@@ -1,0 +1,4 @@
+(library
+ (name my_koka)
+ (public_name my-koka)
+ (libraries))
