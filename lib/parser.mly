@@ -27,9 +27,11 @@
 %token <String> STRING
 %token <Char>   CHAR
 
+(* note: commented out in spec *)
 (* %token APP  *) (* '(' for applications *)
 (* %token IDX  *) (* '[' for indexing *)
 
+(* TODO: remove tokens not present in any production *)
 %token IF THEN ELSE ELIF
 %token WITH IN
 %token MATCH
@@ -76,6 +78,7 @@
 %precedence THEN
 %precedence ELSE ELIF
 
+(* TODO: should I support this syntax - it makes parsing etc. harder *)
 (* resolve s/r conflict to have a `FN funparams -> expr` span as far as possible,
    e.g. `fn(x) -> x + 1` is `(fn(x) -> x + 1)` and not `(fn(x) -> x) + 1`
    and  `fn(x) -> x.foo` is `(fn(x) -> x.foo)` and not `(fn(x) -> x).foo`
@@ -94,30 +97,19 @@
 ----------------------------------------------------------*)
 
 program     :
-            (* | semis visibility MODULE modulepath moduledecl  { printDecl("module",$4); } *)
             | moduledecl                                     { printDecl("module","main"); }
             ;
 
 moduledecl  :
-            (* | '{' semis modulebody '}' semis *)
             | semis modulebody
             ;
 
 modulebody  :
-            (* | importdecl semis1 modulebody *)
             | declarations
             ;
 
-(* importdecl  : visibility IMPORT modulepath *)
-(*             | visibility IMPORT modulepath '=' modulepath *)
-(*             ; *)
 
-(* modulepath  : varid                       { $$ = $1; } *)
-(*             | qvarid                      { $$ = $1; } *)
-(*             ; *)
-
-visibility  : PUBLIC
-            | PRIVATE
+visibility  :
             | (* empty *)
             ;
 
@@ -145,7 +137,7 @@ declarations:
             ;
 
 (* fixitydecl  : visibility fixity oplist1 *)
-            ;
+(*             ; *)
 
 (* fixity      : INFIX NAT *)
 (*             | INFIXR NAT *)
@@ -165,8 +157,8 @@ topdecls1   : topdecls1 topdecl semis1
             | topdecl semis1
             (* TODO: keep 'error recovery' ? *)
             (* error recovery *)
-            | topdecls1 error semis1
-            | error semis1                                    { yyerror(&@1,scanner,"skipped top-level declaration");  }
+            (* | topdecls1 error semis1 *)
+            (* | error semis1                                    { yyerror(&@1,scanner,"skipped top-level declaration");  } *)
             ;
 
 topdecl     : visibility puredecl                             { printDecl("value",$2); }
@@ -178,60 +170,6 @@ topdecl     : visibility puredecl                             { printDecl("value
             ;
 
 
-(* ---------------------------------------------------------
--- External declarations
-----------------------------------------------------------*)
-
-(* externdecl  : ID_INLINE   EXTERN funid externtype externbody   { $$ = $3; } *)
-(*             | ID_NOINLINE EXTERN funid externtype externbody   { $$ = $3; } *)
-(*             | EXTERN funid externtype externbody               { $$ = $2; } *)
-(*             | EXTERN IMPORT externimpbody                      { $$ = "<extern import>"; } *)
-(*             ; *)
-
-(* externtype  : ':' typescheme *)
-(*             | typeparams '(' parameters ')' annotres *)
-(*             ; *)
-
-(* externbody  : '{' semis externstats1 '}' *)
-(*             | '{' semis '}' *)
-(*             ; *)
-
-(* externstats1: externstats1 externstat semis1 *)
-(*             | externstat semis1 *)
-(*             ; *)
-
-(* externstat  : externtarget externinline STRING *)
-(*             | externinline STRING *)
-(*             ; *)
-
-(* externinline: ID_INLINE *)
-(*             | (\* empty *\) *)
-(*             ; *)
-
-
-(* externimpbody: '=' externimp *)
-(*             | '{' semis externimps1 '}' *)
-(*             ; *)
-
-(* externimps1 : externimps1 externimp semis1 *)
-(*             | externimp semis1 *)
-(*             ; *)
-
-(* externimp   : externtarget varid STRING *)
-(*             | externtarget '{' externvals1 '}' *)
-(*             ; *)
-
-(* externvals1 : externvals1 externval semis1 *)
-(*             | externval semis1 *)
-(*             ; *)
-
-(* externval   : varid '=' STRING *)
-(*             ; *)
-
-(* externtarget: ID_CS *)
-(*             | ID_JS *)
-(*             | ID_C *)
-(*             ; *)
 
 
 (* ---------------------------------------------------------
@@ -244,16 +182,9 @@ typedecl    : typemod TYPE typeid typeparams kannot typebody      { $$ = $3; }
             (* | structmod STRUCT typeid typeparams kannot conparams { $$ = $3; } *)
             | effectmod EFFECT varid typeparams kannot opdecls          { $$ = $3; }
             | effectmod EFFECT typeparams kannot operation              { $$ = "<operation>"; }
-            (* | NAMED effectmod EFFECT varid typeparams kannot opdecls           { $$ = $4; } *)
-            (* | NAMED effectmod EFFECT typeparams kannot operation               { $$ = "<operation>"; } *)
-            (* | NAMED effectmod EFFECT varid typeparams kannot IN type opdecls   { $$ = $4; }  (\* error on SCOPED (?) *\) *)
             ;
 
 typemod     : structmod
-            (* | ID_OPEN *)
-            (* | ID_EXTEND *)
-            (* | ID_CO *)
-            (* | ID_REC *)
             ;
 
 structmod   :
@@ -263,7 +194,7 @@ structmod   :
             ;
 
 effectmod   :
-            (* |ID_REC *)
+            (* | ID_REC *)
             (* | ID_LINEAR *)
             (* | ID_LINEAR ID_REC *)
             | (* empty *)
@@ -505,7 +436,7 @@ literal     : NAT | FLOAT | CHAR | STRING
             ;
 
 (* mask        : MASK behind '<' tbasic '>' *)
-            ;
+(*             ; *)
 
 (* behind      : ID_BEHIND *)
 (*             | (\* empty *\) *)
@@ -622,24 +553,25 @@ qvarid      : QID
             ;
 
 varid       : ID
-            (* | ID_C            { $$ = "c"; } *)
-            (* | ID_CS           { $$ = "cs"; } *)
-            (* | ID_JS           { $$ = "js"; } *)
-            (* | ID_FILE         { $$ = "file"; } *)
-            (* | ID_INLINE       { $$ = "inline"; } *)
-            (* | ID_NOINLINE     { $$ = "noinline"; } *)
-            (* | ID_OPEN         { $$ = "open"; } *)
-            (* | ID_EXTEND       { $$ = "extend"; } *)
-            (* | ID_LINEAR       { $$ = "linear"; } *)
-            (* | ID_BEHIND       { $$ = "behind"; } *)
-            (* | ID_VALUE        { $$ = "value"; } *)
-            (* | ID_REFERENCE    { $$ = "reference"; } *)
-            (* | ID_SCOPED       { $$ = "scoped"; } *)
-            (* TODO: maybe do intially/finally *)
-            (* | ID_INITIALLY    { $$ = "initially"; } *)
-            (* | ID_FINALLY      { $$ = "finally"; } *)
-            (* | ID_REC          { $$ = "rec"; } *)
-            (* | ID_CO           { $$ = "co"; } *)
+            (* allow reserved words to be used as identifiers
+               in unambiguous contexts *)
+            | ID_C            { $$ = "c"; }
+            | ID_CS           { $$ = "cs"; }
+            | ID_JS           { $$ = "js"; }
+            | ID_FILE         { $$ = "file"; }
+            | ID_INLINE       { $$ = "inline"; }
+            | ID_NOINLINE     { $$ = "noinline"; }
+            | ID_OPEN         { $$ = "open"; }
+            | ID_EXTEND       { $$ = "extend"; }
+            | ID_LINEAR       { $$ = "linear"; }
+            | ID_BEHIND       { $$ = "behind"; }
+            | ID_VALUE        { $$ = "value"; }
+            | ID_REFERENCE    { $$ = "reference"; }
+            | ID_SCOPED       { $$ = "scoped"; }
+            | ID_INITIALLY    { $$ = "initially"; }
+            | ID_FINALLY      { $$ = "finally"; }
+            | ID_REC          { $$ = "rec"; }
+            | ID_CO           { $$ = "co"; }
             (* note: commented out in original spec *)
             (* | ID_NAMED        { $$ = "named"; } *)
             ;
@@ -654,11 +586,10 @@ qconid      : QCONID { $$ = $1; }
 conid       : CONID  { $$ = $1; }
             ;
 
-(* TODO: why are these the only operators?? *)
+(* TODO: decide whether operators should be special cases, or done like funcitons *)
 op          : OP
             | '>'       { $$ = ">";  }
             | '<'       { $$ = "<";  }
-            (* TODO: what is | ? *)
             | '|'       { $$ = "|";  }
             (* | ASSIGN    { $$ = ":="; } *)
             ;
@@ -726,8 +657,6 @@ pattern     : identifier
 ----------------------------------------------------------*)
 handlerexpr : HANDLER override witheff opclauses
             | HANDLE override witheff ntlexpr opclauses
-            (* | NAMED HANDLER witheff opclauses *)
-            (* | NAMED HANDLE witheff ntlexpr opclauses *)
             ;
 
 override    :
@@ -743,11 +672,9 @@ witheff     : '<' anntype '>'
 withstat    : WITH basicexpr
             | WITH override witheff opclauses    (* shorthand for handler *)
             | WITH binder LARROW basicexpr
-            (* | WITH binder LARROW witheff opclauses  (\* shorthand for named handler *\) *)
             (* TODO: support the old syntax? *)
             (* deprecated: *)
             | WITH binder '=' basicexpr
-            (* | WITH binder '=' witheff opclauses  (\* shorthand for named handler *\) *)
             ;
 
 withexpr    : withstat IN blockexpr
@@ -822,9 +749,6 @@ type_        : FORALL typeparams1 tarrow qualifier
             ;
 
 someforalls :
-            (* TODO: maybe look at what SOME means *)
-            (* | SOME typeparams1 FORALL typeparams1 *)
-            (* | SOME typeparams1 *)
             | FORALL typeparams1
             | (* empty *)
             ;
@@ -837,18 +761,8 @@ typeparams1 : '<' tbinders '>'
             ;
 
 qualifier   :
-            (* | WITH '(' predicates1 ')' *)
             | (* empty *)
             ;
-
-(* TODO: what are type predicates? (interfaces?) *)
-(* predicates1 : predicates1 ',' predicate *)
-(*             | predicate *)
-(*             ; *)
-
-
-(* predicate   : typeapp                     (\* interface:  identifier '<' targuments '>' *\) *)
-(*             ; *)
 
 
 (* mono types *)
@@ -930,7 +844,3 @@ katom       : conid
 
 %%
 
-void printDecl( const char* sort, const char* name )
-{
-  printf( "parsed %s declaration: %s\n", sort, name );
-}
