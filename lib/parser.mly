@@ -96,6 +96,7 @@
 -- Program
 ----------------------------------------------------------*)
 
+(* TODO: eliminate trivial productions like this *)
 program     :
             | moduledecl                                     { printDecl("module","main"); }
             ;
@@ -165,8 +166,6 @@ topdecl     : visibility puredecl                             { printDecl("value
             (* TODO: keep aliases? *)
             (* | visibility aliasdecl                            { printDecl("alias",$2); } *)
             | visibility typedecl                             { printDecl("type",$2); }
-            (* | ABSTRACT typedecl                               { printDecl("type",$2); } *)
-            (* | visibility externdecl                           { printDecl("extern",$2); } *)
             ;
 
 
@@ -175,23 +174,24 @@ topdecl     : visibility puredecl                             { printDecl("value
 (* ---------------------------------------------------------
 -- Type declarations
 ----------------------------------------------------------*)
-aliasdecl   : ALIAS typeid typeparams kannot '=' type_     { $$ = $2; }
-            ;
+(* aliasdecl   : ALIAS typeid typeparams kannot '=' type_     { $$ = $2; } *)
+(*             ; *)
 
-typedecl    : typemod TYPE typeid typeparams kannot typebody      { $$ = $3; }
+typedecl    :
+            (* | typemod TYPE typeid typeparams kannot typebody      { $$ = $3; } *)
             (* | structmod STRUCT typeid typeparams kannot conparams { $$ = $3; } *)
             | effectmod EFFECT varid typeparams kannot opdecls          { $$ = $3; }
             | effectmod EFFECT typeparams kannot operation              { $$ = "<operation>"; }
             ;
 
-typemod     : structmod
-            ;
+(* typemod     : structmod *)
+(*             ; *)
 
-structmod   :
-            (* | ID_VALUE *)
-            (* | ID_REFERENCE *)
-            | (* empty *)
-            ;
+(* structmod   : *)
+(*             (\* | ID_VALUE *\) *)
+(*             (\* | ID_REFERENCE *\) *)
+(*             | (\* empty *\) *)
+(*             ; *)
 
 effectmod   :
             (* | ID_REC *)
@@ -202,17 +202,16 @@ effectmod   :
 
 
 
-typebody    : '{' semis constructors '}'
-            | (* empty *)
-            ;
+(* typebody    : '{' semis constructors '}' *)
+(*             | (\* empty *\) *)
+(*             ; *)
 
-(* TODO: what are typeids? *)
-typeid      : '(' commas ')'      { $$ = "(,)"; }       (* tuples *)
-            | '[' ']'             { $$ = "[]"; }        (* lists *)
-            | '<' '>'             { $$ = "<>"; }        (* total effect *)
-            | '<' '|' '>'         { $$ = "<|>"; }       (* effect extension *)
-            | varid               { $$ = $1; }
-            ;
+(* typeid      : '(' commas ')'      { $$ = "(,)"; }       (\* tuples *\) *)
+(*             | '[' ']'             { $$ = "[]"; }        (\* lists *\) *)
+(*             | '<' '>'             { $$ = "<>"; }        (\* total effect *\) *)
+(*             | '<' '|' '>'         { $$ = "<|>"; }       (\* effect extension *\) *)
+(*             | varid               { $$ = $1; } *)
+(*             ; *)
 
 (* TODO: rewrite commas to use +/* *)
 commas      : commas1
