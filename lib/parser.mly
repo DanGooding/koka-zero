@@ -269,7 +269,7 @@ funid       : identifier         { $$ = $1; }
 
 (* TODO: why does one call bodyexpr, and the other call block? *)
 funbody     : typeparams '(' pparameters ')' bodyexpr
-            | typeparams '(' pparameters ')' ':' tresult qualifier block
+            | typeparams '(' pparameters ')' ':' tresult block
             ;
 
 (* annotres    : ':' tresult *)
@@ -317,6 +317,7 @@ blockexpr   : expr              (* a `block` is not interpreted as an anonymous 
 
 expr        :
             (* | withexpr *)
+            (* TODO: grammar needs changes to make blockexpr handle block specially *)
             | block             (* interpreted as an anonymous function (except if coming from `blockexpr`) *)
             | returnexpr
             | valexpr
@@ -699,11 +700,11 @@ tbinder     : varid kannot
 
 
 (* full type *)
-typescheme  : someforalls tarrow qualifier        (* used for type annotations *)
+typescheme  : someforalls tarrow         (* used for type annotations *)
             ;
 
-type_       : FORALL typeparams1 tarrow qualifier
-            | tarrow qualifier
+type_       : FORALL typeparams1 tarrow
+            | tarrow
             ;
 
 someforalls :
@@ -796,4 +797,3 @@ katom       : conid
             ;
 
 %%
-
