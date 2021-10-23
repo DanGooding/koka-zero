@@ -54,7 +54,7 @@
 %token LE ASSIGN DCOLON EXTEND
 %token RETURN
 
-%token HANDLER HANDLE (* NAMED MASK OVERRIDE *)
+%token HANDLER HANDLE (* NAMED MASK *)
 (* %token IFACE UNSAFE *)
 
 (* %token ID_CO ID_REC *)
@@ -98,21 +98,7 @@
 ----------------------------------------------------------*)
 
 (* TODO: eliminate trivial productions like this *)
-program     :
-            | moduledecl                                     { printDecl("module","main"); }
-            ;
-
-moduledecl  :
-            | semis modulebody
-            ;
-
-modulebody  :
-            | declarations
-            ;
-
-
-visibility  :
-            | (* empty *)
+program     : semis declarations
             ;
 
 (* TODO: rewrite using */+ *)
@@ -138,7 +124,7 @@ declarations:
             | topdecls
             ;
 
-(* fixitydecl  : visibility fixity oplist1 *)
+(* fixitydecl  : fixity oplist1 *)
 (*             ; *)
 
 (* fixity      : INFIX NAT *)
@@ -163,10 +149,10 @@ topdecls1   : topdecls1 topdecl semis1
             (* | error semis1                                    { yyerror(&@1,scanner,"skipped top-level declaration");  } *)
             ;
 
-topdecl     : visibility puredecl                             { printDecl("value",$2); }
+topdecl     : puredecl                             { printDecl("value",$2); }
             (* TODO: keep aliases? *)
-            (* | visibility aliasdecl                            { printDecl("alias",$2); } *)
-            | visibility typedecl                             { printDecl("type",$2); }
+            (* | aliasdecl                            { printDecl("alias",$2); } *)
+            | typedecl                             { printDecl("type",$2); }
             ;
 
 
@@ -181,8 +167,8 @@ topdecl     : visibility puredecl                             { printDecl("value
 typedecl    :
             (* | typemod TYPE typeid typeparams kannot typebody      { $$ = $3; } *)
             (* | structmod STRUCT typeid typeparams kannot conparams { $$ = $3; } *)
-            | effectmod EFFECT varid typeparams kannot opdecls          { $$ = $3; }
-            | effectmod EFFECT typeparams kannot operation              { $$ = "<operation>"; }
+            | EFFECT varid typeparams kannot opdecls          { $$ = $3; }
+            | EFFECT typeparams kannot operation              { $$ = "<operation>"; }
             ;
 
 (* typemod     : structmod *)
@@ -193,15 +179,6 @@ typedecl    :
 (*             (\* | ID_REFERENCE *\) *)
 (*             | (\* empty *\) *)
 (*             ; *)
-
-effectmod   :
-            (* | ID_REC *)
-            (* | ID_LINEAR *)
-            (* | ID_LINEAR ID_REC *)
-            | (* empty *)
-            ;
-
-
 
 (* typebody    : '{' semis constructors '}' *)
 (*             | (\* empty *\) *)
@@ -231,8 +208,8 @@ commas1     : commas ','
 (*             | constructor *)
 (*             ; *)
 
-(* constructor : visibility con conid typeparams conparams *)
-(*             | visibility con STRING typeparams conparams *)
+(* constructor : con conid typeparams conparams *)
+(*             | con STRING typeparams conparams *)
 (*             ; *)
 
 (* con         : CON *)
@@ -261,25 +238,20 @@ operations  : operations operation semis1
             | (* empty *)
             ;
 
-operation   : visibility VAL identifier typeparams ':' tatomic
-            | visibility FUN identifier typeparams '(' parameters ')' ':' tatomic
-            | visibility EXCEPT identifier typeparams '(' parameters ')' ':' tatomic
-            | visibility CONTROL identifier typeparams '(' parameters ')' ':' tatomic
+operation   : VAL identifier typeparams ':' tatomic
+            | FUN identifier typeparams '(' parameters ')' ':' tatomic
+            | EXCEPT identifier typeparams '(' parameters ')' ':' tatomic
+            | CONTROL identifier typeparams '(' parameters ')' ':' tatomic
             ;
 
 
 (* ---------------------------------------------------------
 -- Pure (top-level) Declarations
 ----------------------------------------------------------*)
-puredecl    : inlineattr VAL binder '=' blockexpr      { $$ = $3; }
-            | inlineattr FUN funid funbody             { $$ = $3; }
+puredecl    : VAL binder '=' blockexpr      { $$ = $3; }
+            | FUN funid funbody             { $$ = $3; }
             ;
 
-inlineattr  :
-            (* | ID_INLINE *)
-            (* | ID_NOINLINE *)
-            | (* empty *)
-            ;
 (* TODO: update puredecl to include this? *)
 fundecl     : funid funbody                { $$ = $1; }
             ;
@@ -343,7 +315,8 @@ bodyexpr    : blockexpr
 blockexpr   : expr              (* a `block` is not interpreted as an anonymous function but as statement grouping *)
             ;
 
-expr        : withexpr
+expr        :
+            (* | withexpr *)
             | block             (* interpreted as an anonymous function (except if coming from `blockexpr`) *)
             | returnexpr
             | valexpr
@@ -537,7 +510,7 @@ annot       : ':' typescheme
 -- Identifiers and operators
 ----------------------------------------------------------*)
 
-operator   : op
+operator    : op
             ;
 
 identifier  : varid
@@ -569,7 +542,7 @@ varid       : ID
             (* | ID_NAMED        { $$ = "named"; } *)
             ;
 
-constructor: conid
+constructor : conid
             ;
 
 
@@ -645,13 +618,8 @@ pattern     : identifier
 (* ---------------------------------------------------------
 -- Handlers
 ----------------------------------------------------------*)
-handlerexpr : HANDLER override witheff opclauses
-            | HANDLE override witheff ntlexpr opclauses
-            ;
-
-override    :
-            (* | OVERRIDE *)
-            | (* empty *)
+handlerexpr : HANDLER witheff opclauses
+            | HANDLE witheff ntlexpr opclauses
             ;
 
 (* TODO: what does an annotation on a handler mean? *)
@@ -660,18 +628,17 @@ witheff     : '<' anntype '>'
             ;
 
 withstat    : WITH basicexpr
-            | WITH override witheff opclauses    (* shorthand for handler *)
+            | WITH witheff opclauses    (* shorthand for handler *)
             | WITH binder LARROW basicexpr
             (* TODO: support the old syntax? *)
             (* deprecated: *)
             | WITH binder '=' basicexpr
             ;
 
-(* TODO: when does [WITH ... IN blockexpr] occur? *)
-withexpr    : withstat IN blockexpr
-            (* note: already commented out in spec *)
-            (* | withstat *)
-            ;
+(* withexpr    : withstat IN blockexpr *)
+(*             (\* note: already commented out in spec *\) *)
+(*             (\* | withstat *\) *)
+(*             ; *)
 
 (* TODO: rewrite to use lists *)
 opclauses   : opclause
@@ -735,7 +702,7 @@ tbinder     : varid kannot
 typescheme  : someforalls tarrow qualifier        (* used for type annotations *)
             ;
 
-type_        : FORALL typeparams1 tarrow qualifier
+type_       : FORALL typeparams1 tarrow qualifier
             | tarrow qualifier
             ;
 
@@ -750,11 +717,6 @@ typeparams  : typeparams1
 
 typeparams1 : '<' tbinders '>'
             ;
-
-qualifier   :
-            | (* empty *)
-            ;
-
 
 (* mono types *)
 tarrow      : tatomic RARROW tresult
