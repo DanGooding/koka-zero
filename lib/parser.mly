@@ -20,7 +20,7 @@
 
 
 (* TODO: why are brackets of type Id? what about keywords? (maybe a C thing) *)
-%token <Id>     ID CONID OP IDOP QID  QCONID QIDOP WILDCARD '(' ')' '[' ']'
+%token <Id>     ID CONID OP IDOP WILDCARD '(' ')' '[' ']'
 (* TODO: rename nat->int? *)
 %token <Nat>    NAT
 %token <Float>  FLOAT
@@ -34,38 +34,39 @@
 (* TODO: remove tokens not present in any production *)
 %token IF THEN ELSE ELIF
 %token WITH IN
-%token MATCH
+(* %token MATCH *)
 %token RARROW LARROW
 
-%token FUN FN VAL VAR CONTROL RCONTROL EXCEPT
-%token TYPE STRUCT EFFECT
-%token ALIAS CON
+%token FUN FN VAL VAR CONTROL (* RCONTROL *) EXCEPT
+%token (* TYPE STRUCT *) EFFECT
+(* %token ALIAS CON *)
 (* TODO: I can't see EXISTS ever being used, and SOME is undocumented *)
-%token FORALL EXISTS SOME
+%token FORALL (* EXISTS SOME *)
 
-%token IMPORT AS MODULE
-%token PUBLIC PRIVATE ABSTRACT
-%token EXTERN
-%token INFIX INFIXL INFIXR
+(* %token IMPORT AS MODULE *)
+(* %token PUBLIC PRIVATE ABSTRACT *)
+(* %token EXTERN *)
+(* %token INFIX INFIXL INFIXR *)
 
+(* TODO: why is whitespace here? - they are never used... *)
 %token LEX_WHITE LEX_COMMENT
 %token INSERTED_SEMI
 %token LE ASSIGN DCOLON EXTEND
 %token RETURN
 
-%token HANDLER HANDLE NAMED MASK OVERRIDE
-%token IFACE UNSAFE
+%token HANDLER HANDLE (* NAMED MASK OVERRIDE *)
+(* %token IFACE UNSAFE *)
 
-%token ID_CO ID_REC
-%token ID_INLINE ID_NOINLINE
-%token ID_C ID_CS ID_JS ID_FILE
-%token ID_LINEAR ID_OPEN ID_EXTEND
-%token ID_BEHIND
-%token ID_VALUE ID_REFERENCE ID_SCOPED
+(* %token ID_CO ID_REC *)
+(* %token ID_INLINE ID_NOINLINE *)
+(* %token ID_C ID_CS ID_JS ID_FILE *)
+(* %token ID_LINEAR ID_OPEN ID_EXTEND *)
+(* %token ID_BEHIND *)
+(* %token ID_VALUE ID_REFERENCE ID_SCOPED *)
 %token ID_INITIALLY ID_FINALLY
 
 %type <Id>  varid conid qvarid qconid op
-%type <Id>  identifier qidentifier qoperator qconstructor
+%type <Id>  identifier operator constructor
 %type <Id>  funid typeid modulepath binder
 %type <Id>  fundecl aliasdecl typedecl externdecl puredecl
 
@@ -279,7 +280,7 @@ inlineattr  :
             (* | ID_NOINLINE *)
             | (* empty *)
             ;
-
+(* TODO: update puredecl to include this? *)
 fundecl     : funid funbody                { $$ = $1; }
             ;
 
@@ -294,6 +295,7 @@ funid       : identifier         { $$ = $1; }
             (* | STRING             { $$ = $1; } *)
             ;
 
+(* TODO: why does one call bodyexpr, and the other call block? *)
 funbody     : typeparams '(' pparameters ')' bodyexpr
             | typeparams '(' pparameters ')' ':' tresult qualifier block
             ;
@@ -384,7 +386,7 @@ valexpr     : VAL apattern '=' blockexpr IN expr
 (* operator expression *)
 (* TODO: what am I doing about operators? *)
 
-opexpr      : opexpr qoperator prefixexpr
+opexpr      : opexpr operator prefixexpr
             | prefixexpr
             ;
 
@@ -406,7 +408,7 @@ appexpr     : appexpr '(' arguments ')'             (* application *)
 ntlexpr     : ntlopexpr
             ;
 
-ntlopexpr   : ntlopexpr qoperator ntlprefixexpr
+ntlopexpr   : ntlopexpr operator ntlprefixexpr
             | ntlprefixexpr
             ;
 
@@ -423,8 +425,8 @@ ntlappexpr  : ntlappexpr '(' arguments ')'             (* application *)
 
 (* atomic expressions *)
 
-atom        : qidentifier
-            | qconstructor
+atom        : identifier
+            | constructor
             | literal
             | mask
             | '(' aexprs ')'             (* unit, parenthesized (possibly annotated) expression, tuple expression *)
@@ -535,21 +537,13 @@ annot       : ':' typescheme
 -- Identifiers and operators
 ----------------------------------------------------------*)
 
-(* TODO: does the q stand for something *)
-qoperator   : op
-            ;
-
-qidentifier : qvarid
-            | QIDOP
-            | identifier
+operator   : op
             ;
 
 identifier  : varid
             | IDOP
             ;
 
-qvarid      : QID
-            ;
 
 varid       : ID
             (* allow reserved words to be used as identifiers
@@ -575,12 +569,9 @@ varid       : ID
             (* | ID_NAMED        { $$ = "named"; } *)
             ;
 
-qconstructor: conid
-            | qconid
+constructor: conid
             ;
 
-qconid      : QCONID { $$ = $1; }
-            ;
 
 conid       : CONID  { $$ = $1; }
             ;
@@ -676,6 +667,7 @@ withstat    : WITH basicexpr
             | WITH binder '=' basicexpr
             ;
 
+(* TODO: when does [WITH ... IN blockexpr] occur? *)
 withexpr    : withstat IN blockexpr
             (* note: already commented out in spec *)
             (* | withstat *)
@@ -697,12 +689,12 @@ opclausex   :
             | opclause
             ;
 
-opclause    : VAL qidentifier '=' blockexpr
-            | VAL qidentifier ':' type_ '=' blockexpr
-            | FUN qidentifier opparams bodyexpr
-            | EXCEPT qidentifier opparams bodyexpr
-            | CONTROL qidentifier opparams bodyexpr
-            (* | RCONTROL qidentifier opparams bodyexpr *)
+opclause    : VAL identifier '=' blockexpr
+            | VAL identifier ':' type_ '=' blockexpr
+            | FUN identifier opparams bodyexpr
+            | EXCEPT identifier opparams bodyexpr
+            | CONTROL identifier opparams bodyexpr
+            (* | RCONTROL identifier opparams bodyexpr *)
             | RETURN '(' opparam ')' bodyexpr
             (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
             ;
