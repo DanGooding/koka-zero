@@ -98,16 +98,7 @@
 ----------------------------------------------------------*)
 
 (* TODO: eliminate trivial productions like this *)
-program     : semis declarations
-            ;
-
-(* TODO: rewrite using */+ *)
-semis1      : semis1 semi
-            | semi
-            ;
-
-semis       : semis semi
-            | (* empty *)
+program     : semi* declarations
             ;
 
 semi        : ';'
@@ -120,7 +111,7 @@ semi        : ';'
 ----------------------------------------------------------*)
 
 declarations:
-            (* | fixitydecl semis1 declarations *)
+            (* | fixitydecl semi+ declarations *)
             | topdecls
             ;
 
@@ -137,17 +128,9 @@ declarations:
 (*             ; *)
 
 
-topdecls    : topdecls1
-            | (* empty *)
+topdecls    : list(topdecl semi+)
             ;
-
-topdecls1   : topdecls1 topdecl semis1
-            | topdecl semis1
-            (* TODO: keep 'error recovery' ? *)
-            (* error recovery *)
-            (* | topdecls1 error semis1 *)
-            (* | error semis1                                    { yyerror(&@1,scanner,"skipped top-level declaration");  } *)
-            ;
+(* TODO: error recovery? [(topdecl | error) semi+] *)
 
 topdecl     : puredecl                             { printDecl("value",$2); }
             (* TODO: keep aliases? *)
@@ -180,7 +163,7 @@ typedecl    :
 (*             | (\* empty *\) *)
 (*             ; *)
 
-(* typebody    : '{' semis constructors '}' *)
+(* typebody    : '{' semi* constructors '}' *)
 (*             | (\* empty *\) *)
 (*             ; *)
 
@@ -191,20 +174,19 @@ typedecl    :
 (*             | varid               { $$ = $1; } *)
 (*             ; *)
 
-(* TODO: rewrite commas to use +/* *)
-commas      : commas1
-            | (* empty *)
+(* TODO: replace with `','*` ? *)
+commas      : ','*
             ;
 
-commas1     : commas ','
+commas1     : ','+
             ;
 
 
-(* constructors: constructors1 semis1 *)
+(* constructors: constructors1 semi+ *)
 (*             | (\* empty *\) *)
 (*             ; *)
 
-(* constructors1: constructors1 semis1 constructor *)
+(* constructors1: constructors1 semi+ constructor *)
 (*             | constructor *)
 (*             ; *)
 
@@ -217,11 +199,11 @@ commas1     : commas ','
 (*             ; *)
 
 (* conparams   : '(' parameters1 ')'          (\* deprecated *\) *)
-(*             | '{' semis sconparams '}' *)
+(*             | '{' semi* sconparams '}' *)
 (*             | (\* empty *\) *)
 (*             ; *)
 
-(* sconparams  : sconparams parameter semis1 *)
+(* sconparams  : sconparams parameter semi+ *)
 (*             | (\* empty *\) *)
 (*             ; *)
 
@@ -231,12 +213,10 @@ commas1     : commas ','
 ----------------------------------------------------------*)
 
 
-opdecls     : '{' semis operations '}'
+opdecls     : '{' semi* operations '}'
             ;
 
-operations  : operations operation semis1
-            | (* empty *)
-            ;
+operations  : separated_list(semi+, operation) semi+
 
 operation   : VAL identifier typeparams ':' tatomic
             | FUN identifier typeparams '(' parameters ')' ':' tatomic
@@ -281,15 +261,14 @@ funbody     : typeparams '(' pparameters ')' bodyexpr
 -- Statements
 ----------------------------------------------------------*)
 
-block       : '{' semis statements1 '}'    (* must end with an expression statement (and not a declaration) *)
+(* TODO: template for this pattern (shared with operations) *)
+block       : '{' semi* statements1 '}'    (* must end with an expression statement (and not a declaration) *)
             ;
 
-(* TODO: rewrite to use */+ *)
-statements1 : statements1 statement semis1
-            | statement semis1
-            (* TODO: errors? *)
-            (* | error semis1 *)
-            ;
+(* TODO: error recovery? {statement | error} *)
+statements1 : separated_list(semi+, statement) semi+
+
+                              ;
 
 statement   : decl
             | withstat
@@ -335,7 +314,7 @@ basicexpr   : ifexpr
 (* keyword expressions *)
 
 (* TODO: not yet supporting match? *)
-matchexpr   : MATCH ntlexpr '{' semis matchrules '}'
+matchexpr   : MATCH ntlexpr '{' semi* matchrules '}'
             ;
 
 fnexpr      : FN funbody                     (* anonymous function *)
@@ -419,14 +398,7 @@ literal     : NAT | FLOAT | CHAR | STRING
 
 (* arguments: separated by comma *)
 
-
-(* TODO: rewrite to use separated_list *)
-arguments   : arguments1
-            | (* empty *)
-            ;
-
-arguments1  : arguments1 ',' argument
-            | argument
+arguments   : separated_list(',', argument)
             ;
 
 argument    : expr
@@ -435,13 +407,11 @@ argument    : expr
 
 (* parameters: separated by comma, must have a type *)
 
-(* TODO: rewrite to use separated_list *)
 parameters  : parameters1
             | (* empty *)
             ;
 
-parameters1 : parameters1 ',' parameter
-            | parameter
+parameters1 : separated_nonempty_list(',' parameter)
             ;
 
 parameter   : paramid ':' paramtype
@@ -460,13 +430,7 @@ paramtype   : type_
 
 (* pattern matching parameters: separated by comma *)
 
-(* TODO: rewrite to use separated_list *)
-pparameters : pparameters1
-            | (* empty *)
-            ;
-
-pparameters1: pparameters1 ',' pparameter
-            | pparameter
+pparameters : separated_list(',', pparameter)
             ;
 
 pparameter  : pattern
@@ -480,25 +444,14 @@ pparameter  : pattern
 
 (* annotated expressions: separated or terminated by comma *)
 
-(* TODO: rewrite to use lists! *)
-aexprs      : aexprs1                               (* separated by comma *)
-            | (* empty *)
-            ;
-
-aexprs1     : aexprs1 ',' aexpr
-            | aexpr
-            ;
-
-(* TODO: what? - surely these are different cases? *)
-cexprs      : cexprs0                              (* terminated or separated by comma *)
-            | cexprs0 aexpr
-            ;
-
-cexprs0     : cexprs0 aexpr ','
-            | (* empty *)
+aexprs      : separated_list(',', aexpr)
             ;
 
 aexpr       : expr annot
+            ;
+
+(* terminated or separated by comma *)
+cexprs      : separated_list(aexpr, ',') ','?
             ;
 
 annot       : ':' typescheme
@@ -564,30 +517,17 @@ op          : OP
 ----------------------------------------------------------*)
 (* TODO: pattern matching removed for now *)
 
-matchrules  : matchrules1 semis1
-            | (* empty *)
-            ;
-
-matchrules1 : matchrules1 semis1 matchrule
-            | matchrule
+matchrules  : list(matchrule semi+)
             ;
 
 matchrule   : patterns1 '|' expr RARROW blockexpr
             | patterns1 RARROW blockexpr
             ;
 
-(* TODO: are the commas to form a tuple, or is this
-  just syntax for multiple pattern matching? *)
-patterns1   : patterns1 ',' pattern
-            | pattern
+patterns1   : separated_nonempy_list(',', pattern)
             ;
 
-apatterns   : apatterns1
-            | (* empty *)
-            ;
-
-apatterns1  : apatterns1 ',' apattern
-            | apattern
+apatterns   : separated_list(',', apattern)
             ;
 
 apattern    : pattern annot                    (* annotated pattern *)
@@ -641,14 +581,8 @@ withstat    : WITH basicexpr
 (*             (\* | withstat *\) *)
 (*             ; *)
 
-(* TODO: rewrite to use lists *)
 opclauses   : opclause
-            | '{' semis opclauses1 semis1 '}'
-            | '{' semis '}'
-            ;
-
-opclauses1  : opclauses1 semis1 opclausex
-            | opclausex
+            | '{' semi* list(opclausex semi+) '}'
             ;
 
 opclausex   :
@@ -667,15 +601,7 @@ opclause    : VAL identifier '=' blockexpr
             (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
             ;
 
-opparams    : '(' opparams0 ')'
-            ;
-
-opparams0   : opparams1
-            | (* empty *)
-            ;
-
-opparams1   : opparams1 ',' opparam
-            | opparam
+opparams    : '(' separated_list(',', opparam) ')'
             ;
 
 opparam     : paramid
@@ -686,13 +612,7 @@ opparam     : paramid
 (* ---------------------------------------------------------
 -- Types
 ----------------------------------------------------------*)
-(* TODO: rewrite to use lists *)
-tbinders    : tbinders1
-            | (* empty *)
-            ;
-
-tbinders1   : tbinders1 ',' tbinder
-            | tbinder
+tbinders    : separated_list(',', tbinder)
             ;
 
 tbinder     : varid kannot
@@ -752,12 +672,7 @@ typecon     : varid | qvarid                 (* type name *)
             ;
 
 
-tparams     : tparams1
-            | (* empty *)
-            ;
-
-tparams1    : tparams1 ',' tparam
-            | tparam
+tparams     : separated_list(',', tparam)
             ;
 
 tparam      : identifier ':' anntype              (* named parameter *)
@@ -769,8 +684,7 @@ targuments  : targuments1
             | (* empty *)
             ;
 
-targuments1 : targuments1 ',' anntype
-            | anntype
+targuments1 : separated_nonempy_list(',', anntype)
             ;
 
 anntype     : type_ kannot
@@ -789,9 +703,7 @@ kind        : '(' kinds1 ')' RARROW katom
             | katom
             ;
 
-kinds1      : kinds1 ',' kind
-            | kind
-            ;
+kinds1 = separated_nonempty_list(',', kind)
 
 katom       : conid
             ;
