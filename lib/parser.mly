@@ -1,6 +1,6 @@
 (*
-  Modified from the koka grammar specification
-  https://github.com/koka-lang/koka/blob/master/doc/spec/grammar/parser.y
+  Modified from the koka (v2.3.2) grammar specification
+  https://github.com/koka-lang/koka/blob/v2.3.2/doc/spec/grammar/parser.y
   the license of which is reproduced below
 *)
 (* Copyright 2012-2021, Microsoft Research, Daan Leijen
