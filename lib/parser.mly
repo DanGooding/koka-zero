@@ -102,12 +102,14 @@
 -- Program
 ----------------------------------------------------------*)
 
-program     : semi* declarations
-            ;
+program:
+  | semi* declarations
+  ;
 
-semi        : ";"
-            | INSERTED_SEMI
-            ;
+semi:
+  | ";"
+  | INSERTED_SEMI
+  ;
 
 
 (* ---------------------------------------------------------
@@ -115,32 +117,37 @@ semi        : ";"
 ----------------------------------------------------------*)
 
 declarations:
-            (* | fixitydecl semi+ declarations *)
-            | topdecls
-            ;
+  (* | fixitydecl semi+ declarations *)
+  | topdecls
+  ;
 
-(* fixitydecl  : fixity oplist1 *)
-(*             ; *)
+(* fixitydecl:
+  | fixity oplist1 *)
+(*  ; *)
 
-(* fixity      : INFIX NAT *)
-(*             | INFIXR NAT *)
-(*             | INFIXL NAT *)
-(*             ; *)
+(* fixity:
+  | INFIX NAT *)
+(*  | INFIXR NAT *)
+(*  | INFIXL NAT *)
+(*  ; *)
 
-(* oplist1     : oplist1 "," identifier *)
-(*             | identifier *)
-(*             ; *)
+(* oplist1:
+  | oplist1 "," identifier *)
+(*  | identifier *)
+(*  ; *)
 
 
-topdecls    : list(topdecl semi+)
-            ;
+topdecls:
+  | list(topdecl semi+)
+  ;
 (* TODO: error recovery? [(topdecl | error) semi+] *)
 
-topdecl     : puredecl                             { printDecl("value",$2); }
-            (* TODO: keep aliases? *)
-            (* | aliasdecl                            { printDecl("alias",$2); } *)
-            | typedecl                             { printDecl("type",$2); }
-            ;
+topdecl:
+  | puredecl                             { printDecl("value",$2); }
+  (* TODO: keep aliases? *)
+  (* | aliasdecl                            { printDecl("alias",$2); } *)
+  | typedecl                             { printDecl("type",$2); }
+  ;
 
 
 
@@ -148,67 +155,78 @@ topdecl     : puredecl                             { printDecl("value",$2); }
 (* ---------------------------------------------------------
 -- Type declarations
 ----------------------------------------------------------*)
-(* aliasdecl   : ALIAS typeid typeparams kannot '=' type_     { $$ = $2; } *)
-(*             ; *)
+(* aliasdecl:
+  | ALIAS typeid typeparams kannot '=' type_     { $$ = $2; } *)
+(*  ; *)
 
 typedecl    :
-            (* | typemod TYPE typeid typeparams kannot typebody      { $$ = $3; } *)
-            (* | structmod STRUCT typeid typeparams kannot conparams { $$ = $3; } *)
-            | EFFECT varid typeparams kannot opdecls          { $$ = $3; }
-            | EFFECT typeparams kannot operation              { $$ = "<operation>"; }
-            ;
+  (* | typemod TYPE typeid typeparams kannot typebody      { $$ = $3; } *)
+  (* | structmod STRUCT typeid typeparams kannot conparams { $$ = $3; } *)
+  | EFFECT varid typeparams kannot opdecls          { $$ = $3; }
+  | EFFECT typeparams kannot operation              { $$ = "<operation>"; }
+  ;
 
-(* typemod     : structmod *)
-(*             ; *)
+(* typemod:
+  | structmod *)
+(*  ; *)
 
-(* structmod   : *)
-(*             (\* | ID_VALUE *\) *)
-(*             (\* | ID_REFERENCE *\) *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* structmod:
+  | *)
+(*  (\* | ID_VALUE *\) *)
+(*  (\* | ID_REFERENCE *\) *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
-(* typebody    : "{" semi* constructors "}" *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* typebody:
+  | "{" semi* constructors "}" *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
-(* typeid      : "(" commas ")"      { $$ = "(,)"; }       (\* tuples *\) *)
-(*             | "[" "]"             { $$ = "[]"; }        (\* lists *\) *)
-(*             | "<" ">"             { $$ = "<>"; }        (\* total effect *\) *)
-(*             | "<" "|" ">"         { $$ = "<|>"; }       (\* effect extension *\) *)
-(*             | varid               { $$ = $1; } *)
-(*             ; *)
+(* typeid:
+  | "(" commas ")"      { $$ = "(,)"; }       (\* tuples *\) *)
+(*  | "[" "]"             { $$ = "[]"; }        (\* lists *\) *)
+(*  | "<" ">"             { $$ = "<>"; }        (\* total effect *\) *)
+(*  | "<" "|" ">"         { $$ = "<|>"; }       (\* effect extension *\) *)
+(*  | varid               { $$ = $1; } *)
+(*  ; *)
 
-commas      : ","*
-            ;
+commas:
+  | ","*
+  ;
 
-commas1     : ","+
-            ;
+commas1:
+  | ","+
+  ;
 
 
 (* constructors: constructors1 semi+ *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
 (* constructors1: constructors1 semi+ constructor *)
-(*             | constructor *)
-(*             ; *)
+(*  | constructor *)
+(*  ; *)
 
-(* constructor : con conid typeparams conparams *)
-(*             | con STRING typeparams conparams *)
-(*             ; *)
+(* constructor:
+  | con conid typeparams conparams *)
+(*  | con STRING typeparams conparams *)
+(*  ; *)
 
-(* con         : CON *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* con:
+  | CON *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
-(* conparams   : "(" parameters1 ")"          (\* deprecated *\) *)
-(*             | "{" semi* sconparams "}" *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* conparams:
+  | "(" parameters1 ")"          (\* deprecated *\) *)
+(*  | "{" semi* sconparams "}" *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
-(* sconparams  : sconparams parameter semi+ *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* sconparams:
+  | sconparams parameter semi+ *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
 
 (* ---------------------------------------------------------
@@ -216,48 +234,57 @@ commas1     : ","+
 ----------------------------------------------------------*)
 
 
-opdecls     : "{" semi* operations "}"
-            ;
+opdecls:
+  | "{" semi* operations "}"
+  ;
 
-operations  : separated_list(semi+, operation) semi+
+operations:
+  | separated_list(semi+, operation) semi+
 
-operation   : VAL identifier typeparams ":" tatomic
-            | FUN identifier typeparams "(" parameters ")" ":" tatomic
-            | EXCEPT identifier typeparams "(" parameters ")" ":" tatomic
-            | CONTROL identifier typeparams "(" parameters ")" ":" tatomic
-            ;
+operation:
+  | VAL identifier typeparams ":" tatomic
+  | FUN identifier typeparams "(" parameters ")" ":" tatomic
+  | EXCEPT identifier typeparams "(" parameters ")" ":" tatomic
+  | CONTROL identifier typeparams "(" parameters ")" ":" tatomic
+  ;
 
 
 (* ---------------------------------------------------------
 -- Pure (top-level) Declarations
 ----------------------------------------------------------*)
-puredecl    : VAL binder '=' blockexpr      { $$ = $3; }
-            | FUN funid funbody             { $$ = $3; }
-            ;
+puredecl:
+  | VAL binder '=' blockexpr      { $$ = $3; }
+  | FUN funid funbody             { $$ = $3; }
+  ;
 
 (* TODO: update puredecl to include this? *)
-fundecl     : funid funbody                { $$ = $1; }
-            ;
+fundecl:
+  | funid funbody                { $$ = $1; }
+  ;
 
-binder      : identifier                    { $$ = $1; }
-            | identifier ":" type_           { $$ = $1; }
-            ;
+binder:
+  | identifier                    { $$ = $1; }
+  | identifier ":" type_           { $$ = $1; }
+  ;
 
-funid       : identifier         { $$ = $1; }
-            (* TODO: how can a function name be [,,,]? *)
-            (* | "[" commas "]"     { $$ = "[]"; } *)
-            (* TODO: are literals as function names needed? *)
-            (* | STRING             { $$ = $1; } *)
-            ;
+funid:
+  | identifier         { $$ = $1; }
+  (* TODO: how can a function name be [,,,]? *)
+  (* | "[" commas "]"     { $$ = "[]"; } *)
+  (* TODO: are literals as function names needed? *)
+  (* | STRING             { $$ = $1; } *)
+  ;
 
 (* TODO: why does one call bodyexpr, and the other call block? *)
-funbody     : typeparams "(" pparameters ")" bodyexpr
-            | typeparams "(" pparameters ")" ":" tresult block
-            ;
+funbody:
+  | typeparams "(" pparameters ")" bodyexpr
+  | typeparams "(" pparameters ")" ":" tresult block
+  ;
 
-(* annotres    : ":" tresult *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* annotres:
+  | ":" tresult *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
 
 (* ---------------------------------------------------------
@@ -265,201 +292,237 @@ funbody     : typeparams "(" pparameters ")" bodyexpr
 ----------------------------------------------------------*)
 
 (* TODO: template for this pattern (shared with operations) *)
-block       : "{" semi* statements1 "}"    (* must end with an expression statement (and not a declaration) *)
-            ;
+block:
+  | "{" semi* statements1 "}"    (* must end with an expression statement (and not a declaration) *)
+  ;
 
 (* TODO: error recovery? {statement | error} *)
-statements1 : separated_list(semi+, statement) semi+
+statements1:
+  | separated_list(semi+, statement) semi+
 
-                              ;
+                    ;
 
-statement   : decl
-            | withstat
-            | withstat IN blockexpr
-            | returnexpr
-            | basicexpr
-            ;
+statement:
+  | decl
+  | withstat
+  | withstat IN blockexpr
+  | returnexpr
+  | basicexpr
+  ;
 
-decl        : FUN fundecl
-            | VAL apattern '=' blockexpr    (* local value declaration can use a pattern binding *)
-            (* TODO: keep := in ? *)
-            (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
-            ;
+decl:
+  | FUN fundecl
+  | VAL apattern '=' blockexpr    (* local value declaration can use a pattern binding *)
+  (* TODO: keep := in ? *)
+  (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
+  ;
 
 
 (* ---------------------------------------------------------
 -- Expressions
 ----------------------------------------------------------*)
-bodyexpr    : blockexpr
-            (* | RARROW blockexpr  (\* deprecated *\) *)
-            ;
+bodyexpr:
+  | blockexpr
+  (* | RARROW blockexpr  (\* deprecated *\) *)
+  ;
 
-blockexpr   : expr              (* a `block` is not interpreted as an anonymous function but as statement grouping *)
-            ;
+blockexpr:
+  | expr              (* a `block` is not interpreted as an anonymous function but as statement grouping *)
+  ;
 
 expr        :
-            (* | withexpr *)
-            (* TODO: grammar needs changes to make blockexpr handle block specially *)
-            | block             (* interpreted as an anonymous function (except if coming from `blockexpr`) *)
-            | returnexpr
-            | valexpr
-            | basicexpr
-            ;
+  (* | withexpr *)
+  (* TODO: grammar needs changes to make blockexpr handle block specially *)
+  | block             (* interpreted as an anonymous function (except if coming from `blockexpr`) *)
+  | returnexpr
+  | valexpr
+  | basicexpr
+  ;
 
-basicexpr   : ifexpr
-            | matchexpr
-            | handlerexpr
-            | fnexpr
-            | opexpr             %prec RARROW
-            ;
+basicexpr:
+  | ifexpr
+  | matchexpr
+  | handlerexpr
+  | fnexpr
+  | opexpr             %prec RARROW
+  ;
 
 
 (* keyword expressions *)
 
 (* TODO: not yet supporting match? *)
-matchexpr   : MATCH ntlexpr "{" semi* matchrules "}"
-            ;
+matchexpr:
+  | MATCH ntlexpr "{" semi* matchrules "}"
+  ;
 
-fnexpr      : FN funbody                     (* anonymous function *)
-            ;
+fnexpr:
+  | FN funbody                     (* anonymous function *)
+  ;
 
-returnexpr  : RETURN expr
-            ;
+returnexpr:
+  | RETURN expr
+  ;
 
-ifexpr      : IF ntlexpr THEN expr elifs
-            | IF ntlexpr THEN expr
-            | IF ntlexpr RETURN expr
-            ;
+ifexpr:
+  | IF ntlexpr THEN expr elifs
+  | IF ntlexpr THEN expr
+  | IF ntlexpr RETURN expr
+  ;
 
-elifs       : ELIF ntlexpr THEN expr elifs
-            | ELSE expr
-            ;
+elifs:
+  | ELIF ntlexpr THEN expr elifs
+  | ELSE expr
+  ;
 
-valexpr     : VAL apattern '=' blockexpr IN expr
-            ;
+valexpr:
+  | VAL apattern '=' blockexpr IN expr
+  ;
 
 
 (* operator expression *)
 (* TODO: what am I doing about operators? *)
 
-opexpr      : opexpr operator prefixexpr
-            | prefixexpr
-            ;
+opexpr:
+  | opexpr operator prefixexpr
+  | prefixexpr
+  ;
 
-prefixexpr  : '!' prefixexpr
-            | '~' prefixexpr
-            | appexpr               %prec RARROW
-            ;
+prefixexpr:
+  | '!' prefixexpr
+  | '~' prefixexpr
+  | appexpr               %prec RARROW
+  ;
 
-appexpr     : appexpr "(" arguments ")"             (* application *)
-            (* | appexpr "[" arguments "]"             (\* index expression *\) *)
-            | appexpr "." atom                      (* dot application *)
-            | appexpr block                         (* trailing function application *)
-            | appexpr fnexpr                        (* trailing function application *)
-            | atom
-            ;
+appexpr:
+  | appexpr "(" arguments ")"             (* application *)
+  (* | appexpr "[" arguments "]"             (\* index expression *\) *)
+  | appexpr "." atom                      (* dot application *)
+  | appexpr block                         (* trailing function application *)
+  | appexpr fnexpr                        (* trailing function application *)
+  | atom
+  ;
 
 
 (* non-trailing-lambda expression *)
-ntlexpr     : ntlopexpr
-            ;
+ntlexpr:
+  | ntlopexpr
+  ;
 
-ntlopexpr   : ntlopexpr operator ntlprefixexpr
-            | ntlprefixexpr
-            ;
+ntlopexpr:
+  | ntlopexpr operator ntlprefixexpr
+  | ntlprefixexpr
+  ;
 
 ntlprefixexpr: '!' ntlprefixexpr
-            | '~' ntlprefixexpr
-            | ntlappexpr
-            ;
+  | '~' ntlprefixexpr
+  | ntlappexpr
+  ;
 
-ntlappexpr  : ntlappexpr "(" arguments ")"             (* application *)
-            (* | ntlappexpr "[" arguments "]"             (\* index expression *\) *)
-            | ntlappexpr "." atom                      (* dot application *)
-            | atom
-            ;
+ntlappexpr:
+  | ntlappexpr "(" arguments ")"             (* application *)
+  (* | ntlappexpr "[" arguments "]"             (\* index expression *\) *)
+  | ntlappexpr "." atom                      (* dot application *)
+  | atom
+  ;
 
 (* atomic expressions *)
 
-atom        : identifier
-            | constructor
-            | literal
-            | mask
-            | "(" aexprs ")"             (* unit, parenthesized (possibly annotated) expression, tuple expression *)
-            | "[" cexprs "]"             (* list expression (elements may be terminated with comma instead of separated) *)
-            ;
+atom:
+  | identifier
+  | constructor
+  | literal
+  | mask
+  | "(" aexprs ")"             (* unit, parenthesized (possibly annotated) expression, tuple expression *)
+  | "[" cexprs "]"             (* list expression (elements may be terminated with comma instead of separated) *)
+  ;
 
-literal     : INT | FLOAT | CHAR | STRING
-            ;
+literal:
+  | INT | FLOAT | CHAR | STRING
+  ;
 
-(* mask        : MASK behind "<" tbasic ">" *)
-(*             ; *)
+(* mask:
+  | MASK behind "<" tbasic ">" *)
+(*  ; *)
 
-(* behind      : ID_BEHIND *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* behind:
+  | ID_BEHIND *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
 (* arguments: separated by comma *)
 
-arguments   : separated_list(",", argument)
-            ;
+arguments:
+  | separated_list(",", argument)
+  ;
 
-argument    : expr
-            (* | identifier '=' expr                  (\* named arguments *\) *)
-            ;
+argument:
+  | expr
+  (* | identifier '=' expr                  (\* named arguments *\) *)
+  ;
 
 (* parameters: separated by comma, must have a type *)
 
-parameters  : parameters1
-            | (* empty *)
-            ;
+parameters:
+  | parameters1
+  | (* empty *)
+  ;
 
-parameters1 : separated_nonempty_list("," parameter)
-            ;
+parameters1:
+  | separated_nonempty_list("," parameter)
+  ;
 
-parameter   : paramid ":" paramtype
-            (* | paramid ":" paramtype '=' expr *)
-            ;
+parameter:
+  | paramid ":" paramtype
+  (* | paramid ":" paramtype '=' expr *)
+  ;
 
-paramid     : identifier
-            | WILDCARD
-            ;
+paramid:
+  | identifier
+  | WILDCARD
+  ;
 
-paramtype   : type_
-            (* TODO: is this just for optional parameters? *)
-            (* | '?' type_ *)
-            ;
+paramtype:
+  | type_
+  (* TODO: is this just for optional parameters? *)
+  (* | '?' type_ *)
+  ;
 
 
 (* pattern matching parameters: separated by comma *)
 
-pparameters : separated_list(",", pparameter)
-            ;
+pparameters:
+  | separated_list(",", pparameter)
+  ;
 
-pparameter  : pattern
-            | pattern ":" paramtype
-            (* TODO: pattern=expr - strange form of pattern matching
-               seems to be for struct members, or e.g. (fst=1, snd=2) *)
-            (* | pattern ":" paramtype '=' expr *)
-            (* | pattern '=' expr *)
-            ;
+pparameter:
+  | pattern
+  | pattern ":" paramtype
+  (* TODO: pattern=expr - strange form of pattern matching
+     seems to be for struct members, or e.g. (fst=1, snd=2) *)
+  (* | pattern ":" paramtype '=' expr *)
+  (* | pattern '=' expr *)
+  ;
 
 
 (* annotated expressions: separated or terminated by comma *)
 
-aexprs      : separated_list(",", aexpr)
-            ;
+aexprs:
+  | separated_list(",", aexpr)
+  ;
 
-aexpr       : expr annot
-            ;
+aexpr:
+  | expr annot
+  ;
 
 (* terminated or separated by comma *)
-cexprs      : separated_list(aexpr, ",") ","?
-            ;
+cexprs:
+  | separated_list(aexpr, ",") ","?
+  ;
 
-annot       : ":" typescheme
-            | (* empty *)
-            ;
+annot:
+  | ":" typescheme
+  | (* empty *)
+  ;
 
 
 
@@ -467,52 +530,58 @@ annot       : ":" typescheme
 -- Identifiers and operators
 ----------------------------------------------------------*)
 
-operator    : op
-            ;
+operator:
+  | op
+  ;
 
-identifier  : varid
-            | IDOP
-            ;
-
-
-varid       : ID
-            (* allow reserved words to be used as identifiers
-               in unambiguous contexts *)
-            | ID_C            { $$ = "c"; }
-            | ID_CS           { $$ = "cs"; }
-            | ID_JS           { $$ = "js"; }
-            | ID_FILE         { $$ = "file"; }
-            | ID_INLINE       { $$ = "inline"; }
-            | ID_NOINLINE     { $$ = "noinline"; }
-            | ID_OPEN         { $$ = "open"; }
-            | ID_EXTEND       { $$ = "extend"; }
-            | ID_LINEAR       { $$ = "linear"; }
-            | ID_BEHIND       { $$ = "behind"; }
-            | ID_VALUE        { $$ = "value"; }
-            | ID_REFERENCE    { $$ = "reference"; }
-            | ID_SCOPED       { $$ = "scoped"; }
-            | ID_INITIALLY    { $$ = "initially"; }
-            | ID_FINALLY      { $$ = "finally"; }
-            | ID_REC          { $$ = "rec"; }
-            | ID_CO           { $$ = "co"; }
-            (* note: commented out in original spec *)
-            (* | ID_NAMED        { $$ = "named"; } *)
-            ;
-
-constructor : conid
-            ;
+identifier:
+  | varid
+  | IDOP
+  ;
 
 
-conid       : CONID  { $$ = $1; }
-            ;
+varid:
+  | ID
+  (* allow reserved words to be used as identifiers
+     in unambiguous contexts *)
+  | ID_C            { $$ = "c"; }
+  | ID_CS           { $$ = "cs"; }
+  | ID_JS           { $$ = "js"; }
+  | ID_FILE         { $$ = "file"; }
+  | ID_INLINE       { $$ = "inline"; }
+  | ID_NOINLINE     { $$ = "noinline"; }
+  | ID_OPEN         { $$ = "open"; }
+  | ID_EXTEND       { $$ = "extend"; }
+  | ID_LINEAR       { $$ = "linear"; }
+  | ID_BEHIND       { $$ = "behind"; }
+  | ID_VALUE        { $$ = "value"; }
+  | ID_REFERENCE    { $$ = "reference"; }
+  | ID_SCOPED       { $$ = "scoped"; }
+  | ID_INITIALLY    { $$ = "initially"; }
+  | ID_FINALLY      { $$ = "finally"; }
+  | ID_REC          { $$ = "rec"; }
+  | ID_CO           { $$ = "co"; }
+  (* note: commented out in original spec *)
+  (* | ID_NAMED        { $$ = "named"; } *)
+  ;
+
+constructor:
+  | conid
+  ;
+
+
+conid:
+  | CONID  { $$ = $1; }
+  ;
 
 (* TODO: decide whether operators should be special cases, or done like funcitons *)
-op          : OP
-            | ">"       { $$ = ">";  }
-            | "<"       { $$ = "<";  }
-            | "|"       { $$ = "|";  }
-            (* | ASSIGN    { $$ = ":="; } *)
-            ;
+op:
+  | OP
+  | ">"       { $$ = ">";  }
+  | "<"       { $$ = "<";  }
+  | "|"       { $$ = "|";  }
+  (* | ASSIGN    { $$ = ":="; } *)
+  ;
 
 
 (* ---------------------------------------------------------
@@ -520,195 +589,232 @@ op          : OP
 ----------------------------------------------------------*)
 (* TODO: pattern matching removed for now *)
 
-matchrules  : list(matchrule semi+)
-            ;
+matchrules:
+  | list(matchrule semi+)
+  ;
 
-matchrule   : patterns1 "|" expr RARROW blockexpr
-            | patterns1 RARROW blockexpr
-            ;
+matchrule:
+  | patterns1 "|" expr RARROW blockexpr
+  | patterns1 RARROW blockexpr
+  ;
 
-patterns1   : separated_nonempy_list(",", pattern)
-            ;
+patterns1:
+  | separated_nonempy_list(",", pattern)
+  ;
 
-apatterns   : separated_list(",", apattern)
-            ;
+apatterns:
+  | separated_list(",", apattern)
+  ;
 
-apattern    : pattern annot                    (* annotated pattern *)
-            ;
+apattern:
+  | pattern annot                    (* annotated pattern *)
+  ;
 
-pattern     : identifier
-            (* | identifier AS pattern              (\* named pattern *\) *)
-            (* | conid *)
-            (* | conid "(" patargs ")" *)
-            (* | "(" apatterns ")"                  (\* unit, parenthesized, and tuple pattern *\) *)
-            (* | "[" apatterns "]"                  (\* list pattern *\) *)
-            (* | literal *)
-            | WILDCARD
-            ;
+pattern:
+  | identifier
+  (* | identifier AS pattern              (\* named pattern *\) *)
+  (* | conid *)
+  (* | conid "(" patargs ")" *)
+  (* | "(" apatterns ")"                  (\* unit, parenthesized, and tuple pattern *\) *)
+  (* | "[" apatterns "]"                  (\* list pattern *\) *)
+  (* | literal *)
+  | WILDCARD
+  ;
 
-(* patargs     : patargs1 *)
-(*             | (\* empty *\) *)
-(*             ; *)
+(* patargs:
+  | patargs1 *)
+(*  | (\* empty *\) *)
+(*  ; *)
 
-(* patargs1    : patargs "," patarg *)
-(*             | patarg *)
-(*             ; *)
+(* patargs1:
+  | patargs "," patarg *)
+(*  | patarg *)
+(*  ; *)
 
-(* patarg      : identifier '=' apattern            (\* named argument *\) *)
-(*             | apattern *)
-(*             ; *)
+(* patarg:
+  | identifier '=' apattern            (\* named argument *\) *)
+(*  | apattern *)
+(*  ; *)
 
 
 (* ---------------------------------------------------------
 -- Handlers
 ----------------------------------------------------------*)
-handlerexpr : HANDLER witheff opclauses
-            | HANDLE witheff ntlexpr opclauses
-            ;
+handlerexpr:
+  | HANDLER witheff opclauses
+  | HANDLE witheff ntlexpr opclauses
+  ;
 
 (* TODO: what does an annotation on a handler mean? *)
-witheff     : "<" anntype ">"
-            | (* empty *)
-            ;
+witheff:
+  | "<" anntype ">"
+  | (* empty *)
+  ;
 
-withstat    : WITH basicexpr
-            | WITH witheff opclauses    (* shorthand for handler *)
-            | WITH binder LARROW basicexpr
-            (* TODO: support the old syntax? *)
-            (* deprecated: *)
-            | WITH binder '=' basicexpr
-            ;
+withstat:
+  | WITH basicexpr
+  | WITH witheff opclauses    (* shorthand for handler *)
+  | WITH binder LARROW basicexpr
+  (* TODO: support the old syntax? *)
+  (* deprecated: *)
+  | WITH binder '=' basicexpr
+  ;
 
-(* withexpr    : withstat IN blockexpr *)
-(*             (\* note: already commented out in spec *\) *)
-(*             (\* | withstat *\) *)
-(*             ; *)
+(* withexpr:
+  | withstat IN blockexpr *)
+(*  (\* note: already commented out in spec *\) *)
+(*  (\* | withstat *\) *)
+(*  ; *)
 
-opclauses   : opclause
-            | "{" semi* list(opclausex semi+) "}"
-            ;
+opclauses:
+  | opclause
+  | "{" semi* list(opclausex semi+) "}"
+  ;
 
 opclausex   :
-            (* | ID_FINALLY bodyexpr *)
-            (* | ID_INITIALLY bodyexpr *)
-            | opclause
-            ;
+  (* | ID_FINALLY bodyexpr *)
+  (* | ID_INITIALLY bodyexpr *)
+  | opclause
+  ;
 
-opclause    : VAL identifier '=' blockexpr
-            | VAL identifier ":" type_ '=' blockexpr
-            | FUN identifier opparams bodyexpr
-            | EXCEPT identifier opparams bodyexpr
-            | CONTROL identifier opparams bodyexpr
-            (* | RCONTROL identifier opparams bodyexpr *)
-            | RETURN "(" opparam ")" bodyexpr
-            (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
-            ;
+opclause:
+  | VAL identifier '=' blockexpr
+  | VAL identifier ":" type_ '=' blockexpr
+  | FUN identifier opparams bodyexpr
+  | EXCEPT identifier opparams bodyexpr
+  | CONTROL identifier opparams bodyexpr
+  (* | RCONTROL identifier opparams bodyexpr *)
+  | RETURN "(" opparam ")" bodyexpr
+  (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
+  ;
 
-opparams    : "(" separated_list(",", opparam) ")"
-            ;
+opparams:
+  | "(" separated_list(",", opparam) ")"
+  ;
 
-opparam     : paramid
-            | paramid ":" type_
-            ;
+opparam:
+  | paramid
+  | paramid ":" type_
+  ;
 
 
 (* ---------------------------------------------------------
 -- Types
 ----------------------------------------------------------*)
-tbinders    : separated_list(",", tbinder)
-            ;
+tbinders:
+  | separated_list(",", tbinder)
+  ;
 
-tbinder     : varid kannot
-            ;
+tbinder:
+  | varid kannot
+  ;
 
 
 (* full type *)
-typescheme  : someforalls tarrow         (* used for type annotations *)
-            ;
+typescheme:
+  | someforalls tarrow         (* used for type annotations *)
+  ;
 
 type_       : FORALL typeparams1 tarrow
-            | tarrow
-            ;
+  | tarrow
+  ;
 
 someforalls :
-            | FORALL typeparams1
-            | (* empty *)
-            ;
+  | FORALL typeparams1
+  | (* empty *)
+  ;
 
-typeparams  : typeparams1
-            | (* empty *)
-            ;
+typeparams:
+  | typeparams1
+  | (* empty *)
+  ;
 
-typeparams1 : "<" tbinders ">"
-            ;
+typeparams1:
+  | "<" tbinders ">"
+  ;
 
 (* mono types *)
-tarrow      : tatomic RARROW tresult
-            | tatomic
-            ;
+tarrow:
+  | tatomic RARROW tresult
+  | tatomic
+  ;
 
-tresult     : tatomic tbasic                 (* effect and result type *)
-            | tatomic                        (* just a result type (with a default total effect) *)
-            ;
+tresult:
+  | tatomic tbasic                 (* effect and result type *)
+  | tatomic                        (* just a result type (with a default total effect) *)
+  ;
 
-tatomic     : tbasic
-            | "<" targuments1 "|" tatomic ">" (* extensible effect type *)
-            | "<" targuments ">"             (* fixed effect type *)
-            ;
+tatomic:
+  | tbasic
+  | "<" targuments1 "|" tatomic ">" (* extensible effect type *)
+  | "<" targuments ">"             (* fixed effect type *)
+  ;
 
-tbasic      : typeapp
-            | "(" tparams ")"                (* unit, parenthesis, tuple, named parameters *)
-            (* TODO: [] as the list type doesn't seem to actually be supported *)
-            (* | "[" anntype "]"                (\* list type *\) *)
-            ;
+tbasic:
+  | typeapp
+  | "(" tparams ")"                (* unit, parenthesis, tuple, named parameters *)
+  (* TODO: [] as the list type doesn't seem to actually be supported *)
+  (* | "[" anntype "]"                (\* list type *\) *)
+  ;
 
-typeapp     : typecon
-            | typecon "<" targuments ">"
-            ;
+typeapp:
+  | typecon
+  | typecon "<" targuments ">"
+  ;
 
-typecon     : varid | qvarid                 (* type name *)
-            | WILDCARD                       (* wildcard type variable *)
-            (* TODO: I think the (,,,)<a,b,c> form isn't needed *)
-            (* | "(" commas1 ")"                (\* tuple constructor *\) *)
-            (* | "[" "]"                        (\* list constructor *\) *)
-            | "(" RARROW ")"                 (* function constructor *)
-            ;
-
-
-tparams     : separated_list(",", tparam)
-            ;
-
-tparam      : identifier ":" anntype              (* named parameter *)
-            | anntype
-            ;
+typecon:
+  | varid | qvarid                 (* type name *)
+  | WILDCARD                       (* wildcard type variable *)
+  (* TODO: I think the (,,,)<a,b,c> form isn't needed *)
+  (* | "(" commas1 ")"                (\* tuple constructor *\) *)
+  (* | "[" "]"                        (\* list constructor *\) *)
+  | "(" RARROW ")"                 (* function constructor *)
+  ;
 
 
-targuments  : targuments1
-            | (* empty *)
-            ;
+tparams:
+  | separated_list(",", tparam)
+  ;
 
-targuments1 : separated_nonempy_list(",", anntype)
-            ;
+tparam:
+  | identifier ":" anntype              (* named parameter *)
+  | anntype
+  ;
 
-anntype     : type_ kannot
-            ;
+
+targuments:
+  | targuments1
+  | (* empty *)
+  ;
+
+targuments1:
+  | separated_nonempy_list(",", anntype)
+  ;
+
+anntype:
+  | type_ kannot
+  ;
 
 
 (* ---------------------------------------------------------
 -- Kinds
 ----------------------------------------------------------*)
-kannot      : "::" kind
-            | (* empty *)
-            ;
+kannot:
+  | "::" kind
+  | (* empty *)
+  ;
 
-kind        : "(" kinds1 ")" RARROW katom
-            | katom RARROW kind
-            | katom
-            ;
+kind:
+  | "(" kinds1 ")" RARROW katom
+  | katom RARROW kind
+  | katom
+  ;
 
-kinds1      : separated_nonempty_list(",", kind)
+kinds1:
+  | separated_nonempty_list(",", kind)
 
-katom       : conid
-            ;
+katom:
+  | conid
+  ;
 
 %%
