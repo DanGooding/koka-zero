@@ -13,17 +13,18 @@ open Parser
 
 exception SyntaxError of string
 
-(** Update the lexbuf's position information,
+(** Update the [lexbuf]'s position information,
     incrementing the line number *)
-let next_line (lexbuf : Lexing.lexbuf) : () =
-  let pos = lexbuf.lex_curr_p in
-  let pos =
-    { pos with
-      pos_bol = pos.pos_cnum
-      pos_lnum = pos.pos_lnum + 1
-    }
-  in
-  lexbuf.lex_curr_p <- pos
+let next_line : Lexing.lexbuf -> unit =
+  fun lexbuf ->
+    let pos = lexbuf.lex_curr_p in
+    let pos =
+      { pos with
+        pos_bol = pos.pos_cnum
+        pos_lnum = pos.pos_lnum + 1
+      }
+    in
+    lexbuf.lex_curr_p <- pos
 ;;
 
 let bad_dash = Str.regexp "[^A-Za-z0-9]-[^A-Za-z]"
@@ -47,6 +48,14 @@ let lex_identifier lexbuf : string =
 
 (* Character classes *)
 
+let upper = ['A'-'Z']
+let lower = ['a'-'z']
+let letter = lower | upper
+let digit = ['0'-'9']
+let hex = ['0'-'9' 'a'-'f' 'A'-'F']
+let space = [' ' '\t']
+let newline = '\r'? '\n'
+
 let sign = '-'?
 let angle = ['<' '>']
 let angle_bar = ['<' '>' '|']
@@ -62,27 +71,12 @@ let operator =
   '/' |
   "||" |
   symbol_except_angle_bar symbol* |
-  angle_bar symbol_except_angle_bar symbol* |
+  angle_bar symbol_except_angle_bar symbol*
 
-let con_id = upper id_char* final*
-let id = lower id_char* final*
-let id_char = letter | digit | ['_' '-']
-
-let hex_esc = 'x' hex hex | 'u' hex hex hex hex | 'U' hex hex hex hex hex hex
-let char_esc = ['n' 'r' 't' '\\' '\"' '\'']
-
-(* TODO: what are these for? *)
-let line_char = graphic_line | utf8
-let block_char = graphic_block | utf8
-
-let letter = lower | upper
-let upper = ['A'-'Z']
-let lower = ['a'-'z']
-let digit = ['0'-'9']
-let hex = ['0'-'9' 'a'-'f' 'A'-'F']
-let space = [' ' '\t']
-let newline = '\r'? '\n'
 let final = '\''
+let id_char = letter | digit | ['_' '-']
+let id = lower id_char* final*
+let con_id = upper id_char* final*
 
 rule read =
   parse
@@ -185,7 +179,7 @@ rule read =
 
   (* comments *)
   | "//" { read_single_line_comment lexbuf }
-  | "/*" { read_multi_line_comment lexbuf }
+  | "/*" { read_multi_line_comment 1 lexbuf }
 
   (* Numbers *)
   | sign '0' ['x' 'X'] hex+ { int_of_string (Lexing.lexeme lexbuf) }
@@ -212,18 +206,22 @@ and read_single_line_comment =
   (* TODO: match as much as possible for effciency? *)
   | _ { read_single_line_comment lexbuf }
 
-and read_multi_line_comment ?(depth = 1) =
+(** Read a comment delimited by /* */.
+
+    A [depth] of 0 means 'not in a comment' so the first call of
+    this function should be [read_multi_line_comment 1 lexbuf] *)
+and read_multi_line_comment depth =
   parse
-  | "(*" { read_multi_line_comment ~depth:(depth + 1) lexbuf }
-  | "*)" { if depth > 1
-             then read_multi_line_comment ~depth:(depth - 1) lexbuf
+  | "/*" { read_multi_line_comment (depth + 1) lexbuf }
+  | "*/" { if depth > 1
+             then read_multi_line_comment (depth - 1) lexbuf
              else read lexbuf
          }
-  | newline { next_line lexbuf; read_multi_line_comment ~depth lexbuf }
+  | newline { next_line lexbuf; read_multi_line_comment depth lexbuf }
+  (* allow end of file to terminate a comment *)
   | eof { EOF }
   (* TODO: match as much as possible for effciency? *)
   | _ { read_multi_line_comment ~depth lexbuf }
-
 
 
 
