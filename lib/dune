@@ -2,3 +2,12 @@
  (name my_koka)
  (public_name my-koka)
  (libraries))
+
+(ocamllex
+ (modules lexer)
+)
+
+(menhir
+  (modules parser)
+  (flags --explain --dump)
+)

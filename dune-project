@@ -25,3 +25,4 @@
   dune
   (alcotest :with-test)
   (odoc :with-doc)))
+(using menhir 2.0)
