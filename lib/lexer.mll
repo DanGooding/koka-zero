@@ -10,7 +10,6 @@
 
 
 {
-open Lexing
 open Parser
 
 (* TODO: [next_line] function? *)
@@ -36,11 +35,22 @@ let lex_identifier lexbuf =
 
 (* Character classes *)
 
-let symbols = symbol+ | '/'
-let symbol = ['$' '%' '&' '*' '+' '@' '!' '\\' '^' '~' '=' '.' '-' ':' '?' '|' '<' '>']
-let angle_bar = ['<' '>' '|']
-let angle = ['<' '>']
 let sign = '-'?
+let angle = ['<' '>']
+let angle_bar = ['<' '>' '|']
+
+let symbol_except_angle_bar =
+  ['$' '%' '&' '*' '+' '@' '!' '\\' '^' '~' '=' '.' '-' ':' '?']
+let symbol = symbol_except_angle_bar | angle_bar
+
+(* In types, we can have sequences like "<<exn>|<div|e>>" where
+   "<<", ">|<", and ">>" should not be parsed as operator tokens,
+   but rather as single characters *)
+let operator =
+  '/' |
+  "||" |
+  symbol_except_angle_bar symbol* |
+  angle_bar symbol_except_angle_bar symbol* |
 
 let con_id = upper id_char* final*
 let id = lower id_char* final*
@@ -157,32 +167,24 @@ rule read =
   | ']' { CLOSE_SQUARE }
   | ';' { SEMI }
   | ',' { COMMA }
+  | '<' { LESS_THAN }
+  | '>' { GREATER_THAN }
+  | '|' { PIPE }
 
   (* comments *)
   | "//" { read_single_line_comment lexbuf }
   | "/*" { read_multi_line_comment lexbuf }
-
-(* Type operators: these are all illegal operators and should be
-   parsed as single characters. For example, in types, we can have
-   sequences like "<<exn>|<div|e>>" where "<<", ">|<", and ">>"
-   should not be parsed as operator tokens. *)
-
-  (* TODO: not actually possible... perhaps just fix supported operators *)
-  (* apart from the special case ||, adjacent <|> should always
-     form separate tokens *)
-  | "||" { OP "||" }
-  | angle_bar angle_bar+ { (* TODO: lex the first angle_bar as an OP token *) }
 
   (* Numbers *)
   | sign '0' ['x' 'X'] hex+ { int_of_string (Lexing.lexeme lexbuf) }
   | sign digit+             { int_of_string (Lexing.lexeme lexbuf) }
 
   (* Identifiers and operators *)
-  | con_id          { CONID (lex_identifier lexbuf) }
-  | id              { ID (lex_identifier lexbuf) }
-  | '(' symbols ')' { IDOP (Lexing.lexeme lexbuf) }
-  | symbol          { OP (Lexing.lexeme lexbuf) }
-  | '_' id_char*    { WILDCARD (lex_identifier lexbuf) }
+  | con_id           { CONID (lex_identifier lexbuf) }
+  | id               { ID (lex_identifier lexbuf) }
+  | '(' operator ')' { IDOP (Lexing.lexeme lexbuf) }
+  | operator         { OP (Lexing.lexeme lexbuf) }
+  | '_' id_char*     { WILDCARD (lex_identifier lexbuf) }
 
   | space+ { read lexbuf }
   | newline { next_line lexbuf; read_lexbuf }
