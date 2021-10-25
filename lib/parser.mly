@@ -190,14 +190,6 @@ typedecl    :
 (*  | varid               { $$ = $1; } *)
 (*  ; *)
 
-commas:
-  | ","*
-  ;
-
-commas1:
-  | ","+
-  ;
-
 
 (* constructors: constructors1 semi+ *)
 (*  | (\* empty *\) *)
@@ -323,21 +315,26 @@ decl:
 ----------------------------------------------------------*)
 bodyexpr:
   | blockexpr
-  (* | RARROW blockexpr  (\* deprecated *\) *)
   ;
 
 blockexpr:
-  | expr              (* a `block` is not interpreted as an anonymous function but as statement grouping *)
+  (* a `block` is not interpreted as an anonymous function but as statement
+     grouping *)
+  | block
+  | expr_except_block
   ;
 
-expr        :
+expr_except_block:
   (* | withexpr *)
-  (* TODO: grammar needs changes to make blockexpr handle block specially *)
-  | block             (* interpreted as an anonymous function (except if coming from `blockexpr`) *)
   | returnexpr
   | valexpr
   | basicexpr
   ;
+
+expr:
+  (* `block` interpreted as an anonymous function *)
+  | block
+  | expr_except_block
 
 basicexpr:
   | ifexpr
@@ -594,8 +591,8 @@ matchrules:
   ;
 
 matchrule:
-  | patterns1 "|" expr RARROW blockexpr
-  | patterns1 RARROW blockexpr
+  | patterns1 "|" expr "->" blockexpr
+  | patterns1 "->" blockexpr
   ;
 
 patterns1:
@@ -655,7 +652,6 @@ withstat:
   | WITH basicexpr
   | WITH witheff opclauses    (* shorthand for handler *)
   | WITH binder LARROW basicexpr
-  (* TODO: support the old syntax? *)
   (* deprecated: *)
   | WITH binder '=' basicexpr
   ;
@@ -715,7 +711,8 @@ typescheme:
   | someforalls tarrow         (* used for type annotations *)
   ;
 
-type_       : FORALL typeparams1 tarrow
+type_:
+  | FORALL typeparams1 tarrow
   | tarrow
   ;
 
@@ -735,7 +732,7 @@ typeparams1:
 
 (* mono types *)
 tarrow:
-  | tatomic RARROW tresult
+  | tatomic "->" tresult
   | tatomic
   ;
 
@@ -768,7 +765,7 @@ typecon:
   (* TODO: I think the (,,,)<a,b,c> form isn't needed *)
   (* | "(" commas1 ")"                (\* tuple constructor *\) *)
   (* | "[" "]"                        (\* list constructor *\) *)
-  | "(" RARROW ")"                 (* function constructor *)
+  | "(" "->" ")"                 (* function constructor *)
   ;
 
 
@@ -805,8 +802,8 @@ kannot:
   ;
 
 kind:
-  | "(" kinds1 ")" RARROW katom
-  | katom RARROW kind
+  | "(" kinds1 ")" "->" katom
+  | katom "->" kind
   | katom
   ;
 
