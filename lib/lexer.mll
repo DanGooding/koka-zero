@@ -15,6 +15,23 @@ open Parser
 
 (* TODO: [next_line] function? *)
 
+
+let bad_dash = Str.regexp "[^A-Za-z0-9]-[^A-Za-z]"
+
+(** An identifier is well formed if dashes are unambiguously not
+    subtraction signs. *)
+let well_formed identifier =
+  not (Str.string_match bad_dash identifier 0)
+
+(* TODO: which exception + add to docstring *)
+(** Return the matched identifier from the lexer, rasing an exception
+    if it is not well formed *)
+let lex_identifier lexbuf =
+  let identifier = Lexing.lexeme lexbuf in
+    if not (well_formed identifier)
+    then raise ?
+    else identifier
+
 }
 
 (* Character classes *)
@@ -44,7 +61,6 @@ let hex = ['0'-'9' 'a'-'f' 'A'-'F']
 let space = [' ' '\t']
 let newline = '\r'? '\n'
 let final = '\''
-
 
 rule read =
   parse
@@ -146,11 +162,39 @@ rule read =
   | "//" { read_single_line_comment lexbuf }
   | "/*" { read_multi_line_comment lexbuf }
 
+(* Type operators: these are all illegal operators and should be
+   parsed as single characters. For example, in types, we can have
+   sequences like "<<exn>|<div|e>>" where "<<", ">|<", and ">>"
+   should not be parsed as operator tokens. *)
+
+  (* TODO: not actually possible... perhaps just fix supported operators *)
+  (* apart from the special case ||, adjacent <|> should always
+     form separate tokens *)
+  | "||" { OP "||" }
+  | angle_bar angle_bar+ { (* TODO: lex the first angle_bar as an OP token *) }
+
+  (* Numbers *)
+  | sign '0' ['x' 'X'] hex+ { int_of_string (Lexing.lexeme lexbuf) }
+  | sign digit+             { int_of_string (Lexing.lexeme lexbuf) }
+
+  (* Identifiers and operators *)
+  | con_id          { CONID (lex_identifier lexbuf) }
+  | id              { ID (lex_identifier lexbuf) }
+  | '(' symbols ')' { IDOP (Lexing.lexeme lexbuf) }
+  | symbol          { OP (Lexing.lexeme lexbuf) }
+  | '_' id_char*    { WILDCARD (lex_identifier lexbuf) }
+
+  | space+ { read lexbuf }
+  | newline { next_line lexbuf; read_lexbuf }
+
+  | eof { EOF }
+  | _ { raise SyntaxError ("Unexpected character: " ^ Lexing.lexeme lexbuf) }
 
 and read_single_line_comment =
   parse
   (* TODO: ensure newlines handled the same in all modes *)
   | newline { next_line lexbuf; read lexbuf }
+  (* TODO: match as much as possible for effciency? *)
   | _ { read_single_line_comment lexbuf }
 
 and read_multi_line_comment ?(depth = 1) =
@@ -162,6 +206,7 @@ and read_multi_line_comment ?(depth = 1) =
          }
   | newline { next_line lexbuf; read_multi_line_comment ~depth lexbuf }
   (* TODO: compare this and [read_single_line_comment] with spec implementations *)
+  (* TODO: match as much as possible for effciency? *)
   | _ { read_multi_line_comment ~depth lexbuf }
   (* TODO: EOF token (don't spin forever) *)
 
