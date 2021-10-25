@@ -8,12 +8,23 @@
    terms of the Apache License, Version 2.0.
 *)
 
-
 {
 open Parser
 
-(* TODO: [next_line] function? *)
+exception SyntaxError of string
 
+(** Update the lexbuf's position information,
+    incrementing the line number *)
+let next_line (lexbuf : Lexing.lexbuf) : () =
+  let pos = lexbuf.lex_curr_p in
+  let pos =
+    { pos with
+      pos_bol = pos.pos_cnum
+      pos_lnum = pos.pos_lnum + 1
+    }
+  in
+  lexbuf.lex_curr_p <- pos
+;;
 
 let bad_dash = Str.regexp "[^A-Za-z0-9]-[^A-Za-z]"
 
@@ -22,14 +33,15 @@ let bad_dash = Str.regexp "[^A-Za-z0-9]-[^A-Za-z]"
 let well_formed identifier =
   not (Str.string_match bad_dash identifier 0)
 
-(* TODO: which exception + add to docstring *)
-(** Return the matched identifier from the lexer, rasing an exception
-    if it is not well formed *)
-let lex_identifier lexbuf =
+(** Return the matched identifier from the lexbuf,
+    raising SyntaxError if it is not well formed *)
+let lex_identifier lexbuf : string =
   let identifier = Lexing.lexeme lexbuf in
     if not (well_formed identifier)
-    then raise ?
+    then raise SyntaxError (
+        "malformed identifier: a dash must be preceded and followed by a letter")
     else identifier
+;;
 
 }
 
@@ -196,6 +208,7 @@ and read_single_line_comment =
   parse
   (* TODO: ensure newlines handled the same in all modes *)
   | newline { next_line lexbuf; read lexbuf }
+  | eof { EOF }
   (* TODO: match as much as possible for effciency? *)
   | _ { read_single_line_comment lexbuf }
 
@@ -207,10 +220,9 @@ and read_multi_line_comment ?(depth = 1) =
              else read lexbuf
          }
   | newline { next_line lexbuf; read_multi_line_comment ~depth lexbuf }
-  (* TODO: compare this and [read_single_line_comment] with spec implementations *)
+  | eof { EOF }
   (* TODO: match as much as possible for effciency? *)
   | _ { read_multi_line_comment ~depth lexbuf }
-  (* TODO: EOF token (don't spin forever) *)
 
 
 
