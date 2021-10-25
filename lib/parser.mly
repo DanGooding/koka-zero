@@ -80,8 +80,8 @@
 *)
 
 (* resolve s/r conflict by shifting on ELSE so the ELSE binds to the closest IF.*)
-%precedence THEN
-%precedence ELSE ELIF
+%nonassoc THEN
+%nonassoc ELSE ELIF
 
 (* TODO: should I support this syntax - it makes parsing etc. harder *)
 (* resolve s/r conflict to have a `FN funparams -> expr` span as far as possible,
@@ -89,13 +89,13 @@
    and  `fn(x) -> x.foo` is `(fn(x) -> x.foo)` and not `(fn(x) -> x).foo`
    note: we could avoid these rules by disallowing the `->` form in trailing lambdas.
 *)
-%precedence RARROW                     (* -> *)
-%precedence "(" "[" FN "{" "."         (* applications *)
-%precedence OP ASSIGN ">" "<" "|"      (* operators *)
+%nonassoc RARROW                     (* -> *)
+%nonassoc "(" "[" FN "{" "."         (* applications *)
+%nonassoc OP ASSIGN ">" "<" "|"      (* operators *)
 
-(* %precedence '?' *)
+(* %prec "?" *)
 
-%start <Syntax.program>
+%start <Syntax.program> program
 %%
 
 (* ---------------------------------------------------------
