@@ -8,7 +8,7 @@
    terms of the Apache License, Version 2.0.
 *)
 
-(* TODO: why are brackets of type Id? what about keywords? (maybe a C thing) *)
+(* TODO: wildcard doesn't need id *)
 %token <Id>     ID CONID OP IDOP WILDCARD
 
 %token <int>    INT
@@ -291,8 +291,7 @@ block:
 (* TODO: error recovery? {statement | error} *)
 statements1:
   | separated_list(semi+, statement) semi+
-
-                    ;
+  ;
 
 statement:
   | decl
@@ -304,7 +303,8 @@ statement:
 
 decl:
   | FUN fundecl
-  | VAL apattern '=' blockexpr    (* local value declaration can use a pattern binding *)
+  (* local value declaration can use a pattern binding *)
+  | VAL apattern '=' blockexpr
   (* TODO: keep := in ? *)
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
   ;
@@ -391,11 +391,15 @@ prefixexpr:
   ;
 
 appexpr:
-  | appexpr "(" arguments ")"             (* application *)
+  (* application *)
+  | appexpr "(" arguments ")"
   (* | appexpr "[" arguments "]"             (\* index expression *\) *)
-  | appexpr "." atom                      (* dot application *)
-  | appexpr block                         (* trailing function application *)
-  | appexpr fnexpr                        (* trailing function application *)
+  (* dot application *)
+  | appexpr "." atom
+  (* trailing function application *)
+  | appexpr block
+  (* trailing function application *)
+  | appexpr fnexpr
   | atom
   ;
 
@@ -416,9 +420,11 @@ ntlprefixexpr: '!' ntlprefixexpr
   ;
 
 ntlappexpr:
-  | ntlappexpr "(" arguments ")"             (* application *)
+  (* application *)
+  | ntlappexpr "(" arguments ")"
   (* | ntlappexpr "[" arguments "]"             (\* index expression *\) *)
-  | ntlappexpr "." atom                      (* dot application *)
+  (* dot application *)
+  | ntlappexpr "." atom
   | atom
   ;
 
@@ -429,8 +435,10 @@ atom:
   | constructor
   | literal
   | mask
-  | "(" aexprs ")"             (* unit, parenthesized (possibly annotated) expression, tuple expression *)
-  | "[" cexprs "]"             (* list expression (elements may be terminated with comma instead of separated) *)
+  (* unit, parenthesized (possibly annotated) expression, tuple expression *)
+  | "(" aexprs ")"
+  (* list expression (elements may be terminated with comma instead of separated) *)
+  | "[" cexprs "]"
   ;
 
 literal:
@@ -604,7 +612,8 @@ apatterns:
   ;
 
 apattern:
-  | pattern annot                    (* annotated pattern *)
+  (* annotated pattern *)
+  | pattern annot
   ;
 
 pattern:
@@ -650,7 +659,8 @@ witheff:
 
 withstat:
   | WITH basicexpr
-  | WITH witheff opclauses    (* shorthand for handler *)
+  (* shorthand for handler *)
+  | WITH witheff opclauses
   | WITH binder LARROW basicexpr
   (* deprecated: *)
   | WITH binder '=' basicexpr
@@ -737,19 +747,24 @@ tarrow:
   ;
 
 tresult:
-  | tatomic tbasic                 (* effect and result type *)
-  | tatomic                        (* just a result type (with a default total effect) *)
+  (* effect and result type *)
+  | tatomic tbasic
+  (* just a result type (with a default total effect) *)
+  | tatomic
   ;
 
 tatomic:
   | tbasic
-  | "<" targuments1 "|" tatomic ">" (* extensible effect type *)
-  | "<" targuments ">"             (* fixed effect type *)
+  (* extensible effect type *)
+  | "<" targuments1 "|" tatomic ">"
+  (* fixed effect type *)
+  | "<" targuments ">"
   ;
 
 tbasic:
   | typeapp
-  | "(" tparams ")"                (* unit, parenthesis, tuple, named parameters *)
+  (* unit, parenthesis, tuple, named parameters *)
+  | "(" tparams ")"
   (* TODO: [] as the list type doesn't seem to actually be supported *)
   (* | "[" anntype "]"                (\* list type *\) *)
   ;
@@ -760,12 +775,15 @@ typeapp:
   ;
 
 typecon:
-  | varid | qvarid                 (* type name *)
-  | WILDCARD                       (* wildcard type variable *)
+  (* type name *)
+  | varid | qvarid
+  (* wildcard type variable *)
+  | WILDCARD
   (* TODO: I think the (,,,)<a,b,c> form isn't needed *)
   (* | "(" commas1 ")"                (\* tuple constructor *\) *)
   (* | "[" "]"                        (\* list constructor *\) *)
-  | "(" "->" ")"                 (* function constructor *)
+  (* function constructor *)
+  | "(" "->" ")"
   ;
 
 
@@ -774,7 +792,8 @@ tparams:
   ;
 
 tparam:
-  | identifier ":" anntype              (* named parameter *)
+  (* named parameter *)
+  | identifier ":" anntype
   | anntype
   ;
 
