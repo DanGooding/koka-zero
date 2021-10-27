@@ -96,6 +96,15 @@
 (* %prec "?" *)
 
 %start <Syntax.program> program
+
+%type <Syntax.toplevel_declaration> topdecl
+%type <Syntax.pure_declaration> puredecl
+%type <Syntax.type_declaration> typedecl
+%type <Syntax.effect_declaration> effectdecl
+%type <Syntax.operation_declaration> operation
+
+%type <Syntax.statement> statement
+
 %%
 
 (* ---------------------------------------------------------
@@ -103,7 +112,7 @@
 ----------------------------------------------------------*)
 
 program:
-  | semi* declarations
+  | semi* ds = declarations { ds }
   ;
 
 semi:
@@ -138,15 +147,15 @@ declarations:
 
 
 topdecls:
-  | list(topdecl semi+)
+  | list(t = topdecl semi+ { t })
   ;
 (* TODO: error recovery? [(topdecl | error) semi+] *)
 
 topdecl:
-  | puredecl                             { printDecl("value",$2); }
+  | p = puredecl { Pure_declaration p }
   (* TODO: keep aliases? *)
   (* | aliasdecl                            { printDecl("alias",$2); } *)
-  | typedecl                             { printDecl("type",$2); }
+  | t = typedecl { Type_delcaration t }
   ;
 
 
@@ -159,11 +168,27 @@ topdecl:
   | ALIAS typeid typeparams kannot '=' type_     { $$ = $2; } *)
 (*  ; *)
 
-typedecl    :
+typedecl:
   (* | typemod TYPE typeid typeparams kannot typebody      { $$ = $3; } *)
   (* | structmod STRUCT typeid typeparams kannot conparams { $$ = $3; } *)
-  | EFFECT varid typeparams kannot opdecls          { $$ = $3; }
-  | EFFECT typeparams kannot operation              { $$ = "<operation>"; }
+  | e = effectdecl { Effect_declaration e }
+  ;
+
+effectdecl:
+  | EFFECT;
+    id = varid;
+    type_parameters = typeparams;
+    kind_annotation = kannot;
+    operations = opdecls
+    { { id; type_parameters; kind_annotation; operations } }
+  | EFFECT;
+    type_parameters = typeparams;
+    kind_annotation = kannot;
+    operation = operation
+    { let id = operation.id in
+      let operations = [operation] in
+      { id; type_parameters; kind_annotation; operations }
+    }
   ;
 
 (* typemod:
@@ -227,17 +252,31 @@ typedecl    :
 
 
 opdecls:
-  | "{" semi* operations "}"
+  | "{"; semi*; operations = operations; "}"
+    { operations }
   ;
 
 operations:
-  | separated_list(semi+, operation) semi+
+  | operations = separated_list(semi+, operation) semi+
+    { operations }
 
 operation:
-  | VAL identifier typeparams ":" tatomic
-  | FUN identifier typeparams "(" parameters ")" ":" tatomic
-  | EXCEPT identifier typeparams "(" parameters ")" ":" tatomic
-  | CONTROL identifier typeparams "(" parameters ")" ":" tatomic
+  | VAL; id = varid; type_parameters = typeparams; ":"; result_type = tatomic
+    { let shape = Val result_type in
+      { id; type_parameters; shape } }
+  | FUN;
+    id = varid; type_parameters = typeparams;
+    "("; parameters = parameters; ")"; ":"; result_type = tatomic
+    { let shape = Fun(parameters, result_type) in
+      { id; type_parameters; shape } }
+  | EXCEPT; id = varid; type_parameters = typeparams;
+    "("; parameters = parameters; ")"; ":"; result_type = tatomic
+    { let shape = Except(parameters, result_type) in
+      { id; type_parameters; shape } }
+  | CONTROL; id = varid; type_parameters = typeparams;
+    "("; parameters = parameters; ")"; ":"; result_type = tatomic
+    { let shape = Control(parameters, result_type) in
+      { id; type_parameters; shape } }
   ;
 
 
@@ -290,13 +329,17 @@ block:
 
 (* TODO: error recovery? {statement | error} *)
 statements1:
-  | separated_list(semi+, statement) semi+
+  | statements = separated_list(semi+, statement); semi+
+    { statements }
   ;
 
 statement:
-  | decl
-  | withstat
-  | withstat IN blockexpr
+  (* XXX working here *)
+  (* TODO: don't _need_ the wraper type - decl could produce a [statement] *)
+  | d = decl { Declaration d }
+  | w = withstat { With w }
+  | w = withstat; IN; b = blockexpr
+    { With_in(w, b) }
   | returnexpr
   | basicexpr
   ;
@@ -686,10 +729,10 @@ opclausex   :
 opclause:
   | VAL identifier '=' blockexpr
   | VAL identifier ":" type_ '=' blockexpr
-  | FUN identifier opparams bodyexpr
-  | EXCEPT identifier opparams bodyexpr
-  | CONTROL identifier opparams bodyexpr
-  (* | RCONTROL identifier opparams bodyexpr *)
+  | FUN varid opparams bodyexpr
+  | EXCEPT varid opparams bodyexpr
+  | CONTROL varid opparams bodyexpr
+  (* | RCONTROL varid opparams bodyexpr *)
   | RETURN "(" opparam ")" bodyexpr
   (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
   ;

@@ -9,36 +9,68 @@
    badly typed terms)*)
 
 type type_parameter =
-  (* production is varid, but this is a type_id really *)
   (* kind annotation is always optional *)
   (varid * kind option)
 
 type type_result = 
 type monotype =
   | Arrow of monotype * ()
-  | 
+  |
+;;
+
+(* TODO: just haave builtin kinds V, E ? *)
+type kind =
+  (* TODO: grammar seems to allow curried & uncurried forms - equivalent? *)
+  | Arrow_uncurried of kind nonempty_list * conid
+  | Arrow_curried of conid * kind
+  | Atom of conid (* TODO: alias conid -> katom? *)
 
 type type_scheme =
   { forall_quantified : type_parameter list
   ; body : monotype
   }
 
-(* TODO: namespace by effect (to distinguish from operator) *)
-type operation =
-  (* TODO: name fields *)
-  (* TODO: factor out duplication *)
-  | Val of identifier * type_parameter list * tatomic
-  | Fun of identifier * type_parameter list * parameters * tatomic
-  | Except of identifier * type_parameter list * parameters * tatomic
-  | Control of identifier * type_parameter list * parameters * tatomic
+type 'a operation_declaration =
+  { id : varid
+  ; type_parameters : type_parameter list
+  ; parameters : 'a
+  ; result_type : tatomic
+  }
+
+(* TODO: better name *)
+type operation_shape =
+  (* TODO: name fields? *)
+  | Val of tatomic
+  | Fun of parameters * tatomic
+  | Except of parameters * tatomic
+  | Control of parameters * tatomic
+
+type operation_declaration =
+  { id : varid
+  ; type_parameters : type_parameter list
+  ; shape : operation_shape
+  }
+
+type effect_declaration =
+  { id : varid
+  ; type_parameters : type_parameter list
+  ; kind_annotation : option kind
+  ; operations : operation_declaration list
+  }
 
 type type_declaration =
   (* TODO: records/Effect.t *)
-  | Effect_declaration of varid * type_parameter list * kannot * operation list
+  | Effect_declaration of effect_declaration
 (* | Type *)
 
-type fun_declaration = funid * type_parameter list * parameters * tresult option * block
-(* TODO: should type_parameter list go here, or in pure_declaration.Fun? *)
+type fun_declaration =
+  (* TODO: should type_parameter list go here, or in pure_declaration.Fun? *)
+  { id : funid
+  ; type_parameters : type_parameter list
+  ; parameters : parameters
+  ; result_type : tresult option
+  ; body : block
+  }
 
 type declaration =
   | Fun of fun_declaration
@@ -51,6 +83,11 @@ type statement =
   | Basic_expr or Expr of ...
 ;;
 type block = statement list
+(* TODO:
+   is there a semantic difference between expr/basic_expr
+   block/block_expr etc.
+
+*)
 
 type binder = identifier * type_ option
 type pure_declaration =
