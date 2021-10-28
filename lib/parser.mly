@@ -29,6 +29,9 @@
 %token DCOLON "::"
 %token COMMA ","
 %token SEMI ";"
+%token EQUALS "="
+%token TILDE "~"
+%token EXCLAMATION_MARK "!"
 
 (* note: commented out in spec *)
 (* %token APP  *) (* '(' for applications *)
@@ -165,7 +168,7 @@ topdecl:
 -- Type declarations
 ----------------------------------------------------------*)
 (* aliasdecl:
-  | ALIAS typeid typeparams kannot '=' type_     { $$ = $2; } *)
+  | ALIAS typeid typeparams kannot "=" type_     { $$ = $2; } *)
 (*  ; *)
 
 typedecl:
@@ -284,7 +287,7 @@ operation:
 -- Pure (top-level) Declarations
 ----------------------------------------------------------*)
 puredecl:
-  | VAL binder '=' blockexpr      { $$ = $3; }
+  | VAL binder "=" blockexpr      { $$ = $3; }
   | FUN funid funbody             { $$ = $3; }
   ;
 
@@ -312,7 +315,7 @@ funbody:
   | typeparams "(" pparameters ")" ":" tresult block
   ;
 
-(* annotres:
+(* annotres??
   | ":" tresult *)
 (*  | (\* empty *\) *)
 (*  ; *)
@@ -347,7 +350,7 @@ statement:
 decl:
   | FUN fundecl
   (* local value declaration can use a pattern binding *)
-  | VAL apattern '=' blockexpr
+  | VAL apattern "=" blockexpr
   (* TODO: keep := in ? *)
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
   ;
@@ -395,55 +398,110 @@ matchexpr:
   | MATCH ntlexpr "{" semi* matchrules "}"
   ;
 
+%type <expr> fnexpr
 fnexpr:
-  | FN funbody                     (* anonymous function *)
+  (* anonymous function *)
+  | FN; f = funbody
+    { Fn f }
   ;
 
+%type <expr> returnexpr
 returnexpr:
-  | RETURN expr
+  | RETURN; e = expr
+  { Return e }
   ;
 
+%type <expr> ifexpr
 ifexpr:
-  | IF ntlexpr THEN expr elifs
-  | IF ntlexpr THEN expr
-  | IF ntlexpr RETURN expr
+  | IF; cond = ntlexpr; THEN; a = expr; b = elifs
+    { If_then_else(cond, a, b) }
+  | IF; cond = ntlexpr; THEN; e = expr
+    { If_then(cond, e) }
+  | IF; cond = ntlexpr; RETURN; e = expr
+    { If_then(cond, Return e) }
   ;
 
 elifs:
-  | ELIF ntlexpr THEN expr elifs
-  | ELSE expr
+  | ELIF; cond = ntlexpr; THEN; a = expr; b = elifs
+    { If_then_else(cond, a, b)  }
+  | ELSE; e = expr
+    { e }
   ;
 
+%type <expr> valexpr
 valexpr:
-  | VAL apattern '=' blockexpr IN expr
+  | VAL; pat = apattern; "="; e1 = blockexpr; IN; e2 = expr
+    { Val_in(pat, e1, e2) }
   ;
 
 
 (* operator expression *)
 (* TODO: what am I doing about operators? *)
 
+%type <expr> opexpr
 opexpr:
-  | opexpr operator prefixexpr
-  | prefixexpr
+  | el = opexpr; op = operator; er = prefixexpr
+    { Bin_op(el, op, er) }
+  | e = prefixexpr
+    { e }
   ;
 
+%type <expr> prefixexpr
 prefixexpr:
-  | '!' prefixexpr
-  | '~' prefixexpr
-  | appexpr               %prec RARROW
+  (* | "!"; e = prefixexpr *)
+  (*   { Un_op(Deref, e) } *)
+  | "~"; prefixexpr
+    { Un_op(Not, e) }
+  | e = appexpr
+    %prec RARROW
+    { e }
   ;
 
+%type <expr> appexpr
 appexpr:
+  | a = auxappexpr
+    { match a with
+      | `Dot_application(f, arg0) -> Application(f, [arg0])
+      | `Application(f, args)
+      | `Expr e -> e
+    }
+
+%type <
+  [ (** a [`Dot_application] may be awaiting more bracketed args *)
+    `Dot_application of expr * expr
+    (** an [`Application] may be awaiting a trailing lambda *)
+  | `Application of expr * expr list
+  | `Expr of expr
+  ]> auxappexpr
+auxappexpr:
   (* application *)
-  | appexpr "(" arguments ")"
+  | f = auxappexpr; "("; args = arguments; ")"
+    { match f with
+      (* koka allows three syntaxes for passing arguments
+         (normal, dot, trailing lambda), any two can be used together
+         for a single call, but not all three *)
+      | `Dot_application(f', arg0) -> `Expr (Application(f', arg0 :: args))
+      | `Application(f', args')    -> `Application(Application(f', args'), args)
+      | `Expr f'                   -> `Application(f', args)
+    }
   (* | appexpr "[" arguments "]"             (\* index expression *\) *)
   (* dot application *)
-  | appexpr "." atom
+  | arg0 = appexpr; "."; f = atom
+    { `Dot_application(f, arg0) }
+
   (* trailing function application *)
-  | appexpr block
+  | auxappexpr block
+    (* TODO: copy the below case, once work out relation between
+       [block] and function body *)
   (* trailing function application *)
-  | appexpr fnexpr
-  | atom
+  | app = auxappexpr; last_arg = fnexpr
+    { match app with
+        | `Application(f, args)     -> `Application(f, args @ [last_arg])
+        | `Dot_application(f, arg0) -> `Application(f, [arg0])
+        | `Expr e                   -> `Application(Expr e, [last_arg])
+    }
+  | e = atom
+    { `Expr e }
   ;
 
 
@@ -457,8 +515,9 @@ ntlopexpr:
   | ntlprefixexpr
   ;
 
-ntlprefixexpr: '!' ntlprefixexpr
-  | '~' ntlprefixexpr
+ntlprefixexpr:
+  (* | "!" ntlprefixexpr *)
+  | "~" ntlprefixexpr
   | ntlappexpr
   ;
 
@@ -477,7 +536,7 @@ atom:
   | identifier
   | constructor
   | literal
-  | mask
+  (* | mask *)
   (* unit, parenthesized (possibly annotated) expression, tuple expression *)
   | "(" aexprs ")"
   (* list expression (elements may be terminated with comma instead of separated) *)
@@ -485,7 +544,8 @@ atom:
   ;
 
 literal:
-  | INT | FLOAT | CHAR | STRING
+  | INT
+  (* | FLOAT | CHAR | STRING *)
   ;
 
 (* mask:
@@ -505,7 +565,7 @@ arguments:
 
 argument:
   | expr
-  (* | identifier '=' expr                  (\* named arguments *\) *)
+  (* | identifier "=" expr                  (\* named arguments *\) *)
   ;
 
 (* parameters: separated by comma, must have a type *)
@@ -521,7 +581,7 @@ parameters1:
 
 parameter:
   | paramid ":" paramtype
-  (* | paramid ":" paramtype '=' expr *)
+  (* | paramid ":" paramtype "=" expr *)
   ;
 
 paramid:
@@ -547,8 +607,8 @@ pparameter:
   | pattern ":" paramtype
   (* TODO: pattern=expr - strange form of pattern matching
      seems to be for struct members, or e.g. (fst=1, snd=2) *)
-  (* | pattern ":" paramtype '=' expr *)
-  (* | pattern '=' expr *)
+  (* | pattern ":" paramtype "=" expr *)
+  (* | pattern "=" expr *)
   ;
 
 
@@ -681,7 +741,7 @@ pattern:
 (*  ; *)
 
 (* patarg:
-  | identifier '=' apattern            (\* named argument *\) *)
+  | identifier "=" apattern            (\* named argument *\) *)
 (*  | apattern *)
 (*  ; *)
 
@@ -706,7 +766,7 @@ withstat:
   | WITH witheff opclauses
   | WITH binder LARROW basicexpr
   (* deprecated: *)
-  | WITH binder '=' basicexpr
+  | WITH binder "=" basicexpr
   ;
 
 (* withexpr:
@@ -727,8 +787,8 @@ opclausex   :
   ;
 
 opclause:
-  | VAL identifier '=' blockexpr
-  | VAL identifier ":" type_ '=' blockexpr
+  | VAL identifier "=" blockexpr
+  | VAL identifier ":" type_ "=" blockexpr
   | FUN varid opparams bodyexpr
   | EXCEPT varid opparams bodyexpr
   | CONTROL varid opparams bodyexpr

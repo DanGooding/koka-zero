@@ -63,18 +63,60 @@ type type_declaration =
   | Effect_declaration of effect_declaration
 (* | Type *)
 
-type fun_declaration =
-  (* TODO: should type_parameter list go here, or in pure_declaration.Fun? *)
-  { id : funid
-  ; type_parameters : type_parameter list
+(* TODO: better naming *)
+type fn =
+  { type_parameters : type_parameter list
   ; parameters : parameters
   ; result_type : tresult option
-  ; body : block
+  ; body : ??
   }
+
+type fun_declaration =
+  { id : funid
+  ; fn : fn
+  }
+
+
+
 
 type declaration =
   | Fun of fun_declaration
   | Val of apattern * blockexpr
+
+type literal =
+  | Int of int
+  (* TODO: hardcode bools *)
+
+type unary_operator =
+  | Not
+
+type expr =
+  | block
+  | Return of expr
+  (* | withexpr *)
+  | Val_in of apattern * blockexpr * expr
+  | If_then_else of ntl_expr * expr * expr
+  | If_then of ntl_expr * expr
+  (* | Match *)
+  | Handler
+  | Fn of fn
+  | Binary_op of expr * operator * expr
+  | Unary_op of unary_operator * expr
+  | Application of expr * expr list
+  (* (\* this must be desugared later, the parser cannot *)
+  (*    guarantee it is correct, due to cases such as {[ *)
+  (*      val foo = fn(x) { x + 1 } *)
+  (*      42.foo *)
+  (*    ]} *\) *)
+  (* | Dot_application of expr * expr *)
+  | Application of application_expr
+  | Identifier of id
+  | Literal of literal
+  (* | Tuple of expr list *)
+  (* | List of expr list *)
+
+
+
 type statement =
   | Declaration of declaration
   | With of with_statement
@@ -82,6 +124,7 @@ type statement =
   | Return of return_expr
   | Basic_expr or Expr of ...
 ;;
+
 type block = statement list
 (* TODO:
    is there a semantic difference between expr/basic_expr
