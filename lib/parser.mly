@@ -168,12 +168,12 @@ topdecl:
 -- Type declarations
 ----------------------------------------------------------*)
 (* aliasdecl:
-  | ALIAS typeid typeparams kannot "=" type_     { $$ = $2; } *)
+  | ALIAS typeid typeparams kannot "=" type_     { Var_id.of_string $2; } *)
 (*  ; *)
 
 typedecl:
-  (* | typemod TYPE typeid typeparams kannot typebody      { $$ = $3; } *)
-  (* | structmod STRUCT typeid typeparams kannot conparams { $$ = $3; } *)
+  (* | typemod TYPE typeid typeparams kannot typebody      { Var_id.of_string $3; } *)
+  (* | structmod STRUCT typeid typeparams kannot conparams { Var_id.of_string $3; } *)
   | e = effectdecl { Effect_declaration e }
   ;
 
@@ -211,11 +211,11 @@ effectdecl:
 (*  ; *)
 
 (* typeid:
-  | "(" commas ")"      { $$ = "(,)"; }       (\* tuples *\) *)
-(*  | "[" "]"             { $$ = "[]"; }        (\* lists *\) *)
-(*  | "<" ">"             { $$ = "<>"; }        (\* total effect *\) *)
-(*  | "<" "|" ">"         { $$ = "<|>"; }       (\* effect extension *\) *)
-(*  | varid               { $$ = $1; } *)
+  | "(" commas ")"      { Var_id.of_string "(,)"; }       (\* tuples *\) *)
+(*  | "[" "]"             { Var_id.of_string "[]"; }        (\* lists *\) *)
+(*  | "<" ">"             { Var_id.of_string "<>"; }        (\* total effect *\) *)
+(*  | "<" "|" ">"         { Var_id.of_string "<|>"; }       (\* effect extension *\) *)
+(*  | varid               { Var_id.of_string $1; } *)
 (*  ; *)
 
 
@@ -287,26 +287,26 @@ operation:
 -- Pure (top-level) Declarations
 ----------------------------------------------------------*)
 puredecl:
-  | VAL binder "=" blockexpr      { $$ = $3; }
-  | FUN funid funbody             { $$ = $3; }
+  | VAL binder "=" blockexpr      { Var_id.of_string $3; }
+  | FUN funid funbody             { Var_id.of_string $3; }
   ;
 
 (* TODO: update puredecl to include this? *)
 fundecl:
-  | funid funbody                { $$ = $1; }
+  | funid funbody                { Var_id.of_string $1; }
   ;
 
 binder:
-  | identifier                    { $$ = $1; }
-  | identifier ":" type_           { $$ = $1; }
+  | identifier                    { Var_id.of_string $1; }
+  | identifier ":" type_           { Var_id.of_string $1; }
   ;
 
 funid:
-  | identifier         { $$ = $1; }
+  | identifier         { Var_id.of_string $1; }
   (* TODO: how can a function name be [,,,]? *)
-  (* | "[" commas "]"     { $$ = "[]"; } *)
+  (* | "[" commas "]"     { Var_id.of_string "[]"; } *)
   (* TODO: are literals as function names needed? *)
-  (* | STRING             { $$ = $1; } *)
+  (* | STRING             { Var_id.of_string $1; } *)
   ;
 
 (* TODO: why does one call bodyexpr, and the other call block? *)
@@ -393,10 +393,9 @@ basicexpr:
 
 (* keyword expressions *)
 
-(* TODO: not yet supporting match? *)
-matchexpr:
-  | MATCH ntlexpr "{" semi* matchrules "}"
-  ;
+(* matchexpr: *)
+(*   | MATCH ntlexpr "{" semi* matchrules "}" *)
+(*   ; *)
 
 %type <expr> fnexpr
 fnexpr:
@@ -701,30 +700,31 @@ identifier:
   | IDOP
   ;
 
-
+%type <Var_id.t> varid
 varid:
-  | ID
+  | id = ID
+    { Var_id.of_string id }
   (* allow reserved words to be used as identifiers
      in unambiguous contexts *)
-  | ID_C            { $$ = "c"; }
-  | ID_CS           { $$ = "cs"; }
-  | ID_JS           { $$ = "js"; }
-  | ID_FILE         { $$ = "file"; }
-  | ID_INLINE       { $$ = "inline"; }
-  | ID_NOINLINE     { $$ = "noinline"; }
-  | ID_OPEN         { $$ = "open"; }
-  | ID_EXTEND       { $$ = "extend"; }
-  | ID_LINEAR       { $$ = "linear"; }
-  | ID_BEHIND       { $$ = "behind"; }
-  | ID_VALUE        { $$ = "value"; }
-  | ID_REFERENCE    { $$ = "reference"; }
-  | ID_SCOPED       { $$ = "scoped"; }
-  | ID_INITIALLY    { $$ = "initially"; }
-  | ID_FINALLY      { $$ = "finally"; }
-  | ID_REC          { $$ = "rec"; }
-  | ID_CO           { $$ = "co"; }
+  | ID_C            { Var_id.of_string "c" }
+  | ID_CS           { Var_id.of_string "cs" }
+  | ID_JS           { Var_id.of_string "js" }
+  | ID_FILE         { Var_id.of_string "file" }
+  | ID_INLINE       { Var_id.of_string "inline" }
+  | ID_NOINLINE     { Var_id.of_string "noinline" }
+  | ID_OPEN         { Var_id.of_string "open" }
+  | ID_EXTEND       { Var_id.of_string "extend" }
+  | ID_LINEAR       { Var_id.of_string "linear" }
+  | ID_BEHIND       { Var_id.of_string "behind" }
+  | ID_VALUE        { Var_id.of_string "value" }
+  | ID_REFERENCE    { Var_id.of_string "reference" }
+  | ID_SCOPED       { Var_id.of_string "scoped" }
+  | ID_INITIALLY    { Var_id.of_string "initially" }
+  | ID_FINALLY      { Var_id.of_string "finally" }
+  | ID_REC          { Var_id.of_string "rec" }
+  | ID_CO           { Var_id.of_string "co" }
   (* note: commented out in original spec *)
-  (* | ID_NAMED        { $$ = "named"; } *)
+  (* | ID_NAMED        { Var_id.of_string "named"; } *)
   ;
 
 constructor:
@@ -732,17 +732,25 @@ constructor:
   ;
 
 
+%type <Constructor_id.t> conid
 conid:
-  | CONID  { $$ = $1; }
+  | id = CONID
+    { Constructor_id.of_string id }
   ;
 
 (* TODO: decide whether operators should be special cases, or done like funcitons *)
+%type <Operator.t> op
 op:
-  | OP
-  | ">"       { $$ = ">";  }
-  | "<"       { $$ = "<";  }
-  | "|"       { $$ = "|";  }
-  (* | ASSIGN    { $$ = ":="; } *)
+  | op = OP
+    { Operator_id.of_string op }
+  | ">"
+    { Operator_id.of_string "<" }
+  | "<"
+    { Operator_id.of_string ">" }
+  | "|"
+    { Operator_id.of_string "|" }
+  | ASSIGN
+    { Operator_id.of_string ":=" }
   ;
 
 
@@ -751,27 +759,27 @@ op:
 ----------------------------------------------------------*)
 (* TODO: pattern matching removed for now *)
 
-matchrules:
-  | list(matchrule semi+)
-  ;
+(* matchrules: *)
+(*   | list(matchrule semi+) *)
+(*   ; *)
 
-matchrule:
-  | patterns1 "|" expr "->" blockexpr
-  | patterns1 "->" blockexpr
-  ;
+(* matchrule: *)
+(*   | patterns1 "|" expr "->" blockexpr *)
+(*   | patterns1 "->" blockexpr *)
+(*   ; *)
 
-patterns1:
-  | separated_nonempy_list(",", pattern)
-  ;
+(* patterns1: *)
+(*   | separated_nonempy_list(",", pattern) *)
+(*   ; *)
 
-apatterns:
-  | separated_list(",", apattern)
-  ;
+(* apatterns: *)
+(*   | separated_list(",", apattern) *)
+(*   ; *)
 
-apattern:
-  (* annotated pattern *)
-  | pattern annot
-  ;
+(* apattern: *)
+(*   (* annotated pattern *) *)
+(*   | pattern annot *)
+(*   ; *)
 
 pattern:
   | identifier
@@ -804,7 +812,9 @@ pattern:
 -- Handlers
 ----------------------------------------------------------*)
 handlerexpr:
+  (* handler is apparantly a function, handle is not *)
   | HANDLER witheff opclauses
+  (* TODO: have never seen this used *)
   | HANDLE witheff ntlexpr opclauses
   ;
 
@@ -834,7 +844,7 @@ opclauses:
   | "{" semi* list(opclausex semi+) "}"
   ;
 
-opclausex   :
+opclausex:
   (* | ID_FINALLY bodyexpr *)
   (* | ID_INITIALLY bodyexpr *)
   | opclause
@@ -933,7 +943,7 @@ typeapp:
 
 typecon:
   (* type name *)
-  | varid | qvarid
+  | varid
   (* wildcard type variable *)
   | WILDCARD
   (* TODO: I think the (,,,)<a,b,c> form isn't needed *)

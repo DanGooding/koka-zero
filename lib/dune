@@ -1,7 +1,8 @@
 (library
  (name my_koka)
  (public_name my-koka)
- (libraries))
+ (libraries core)
+ (preprocess (pps ppx_jane)))
 
 (ocamllex
  (modules lexer)

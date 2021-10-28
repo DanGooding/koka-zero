@@ -8,10 +8,33 @@
 (* TODO: but make sure to desscribe the syntax only (don't throw out
    badly typed terms)*)
 
+open Core
+
+module Var_id : Identifiable
+module Operator_id : Identifiable
+module Constructor_id : Identifiable
+
+
+module Identifier : sig
+  module T : sig
+    type t =
+      | Var of Var_id.t
+      | Operator of Operator_id.t
+      | Constructor of Constructor_id.t
+      [@@deriving compare, hash, sexp]
+    (* TODO: bin_io too? *)
+
+    val module_name : string
+    include Stringable.S with type t := t
+  end
+  include T
+  include Identifiable.Make (T)
+end
+
 
 type type_parameter =
   (* kind annotation is always optional *)
-  (varid * kind option)
+  (Var_id.t * kind option)
 
 type type_result = 
 type monotype =
@@ -22,9 +45,9 @@ type monotype =
 (* TODO: just haave builtin kinds V, E ? *)
 type kind =
   (* TODO: grammar seems to allow curried & uncurried forms - equivalent? *)
-  | Arrow_uncurried of kind nonempty_list * conid
-  | Arrow_curried of conid * kind
-  | Atom of conid (* TODO: alias conid -> katom? *)
+  | Arrow_uncurried of kind nonempty_list * Constructor_id.t
+  | Arrow_curried of Constructor_id.t * kind
+  | Atom of Constructor_id.t (* TODO: alias conid -> katom? *)
 
 type type_scheme =
   { forall_quantified : type_parameter list
@@ -32,7 +55,7 @@ type type_scheme =
   }
 
 type 'a operation_declaration =
-  { id : varid
+  { id : Var_id.t
   ; type_parameters : type_parameter list
   ; parameters : 'a
   ; result_type : tatomic
@@ -47,13 +70,13 @@ type operation_shape =
   | Control of parameters * tatomic
 
 type operation_declaration =
-  { id : varid
+  { id : Var_id.t
   ; type_parameters : type_parameter list
   ; shape : operation_shape
   }
 
 type effect_declaration =
-  { id : varid
+  { id : Var_id.t
   ; type_parameters : type_parameter list
   ; kind_annotation : option kind
   ; operations : operation_declaration list
@@ -95,7 +118,7 @@ type argument = expr
 
 (* these do coincide for now, but they may not later *)
 type parameter_id =
-  | Id of identifier
+  | Id of Identifier.t
   | Wildcard
 type parameter =
   { id : parameter_id
@@ -103,14 +126,13 @@ type parameter =
   }
 
 type pattern =
-  | Id of identifier
+  | Id of Identifier.t
   | Wildcard
 
 type pattern_parameter =
   { pattern : pattern
   ; type_ : option type_
   }
-
 
 
 (* TODO: can have annotations anywhere! *)
@@ -124,17 +146,11 @@ type expr =
   (* | Match *)
   | Handler
   | Fn of fn
-  | Binary_op of expr * operator * expr
+  | Binary_op of expr * Operator.t * expr
   | Unary_op of unary_operator * expr
   | Application of expr * argument list
-  (* (\* this must be desugared later, the parser cannot *)
-  (*    guarantee it is correct, due to cases such as {[ *)
-  (*      val foo = fn(x) { x + 1 } *)
-  (*      42.foo *)
-  (*    ]} *\) *)
-  (* | Dot_application of expr * expr *)
   | Application of application_expr
-  | Identifier of id
+  | Identifier of Identifier.t
   | Literal of literal
   | Tuple of expr list
   (* | List of expr list *)
@@ -158,7 +174,7 @@ type block = statement list
 
 *)
 
-type binder = identifier * type_ option
+type binder = Identifier.t * type_ option
 type pure_declaration =
   | Val of binder * blockexpr
   | Fun of fun_declaration
@@ -169,5 +185,5 @@ type toplevel_declaration =
 
 type program = toplevel_declaration list
 
-(* TODO: are ids all the same type or not? varid != opid != conid but what aboout type
+(* TODO: are ids all the same type or not? Var_id.t != Operator_id.t != Constructor_id.t but what aboout type
    vs.function vs. effect? *)
