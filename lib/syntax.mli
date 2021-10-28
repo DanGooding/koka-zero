@@ -8,6 +8,7 @@
 (* TODO: but make sure to desscribe the syntax only (don't throw out
    badly typed terms)*)
 
+
 type type_parameter =
   (* kind annotation is always optional *)
   (varid * kind option)
@@ -88,8 +89,31 @@ type literal =
   (* TODO: hardcode bools *)
 
 type unary_operator =
-  | Not
+  | Exclamation
 
+type argument = expr
+
+(* these do coincide for now, but they may not later *)
+type parameter_id =
+  | Id of identifier
+  | Wildcard
+type parameter =
+  { id : parameter_id
+  ; type_ : type_
+  }
+
+type pattern =
+  | Id of identifier
+  | Wildcard
+
+type pattern_parameter =
+  { pattern : pattern
+  ; type_ : option type_
+  }
+
+
+
+(* TODO: can have annotations anywhere! *)
 type expr =
   | block
   | Return of expr
@@ -102,7 +126,7 @@ type expr =
   | Fn of fn
   | Binary_op of expr * operator * expr
   | Unary_op of unary_operator * expr
-  | Application of expr * expr list
+  | Application of expr * argument list
   (* (\* this must be desugared later, the parser cannot *)
   (*    guarantee it is correct, due to cases such as {[ *)
   (*      val foo = fn(x) { x + 1 } *)
@@ -112,8 +136,10 @@ type expr =
   | Application of application_expr
   | Identifier of id
   | Literal of literal
-  (* | Tuple of expr list *)
+  | Tuple of expr list
   (* | List of expr list *)
+  (* TODO: how best to do annotations? *)
+  | Annotated of expr * type_scheme
 
 
 

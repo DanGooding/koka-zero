@@ -448,10 +448,10 @@ opexpr:
 
 %type <expr> prefixexpr
 prefixexpr:
-  (* | "!"; e = prefixexpr *)
-  (*   { Un_op(Deref, e) } *)
-  | "~"; prefixexpr
-    { Un_op(Not, e) }
+  | "!"; e = prefixexpr
+    { Un_op(Exclamation, e) }
+  (* | "~"; e = prefixexpr *)
+  (*   { Un_op(?, e) } *)
   | e = appexpr
     %prec RARROW
     { e }
@@ -467,10 +467,10 @@ appexpr:
     }
 
 %type <
-  [ (** a [`Dot_application] may be awaiting more bracketed args *)
-    `Dot_application of expr * expr
-    (** an [`Application] may be awaiting a trailing lambda *)
-  | `Application of expr * expr list
+  [ (** a [`Dot_application] can be followed by more bracketed args *)
+    `Dot_application of expr * argument
+    (** an [`Application] can be followed by a trailing lambda *)
+  | `Application of expr * argument list
   | `Expr of expr
   ]> auxappexpr
 auxappexpr:
@@ -504,47 +504,83 @@ auxappexpr:
     { `Expr e }
   ;
 
-
 (* non-trailing-lambda expression *)
+%type <expr> ntlexpr
 ntlexpr:
-  | ntlopexpr
+  | e = ntlopexpr
+    { e }
   ;
 
+%type <expr> ntlopexpr
 ntlopexpr:
-  | ntlopexpr operator ntlprefixexpr
-  | ntlprefixexpr
+  | el = ntlopexpr; op = operator; er = ntlprefixexpr
+    { Binary_op(el, op, er) }
+  | e = ntlprefixexpr
+    { e }
   ;
 
+%type <expr> ntlprefixexpr
 ntlprefixexpr:
-  (* | "!" ntlprefixexpr *)
-  | "~" ntlprefixexpr
-  | ntlappexpr
+  (* | "~"; e = ntlprefixexpr *)
+  | "!" ntlprefixexpr
+    { Unary_op(Exclamation, e) }
+  | e = ntlappexpr
+    { e }
   ;
 
-ntlappexpr:
+
+%type <
+  [ (** a [`Dot_application] can be followed by more bracketed args *)
+    `Dot_application of expr * argument
+  | `Expr of expr
+  ]> ntlappexpr
+auxntlappexpr:
   (* application *)
-  | ntlappexpr "(" arguments ")"
+  | f = auxntlappexpr; "("; args = arguments; ")"
+    { match f with
+      | `Dot_application(f', arg0) -> `Expr(Application(f, arg0 :: args))
+      | `Expr e -> `Expr(Application(e, args))
+    }
   (* | ntlappexpr "[" arguments "]"             (\* index expression *\) *)
   (* dot application *)
-  | ntlappexpr "." atom
-  | atom
+  | arg0 = ntlappexpr; "."; f = atom
+    { `Dot_application(f, arg0) }
+  | e = atom
+    { `Expr e }
   ;
+
+%type <expr> ntlappexpr
+ntlappexpr:
+  | a = auxntlappexpr
+    { match a with
+      | `Dot_application(f, arg0) -> Application(f, [arg0])
+      | `Expr e -> e
+    }
 
 (* atomic expressions *)
 
+%type <expr> atom
 atom:
-  | identifier
+  | id = identifier
+    { Identfier id }
   | constructor
-  | literal
+  | lit = literal
+    { Literal lit }
   (* | mask *)
   (* unit, parenthesized (possibly annotated) expression, tuple expression *)
-  | "(" aexprs ")"
-  (* list expression (elements may be terminated with comma instead of separated) *)
-  | "[" cexprs "]"
-  ;
+  | "("; es = aexprs; ")"
+    { match es with
+      | [e] -> e
+      | _ -> Tuple es
+    }
 
+  (* list expression (elements may be terminated with comma instead of separated) *)
+  (* not yet supported *)
+
+%type <literal> literal
 literal:
-  | INT
+  | i = INT
+    { Int i }
   (* | FLOAT | CHAR | STRING *)
   ;
 
@@ -559,16 +595,21 @@ literal:
 
 (* arguments: separated by comma *)
 
+%type <argument list> arguments
 arguments:
   | separated_list(",", argument)
   ;
 
+%type <argument> argument
 argument:
-  | expr
+  | e = expr
+    { e }
   (* | identifier "=" expr                  (\* named arguments *\) *)
   ;
 
 (* parameters: separated by comma, must have a type *)
+
+(* these are used only in constructor definitions *)
 
 parameters:
   | parameters1
@@ -579,18 +620,24 @@ parameters1:
   | separated_nonempty_list("," parameter)
   ;
 
+%type <parameter> parameter
 parameter:
-  | paramid ":" paramtype
+  | id = paramid; ":"; type_ = paramtype
+    { {id; type_} }
   (* | paramid ":" paramtype "=" expr *)
   ;
 
+%type <parameter_id> paramid
 paramid:
-  | identifier
+  | id = identifier
+    { Id id }
   | WILDCARD
+    { Wildcard }
   ;
 
 paramtype:
-  | type_
+  | t = type_
+    { t }
   (* TODO: is this just for optional parameters? *)
   (* | '?' type_ *)
   ;
@@ -598,14 +645,19 @@ paramtype:
 
 (* pattern matching parameters: separated by comma *)
 
+%type <pattern_parameter list> pparameters
 pparameters:
-  | separated_list(",", pparameter)
+  | ps = separated_list(",", pparameter)
+    { ps }
   ;
 
+%type <pattern_parameter> pparameter
 pparameter:
-  | pattern
-  | pattern ":" paramtype
-  (* TODO: pattern=expr - strange form of pattern matching
+  | pattern = pattern
+    { { pattern; type_ = None } }
+  | pattern = pattern; ":"; type_ = paramtype
+    { { pattern; type_ } }
+  (* pattern=expr - strange form of pattern matching
      seems to be for struct members, or e.g. (fst=1, snd=2) *)
   (* | pattern ":" paramtype "=" expr *)
   (* | pattern "=" expr *)
@@ -614,22 +666,24 @@ pparameter:
 
 (* annotated expressions: separated or terminated by comma *)
 
+%type <expr list>
 aexprs:
-  | separated_list(",", aexpr)
+  | es = separated_list(",", aexpr)
+    { es }
   ;
 
+%type <expr>
 aexpr:
-  | expr annot
+  | e = expr; a = annot
+    { Annotated(e, a) }
   ;
 
-(* terminated or separated by comma *)
-cexprs:
-  | separated_list(aexpr, ",") ","?
-  ;
-
+%type <type_scheme> annot
 annot:
-  | ":" typescheme
+  | ":"; s = typescheme
+    { Some s }
   | (* empty *)
+    { None }
   ;
 
 
@@ -829,7 +883,7 @@ type_:
   | tarrow
   ;
 
-someforalls :
+someforalls:
   | FORALL typeparams1
   | (* empty *)
   ;
