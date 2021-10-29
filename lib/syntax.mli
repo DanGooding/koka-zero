@@ -14,13 +14,12 @@ module Var_id : Identifiable
 module Operator_id : Identifiable
 module Constructor_id : Identifiable
 
-
 module Identifier : sig
   module T : sig
     type t =
       | Var of Var_id.t
-      | Operator of Operator_id.t
-      | Constructor of Constructor_id.t
+      (* | Operator of Operator_id.t *)
+      (* | Constructor of Constructor_id.t *)
       [@@deriving compare, hash, sexp]
     (* TODO: bin_io too? *)
 
@@ -118,6 +117,23 @@ type literal =
 type unary_operator =
   | Exclamation
 
+type binary_operator =
+  | Plus
+  | Minus
+  | Times
+  | Divide
+  | Modulo
+  | And
+  | Or
+  | Not
+  (* TODO: equals will require overloading? *)
+  | Equals
+  | Not_equal
+  | Less_than
+  | Less_equal
+  | Greater_than
+  | Greater_equal
+
 type argument = expr
 
 (* these do coincide for now, but they may not later *)
@@ -150,7 +166,7 @@ type expr =
   (* | Match *)
   | Handler
   | Fn of fn
-  | Binary_op of expr * Operator.t * expr
+  | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr
   | Application of expr * argument list
   | Application of application_expr

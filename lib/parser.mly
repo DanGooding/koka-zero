@@ -8,8 +8,7 @@
    terms of the Apache License, Version 2.0.
 *)
 
-(* TODO: wildcard doesn't need id *)
-%token <string> ID CONID OP IDOP
+%token <string> ID CONID (* OP IDOP *)
 %token WILDCARD
 
 %token <int> INT
@@ -414,13 +413,102 @@ valexpr:
 
 
 (* operator expression *)
-(* TODO: what am I doing about operators? *)
 
 %type <expr> opexpr
 opexpr:
-  | el = opexpr; op = operator; er = prefixexpr
-    { Bin_op(el, op, er) }
-  | e = prefixexpr
+  | e = opexpr_of(prefixexpr)
+    { e }
+  ;
+
+(** [opexpr_of] is parameterised by [prefixexpr_]
+    the nonterminal which operators are surrounded by.
+    This allows sharing between standard and
+    non-trailing-lambda usages *)
+%type <expr> opexpr_of(prefixexpr)
+%type <expr> opexpr_of(ntlprefixexpr)
+opexpr_of(prefixexpr_):
+  | e = opexpr_r20(prefixexpr_)
+    { e }
+  ;
+
+(* Not yet allowing user defined operators,
+   so instead hardcoding common ones into the grammar
+
+   Koka operator precedence chart:
+   {[
+    infixr 80  (^)
+    infixl 70  ( * ), (%), (/), cdiv, cmod
+    infixr 60  (++)
+    infixl 60  (+), (-)
+    infix  40  (!=), (==), (<=), (>=), (<), (>)
+    infixr 30  (&&)
+    infixr 20  (||)
+  ]}
+  (obtained by grepping the koka standard library):
+*)
+
+(* opexpr_[associativity][koka precedence level] *)
+%type <expr> opexpr_r20
+opexpr_r20(prefixexpr_):
+  | el = opexpr_r30(prefixexpr_); "||"; er = opexpr_r20(appexpr_)
+    { Binary_op(el, Or, er) }
+  | e = opexpr_r30(prefixexpr_)
+    { e }
+  ;
+
+%type <expr> opexpr_r30
+opexpr_r30(prefixexpr_):
+  | el = opexpr_40(prefixexpr_); "&&"; er = opexpr_r30(appexpr_)
+    { Binary_op(el, And, er) }
+  | e = opexpr_40(prefixexpr_)
+    { e }
+  ;
+
+%type <binary_operator> op_40
+op_n40:
+  | "==" { Equals }
+  | "!=" { Not_equal }
+  | "<=" { Less_equal }
+  | ">=" { Greater_equal }
+  | "<"  { Less_than }
+  | ">"  { Greater_than }
+  ;
+
+(* non-associative *)
+%type <expr> opexpr_40
+opexpr_n40:
+  | el = opexpr_l60(prefixexpr_); op = op_n40; er = opexpr_l60(appexpr_)
+    { Binary_op(el, op, er) }
+  | e = opexpr_l60(prefixexpr_)
+    { e }
+  ;
+
+%type <binary_operator> op_l60
+op_l60:
+  | "+" { Plus }
+  | "-" { Minus }
+  ;
+
+%type <expr> opexpr_l60
+opexpr_l60(prefixexpr_):
+  | el = opexpr_l60(prefixexpr_); op = op_l60; er = opexpr_l70(appexpr_)
+    { Binay_op(el, op, er) }
+  | e = opexpr_l70(prefixexpr_)
+    { e }
+  ;
+
+%type <binary_operator> op_l70
+op_l70:
+  | "*" { Times }
+  | "%" { Modulo }
+  | "/" { Divide }
+  ;
+
+%type <expr> opexpr_l70
+opexpr_l70(prefixexpr_):
+  | el = opexpr_l70(prefixexpr_); op = op_l70; er = prefixexpr(appexpr_)
+    { Binary_op(el, op, er) }
+  | e = prefixexpr_
     { e }
   ;
 
@@ -433,6 +521,8 @@ prefixexpr:
   | e = appexpr
     %prec RARROW
     { e }
+  (* note: unary minus is handled in the lexer:
+     [-NUMBER] is always unary, [- ANYTHING] is always binary *)
   ;
 
 %type <expr> appexpr
@@ -491,9 +581,7 @@ ntlexpr:
 
 %type <expr> ntlopexpr
 ntlopexpr:
-  | el = ntlopexpr; op = operator; er = ntlprefixexpr
-    { Binary_op(el, op, er) }
-  | e = ntlprefixexpr
+  | e = opexpr_of(ntlprefixexpr)
     { e }
   ;
 
@@ -666,13 +754,21 @@ annot:
 -- Identifiers and operators
 ----------------------------------------------------------*)
 
-operator:
-  | op
-  ;
+(* operator: *)
+(*   | op *)
+(*   ; *)
 
+(* TODO: until add user defined operators,
+   operators are not a first class concept
+
+   note this loses prefix syntax: [xs.fold(0, (+))]
+*)
+
+%type <Identifier> identifier
 identifier:
-  | varid
-  | IDOP
+  | var_id = varid
+    { Var var_id }
+  (* | IDOP *)
   ;
 
 %type <Var_id.t> varid
@@ -687,37 +783,37 @@ varid:
   (* | ID_NAMED        { Var_id.of_string "named"; } *)
   ;
 
-constructor:
-  | conid
-  ;
+(* %type <Constructor_id.t> constructor *)
+(* constructor: *)
+(*   | conid *)
+(*   ; *)
 
 
-%type <Constructor_id.t> conid
-conid:
-  | id = CONID
-    { Constructor_id.of_string id }
-  | KIND_E
-    { Constructor_id.of_string "E" }
-  | KIND_X
-    { Constructor_id.of_string "X" }
-  | KIND_V
-    { Constructor_id.of_string "V" }
-  ;
+(* %type <Constructor_id.t> conid *)
+(* conid: *)
+(*   | id = CONID *)
+(*     { Constructor_id.of_string id } *)
+(*   | KIND_E *)
+(*     { Constructor_id.of_string "E" } *)
+(*   | KIND_X *)
+(*     { Constructor_id.of_string "X" } *)
+(*   | KIND_V *)
+(*     { Constructor_id.of_string "V" } *)
+(*   ; *)
 
-(* TODO: decide whether operators should be special cases, or done like funcitons *)
-%type <Operator.t> op
-op:
-  | op = OP
-    { Operator_id.of_string op }
-  | ">"
-    { Operator_id.of_string "<" }
-  | "<"
-    { Operator_id.of_string ">" }
-  | "|"
-    { Operator_id.of_string "|" }
-  | ASSIGN
-    { Operator_id.of_string ":=" }
-  ;
+(* %type <Operator.t> op *)
+(* op: *)
+(*   | op = OP *)
+(*     { Operator_id.of_string op } *)
+(*   | ">" *)
+(*     { Operator_id.of_string "<" } *)
+(*   | "<" *)
+(*     { Operator_id.of_string ">" } *)
+(*   | "|" *)
+(*     { Operator_id.of_string "|" } *)
+(*   | ASSIGN *)
+(*     { Operator_id.of_string ":=" } *)
+(*   ; *)
 
 
 (* ---------------------------------------------------------

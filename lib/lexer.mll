@@ -125,6 +125,8 @@ rule read =
   | "initially"                 { ID_INITIALLY }
   | "finally"                   { ID_FINALLY }
 
+  (* kinds, not reserved, can be used as
+     constructor names too *)
   | "E"                         { KIND_E }
   | "X"                         { KIND_X }
   | "V"                         { KIND_V }
@@ -158,6 +160,19 @@ rule read =
   | '>' { GREATER_THAN }
   | '|' { PIPE }
 
+  (* operators (fixed for now) *)
+  | "||" { OP_OR }
+  | "&&" { OP_AND }
+  | "!=" { OP_NOT_EQUAL }
+  | "==" { OP_EQUAL_EQUAL }
+  | "<=" { OP_GREATER_EQUAL }
+  | ">=" { OP_LESS_THAN }
+  | "+"  { OP_PLUS }
+  | "-"  { OP_MINUS }
+  | "*"  { OP_TIMES }
+  | "/"  { OP_DIVIDE }
+  | "%"  { OP_MODULO }
+
   (* comments *)
   | "//" { read_single_line_comment lexbuf }
   | "/*" { read_multi_line_comment 1 lexbuf }
@@ -169,8 +184,8 @@ rule read =
   (* Identifiers and operators *)
   | con_id           { CONID (lex_identifier lexbuf) }
   | id               { ID (lex_identifier lexbuf) }
-  | '(' operator ')' { IDOP (Lexing.lexeme lexbuf) }
-  | operator         { OP (Lexing.lexeme lexbuf) }
+  (* | '(' operator ')' { IDOP (Lexing.lexeme lexbuf) } *)
+  (* | operator         { OP (Lexing.lexeme lexbuf) } *)
   | '_' id_char*     { WILDCARD }
 
   | space+ { read lexbuf }
