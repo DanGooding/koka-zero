@@ -9,12 +9,13 @@
 *)
 
 (* TODO: wildcard doesn't need id *)
-%token <Id>     ID CONID OP IDOP WILDCARD
+%token <string> ID CONID OP IDOP
+%token WILDCARD
 
-%token <int>    INT
-(* %token <Float>  FLOAT *)
-%token <string> STRING
-%token <char>   CHAR
+%token <int> INT
+(* %token <Float> FLOAT *)
+/* %token <string> STRING */
+/* %token <char> CHAR */
 
 (* string literals define nicer syntax for use in the production rules
    they do not determine when the lexer produces these tokens *)
@@ -33,10 +34,6 @@
 %token TILDE "~"
 %token EXCLAMATION_MARK "!"
 
-(* note: commented out in spec *)
-(* %token APP  *) (* '(' for applications *)
-(* %token IDX  *) (* "[" for indexing *)
-
 (* TODO: remove tokens not present in any production *)
 %token IF THEN ELSE ELIF
 %token WITH IN
@@ -54,10 +51,7 @@
 (* %token EXTERN *)
 (* %token INFIX INFIXL INFIXR *)
 
-(* TODO: why is whitespace here? - they are never used... *)
-%token LEX_WHITE LEX_COMMENT
-%token INSERTED_SEMI
-%token ASSIGN EXTEND
+%token ASSIGN
 %token RETURN
 
 %token HANDLER HANDLE (* NAMED MASK *)

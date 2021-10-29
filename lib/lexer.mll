@@ -127,26 +127,26 @@ rule read =
   | "handler"                   { HANDLER }
   | "effect"                    { EFFECT }
 
-  | "rec"                       { IDREC }
-  | "co"                        { IDCO }
+  | "rec"                       { ID_REC }
+  | "co"                        { ID_CO }
 
   | "mask"                      { MASK }
   | "override"                  { OVERRIDE }
   | "named"                     { NAMED }
 
-  | "inline"                    { IDINLINE  }
-  | "noinline"                  { IDNOINLINE }
+  | "inline"                    { ID_INLINE  }
+  | "noinline"                  { ID_NOINLINE }
 
-  | "open"                      { IDOPEN }
-  | "extend"                    { IDEXTEND }
-  | "linear"                    { IDLINEAR  }
-  | "value"                     { IDVALUE  }
-  | "reference"                 { IDREFERENCE  }
-  | "scoped"                    { IDSCOPED }
-  | "behind"                    { IDBEHIND }
+  | "open"                      { ID_OPEN }
+  | "extend"                    { ID_EXTEND }
+  | "linear"                    { ID_LINEAR  }
+  | "value"                     { ID_VALUE  }
+  | "reference"                 { ID_REFERENCE  }
+  | "scoped"                    { ID_SCOPED }
+  | "behind"                    { ID_BEHIND }
 
-  | "initially"                 { IDINITIALLY }
-  | "finally"                   { IDFINALLY }
+  | "initially"                 { ID_INITIALLY }
+  | "finally"                   { ID_FINALLY }
 
   | "E"                         { KIND_E }
   | "X"                         { KIND_X }
@@ -194,7 +194,7 @@ rule read =
   | id               { ID (lex_identifier lexbuf) }
   | '(' operator ')' { IDOP (Lexing.lexeme lexbuf) }
   | operator         { OP (Lexing.lexeme lexbuf) }
-  | '_' id_char*     { WILDCARD (lex_identifier lexbuf) }
+  | '_' id_char*     { WILDCARD }
 
   | space+ { read lexbuf }
   | newline { next_line lexbuf; read_lexbuf }
