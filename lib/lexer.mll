@@ -131,6 +131,10 @@ rule read =
   | "X"                         { KIND_X }
   | "V"                         { KIND_V }
 
+  (* literals *)
+  | "True"                      { BOOL true }
+  | "False"                     { BOOl false }
+
   (* reserved operators *)
   | ':'                         { COLON }
   | '=' { EQUALS }

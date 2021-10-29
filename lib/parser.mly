@@ -12,6 +12,7 @@
 %token WILDCARD
 
 %token <int> INT
+%token <bool> BOOL
 (* %token <Float> FLOAT *)
 (* %token <string> STRING *)
 (* %token <char> CHAR *)
@@ -654,6 +655,8 @@ atom:
 literal:
   | i = INT
     { Int i }
+  | b = BOOL
+    { Bool b }
   (* | FLOAT | CHAR | STRING *)
   ;
 

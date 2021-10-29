@@ -112,7 +112,7 @@ type declaration =
 
 type literal =
   | Int of int
-  (* TODO: hardcode bools *)
+  | Bool of bool
 
 type unary_operator =
   | Exclamation
