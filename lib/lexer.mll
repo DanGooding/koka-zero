@@ -81,26 +81,22 @@ let con_id = upper id_char* final*
 rule read =
   parse
   (* keywords*)
-  | "infix"                     { INFIX }
-  | "infixl"                    { INFIXL }
-  | "infixr"                    { INFIXR }
 
-  | "type"                      { TYPE }
-  | "alias"                     { ALIAS }
-  | "struct"                    { STRUCT }
+  (* | "infix"                     { INFIX } *)
+  (* | "infixl"                    { INFIXL } *)
+  (* | "infixr"                    { INFIXR } *)
+
+  (* | "type"                      { TYPE } *)
+  (* | "alias"                     { ALIAS } *)
+  (* | "struct"                    { STRUCT } *)
 
   | "forall"                    { FORALL }
-  | "exists"                    { EXISTS }
-  | "some"                      { SOME }
-
-  | "abstract"                  { ABSTRACT }
-  | "extern"                    { EXTERN }
 
   | "fun"                       { FUN }
   | "fn"                        { FN }
   | "val"                       { VAL }
   | "var"                       { VAR }
-  | "con"                       { CON }
+  (* | "con"                       { CON } *)
 
   | "if"                        { IF }
   | "then"                      { THEN }
@@ -108,42 +104,23 @@ rule read =
   | "elif"                      { ELIF }
   | "with"                      { WITH }
   | "in"                        { IN }
-  | "match"                     { MATCH }
+  (* | "match"                     { MATCH } *)
   | "return"                    { RETURN }
 
-  | "module"                    { MODULE }
-  | "import"                    { IMPORT }
-  | "pub"                       { PUBLIC }
-  | "public"                    { PUBLIC }
-  | "private"                   { PRIVATE }
-  | "as"                        { AS }
+  (* | "as"                        { AS } *)
 
   | "control"                   { CONTROL }
   | "ctl"                       { CONTROL }
-  | "rcontrol"                  { RCONTROL }
-  | "rctl"                      { RCONTROL }
+  (* | "rcontrol"                  { RCONTROL } *)
+  (* | "rctl"                      { RCONTROL } *)
   | "except"                    { EXCEPT }
   | "handle"                    { HANDLE }
   | "handler"                   { HANDLER }
   | "effect"                    { EFFECT }
 
-  | "rec"                       { ID_REC }
-  | "co"                        { ID_CO }
-
   | "mask"                      { MASK }
-  | "override"                  { OVERRIDE }
-  | "named"                     { NAMED }
-
-  | "inline"                    { ID_INLINE  }
-  | "noinline"                  { ID_NOINLINE }
-
-  | "open"                      { ID_OPEN }
-  | "extend"                    { ID_EXTEND }
-  | "linear"                    { ID_LINEAR  }
-  | "value"                     { ID_VALUE  }
-  | "reference"                 { ID_REFERENCE  }
-  | "scoped"                    { ID_SCOPED }
-  | "behind"                    { ID_BEHIND }
+  (* | "override"                  { OVERRIDE } *)
+  (* | "named"                     { NAMED } *)
 
   | "initially"                 { ID_INITIALLY }
   | "finally"                   { ID_FINALLY }

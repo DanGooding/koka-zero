@@ -156,7 +156,7 @@ type expr =
   | Application of application_expr
   | Identifier of Identifier.t
   | Literal of literal
-  | Tuple of expr list
+  (* | Tuple of expr list *)
   (* | List of expr list *)
   (* TODO: how best to do annotations? *)
   | Annotated of expr * type_scheme

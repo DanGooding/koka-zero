@@ -14,8 +14,8 @@
 
 %token <int> INT
 (* %token <Float> FLOAT *)
-/* %token <string> STRING */
-/* %token <char> CHAR */
+(* %token <string> STRING *)
+(* %token <char> CHAR *)
 
 (* string literals define nicer syntax for use in the production rules
    they do not determine when the lexer produces these tokens *)
@@ -40,29 +40,18 @@
 (* %token MATCH *)
 %token RARROW LARROW
 
-%token FUN FN VAL VAR CONTROL (* RCONTROL *) EXCEPT
+%token FUN FN VAL VAR CONTROL EXCEPT
 %token (* TYPE STRUCT *) EFFECT
 (* %token ALIAS CON *)
-(* TODO: I can't see EXISTS ever being used, and SOME is undocumented *)
-%token FORALL (* EXISTS SOME *)
+%token FORALL
 
-(* %token IMPORT AS MODULE *)
-(* %token PUBLIC PRIVATE ABSTRACT *)
-(* %token EXTERN *)
 (* %token INFIX INFIXL INFIXR *)
 
 %token ASSIGN
 %token RETURN
 
 %token HANDLER HANDLE (* NAMED MASK *)
-(* %token IFACE UNSAFE *)
 
-(* %token ID_CO ID_REC *)
-(* %token ID_INLINE ID_NOINLINE *)
-(* %token ID_C ID_CS ID_JS ID_FILE *)
-(* %token ID_LINEAR ID_OPEN ID_EXTEND *)
-(* %token ID_BEHIND *)
-(* %token ID_VALUE ID_REFERENCE ID_SCOPED *)
 %token ID_INITIALLY ID_FINALLY
 
 %token KIND_V KIND_E, KIND_X
@@ -556,15 +545,11 @@ atom:
   | lit = literal
     { Literal lit }
   (* | mask *)
-  (* unit, parenthesized (possibly annotated) expression, tuple expression *)
-  | "("; es = aexprs; ")"
-    { match es with
-      | [e] -> e
-      | _ -> Tuple es
-    }
-
-  (* list expression (elements may be terminated with comma instead of separated) *)
-  (* not yet supported *)
+  | "("; e = aexpr; ")"
+    { e }
+  (* not yet supported: *)
+    (* unit, parenthesized (possibly annotated) expression, tuple expression *)
+    (* list expression (elements may be terminated with comma instead of separated) *)
 
 %type <literal> literal
 literal:
@@ -696,23 +681,8 @@ varid:
     { Var_id.of_string id }
   (* allow reserved words to be used as identifiers
      in unambiguous contexts *)
-  | ID_C            { Var_id.of_string "c" }
-  | ID_CS           { Var_id.of_string "cs" }
-  | ID_JS           { Var_id.of_string "js" }
-  | ID_FILE         { Var_id.of_string "file" }
-  | ID_INLINE       { Var_id.of_string "inline" }
-  | ID_NOINLINE     { Var_id.of_string "noinline" }
-  | ID_OPEN         { Var_id.of_string "open" }
-  | ID_EXTEND       { Var_id.of_string "extend" }
-  | ID_LINEAR       { Var_id.of_string "linear" }
-  | ID_BEHIND       { Var_id.of_string "behind" }
-  | ID_VALUE        { Var_id.of_string "value" }
-  | ID_REFERENCE    { Var_id.of_string "reference" }
-  | ID_SCOPED       { Var_id.of_string "scoped" }
   | ID_INITIALLY    { Var_id.of_string "initially" }
   | ID_FINALLY      { Var_id.of_string "finally" }
-  | ID_REC          { Var_id.of_string "rec" }
-  | ID_CO           { Var_id.of_string "co" }
   (* note: commented out in original spec *)
   (* | ID_NAMED        { Var_id.of_string "named"; } *)
   ;
