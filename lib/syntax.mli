@@ -28,6 +28,7 @@ module Identifier : sig
     include Stringable.S with type t := t
   end
   include T
+  (* don't want this abstract .. *)
   include Identifiable.Make (T)
 end
 
@@ -42,12 +43,15 @@ type monotype =
   |
 ;;
 
-(* TODO: just haave builtin kinds V, E ? *)
+type kind_atom =
+  | Effect_type
+  | Effect_row
+  | Value
+
+(* TODO: is slightly more permissive than the grammar *)
 type kind =
-  (* TODO: grammar seems to allow curried & uncurried forms - equivalent? *)
-  | Arrow_uncurried of kind nonempty_list * Constructor_id.t
-  | Arrow_curried of Constructor_id.t * kind
-  | Atom of Constructor_id.t (* TODO: alias conid -> katom? *)
+  | Arrow of kind list * kind_atom
+  | Atom of kind_atom
 
 type type_scheme =
   { forall_quantified : type_parameter list

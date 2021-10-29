@@ -148,6 +148,10 @@ rule read =
   | "initially"                 { IDINITIALLY }
   | "finally"                   { IDFINALLY }
 
+  | "E"                         { KIND_E }
+  | "X"                         { KIND_X }
+  | "V"                         { KIND_V }
+
   (* reserved operators *)
   | ':'                         { COLON }
   | '=' { EQUALS }

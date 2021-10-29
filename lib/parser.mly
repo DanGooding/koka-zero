@@ -71,11 +71,7 @@
 (* %token ID_VALUE ID_REFERENCE ID_SCOPED *)
 %token ID_INITIALLY ID_FINALLY
 
-(* TODO: figure out mappings to ocaml types, add any extras *)
-%type <Id>  varid conid qvarid qconid op
-%type <Id>  identifier operator constructor
-%type <Id>  funid typeid binder
-%type <Id>  fundecl aliasdecl typedecl externdecl puredecl
+%token KIND_V KIND_E, KIND_X
 
 (* TODO: check if I need precedence stuff (including some on individual rules) *)
 (* precedence declarations are in increasing order,
@@ -736,6 +732,12 @@ constructor:
 conid:
   | id = CONID
     { Constructor_id.of_string id }
+  | KIND_E
+    { Constructor_id.of_string "E" }
+  | KIND_X
+    { Constructor_id.of_string "X" }
+  | KIND_V
+    { Constructor_id.of_string "V" }
   ;
 
 (* TODO: decide whether operators should be special cases, or done like funcitons *)
@@ -982,22 +984,37 @@ anntype:
 (* ---------------------------------------------------------
 -- Kinds
 ----------------------------------------------------------*)
+%type <kind option> kannot
 kannot:
-  | "::" kind
+  | "::"; k = kind
+    { Some k }
   | (* empty *)
+    { None }
   ;
 
+%type <kind> kind
 kind:
-  | "(" kinds1 ")" "->" katom
-  | katom "->" kind
-  | katom
+  | "("; ks = kinds1; ")"; "->"; a = katom
+    { Arrow ks (Atom a) }
+  | a = katom; "->"; k = kind
+    { Arrow [Atom a] k }
+  | a = katom
+    { Atom a }
   ;
 
+%type <kind list> kinds1
 kinds1:
-  | separated_nonempty_list(",", kind)
+  | ks = separated_nonempty_list(",", kind)
+    { ks }
 
+%type <kind_atom> katom
 katom:
-  | conid
+  | KIND_E
+    { Effect_row }
+  | KIND_X
+    { Effect_type }
+  | KIND_V
+    { Value }
   ;
 
 %%
