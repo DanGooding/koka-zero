@@ -1,6 +1,6 @@
 (library
- (name my_koka)
- (public_name my-koka)
+ (name koka_zero)
+ (public_name koka-zero)
  (libraries core)
  (preprocess (pps ppx_jane)))
 

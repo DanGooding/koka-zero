@@ -1,7 +1,7 @@
 open Alcotest
 
 let test_hello_with_name name () =
-  let greeting = My_koka.greet name in
+  let greeting = Koka_zero.greet name in
   let expected = "Hello " ^ name ^ "!" in
   check string "same string" greeting expected
 ;;
@@ -13,4 +13,4 @@ let suite =
   ]
 ;;
 
-let () = Alcotest.run "my-koka" [ "My_koka", suite ]
+let () = Alcotest.run "koka-zero" [ "Koka_zero", suite ]

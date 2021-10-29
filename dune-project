@@ -1,6 +1,6 @@
 (lang dune 2.0)
 
-(name my-koka)
+(name koka-zero)
 
 
 
@@ -17,7 +17,7 @@
 (generate_opam_files true)
 
 (package
- (name my-koka)
+ (name koka-zero)
  (synopsis "Reimplementatin of core Koka, compiling to LLVM-IR, for my dissertation")
  (description "Reimplementatin of core Koka, compiling to LLVM-IR, for my dissertation")
  (depends

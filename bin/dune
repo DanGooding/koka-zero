@@ -1,4 +1,4 @@
 (executable
  (name main)
- (public_name my-koka)
- (libraries my-koka))
+ (public_name koka-zero)
+ (libraries koka-zero))

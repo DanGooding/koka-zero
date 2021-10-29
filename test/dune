@@ -1,4 +1,4 @@
 (tests
- (names my_koka_test)
- (package my-koka)
- (libraries alcotest my_koka))
+ (names koka_zero_test)
+ (package koka-zero)
+ (libraries alcotest koka_zero))
