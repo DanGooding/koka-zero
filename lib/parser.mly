@@ -76,15 +76,7 @@
 
 (* %prec "?" *)
 
-%start <Syntax.program> program
-
-%type <Syntax.toplevel_declaration> topdecl
-%type <Syntax.pure_declaration> puredecl
-%type <Syntax.type_declaration> typedecl
-%type <Syntax.effect_declaration> effectdecl
-%type <Syntax.operation_declaration> operation
-
-%type <Syntax.statement> statement
+%start program
 
 %%
 
@@ -92,6 +84,7 @@
 -- Program
 ----------------------------------------------------------*)
 
+%type <program> program
 program:
   | semi* ds = declarations { ds }
   ;
@@ -106,6 +99,7 @@ semi:
 -- Top level declarations
 ----------------------------------------------------------*)
 
+%type <
 declarations:
   (* | fixitydecl semi+ declarations *)
   | topdecls
@@ -127,11 +121,13 @@ declarations:
 (*  ; *)
 
 
+%type <toplevel_declaration list> topdecls
 topdecls:
   | list(t = topdecl semi+ { t })
   ;
 (* TODO: error recovery? [(topdecl | error) semi+] *)
 
+%type <toplevel_declaration> topdecl
 topdecl:
   | p = puredecl { Pure_declaration p }
   (* TODO: keep aliases? *)
@@ -149,12 +145,14 @@ topdecl:
   | ALIAS typeid typeparams kannot "=" type_     { Var_id.of_string $2; } *)
 (*  ; *)
 
+%type <type_declaration> typedecl
 typedecl:
   (* | typemod TYPE typeid typeparams kannot typebody      { Var_id.of_string $3; } *)
   (* | structmod STRUCT typeid typeparams kannot conparams { Var_id.of_string $3; } *)
   | e = effectdecl { Effect_declaration e }
   ;
 
+%type <effect_declaration> effectdecl
 effectdecl:
   | EFFECT;
     id = varid;
@@ -232,15 +230,18 @@ effectdecl:
 ----------------------------------------------------------*)
 
 
+%type <operation_declaration list> operations
 opdecls:
   | "{"; semi*; operations = operations; "}"
     { operations }
   ;
 
+%type <operation_declaration list> operations
 operations:
   | operations = separated_list(semi+, operation) semi+
     { operations }
 
+%type <operation_declaration> operation
 operation:
   | VAL; id = varid; type_parameters = typeparams; ":"; result_type = tatomic
     { let shape = Val result_type in
@@ -305,15 +306,18 @@ funbody:
 
 (* TODO: template for this pattern (shared with operations) *)
 block:
-  | "{" semi* statements1 "}"    (* must end with an expression statement (and not a declaration) *)
+  (* must end with an expression statement (and not a declaration) *)
+  | "{" semi* statements1 "}"
   ;
 
 (* TODO: error recovery? {statement | error} *)
+%type <statement list> statements1
 statements1:
   | statements = separated_list(semi+, statement); semi+
     { statements }
   ;
 
+%type <statement> statement
 statement:
   (* XXX working here *)
   (* TODO: don't _need_ the wraper type - decl could produce a [statement] *)
@@ -325,6 +329,7 @@ statement:
   | basicexpr
   ;
 
+%type <declaration> decl
 decl:
   | FUN fundecl
   (* local value declaration can use a pattern binding *)
@@ -348,24 +353,36 @@ blockexpr:
   | expr_except_block
   ;
 
+%type <expr> expr_except_block
 expr_except_block:
   (* | withexpr *)
-  | returnexpr
-  | valexpr
-  | basicexpr
+  | e = returnexpr
+    { e }
+  | e = valexpr
+    { e }
+  | e = basicexpr
+    { e }
   ;
 
+%type <expr> expr
 expr:
   (* `block` interpreted as an anonymous function *)
   | block
-  | expr_except_block
+  | e = expr_except_block
+    { e }
 
+%type <expr> basicexpr
 basicexpr:
-  | ifexpr
-  | matchexpr
-  | handlerexpr
-  | fnexpr
-  | opexpr             %prec RARROW
+  | e = ifexpr
+    { e }
+  (* | matchexpr *)
+  | e = handlerexpr
+    { e }
+  | e = fnexpr
+    { e }
+  | opexpr
+    %prec RARROW
+    { e }
   ;
 
 
@@ -385,7 +402,7 @@ fnexpr:
 %type <expr> returnexpr
 returnexpr:
   | RETURN; e = expr
-  { Return e }
+    { Return e }
   ;
 
 %type <expr> ifexpr
@@ -398,6 +415,7 @@ ifexpr:
     { If_then(cond, Return e) }
   ;
 
+%type <expr> elifs
 elifs:
   | ELIF; cond = ntlexpr; THEN; a = expr; b = elifs
     { If_then_else(cond, a, b)  }
@@ -448,7 +466,6 @@ opexpr_of(prefixexpr_):
 *)
 
 (* opexpr_[associativity][koka precedence level] *)
-%type <expr> opexpr_r20
 opexpr_r20(prefixexpr_):
   | el = opexpr_r30(prefixexpr_); "||"; er = opexpr_r20(appexpr_)
     { Binary_op(el, Or, er) }
@@ -456,7 +473,6 @@ opexpr_r20(prefixexpr_):
     { e }
   ;
 
-%type <expr> opexpr_r30
 opexpr_r30(prefixexpr_):
   | el = opexpr_40(prefixexpr_); "&&"; er = opexpr_r30(appexpr_)
     { Binary_op(el, And, er) }
@@ -475,8 +491,7 @@ op_n40:
   ;
 
 (* non-associative *)
-%type <expr> opexpr_40
-opexpr_n40:
+opexpr_n40(prefixexpr_):
   | el = opexpr_l60(prefixexpr_); op = op_n40; er = opexpr_l60(appexpr_)
     { Binary_op(el, op, er) }
   | e = opexpr_l60(prefixexpr_)
@@ -489,7 +504,6 @@ op_l60:
   | "-" { Minus }
   ;
 
-%type <expr> opexpr_l60
 opexpr_l60(prefixexpr_):
   | el = opexpr_l60(prefixexpr_); op = op_l60; er = opexpr_l70(appexpr_)
     { Binay_op(el, op, er) }
@@ -504,7 +518,6 @@ op_l70:
   | "/" { Divide }
   ;
 
-%type <expr> opexpr_l70
 opexpr_l70(prefixexpr_):
   | el = opexpr_l70(prefixexpr_); op = op_l70; er = prefixexpr(appexpr_)
     { Binary_op(el, op, er) }
@@ -552,7 +565,6 @@ auxappexpr:
       | `Application(f', args')    -> `Application(Application(f', args'), args)
       | `Expr f'                   -> `Application(f', args)
     }
-  (* | appexpr "[" arguments "]"             (\* index expression *\) *)
   (* dot application *)
   | arg0 = appexpr; "."; f = atom
     { `Dot_application(f, arg0) }
@@ -564,9 +576,9 @@ auxappexpr:
   (* trailing function application *)
   | app = auxappexpr; last_arg = fnexpr
     { match app with
-        | `Application(f, args)     -> `Application(f, args @ [last_arg])
-        | `Dot_application(f, arg0) -> `Application(f, [arg0])
-        | `Expr e                   -> `Application(Expr e, [last_arg])
+      | `Application(f, args)     -> `Application(f, args @ [last_arg])
+      | `Dot_application(f, arg0) -> `Application(f, [arg0])
+      | `Expr e                   -> `Application(Expr e, [last_arg])
     }
   | e = atom
     { `Expr e }
@@ -607,7 +619,6 @@ auxntlappexpr:
       | `Dot_application(f', arg0) -> `Expr(Application(f, arg0 :: args))
       | `Expr e -> `Expr(Application(e, args))
     }
-  (* | ntlappexpr "[" arguments "]"             (\* index expression *\) *)
   (* dot application *)
   | arg0 = ntlappexpr; "."; f = atom
     { `Dot_application(f, arg0) }
@@ -673,11 +684,15 @@ argument:
 
 (* these are used only in constructor definitions *)
 
+%type <parameter list> parameters
 parameters:
   | parameters1
   | (* empty *)
   ;
 
+(* TODO: other productions (constructor) require the
+   nonempty property, but just [list] is okay for now *)
+%type <parameter list> parameters1
 parameters1:
   | separated_nonempty_list("," parameter)
   ;
@@ -819,7 +834,6 @@ varid:
 (* ---------------------------------------------------------
 -- Matching
 ----------------------------------------------------------*)
-(* TODO: pattern matching removed for now *)
 
 (* matchrules: *)
 (*   | list(matchrule semi+) *)
@@ -843,15 +857,21 @@ varid:
 (*   | pattern annot *)
 (*   ; *)
 
+%type <pattern> pattern
 pattern:
-  | identifier
-  (* | identifier AS pattern              (\* named pattern *\) *)
+  | id = identifier
+    { Id id }
+  (* (* named pattern *) *)
+  (* | identifier AS pattern *)
   (* | conid *)
   (* | conid "(" patargs ")" *)
-  (* | "(" apatterns ")"                  (\* unit, parenthesized, and tuple pattern *\) *)
-  (* | "[" apatterns "]"                  (\* list pattern *\) *)
+  (* (* unit, parenthesized, and tuple pattern *) *)
+  (* | "(" apatterns ")" *)
+  (* (* list pattern *) *)
+  (* | "[" apatterns "]" *)
   (* | literal *)
   | WILDCARD
+    { Wildcard }
   ;
 
 (* patargs:

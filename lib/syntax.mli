@@ -155,7 +155,6 @@ type pattern_parameter =
   }
 
 
-(* TODO: can have annotations anywhere! *)
 type expr =
   | block
   | Return of expr
@@ -188,11 +187,6 @@ type statement =
 ;;
 
 type block = statement list
-(* TODO:
-   is there a semantic difference between expr/basic_expr
-   block/block_expr etc.
-
-*)
 
 type binder = Identifier.t * type_ option
 type pure_declaration =
@@ -204,6 +198,3 @@ type toplevel_declaration =
   | Type_declaration of type_declaration
 
 type program = toplevel_declaration list
-
-(* TODO: are ids all the same type or not? Var_id.t != Operator_id.t != Constructor_id.t but what aboout type
-   vs.function vs. effect? *)
