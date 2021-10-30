@@ -67,9 +67,9 @@ type 'a operation_declaration =
 (* TODO: better name *)
 type operation_shape =
   (* TODO: name fields? *)
-  | Val of tatomic
-  | Fun of parameters * tatomic
-  | Except of parameters * tatomic
+  | Val     of tatomic
+  | Fun     of parameters * tatomic
+  | Except  of parameters * tatomic
   | Control of parameters * tatomic
 
 type operation_declaration =
@@ -84,6 +84,42 @@ type effect_declaration =
   ; kind_annotation : option kind
   ; operations : operation_declaration list
   }
+
+
+type operation_parameter =
+  { id : parameter_id
+  ; type_ : option type_
+  }
+
+type operation_handler =
+  | Val of
+      { id : Var_id.t
+      ; type_ : option type_
+      ; value : blockexpr
+      }
+  (* TODO: sharing betweem different shapes? *)
+  | Fun of
+      { id : Var_id.t
+      ; parameters : operation_parameter list
+      ; body : bodyexpr
+      }
+  | Except of
+      { id : Var_id.t
+      ; parameters : operation_parameter list
+      ; body : bodyexpr
+      }
+  | Control of
+      { id : Var_id.t
+      ; parameters : operation_parameter list
+      ; body : bodyexpr
+      }
+  | Return of
+      { parameter : operation_parameter
+      ; body : bodyexpr
+      }
+
+type handler = Handler of operation_handler list
+
 
 type type_declaration =
   (* TODO: records/Effect.t *)
@@ -155,6 +191,13 @@ type pattern_parameter =
   }
 
 
+type handle_expr =
+  { (** evaluates to a funciton *)
+    subject : expr
+    (** which is run under this handler *)
+  ; hander : handler
+  }
+
 type expr =
   | block
   | Return of expr
@@ -163,7 +206,11 @@ type expr =
   | If_then_else of ntl_expr * expr * expr
   | If_then of ntl_expr * expr
   (* | Match *)
-  | Handler
+  (** evaluates to any value *)
+  | Handle of handle_expr
+  (* TODO: should this be desugared? *)
+  (** evaluates to / behaves like a function *)
+  | Handler of handler
   | Fn of fn
   | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr

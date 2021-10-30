@@ -38,7 +38,7 @@
 %token IF THEN ELSE ELIF
 %token WITH IN
 (* %token MATCH *)
-%token RARROW LARROW
+%token RARROW "->" LARROW "<-"
 
 %token FUN FN VAL VAR CONTROL EXCEPT
 %token (* TYPE STRUCT *) EFFECT
@@ -896,24 +896,21 @@ pattern:
 (* ---------------------------------------------------------
 -- Handlers
 ----------------------------------------------------------*)
+%type <expr> handlerexpr
 handlerexpr:
-  (* handler is apparantly a function, handle is not *)
-  | HANDLER witheff opclauses
-  (* TODO: have never seen this used *)
-  | HANDLE witheff ntlexpr opclauses
-  ;
-
-(* TODO: what does an annotation on a handler mean? *)
-witheff:
-  | "<" anntype ">"
-  | (* empty *)
+  (* [val h = handler { ops }; h(action)] *)
+  | HANDLER; handler = opclauses
+    { Handler handler }
+  (* [handle (action) { ops }] *)
+  | HANDLE; subject = ntlexpr; handler = opclauses
+    { Handle { subject; handler } }
   ;
 
 withstat:
   | WITH basicexpr
   (* shorthand for handler *)
-  | WITH witheff opclauses
-  | WITH binder LARROW basicexpr
+  | WITH opclauses
+  | WITH binder "<-" basicexpr
   (* deprecated: *)
   | WITH binder "=" basicexpr
   ;
@@ -924,35 +921,52 @@ withstat:
 (*  (\* | withstat *\) *)
 (*  ; *)
 
+%type <handler> opclauses
 opclauses:
-  | opclause
-  | "{" semi* list(opclausex semi+) "}"
+  | op = opclause
+    { [op] }
+  | "{"; semi*; ops = list(opclausex semi+); "}"
+    { ops }
   ;
 
+%type <operation_handler> opclausex
 opclausex:
   (* | ID_FINALLY bodyexpr *)
   (* | ID_INITIALLY bodyexpr *)
-  | opclause
+  | op = opclause
+    { op }
   ;
 
+%type <operation_handler> opclause
 opclause:
-  | VAL identifier "=" blockexpr
-  | VAL identifier ":" type_ "=" blockexpr
-  | FUN varid opparams bodyexpr
-  | EXCEPT varid opparams bodyexpr
-  | CONTROL varid opparams bodyexpr
+  | VAL; id = varid; "="; value = blockexpr
+    { Val { id; type_ = None; value }}
+  | VAL; id = varid; ":"; type_ = type_; "="; value blockexpr
+    { Val { id; type_; value }}
+  | FUN; id = varid; parameters = opparams; body = bodyexpr
+    { Fun { id; parameters; body } }
+  | EXCEPT; id = varid; parameters = opparams; body = bodyexpr
+    { Except { id; parameters; body } }
+  | CONTROL; id = varid; parameters = opparams; body = bodyexpr
+    { Control { id; parameters; body } }
   (* | RCONTROL varid opparams bodyexpr *)
-  | RETURN "(" opparam ")" bodyexpr
+  | RETURN; "("; parameter = opparam; ")"; body = bodyexpr
+    { Return { parameter; body } }
   (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
   ;
 
+%type <operation_parameter list> opparams
 opparams:
-  | "(" separated_list(",", opparam) ")"
+  | "("; params = separated_list(",", opparam); ")"
+    { params }
   ;
 
+%type <operation_parameter> opparam
 opparam:
-  | paramid
-  | paramid ":" type_
+  | id = paramid
+    { { id; type_ = None } }
+  | id = paramid; ":"; type_ = type_
+    { { id; type_ } }
   ;
 
 
