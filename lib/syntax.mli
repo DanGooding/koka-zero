@@ -246,11 +246,11 @@ type binder =
   }
 
 type pure_declaration =
-  | Val of binder * blockexpr
+  | Val of binder * block
   | Fun of fun_declaration
 
 type toplevel_declaration =
   | Pure_declaration of pure_declaration
   | Type_declaration of type_declaration
 
-type program = toplevel_declaration list
+type program = Program of toplevel_declaration list

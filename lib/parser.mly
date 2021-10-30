@@ -87,7 +87,8 @@
 
 %type <program> program
 program:
-  | semi* ds = declarations { ds }
+  | semi*; ds = declarations; EOF
+    { ds }
   ;
 
 semi:
@@ -100,7 +101,7 @@ semi:
 -- Top level declarations
 ----------------------------------------------------------*)
 
-%type <
+%type <toplevel_declaration list> declarations
 declarations:
   (* | fixitydecl semi+ declarations *)
   | topdecls
@@ -268,7 +269,8 @@ operation:
 ----------------------------------------------------------*)
 %type <pure_declaration> puredecl
 puredecl:
-  | VAL; binder "=" blockexpr      { Var_id.of_string $3; }
+  | VAL; binder = binder; "="; body = blockexpr
+    { Val(binder, body) }
   | FUN; f = fundecl
     { Fun f }
   ;
@@ -601,13 +603,8 @@ auxappexpr:
   (* dot application *)
   | arg0 = appexpr; "."; f = atom
     { `Dot_application(f, arg0) }
-
   (* trailing function application *)
-  | auxappexpr block
-    (* TODO: copy the below case, once work out relation between
-       [block] and function body *)
-  (* trailing function application *)
-  | app = auxappexpr; last_arg = fnexpr
+  | app = auxappexpr; last_arg = trailinglambda
     { match app with
       | `Application(f, args)     -> `Application(f, args @ [last_arg])
       | `Dot_application(f, arg0) -> `Application(f, [arg0])
@@ -616,6 +613,15 @@ auxappexpr:
   | e = atom
     { `Expr e }
   ;
+
+%type <expr> trailinglambda
+trailinglambda:
+  | e = fnexpr
+    { e }
+  | body = block
+    { Fn (anonymous_of_body body) }
+  ;
+
 
 (* non-trailing-lambda expression *)
 %type <expr> ntlexpr
