@@ -101,24 +101,25 @@ type operation_handler =
   | Fun of
       { id : Var_id.t
       ; parameters : operation_parameter list
-      ; body : bodyexpr
+      ; body : block
       }
   | Except of
       { id : Var_id.t
       ; parameters : operation_parameter list
-      ; body : bodyexpr
+      ; body : block
       }
   | Control of
       { id : Var_id.t
       ; parameters : operation_parameter list
-      ; body : bodyexpr
+      ; body : block
       }
   | Return of
       { parameter : operation_parameter
-      ; body : bodyexpr
+      ; body : block
       }
 
-type handler = Handler of operation_handler list
+type handler =
+  Handler of operation_handler list
 
 
 type type_declaration =
@@ -129,13 +130,21 @@ type type_declaration =
 (* TODO: better naming *)
 type fn =
   { type_parameters : type_parameter list
-  ; parameters : parameters
+  ; parameters : pattern_parameter list
   ; result_type : tresult option
-  ; body : ??
+  ; body : block
+  }
+
+let anonymous_of_block : block -> fn =
+  fun block ->
+  { type_parameters = []
+  ; parameters = []
+  ; result_type = None
+  ; body
   }
 
 type fun_declaration =
-  { id : funid
+  { id : Identifier.t
   ; fn : fn
   }
 
@@ -144,7 +153,7 @@ type fun_declaration =
 
 type declaration =
   | Fun of fun_declaration
-  | Val of apattern * blockexpr
+  | Val of apattern * block
 
 type literal =
   | Int of int
@@ -190,32 +199,26 @@ type pattern_parameter =
   ; type_ : option type_
   }
 
-
-type handle_expr =
-  { (** evaluates to a funciton *)
-    subject : expr
-    (** which is run under this handler *)
-  ; hander : handler
+type annotated_pattern =
+  { pattern : pattern
+  ; annotation : type_scheme
   }
 
+
+
 type expr =
-  | block
   | Return of expr
   (* | withexpr *)
   | Val_in of apattern * blockexpr * expr
   | If_then_else of ntl_expr * expr * expr
   | If_then of ntl_expr * expr
   (* | Match *)
-  (** evaluates to any value *)
-  | Handle of handle_expr
-  (* TODO: should this be desugared? *)
-  (** evaluates to / behaves like a function *)
+  (* TODO: which of [handle]/[handler] is the logical primitive? *)
   | Handler of handler
   | Fn of fn
   | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr
   | Application of expr * argument list
-  | Application of application_expr
   | Identifier of Identifier.t
   | Literal of literal
   (* | Tuple of expr list *)
@@ -228,14 +231,20 @@ type expr =
 type statement =
   | Declaration of declaration
   | With of with_statement
-  | With_in of with_statement * block_expr
-  | Return of return_expr
-  | Basic_expr or Expr of ...
+  (* note this may be a return expression! *)
+  | Expr of expr
 ;;
 
-type block = statement list
+type block =
+  { statements : statement list
+  ; last : expr
+  }
 
-type binder = Identifier.t * type_ option
+type binder =
+  { id : Identifier.t
+  ; type_ : type_ option
+  }
+
 type pure_declaration =
   | Val of binder * blockexpr
   | Fun of fun_declaration

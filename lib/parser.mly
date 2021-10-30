@@ -266,33 +266,47 @@ operation:
 (* ---------------------------------------------------------
 -- Pure (top-level) Declarations
 ----------------------------------------------------------*)
+%type <pure_declaration> puredecl
 puredecl:
-  | VAL binder "=" blockexpr      { Var_id.of_string $3; }
-  | FUN funid funbody             { Var_id.of_string $3; }
+  | VAL; binder "=" blockexpr      { Var_id.of_string $3; }
+  | FUN; f = fundecl
+    { Fun f }
   ;
 
 (* TODO: update puredecl to include this? *)
+%type <fun_declaration> fundecl
 fundecl:
-  | funid funbody                { Var_id.of_string $1; }
+  | id = funid; fn = funbody                
+    { { id; fn } }
   ;
 
+%type <binder> binder
 binder:
-  | identifier                    { Var_id.of_string $1; }
-  | identifier ":" type_           { Var_id.of_string $1; }
+  | id = identifier
+    { { id; type_ = None } }
+  | id = identifier; ":"; type_ = type_
+    { { id; type_ } }
   ;
 
+%type <Identifier.t> funid
 funid:
-  | identifier         { Var_id.of_string $1; }
+  | id = identifier
+    { id }
   (* TODO: how can a function name be [,,,]? *)
   (* | "[" commas "]"     { Var_id.of_string "[]"; } *)
   (* TODO: are literals as function names needed? *)
   (* | STRING             { Var_id.of_string $1; } *)
   ;
 
-(* TODO: why does one call bodyexpr, and the other call block? *)
+%type <fn> funbody
 funbody:
-  | typeparams "(" pparameters ")" bodyexpr
-  | typeparams "(" pparameters ")" ":" tresult block
+  | type_parameters = typeparams; "("; parameters = pparameters; ")";
+    body = bodyexpr
+    { { type_parameters; parameteres; result_type = None; body } }
+  | type_parameters = typeparams; "("; parameters = pparameters; ")";
+    ":"; result_type = tresult;
+    body = block
+    { { type_parameters; parameteres; result_type; body } }
   ;
 
 (* annotres??
@@ -305,36 +319,46 @@ funbody:
 -- Statements
 ----------------------------------------------------------*)
 
-(* TODO: template for this pattern (shared with operations) *)
+(* TODO: error recovery? {statement | error} *)
+%type <block> block
 block:
   (* must end with an expression statement (and not a declaration) *)
-  | "{" semi* statements1 "}"
+  | "{"; semi*;
+    statements = separated_list(semi+, statement); semi+;
+    last = laststatement; semi+;
+    "}"
+    { { statements; last } }
   ;
 
-(* TODO: error recovery? {statement | error} *)
-%type <statement list> statements1
-statements1:
-  | statements = separated_list(semi+, statement); semi+
-    { statements }
-  ;
+(* TODO: statement is solely used by block - can desugar [with] here *)
 
 %type <statement> statement
 statement:
-  (* XXX working here *)
   (* TODO: don't _need_ the wraper type - decl could produce a [statement] *)
   | d = decl { Declaration d }
+  (* TODO: with is sugar, not a construct in of itself *)
   | w = withstat { With w }
-  | w = withstat; IN; b = blockexpr
-    { With_in(w, b) }
-  | returnexpr
-  | basicexpr
+  (* has unclear semantics, leaving out for now *)
+  (* | withstat; IN; blockexpr *)
+  | e = laststatement
+    { e }
+  ;
+
+%type <expr> laststatement
+laststatement:
+  | e = returnexpr
+    { e }
+  | e = basicexpr
+    { e }
   ;
 
 %type <declaration> decl
 decl:
-  | FUN fundecl
+  | FUN; f = fundecl
+    { Fun f }
   (* local value declaration can use a pattern binding *)
-  | VAL apattern "=" blockexpr
+  | VAL; annotated_pattern = apattern; "="; body = blockexpr
+    { Val(annotated_patten, body) }
   (* TODO: keep := in ? *)
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
   ;
@@ -343,15 +367,22 @@ decl:
 (* ---------------------------------------------------------
 -- Expressions
 ----------------------------------------------------------*)
+(** The body of an [if]/[match] branch, or of an anonymous function.
+    This may be a block, or a single expression (without braces) *)
+%type <block> bodyexpr
 bodyexpr:
-  | blockexpr
+  | block = blockexpr
+    { block }
   ;
 
+%type <block> blockexpr
 blockexpr:
   (* a `block` is not interpreted as an anonymous function but as statement
      grouping *)
-  | block
-  | expr_except_block
+  | b = block
+    { b }
+  | e = expr_except_block
+    { { statements = []; last = e } }
   ;
 
 %type <expr> expr_except_block
@@ -368,7 +399,8 @@ expr_except_block:
 %type <expr> expr
 expr:
   (* `block` interpreted as an anonymous function *)
-  | block
+  | b = block
+    { anonymous_of_block b }
   | e = expr_except_block
     { e }
 
@@ -715,6 +747,7 @@ paramid:
     { Wildcard }
   ;
 
+%type <type_> paramtype
 paramtype:
   | t = type_
     { t }
@@ -855,10 +888,12 @@ varid:
 (*   | separated_list(",", apattern) *)
 (*   ; *)
 
-(* apattern: *)
-(*   (* annotated pattern *) *)
-(*   | pattern annot *)
-(*   ; *)
+%type <annotated_pattern> apattern
+apattern:
+  (* annotated pattern *)
+  | pattern = pattern; annotation = annot
+    { { pattern; annotation } }
+  ;
 
 %type <pattern> pattern
 pattern:
@@ -903,7 +938,7 @@ handlerexpr:
     { Handler handler }
   (* [handle (action) { ops }] *)
   | HANDLE; subject = ntlexpr; handler = opclauses
-    { Handle { subject; handler } }
+    { Application(Handler handler, subject) }
   ;
 
 withstat:
@@ -1041,6 +1076,8 @@ typeapp:
   ;
 
 typecon:
+  | TYPE_INT
+  | TYPE_BOOL
   (* type name *)
   | varid
   (* wildcard type variable *)
@@ -1049,7 +1086,7 @@ typecon:
   (* | "(" commas1 ")"                (\* tuple constructor *\) *)
   (* | "[" "]"                        (\* list constructor *\) *)
   (* function constructor *)
-  | "(" "->" ")"
+  (* | "(" "->" ")" *)
   ;
 
 

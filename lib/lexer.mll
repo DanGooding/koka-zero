@@ -131,6 +131,9 @@ rule read =
   | "X"                         { KIND_X }
   | "V"                         { KIND_V }
 
+  | "int"                       { TYPE_INT }
+  | "bool"                      { TYPE_BOOL }
+
   (* literals *)
   | "True"                      { BOOL true }
   | "False"                     { BOOl false }
