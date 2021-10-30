@@ -10,24 +10,23 @@
 
 open Core
 
-module Var_id : Identifiable
-module Operator_id : Identifiable
-module Constructor_id : Identifiable
+module Var_id : Identifiable = String
+module Operator_id : Identifiable = String
+module Constructor_id : Identifiable = String
 
-module Identifier : sig
-  module T : sig
+module Identifier = struct
+  module T = struct
     type t =
       | Var of Var_id.t
       (* | Operator of Operator_id.t *)
       (* | Constructor of Constructor_id.t *)
-      [@@deriving compare, hash, sexp]
-    (* TODO: bin_io too? *)
+      [@@deriving compare, bin_io, hash, sexp]
 
-    val module_name : string
-    include Stringable.S with type t := t
+    let module_name = "Identifier"
+    let of_string s = Sexp.of_string s |> t_of_sexp
+    let to_string t = sexp_of_t t |> Sexp.to_string
   end
   include T
-  (* don't want this abstract .. *)
   include Identifiable.Make (T)
 end
 
@@ -36,7 +35,7 @@ type type_parameter =
   (* kind annotation is always optional *)
   (Var_id.t * kind option)
 
-type type_result = 
+type type_result = |
 type monotype =
   | Arrow of monotype * ()
   |
