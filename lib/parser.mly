@@ -593,10 +593,7 @@ auxappexpr:
   (* application *)
   | f = auxappexpr; "("; args = arguments; ")"
     { match f with
-      (* koka allows three syntaxes for passing arguments
-         (normal, dot, trailing lambda), any two can be used together
-         for a single call, but not all three *)
-      | `Dot_application(f', arg0) -> `Expr (Application(f', arg0 :: args))
+      | `Dot_application(f', arg0) -> `Application(f', arg0 :: args)
       | `Application(f', args')    -> `Application(Application(f', args'), args)
       | `Expr f'                   -> `Application(f', args)
     }
