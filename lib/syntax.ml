@@ -134,13 +134,28 @@ type fn =
   ; body : block
   }
 
+(** builds a 0 argument anonymous function with a given body *)
 let anonymous_of_block : block -> fn =
-  fun block ->
-  { type_parameters = []
-  ; parameters = []
-  ; result_type = None
-  ; body
-  }
+  fun body ->
+    { type_parameters = []
+    ; parameters = []
+    ; result_type = None
+    ; body
+    }
+
+(** builds a 1 argument anonymous function with a given
+    parameter and body *)
+let anonymous_of_bound_block : binder:binder -> block:block -> fn =
+  fun ~binder ~block ->
+    let parameter = pattern_parameter_of_binder binder in
+    { type_parameters = []
+    ; parameters = [parameter]
+    ; result_type = None
+    ; body = block
+    }
+
+
+
 
 type fun_declaration =
   { id : Identifier.t
@@ -198,6 +213,11 @@ type pattern_parameter =
   ; type_ : option type_
   }
 
+let pattern_parameter_of_binder : pattern_parameter -> binder =
+  fun binder ->
+    let { id; type_ } = binder in
+    { pattern = Id id; type_ }
+
 type annotated_pattern =
   { pattern : pattern
   ; annotation : type_scheme
@@ -229,10 +249,19 @@ type expr =
 
 type statement =
   | Declaration of declaration
-  | With of with_statement
   (* note this may be a return expression! *)
   | Expr of expr
 ;;
+
+(** `with` syntax: insert an anonymous function as the last argument
+    to an application (or apply the [expr] to the callback if
+    it is not already an [Application]) *)
+let insert_with_callback : callback:fn -> expr -> expr =
+  fun ~callback e ->
+  match e with
+  | Application(f, args) -> Application(f, args @ [Fn callback])
+  (* TODO: wildcard match is brittle *)
+  | _                    -> Application(e, [Fn callback])
 
 type block =
   { statements : statement list

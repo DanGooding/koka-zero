@@ -325,33 +325,25 @@ funbody:
 %type <block> block
 block:
   (* must end with an expression statement (and not a declaration) *)
-  | "{"; semi*;
+  | "{"; block = blockcontents; "}"
+    { block }
+  ;
+
+(* merely a helper function for `with` statement desugaring *)
+%type <block> blockcontents
+blockcontents:
+  | semi*;
     statements = separated_list(semi+, statement); semi+;
-    last = laststatement; semi+;
-    "}"
+    last = laststatement; semi*
     { { statements; last } }
   ;
 
-(* TODO: statement is solely used by block - can desugar [with] here *)
-
 %type <statement> statement
 statement:
-  (* TODO: don't _need_ the wraper type - decl could produce a [statement] *)
-  | d = decl { Declaration d }
-  (* TODO: with is sugar, not a construct in of itself *)
-  | w = withstat { With w }
-  (* has unclear semantics, leaving out for now *)
-  (* | withstat; IN; blockexpr *)
-  | e = laststatement
-    { e }
-  ;
-
-%type <expr> laststatement
-laststatement:
-  | e = returnexpr
-    { e }
-  | e = basicexpr
-    { e }
+  | d = decl
+    { Declaration d }
+  | e = exprstatement
+    { Expr e }
   ;
 
 %type <declaration> decl
@@ -361,10 +353,46 @@ decl:
   (* local value declaration can use a pattern binding *)
   | VAL; annotated_pattern = apattern; "="; body = blockexpr
     { Val(annotated_patten, body) }
-  (* TODO: keep := in ? *)
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
+;
+
+%type <expr> exprstatement
+exprstatement:
+  | e = returnexpr
+    { e }
+  | e = basicexpr
+    { e }
   ;
 
+%type <expr> laststatement
+laststatement:
+  | e = withstat
+    { e }
+  (* has unclear semantics, leaving out for now *)
+  (* | withstat; IN; blockexpr *)
+  | e = exprstatement
+    { e }
+  ;
+
+(* this grabs the rest of the containing block
+   so can only be [laststatement] *)
+%type <expr> withstat
+withstat:
+  | WITH; e = basicexpr; block = blockcontents
+    { let callback = anonymous_of_block block in
+      insert_with_callback ~callback e
+    }
+  (* shorthand for handler *)
+  | WITH; handler = opclauses; block = blockcontents
+    { let callback = anonymous_of_block block in
+      Application(Handler handler, callback)
+    }
+  (* note "=" syntax is deprecated *)
+  | WITH; binder = binder; ("<-" | "="); e = basicexpr; block = blockcontents
+    { let callback = anonymous_of_bound_block ~binder ~block:body in
+      insert_with_callback ~callback e
+    }
+;
 
 (* ---------------------------------------------------------
 -- Expressions
@@ -389,7 +417,6 @@ blockexpr:
 
 %type <expr> expr_except_block
 expr_except_block:
-  (* | withexpr *)
   | e = returnexpr
     { e }
   | e = valexpr
@@ -943,21 +970,6 @@ handlerexpr:
   | HANDLE; subject = ntlexpr; handler = opclauses
     { Application(Handler handler, subject) }
   ;
-
-withstat:
-  | WITH basicexpr
-  (* shorthand for handler *)
-  | WITH opclauses
-  | WITH binder "<-" basicexpr
-  (* deprecated: *)
-  | WITH binder "=" basicexpr
-  ;
-
-(* withexpr:
-  | withstat IN blockexpr *)
-(*  (\* note: already commented out in spec *\) *)
-(*  (\* | withstat *\) *)
-(*  ; *)
 
 %type <handler> opclauses
 opclauses:
