@@ -20,7 +20,7 @@ module Identifier = struct
     let module_name = "Identifier"
     let of_string s = Sexp.of_string s |> t_of_sexp
     let to_string t = sexp_of_t t |> Sexp.to_string
-  end
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
   include Identifiable.Make (T)
