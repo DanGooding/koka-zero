@@ -8,6 +8,8 @@
    terms of the Apache License, Version 2.0.
 *)
 
+%token EOF
+
 %token <string> ID CONID (* OP IDOP *)
 %token WILDCARD
 
@@ -34,7 +36,6 @@
 %token TILDE "~"
 %token EXCLAMATION_MARK "!"
 
-(* TODO: remove tokens not present in any production *)
 %token IF THEN ELSE ELIF
 %token WITH IN
 (* %token MATCH *)
@@ -54,7 +55,24 @@
 
 %token ID_INITIALLY ID_FINALLY
 
+(* builtins *)
 %token KIND_V KIND_E, KIND_X
+
+%token OP_OR "||"
+%token OP_AND "&&"
+%token OP_NOT_EQUAL "!="
+%token OP_EQUAL_EQUAL "=="
+%token OP_GREATER_EQUAL "<="
+%token OP_LESS_THAN ">="
+%token OP_PLUS "+"
+%token OP_MINUS "-"
+%token OP_TIMES "*"
+%token OP_DIVIDE "/"
+%token OP_MODULO "%"
+
+%token TYPE_BOOL
+%token TYPE_INT
+
 
 (* TODO: check if I need precedence stuff (including some on individual rules) *)
 (* precedence declarations are in increasing order,
@@ -79,13 +97,104 @@
 
 %start program
 
+(* %type <program> program *)
+%type <toplevel_declaration list> declarations
+%type <toplevel_declaration list> topdecls
+%type <toplevel_declaration> topdecl
+%type <type_declaration> typedecl
+%type <effect_declaration> effectdecl
+%type <operation_declaration list> operations
+%type <operation_declaration list> operations
+%type <operation_declaration> operation
+%type <pure_declaration> puredecl
+%type <fun_declaration> fundecl
+%type <binder> binder
+%type <Identifier.t> funid
+%type <fn> funbody
+%type <block> block
+%type <block> blockcontents
+%type <statement> statement
+%type <declaration> decl
+%type <expr> exprstatement
+%type <expr> laststatement
+%type <expr> withstat
+%type <block> bodyexpr
+%type <block> blockexpr
+%type <expr> expr_except_block
+%type <expr> expr
+%type <expr> basicexpr
+%type <expr> fnexpr
+%type <expr> returnexpr
+%type <expr> ifexpr
+%type <expr> elifs
+%type <expr> valexpr
+%type <expr> opexpr
+%type <expr> opexpr_of(prefixexpr)
+%type <expr> opexpr_of(ntlprefixexpr)
+%type <binary_operator> op_n40
+%type <binary_operator> op_l60
+%type <binary_operator> op_l70
+%type <expr> prefixexpr
+%type <expr> appexpr
+%type <expr> trailinglambda
+%type <expr> ntlexpr
+%type <expr> ntlopexpr
+%type <expr> ntlprefixexpr
+%type <expr> ntlappexpr
+%type <expr> atom
+%type <literal> literal
+%type <argument list> arguments
+%type <argument> argument
+%type <parameter list> parameters
+%type <parameter list> parameters1
+%type <parameter> parameter
+%type <parameter_id> paramid
+%type <type_> paramtype
+%type <pattern_parameter list> pparameters
+%type <pattern_parameter> pparameter
+%type <expr list> aexprs
+%type <expr> aexpr
+%type <type_scheme> annot
+%type <Identifier> identifier
+%type <Var_id.t> varid
+%type <annotated_pattern> apattern
+%type <pattern> pattern
+%type <expr> handlerexpr
+%type <handler> opclauses
+%type <operation_handler> opclausex
+%type <operation_handler> opclause
+%type <operation_parameter list> opparams
+%type <operation_parameter> opparam
+%type <type_parameter list> tbinders
+%type <type_parameter> tbinder
+%type <type_scheme> typescheme
+%type <type_> type_
+%type <type_parameter list> typeparams
+%type <type_parameter list> typeparams1
+%type <type_> tarrow
+%type <type_result> tresult
+%type <type_> tatomic
+%type <type_> tbasic
+%type <type_> typeapp
+%type <type_constructor> typecon
+%type <parameter_type list> tparams
+%type <parameter_type> tparam
+%type <type_ list> targuments1
+%type <type_ list> targuments1
+%type <type_> anntype
+%type <kind option> kannot
+%type <kind> kind
+%type <kind list> kinds1
+%type <kind_atom> katom
+%type <program> program
+
 %%
 
 (* ---------------------------------------------------------
 -- Program
 ----------------------------------------------------------*)
 
-%type <program> program
+(* %type <program> program *)
 program:
   | semi*; ds = declarations; EOF
     { ds }
@@ -93,7 +202,7 @@ program:
 
 semi:
   | ";"
-  | INSERTED_SEMI
+  { () }
   ;
 
 
@@ -101,10 +210,11 @@ semi:
 -- Top level declarations
 ----------------------------------------------------------*)
 
-%type <toplevel_declaration list> declarations
+(* %type <toplevel_declaration list> declarations *)
 declarations:
   (* | fixitydecl semi+ declarations *)
-  | topdecls
+  | ds = topdecls
+    { ds }
   ;
 
 (* fixitydecl:
@@ -123,13 +233,14 @@ declarations:
 (*  ; *)
 
 
-%type <toplevel_declaration list> topdecls
+(* %type <toplevel_declaration list> topdecls *)
 topdecls:
-  | list(t = topdecl; semi+ { t })
+  | ts = list(t = topdecl; semi+ { t })
+    { ts }
   ;
 (* TODO: error recovery? [(topdecl | error) semi+] *)
 
-%type <toplevel_declaration> topdecl
+(* %type <toplevel_declaration> topdecl *)
 topdecl:
   | p = puredecl { Pure_declaration p }
   (* TODO: keep aliases? *)
@@ -147,14 +258,14 @@ topdecl:
   | ALIAS typeid typeparams kannot "=" type_     { Var_id.of_string $2; } *)
 (*  ; *)
 
-%type <type_declaration> typedecl
+(* %type <type_declaration> typedecl *)
 typedecl:
   (* | typemod TYPE typeid typeparams kannot typebody      { Var_id.of_string $3; } *)
   (* | structmod STRUCT typeid typeparams kannot conparams { Var_id.of_string $3; } *)
   | e = effectdecl { Effect_declaration e }
   ;
 
-%type <effect_declaration> effectdecl
+(* %type <effect_declaration> effectdecl *)
 effectdecl:
   | EFFECT;
     id = varid;
@@ -232,18 +343,18 @@ effectdecl:
 ----------------------------------------------------------*)
 
 
-%type <operation_declaration list> operations
+(* %type <operation_declaration list> operations *)
 opdecls:
   | "{"; semi*; operations = operations; "}"
     { operations }
   ;
 
-%type <operation_declaration list> operations
+(* %type <operation_declaration list> operations *)
 operations:
   | operations = separated_list(semi+, operation) semi+
     { operations }
 
-%type <operation_declaration> operation
+(* %type <operation_declaration> operation *)
 operation:
   | VAL; id = varid; type_parameters = typeparams; ":"; result_type = tatomic
     { let shape = Val result_type in
@@ -267,7 +378,7 @@ operation:
 (* ---------------------------------------------------------
 -- Pure (top-level) Declarations
 ----------------------------------------------------------*)
-%type <pure_declaration> puredecl
+(* %type <pure_declaration> puredecl *)
 puredecl:
   | VAL; binder = binder; "="; body = blockexpr
     { Val(binder, body) }
@@ -276,13 +387,13 @@ puredecl:
   ;
 
 (* TODO: update puredecl to include this? *)
-%type <fun_declaration> fundecl
+(* %type <fun_declaration> fundecl *)
 fundecl:
   | id = funid; fn = funbody
     { { id; fn } }
   ;
 
-%type <binder> binder
+(* %type <binder> binder *)
 binder:
   | id = identifier
     { { id; type_ = None } }
@@ -290,7 +401,7 @@ binder:
     { { id; type_ } }
   ;
 
-%type <Identifier.t> funid
+(* %type <Identifier.t> funid *)
 funid:
   | id = identifier
     { id }
@@ -300,7 +411,7 @@ funid:
   (* | STRING             { Var_id.of_string $1; } *)
   ;
 
-%type <fn> funbody
+(* %type <fn> funbody *)
 funbody:
   | type_parameters = typeparams; "("; parameters = pparameters; ")";
     body = bodyexpr
@@ -322,7 +433,7 @@ funbody:
 ----------------------------------------------------------*)
 
 (* TODO: error recovery? {statement | error} *)
-%type <block> block
+(* %type <block> block *)
 block:
   (* must end with an expression statement (and not a declaration) *)
   | "{"; block = blockcontents; "}"
@@ -330,7 +441,7 @@ block:
   ;
 
 (* merely a helper function for `with` statement desugaring *)
-%type <block> blockcontents
+(* %type <block> blockcontents *)
 blockcontents:
   | semi*;
     statements = separated_list(semi+, statement); semi+;
@@ -338,7 +449,7 @@ blockcontents:
     { { statements; last } }
   ;
 
-%type <statement> statement
+(* %type <statement> statement *)
 statement:
   | d = decl
     { Declaration d }
@@ -346,7 +457,7 @@ statement:
     { Expr e }
   ;
 
-%type <declaration> decl
+(* %type <declaration> decl *)
 decl:
   | FUN; f = fundecl
     { Fun f }
@@ -356,7 +467,7 @@ decl:
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
 ;
 
-%type <expr> exprstatement
+(* %type <expr> exprstatement *)
 exprstatement:
   | e = returnexpr
     { e }
@@ -364,7 +475,7 @@ exprstatement:
     { e }
   ;
 
-%type <expr> laststatement
+(* %type <expr> laststatement *)
 laststatement:
   | e = withstat
     { e }
@@ -376,7 +487,7 @@ laststatement:
 
 (* this grabs the rest of the containing block
    so can only be [laststatement] *)
-%type <expr> withstat
+(* %type <expr> withstat *)
 withstat:
   | WITH; e = basicexpr; block = blockcontents
     { let callback = anonymous_of_block block in
@@ -387,8 +498,12 @@ withstat:
     { let callback = anonymous_of_block block in
       Application(Handler handler, callback)
     }
-  (* note "=" syntax is deprecated *)
-  | WITH; binder = binder; ("<-" | "="); e = basicexpr; block = blockcontents
+  | WITH; binder = binder; "<-"; e = basicexpr; block = blockcontents
+    { let callback = anonymous_of_bound_block ~binder ~block:body in
+      insert_with_callback ~callback e
+    }
+  (* deprecated *)
+  | WITH; binder = binder; "="; e = basicexpr; block = blockcontents
     { let callback = anonymous_of_bound_block ~binder ~block:body in
       insert_with_callback ~callback e
     }
@@ -399,13 +514,13 @@ withstat:
 ----------------------------------------------------------*)
 (** The body of an [if]/[match] branch, or of an anonymous function.
     This may be a block, or a single expression (without braces) *)
-%type <block> bodyexpr
+(* %type <block> bodyexpr *)
 bodyexpr:
   | block = blockexpr
     { block }
   ;
 
-%type <block> blockexpr
+(* %type <block> blockexpr *)
 blockexpr:
   (* a `block` is not interpreted as an anonymous function but as statement
      grouping *)
@@ -415,7 +530,7 @@ blockexpr:
     { { statements = []; last = e } }
   ;
 
-%type <expr> expr_except_block
+(* %type <expr> expr_except_block *)
 expr_except_block:
   | e = returnexpr
     { e }
@@ -425,7 +540,7 @@ expr_except_block:
     { e }
   ;
 
-%type <expr> expr
+(* %type <expr> expr *)
 expr:
   (* `block` interpreted as an anonymous function *)
   | b = block
@@ -433,7 +548,7 @@ expr:
   | e = expr_except_block
     { e }
 
-%type <expr> basicexpr
+(* %type <expr> basicexpr *)
 basicexpr:
   | e = ifexpr
     { e }
@@ -454,20 +569,20 @@ basicexpr:
 (*   | MATCH ntlexpr "{" semi* matchrules "}" *)
 (*   ; *)
 
-%type <expr> fnexpr
+(* %type <expr> fnexpr *)
 fnexpr:
   (* anonymous function *)
   | FN; f = funbody
     { Fn f }
   ;
 
-%type <expr> returnexpr
+(* %type <expr> returnexpr *)
 returnexpr:
   | RETURN; e = expr
     { Return e }
   ;
 
-%type <expr> ifexpr
+(* %type <expr> ifexpr *)
 ifexpr:
   | IF; cond = ntlexpr; THEN; a = expr; b = elifs
     { If_then_else(cond, a, b) }
@@ -477,7 +592,7 @@ ifexpr:
     { If_then(cond, Return e) }
   ;
 
-%type <expr> elifs
+(* %type <expr> elifs *)
 elifs:
   | ELIF; cond = ntlexpr; THEN; a = expr; b = elifs
     { If_then_else(cond, a, b)  }
@@ -485,7 +600,7 @@ elifs:
     { e }
   ;
 
-%type <expr> valexpr
+(* %type <expr> valexpr *)
 valexpr:
   | VAL; pat = apattern; "="; e1 = blockexpr; IN; e2 = expr
     { Val_in(pat, e1, e2) }
@@ -494,7 +609,7 @@ valexpr:
 
 (* operator expression *)
 
-%type <expr> opexpr
+(* %type <expr> opexpr *)
 opexpr:
   | e = opexpr_of(prefixexpr)
     { e }
@@ -504,8 +619,8 @@ opexpr:
     the nonterminal which operators are surrounded by.
     This allows sharing between standard and
     non-trailing-lambda usages *)
-%type <expr> opexpr_of(prefixexpr)
-%type <expr> opexpr_of(ntlprefixexpr)
+(* %type <expr> opexpr_of(prefixexpr) *)
+(* %type <expr> opexpr_of(ntlprefixexpr) *)
 opexpr_of(prefixexpr_):
   | e = opexpr_r20(prefixexpr_)
     { e }
@@ -529,20 +644,20 @@ opexpr_of(prefixexpr_):
 
 (* opexpr_[associativity][koka precedence level] *)
 opexpr_r20(prefixexpr_):
-  | el = opexpr_r30(prefixexpr_); "||"; er = opexpr_r20(appexpr_)
+  | el = opexpr_r30(prefixexpr_); "||"; er = opexpr_r20(prefixexpr_)
     { Binary_op(el, Or, er) }
   | e = opexpr_r30(prefixexpr_)
     { e }
   ;
 
 opexpr_r30(prefixexpr_):
-  | el = opexpr_40(prefixexpr_); "&&"; er = opexpr_r30(appexpr_)
+  | el = opexpr_n40(prefixexpr_); "&&"; er = opexpr_r30(prefixexpr_)
     { Binary_op(el, And, er) }
-  | e = opexpr_40(prefixexpr_)
+  | e = opexpr_n40(prefixexpr_)
     { e }
   ;
 
-%type <binary_operator> op_40
+(* %type <binary_operator> op_40 *)
 op_n40:
   | "==" { Equals }
   | "!=" { Not_equal }
@@ -554,26 +669,26 @@ op_n40:
 
 (* non-associative *)
 opexpr_n40(prefixexpr_):
-  | el = opexpr_l60(prefixexpr_); op = op_n40; er = opexpr_l60(appexpr_)
+  | el = opexpr_l60(prefixexpr_); op = op_n40; er = opexpr_l60(prefixexpr_)
     { Binary_op(el, op, er) }
   | e = opexpr_l60(prefixexpr_)
     { e }
   ;
 
-%type <binary_operator> op_l60
+(* %type <binary_operator> op_l60 *)
 op_l60:
   | "+" { Plus }
   | "-" { Minus }
   ;
 
 opexpr_l60(prefixexpr_):
-  | el = opexpr_l60(prefixexpr_); op = op_l60; er = opexpr_l70(appexpr_)
+  | el = opexpr_l60(prefixexpr_); op = op_l60; er = opexpr_l70(prefixexpr_)
     { Binay_op(el, op, er) }
   | e = opexpr_l70(prefixexpr_)
     { e }
   ;
 
-%type <binary_operator> op_l70
+(* %type <binary_operator> op_l70 *)
 op_l70:
   | "*" { Times }
   | "%" { Modulo }
@@ -581,13 +696,13 @@ op_l70:
   ;
 
 opexpr_l70(prefixexpr_):
-  | el = opexpr_l70(prefixexpr_); op = op_l70; er = prefixexpr(appexpr_)
+  | el = opexpr_l70(prefixexpr_); op = op_l70; er = prefixexpr(prefixexpr_)
     { Binary_op(el, op, er) }
   | e = prefixexpr_
     { e }
   ;
 
-%type <expr> prefixexpr
+(* %type <expr> prefixexpr *)
 prefixexpr:
   | "!"; e = prefixexpr
     { Un_op(Exclamation, e) }
@@ -600,7 +715,7 @@ prefixexpr:
      [-NUMBER] is always unary, [- ANYTHING] is always binary *)
   ;
 
-%type <expr> appexpr
+(* %type <expr> appexpr *)
 appexpr:
   | a = auxappexpr
     { match a with
@@ -609,6 +724,8 @@ appexpr:
       | `Expr e -> e
     }
 
+(*
+{[
 %type <
   [ (** a [`Dot_application] can be followed by more bracketed args *)
     `Dot_application of expr * argument
@@ -616,6 +733,8 @@ appexpr:
   | `Application of expr * argument list
   | `Expr of expr
   ]> auxappexpr
+]}
+ *)
 auxappexpr:
   (* application *)
   | f = auxappexpr; "("; args = arguments; ")"
@@ -638,7 +757,7 @@ auxappexpr:
     { `Expr e }
   ;
 
-%type <expr> trailinglambda
+(* %type <expr> trailinglambda *)
 trailinglambda:
   | e = fnexpr
     { e }
@@ -648,19 +767,19 @@ trailinglambda:
 
 
 (* non-trailing-lambda expression *)
-%type <expr> ntlexpr
+(* %type <expr> ntlexpr *)
 ntlexpr:
   | e = ntlopexpr
     { e }
   ;
 
-%type <expr> ntlopexpr
+(* %type <expr> ntlopexpr *)
 ntlopexpr:
   | e = opexpr_of(ntlprefixexpr)
     { e }
   ;
 
-%type <expr> ntlprefixexpr
+(* %type <expr> ntlprefixexpr *)
 ntlprefixexpr:
   (* | "~"; e = ntlprefixexpr *)
   | "!" ntlprefixexpr
@@ -669,12 +788,14 @@ ntlprefixexpr:
     { e }
   ;
 
-
+(* {[
 %type <
   [ (** a [`Dot_application] can be followed by more bracketed args *)
     `Dot_application of expr * argument
   | `Expr of expr
   ]> ntlappexpr
+]}
+ *)
 auxntlappexpr:
   (* application *)
   | f = auxntlappexpr; "("; args = arguments; ")"
@@ -689,7 +810,7 @@ auxntlappexpr:
     { `Expr e }
   ;
 
-%type <expr> ntlappexpr
+(* %type <expr> ntlappexpr *)
 ntlappexpr:
   | a = auxntlappexpr
     { match a with
@@ -699,11 +820,11 @@ ntlappexpr:
 
 (* atomic expressions *)
 
-%type <expr> atom
+(* %type <expr> atom *)
 atom:
   | id = identifier
     { Identfier id }
-  | constructor
+  (* | constructor *)
   | lit = literal
     { Literal lit }
   (* | mask *)
@@ -713,7 +834,7 @@ atom:
     (* unit, parenthesized (possibly annotated) expression, tuple expression *)
     (* list expression (elements may be terminated with comma instead of separated) *)
 
-%type <literal> literal
+(* %type <literal> literal *)
 literal:
   | i = INT
     { Int i }
@@ -733,13 +854,13 @@ literal:
 
 (* arguments: separated by comma *)
 
-%type <argument list> arguments
+(* %type <argument list> arguments *)
 arguments:
-  | as = separated_list(",", argument)
-    { as }
+  | args = separated_list(",", argument)
+    { args }
   ;
 
-%type <argument> argument
+(* %type <argument> argument *)
 argument:
   | e = expr
     { e }
@@ -750,7 +871,7 @@ argument:
 
 (* these are used only in constructor definitions *)
 
-%type <parameter list> parameters
+(* %type <parameter list> parameters *)
 parameters:
   | ps = parameters1
     { ps }
@@ -760,20 +881,20 @@ parameters:
 
 (* TODO: other productions (constructor) require the
    nonempty property, but just [list] is okay for now *)
-%type <parameter list> parameters1
+(* %type <parameter list> parameters1 *)
 parameters1:
-  | ps = separated_nonempty_list("," parameter)
+  | ps = separated_nonempty_list(",", parameter)
     { ps }
   ;
 
-%type <parameter> parameter
+(* %type <parameter> parameter *)
 parameter:
   | id = paramid; ":"; type_ = paramtype
     { { id; type_ } }
   (* | paramid ":" paramtype "=" expr *)
   ;
 
-%type <parameter_id> paramid
+(* %type <parameter_id> paramid *)
 paramid:
   | id = identifier
     { Id id }
@@ -781,7 +902,7 @@ paramid:
     { Wildcard }
   ;
 
-%type <type_> paramtype
+(* %type <type_> paramtype *)
 paramtype:
   | t = type_
     { t }
@@ -792,13 +913,13 @@ paramtype:
 
 (* pattern matching parameters: separated by comma *)
 
-%type <pattern_parameter list> pparameters
+(* %type <pattern_parameter list> pparameters *)
 pparameters:
   | ps = separated_list(",", pparameter)
     { ps }
   ;
 
-%type <pattern_parameter> pparameter
+(* %type <pattern_parameter> pparameter *)
 pparameter:
   | pattern = pattern
     { { pattern; type_ = None } }
@@ -813,19 +934,19 @@ pparameter:
 
 (* annotated expressions: separated or terminated by comma *)
 
-%type <expr list>
+(* %type <expr list> aexprs *)
 aexprs:
   | es = separated_list(",", aexpr)
     { es }
   ;
 
-%type <expr>
+(* %type <expr> aexpr *)
 aexpr:
   | e = expr; a = annot
     { Annotated(e, a) }
   ;
 
-%type <type_scheme> annot
+(* %type <type_scheme> annot *)
 annot:
   | ":"; s = typescheme
     { Some s }
@@ -849,14 +970,14 @@ annot:
    note this loses prefix syntax: [xs.fold(0, (+))]
 *)
 
-%type <Identifier> identifier
+(* %type <Identifier> identifier *)
 identifier:
   | var_id = varid
     { Var var_id }
   (* | IDOP *)
   ;
 
-%type <Var_id.t> varid
+(* %type <Var_id.t> varid *)
 varid:
   | id = ID
     { Var_id.of_string id }
@@ -922,14 +1043,14 @@ varid:
 (*   | separated_list(",", apattern) *)
 (*   ; *)
 
-%type <annotated_pattern> apattern
+(* %type <annotated_pattern> apattern *)
 apattern:
   (* annotated pattern *)
   | pattern = pattern; annotation = annot
     { { pattern; annotation } }
   ;
 
-%type <pattern> pattern
+(* %type <pattern> pattern *)
 pattern:
   | id = identifier
     { Id id }
@@ -965,7 +1086,7 @@ pattern:
 (* ---------------------------------------------------------
 -- Handlers
 ----------------------------------------------------------*)
-%type <expr> handlerexpr
+(* %type <expr> handlerexpr *)
 handlerexpr:
   (* [val h = handler { ops }; h(action)] *)
   | HANDLER; handler = opclauses
@@ -975,15 +1096,15 @@ handlerexpr:
     { Application(Handler handler, subject) }
   ;
 
-%type <handler> opclauses
+(* %type <handler> opclauses *)
 opclauses:
   | op = opclause
     { [op] }
-  | "{"; semi*; ops = list(opclausex semi+); "}"
+  | "{"; semi*; ops = list(op = opclausex; semi+ { op }); "}"
     { ops }
   ;
 
-%type <operation_handler> opclausex
+(* %type <operation_handler> opclausex *)
 opclausex:
   (* | ID_FINALLY bodyexpr *)
   (* | ID_INITIALLY bodyexpr *)
@@ -991,7 +1112,7 @@ opclausex:
     { op }
   ;
 
-%type <operation_handler> opclause
+(* %type <operation_handler> opclause *)
 opclause:
   | VAL; id = varid; "="; value = blockexpr
     { Val { id; type_ = None; value }}
@@ -1009,13 +1130,13 @@ opclause:
   (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
   ;
 
-%type <operation_parameter list> opparams
+(* %type <operation_parameter list> opparams *)
 opparams:
   | "("; params = separated_list(",", opparam); ")"
     { params }
   ;
 
-%type <operation_parameter> opparam
+(* %type <operation_parameter> opparam *)
 opparam:
   | id = paramid
     { { id; type_ = None } }
@@ -1028,13 +1149,13 @@ opparam:
 -- Types
 ----------------------------------------------------------*)
 
-%type <type_parameter list> tbinders
+(* %type <type_parameter list> tbinders *)
 tbinders:
   | ts = separated_list(",", tbinder)
     { ts }
   ;
 
-%type <type_parameter> tbinder
+(* %type <type_parameter> tbinder *)
 tbinder:
   | id = varid; kind = kannot
     { { id; kind } }
@@ -1043,7 +1164,7 @@ tbinder:
 
 (* full type *)
 (* used for type annotations *)
-%type <type_scheme> typescheme
+(* %type <type_scheme> typescheme *)
 typescheme:
   | FORALL; forall_quantified = typeparams1; type_ = tarrow
     { { forall_quanitifed; type_ } }
@@ -1052,7 +1173,7 @@ typescheme:
   (* note: spec allowed `some<>` as well here *)
   ;
 
-%type <type_>
+(* %type <type_> type_ *)
 type_:
   | FORALL; forall_quantified = typeparams1; type_ = tarrow
     { Scheme { forall_quantified; type_ } }
@@ -1060,7 +1181,7 @@ type_:
     { t }
   ;
 
-%type <type_parameter list> typeparams
+(* %type <type_parameter list> typeparams *)
 typeparams:
   | ps = typeparams1
     { ps }
@@ -1069,13 +1190,14 @@ typeparams:
   ;
 
 (* TODO: currently discarding the 'nonempty' invariant *)
-%type <type_parameter list> typeparams
+(* %type <type_parameter list> typeparams1 *)
 typeparams1:
-  | "<" tbinders ">"
+  | "<"; ps = tbinders; ">"
+    { ps }
   ;
 
 (* 'mono' types *)
-%type <type_> tarrow
+(* %type <type_> tarrow *)
 tarrow:
   | "("; ps = tparams; ")"; "->"; result = tresult
     { Arrow(ps, result) }
@@ -1087,7 +1209,7 @@ tarrow:
     { t }
   ;
 
-%type <type_result> tresult
+(* %type <type_result> tresult *)
 tresult:
   (* effect and result type *)
   | effect = tatomic; result = tbasic
@@ -1097,7 +1219,7 @@ tresult:
     { { effect = total_effect_row; result } }
   ;
 
-%type <type_> tatomic
+(* %type <type_> tatomic *)
 tatomic:
   | t = tbasic
     { t }
@@ -1109,7 +1231,7 @@ tatomic:
     { Effect_row Closed(ts) }
   ;
 
-%type <type_> tbasic
+(* %type <type_> tbasic *)
 tbasic:
   | t = typeapp
     { t }
@@ -1123,7 +1245,7 @@ tbasic:
   (* | "[" anntype "]"                (\* list type *\) *)
   ;
 
-%type <type_> typeapp
+(* %type <type_> typeapp *)
 typeapp:
   | t = typecon
     { Atom(t, []) }
@@ -1131,7 +1253,7 @@ typeapp:
     { Atom(t, args) }
   ;
 
-%type <type_constructor> typecon
+(* %type <type_constructor> typecon *)
 typecon:
   (* type name *)
   | id = varid
@@ -1151,14 +1273,14 @@ typecon:
   ;
 
 
-%type <parameter_type list> tparams
+(* %type <parameter_type list> tparams *)
 tparams:
   | ps = separated_list(",", tparam)
     { ps }
   ;
 
 (* the `x : int` part of `(x : int, y : int) -> bool` *)
-%type <parameter_type> tparam
+(* %type <parameter_type> tparam *)
 tparam:
   (* named parameter *)
   | id = identifier; ":"; anntype = anntype
@@ -1168,7 +1290,7 @@ tparam:
   ;
 
 
-%type <type_ list> targuments1
+(* %type <type_ list> targuments1 *)
 targuments:
   | anntypes = targuments1
     { anntypes }
@@ -1176,13 +1298,13 @@ targuments:
     { [] }
   ;
 
-%type <type_ list> targuments1
+(* %type <type_ list> targuments1 *)
 targuments1:
-  | anntypes = separated_nonempy_list(",", anntype)
+  | anntypes = separated_nonempty_list(",", anntype)
     { anntypes }
   ;
 
-%type <type_> anntype
+(* %type <type_> anntype *)
 anntype:
   | type_ = type_; kind = kannot
     { match kind with
@@ -1195,7 +1317,7 @@ anntype:
 (* ---------------------------------------------------------
 -- Kinds
 ----------------------------------------------------------*)
-%type <kind option> kannot
+(* %type <kind option> kannot *)
 kannot:
   | "::"; k = kind
     { Some k }
@@ -1203,7 +1325,7 @@ kannot:
     { None }
   ;
 
-%type <kind> kind
+(* %type <kind> kind *)
 kind:
   | "("; ks = kinds1; ")"; "->"; a = katom
     { Arrow ks (Atom a) }
@@ -1213,12 +1335,12 @@ kind:
     { Atom a }
   ;
 
-%type <kind list> kinds1
+(* %type <kind list> kinds1 *)
 kinds1:
   | ks = separated_nonempty_list(",", kind)
     { ks }
 
-%type <kind_atom> katom
+(* %type <kind_atom> katom *)
 katom:
   | KIND_E
     { Effect_row }
