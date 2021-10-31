@@ -152,10 +152,10 @@
 %type <type_> paramtype
 %type <pattern_parameter list> pparameters
 %type <pattern_parameter> pparameter
-%type <expr list> aexprs
+(* %type <expr list> aexprs *)
 %type <expr> aexpr
 %type <type_scheme> annot
-%type <Identifier> identifier
+%type <Identifier.t> identifier
 %type <Var_id.t> varid
 %type <annotated_pattern> apattern
 %type <pattern> pattern
@@ -935,10 +935,10 @@ pparameter:
 (* annotated expressions: separated or terminated by comma *)
 
 (* %type <expr list> aexprs *)
-aexprs:
-  | es = separated_list(",", aexpr)
-    { es }
-  ;
+(* aexprs: *)
+(*   | es = separated_list(",", aexpr) *)
+(*     { es } *)
+(*   ; *)
 
 (* %type <expr> aexpr *)
 aexpr:
@@ -970,7 +970,7 @@ annot:
    note this loses prefix syntax: [xs.fold(0, (+))]
 *)
 
-(* %type <Identifier> identifier *)
+(* %type <Identifier.t> identifier *)
 identifier:
   | var_id = varid
     { Var var_id }
@@ -1225,10 +1225,10 @@ tatomic:
     { t }
   (* extensible effect type *)
   | "<"; heads = targuments1; "|"; tail = tatomic; ">"
-    { Effect_row Open(heads, tail) }
+    { Effect_row (Open(heads, tail)) }
   (* fixed effect type *)
   | "<"; ts = targuments; ">"
-    { Effect_row Closed(ts) }
+    { Effect_row (Closed(ts)) }
   ;
 
 (* %type <type_> tbasic *)
@@ -1328,9 +1328,9 @@ kannot:
 (* %type <kind> kind *)
 kind:
   | "("; ks = kinds1; ")"; "->"; a = katom
-    { Arrow ks (Atom a) }
+    { Arrow(ks, (Atom a)) }
   | a = katom; "->"; k = kind
-    { Arrow [Atom a] k }
+    { Arrow([Atom a], k) }
   | a = katom
     { Atom a }
   ;
