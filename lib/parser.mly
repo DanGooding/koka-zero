@@ -607,7 +607,7 @@ auxappexpr:
   | app = auxappexpr; last_arg = trailinglambda
     { match app with
       | `Application(f, args)     -> `Application(f, args @ [last_arg])
-      | `Dot_application(f, arg0) -> `Application(f, [arg0])
+      | `Dot_application(f, arg0) -> `Application(f, [arg0; last_arg])
       | `Expr e                   -> `Application(Expr e, [last_arg])
     }
   | e = atom
