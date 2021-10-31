@@ -125,7 +125,7 @@ declarations:
 
 %type <toplevel_declaration list> topdecls
 topdecls:
-  | list(t = topdecl semi+ { t })
+  | list(t = topdecl; semi+ { t })
   ;
 (* TODO: error recovery? [(topdecl | error) semi+] *)
 
@@ -278,7 +278,7 @@ puredecl:
 (* TODO: update puredecl to include this? *)
 %type <fun_declaration> fundecl
 fundecl:
-  | id = funid; fn = funbody                
+  | id = funid; fn = funbody
     { { id; fn } }
   ;
 
@@ -991,7 +991,7 @@ opclausex:
 opclause:
   | VAL; id = varid; "="; value = blockexpr
     { Val { id; type_ = None; value }}
-  | VAL; id = varid; ":"; type_ = type_; "="; value blockexpr
+  | VAL; id = varid; ":"; type_ = type_; "="; value = blockexpr
     { Val { id; type_; value }}
   | FUN; id = varid; parameters = opparams; body = bodyexpr
     { Fun { id; parameters; body } }
