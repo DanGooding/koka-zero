@@ -193,7 +193,7 @@ rule read =
   | id               { ID (lex_identifier lexbuf) }
   (* | '(' operator ')' { IDOP (Lexing.lexeme lexbuf) } *)
   (* | operator         { OP (Lexing.lexeme lexbuf) } *)
-  | '_' id_char*     { WILDCARD }
+  | '_' id_char*     { WILDCARD (lex_identifier lexbuf) }
 
   | space+ { read lexbuf }
   | newline { next_line lexbuf; read_lexbuf }

@@ -1023,81 +1023,123 @@ opparam:
 (* ---------------------------------------------------------
 -- Types
 ----------------------------------------------------------*)
+
+%type <type_parameter list> tbinders
 tbinders:
-  | separated_list(",", tbinder)
+  | ts = separated_list(",", tbinder)
+    { ts }
   ;
 
+%type <type_parameter> tbinder
 tbinder:
-  | varid kannot
+  | id = varid; kind = kannot
+    { { id; kind } }
   ;
 
 
 (* full type *)
+(* used for type annotations *)
+%type <type_scheme> typescheme
 typescheme:
-  | someforalls tarrow         (* used for type annotations *)
+  | FORALL; forall_quantified = typeparams1; type_ = tarrow
+    { { forall_quanitifed; type_ } }
+  | type_ = tarrow
+    { { forall_quantified = []; type_ } }
+  (* note: spec allowed `some<>` as well here *)
   ;
 
+%type <type_>
 type_:
-  | FORALL typeparams1 tarrow
-  | tarrow
+  | FORALL; forall_quantified = typeparams1; type_ = tarrow
+    { Scheme { forall_quantified; type_ } }
+  | t = tarrow
+    { t }
   ;
 
-someforalls:
-  | FORALL typeparams1
-  | (* empty *)
-  ;
-
+%type <type_parameter list> typeparams
 typeparams:
-  | typeparams1
+  | ps = typeparams1
+    { ps }
   | (* empty *)
+    { [] }
   ;
 
+(* TODO: currently discarding the 'nonempty' invariant *)
+%type <type_parameter list> typeparams
 typeparams1:
   | "<" tbinders ">"
   ;
 
-(* mono types *)
+(* 'mono' types *)
+%type <type_> tarrow
 tarrow:
-  | tatomic "->" tresult
-  | tatomic
+  | "("; ps = tparams; ")"; "->"; result = tresult
+    { Arrow(ps, result) }
+  (* TODO: I think there will be a shift/reduce conflict here
+     for e.g. `(int) -> int` *)
+  | p = tatomic; "->"; result = tresult
+    { Arrow([p], result) }
+  | t = tatomic
+    { t }
   ;
 
+%type <type_result> tresult
 tresult:
   (* effect and result type *)
-  | tatomic tbasic
+  | effect = tatomic; result = tbasic
+    { { effect; result } }
   (* just a result type (with a default total effect) *)
-  | tatomic
+  | result = tatomic
+    { { effect = total_effect_row; result } }
   ;
 
+%type <type_> tatomic
 tatomic:
-  | tbasic
+  | t = tbasic
+    { t }
   (* extensible effect type *)
-  | "<" targuments1 "|" tatomic ">"
+  | "<"; heads = targuments1; "|"; tail = tatomic; ">"
+    { Effect_row Open(heads, tail) }
   (* fixed effect type *)
-  | "<" targuments ">"
+  | "<"; ts = targuments; ">"
+    { Effect_row Closed(ts) }
   ;
 
+%type <type_> tbasic
 tbasic:
-  | typeapp
+  | t = typeapp
+    { t }
+  (* kept to allow returning functions (brackets for precedence only) *)
+  | "("; t = anntype; ")"
+    { t }
+  (* note: this below appears to permit named tuple members in types! *)
   (* unit, parenthesis, tuple, named parameters *)
-  | "(" tparams ")"
+  (* | "(" tparams ")" *)
   (* TODO: [] as the list type doesn't seem to actually be supported *)
   (* | "[" anntype "]"                (\* list type *\) *)
   ;
 
+%type <type_> typeapp
 typeapp:
-  | typecon
-  | typecon "<" targuments ">"
+  | t = typecon
+    { Atom(t, []) }
+  | t = typecon; "<"; args = targuments; ">"
+    { Atom(t, args) }
   ;
 
+%type <type_constructor> typecon
 typecon:
-  | TYPE_INT
-  | TYPE_BOOL
   (* type name *)
-  | varid
+  | id = varid
+    { Variable_or_name (Var_id.of_string id) }
   (* wildcard type variable *)
-  | WILDCARD
-  (* TODO: I think the (,,,)<a,b,c> form isn't needed *)
+  | id = WILDCARD
+    { Wildcard (Var_id.of_string id) }
+  | TYPE_INT
+    { Int }
+  | TYPE_BOOL
+    { Bool }
+  (* these unapplied forms don't seem to actually exist *)
   (* | "(" commas1 ")"                (\* tuple constructor *\) *)
   (* | "[" "]"                        (\* list constructor *\) *)
   (* function constructor *)
@@ -1105,28 +1147,44 @@ typecon:
   ;
 
 
+%type <parameter_type list> tparams
 tparams:
-  | separated_list(",", tparam)
+  | ps = separated_list(",", tparam)
+    { ps }
   ;
 
+(* the `x : int` part of `(x : int, y : int) -> bool` *)
+%type <parameter_type> tparam
 tparam:
   (* named parameter *)
-  | identifier ":" anntype
-  | anntype
+  | id = identifier; ":"; anntype = anntype
+    { (Some id, anntype) }
+  | anntype = anntype
+    { (None, anntype) }
   ;
 
 
+%type <type_ list> targuments1
 targuments:
-  | targuments1
+  | anntypes = targuments1
+    { anntypes }
   | (* empty *)
+    { [] }
   ;
 
+%type <type_ list> targuments1
 targuments1:
-  | separated_nonempy_list(",", anntype)
+  | anntypes = separated_nonempy_list(",", anntype)
+    { anntypes }
   ;
 
+%type <type_> anntype
 anntype:
-  | type_ kannot
+  | type_ = type_; kind = kannot
+    { match kind with
+      | Some kind -> Annotated { type_; kind }
+      | None      -> type_
+    }
   ;
 
 
