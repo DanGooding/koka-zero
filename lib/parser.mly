@@ -103,7 +103,7 @@
 %type <toplevel_declaration> topdecl
 %type <type_declaration> typedecl
 %type <effect_declaration> effectdecl
-%type <operation_declaration list> operations
+%type <operation_declaration list> opdecls
 %type <operation_declaration list> operations
 %type <operation_declaration> operation
 %type <pure_declaration> puredecl
@@ -179,7 +179,7 @@
 %type <type_constructor> typecon
 %type <parameter_type list> tparams
 %type <parameter_type> tparam
-%type <type_ list> targuments1
+%type <type_ list> targuments
 %type <type_ list> targuments1
 %type <type_> anntype
 %type <kind option> kannot
@@ -343,7 +343,7 @@ effectdecl:
 ----------------------------------------------------------*)
 
 
-(* %type <operation_declaration list> operations *)
+(* %type <operation_declaration list> opdecls *)
 opdecls:
   | "{"; semi*; operations = operations; "}"
     { operations }
@@ -696,7 +696,7 @@ op_l70:
   ;
 
 opexpr_l70(prefixexpr_):
-  | el = opexpr_l70(prefixexpr_); op = op_l70; er = prefixexpr(prefixexpr_)
+  | el = opexpr_l70(prefixexpr_); op = op_l70; er = prefixexpr_
     { Binary_op(el, op, er) }
   | e = prefixexpr_
     { e }
@@ -1290,7 +1290,7 @@ tparam:
   ;
 
 
-(* %type <type_ list> targuments1 *)
+(* %type <type_ list> targuments *)
 targuments:
   | anntypes = targuments1
     { anntypes }
