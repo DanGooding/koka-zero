@@ -95,7 +95,7 @@ rule read =
   | "fun"                       { FUN }
   | "fn"                        { FN }
   | "val"                       { VAL }
-  | "var"                       { VAR }
+  (* | "var"                       { VAR } *)
   (* | "con"                       { CON } *)
 
   | "if"                        { IF }
@@ -146,21 +146,20 @@ rule read =
   | "<-" { LARROW }
 
   (* non reserved, but have special meanning in certain contexts *)
-  | ":=" { ASSIGN }
+  (* | ":=" { ASSIGN } *)
   | "::" { DCOLON }
   | '|' { PIPE }
   | '<' { LESS_THAN }
   | '>' { GREATER_THAN }
   | '!' { EXCLAMATION_MARK }
-  | '~' { TILDE }
 
   (* special (non operator) symbols *)
   | '(' { OPEN_ROUND }
   | ')' { CLOSE_ROUND }
   | '{' { OPEN_CURLY }
   | '}' { CLOSE_CURLY }
-  | '[' { OPEN_SQUARE }
-  | ']' { CLOSE_SQUARE }
+  (* | '[' { OPEN_SQUARE } *)
+  (* | ']' { CLOSE_SQUARE } *)
   | ';' { SEMI }
   | ',' { COMMA }
   | '<' { LESS_THAN }
@@ -189,7 +188,7 @@ rule read =
   | sign digit+             { int_of_string (Lexing.lexeme lexbuf) }
 
   (* Identifiers and operators *)
-  | con_id           { CONID (lex_identifier lexbuf) }
+  (* | con_id           { CONID (lex_identifier lexbuf) } *)
   | id               { ID (lex_identifier lexbuf) }
   (* | '(' operator ')' { IDOP (Lexing.lexeme lexbuf) } *)
   (* | operator         { OP (Lexing.lexeme lexbuf) } *)

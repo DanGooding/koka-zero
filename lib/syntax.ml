@@ -310,6 +310,16 @@ let insert_with_callback : callback:fn -> expr -> expr =
  fun ~callback e ->
   match e with
   | Application (f, args) -> Application (f, args @ [ Fn callback ])
-  (* TODO: wildcard match is brittle *)
-  | _ -> Application (e, [ Fn callback ])
+  (* note: technically, [Annotated(e, scheme)] should be possible if [e] is an
+     application, but real koka also forbids this. (There may be some difficulies with
+     capture of type variables) *)
+  | Annotated (_, _)
+  | Return _
+  | Val_in (_, _, _)
+  | If_then_else (_, _, _)
+  | If_then (_, _)
+  | Handler _ | Fn _
+  | Binary_op (_, _, _)
+  | Unary_op (_, _)
+  | Identifier _ | Literal _ -> Application (e, [ Fn callback ])
 ;;

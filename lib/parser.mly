@@ -10,7 +10,7 @@
 
 %token EOF
 
-%token <string> ID CONID (* OP IDOP *)
+%token <string> ID (* CONID OP IDOP *)
 %token WILDCARD
 
 %token <int> INT
@@ -22,7 +22,7 @@
 (* string literals define nicer syntax for use in the production rules
    they do not determine when the lexer produces these tokens *)
 %token OPEN_ROUND  "(" CLOSE_ROUND  ")"
-%token OPEN_SQUARE "[" CLOSE_SQUARE "]"
+(* %token OPEN_SQUARE "[" CLOSE_SQUARE "]" *)
 %token OPEN_CURLY  "{" CLOSE_CURLY  "}"
 
 %token LESS_THAN "<" GREATER_THAN ">"
@@ -33,7 +33,6 @@
 %token COMMA ","
 %token SEMI ";"
 %token EQUALS "="
-%token TILDE "~"
 %token EXCLAMATION_MARK "!"
 
 %token IF THEN ELSE ELIF
@@ -41,14 +40,14 @@
 (* %token MATCH *)
 %token RARROW "->" LARROW "<-"
 
-%token FUN FN VAL VAR CONTROL EXCEPT
+%token FUN FN VAL (* VAR *) CONTROL EXCEPT
 %token (* TYPE STRUCT *) EFFECT
 (* %token ALIAS CON *)
 %token FORALL
 
 (* %token INFIX INFIXL INFIXR *)
 
-%token ASSIGN
+(* %token ASSIGN *)
 %token RETURN
 
 %token HANDLER HANDLE (* NAMED MASK *)
@@ -90,14 +89,16 @@
    note: we could avoid these rules by disallowing the `->` form in trailing lambdas.
 *)
 %nonassoc RARROW                     (* -> *)
-%nonassoc "(" "[" FN "{" "."         (* applications *)
-%nonassoc OP ASSIGN ">" "<" "|"      (* operators *)
+%nonassoc "(" (* "[" *) FN "{" "."         (* applications *)
+%nonassoc (* OP ASSIGN *) ">" "<" (* "|" *)      (* operators *)
 
 (* %prec "?" *)
 
+%{ open Syntax %}
+
 %start program
 
-(* %type <program> program *)
+%type <program> program
 %type <toplevel_declaration list> declarations
 %type <toplevel_declaration list> topdecls
 %type <toplevel_declaration> topdecl
@@ -186,7 +187,6 @@
 %type <kind> kind
 %type <kind list> kinds1
 %type <kind_atom> katom
-%type <program> program
 
 %%
 
