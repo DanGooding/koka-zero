@@ -735,7 +735,8 @@ literal:
 
 %type <argument list> arguments
 arguments:
-  | separated_list(",", argument)
+  | as = separated_list(",", argument)
+    { as }
   ;
 
 %type <argument> argument
@@ -751,21 +752,24 @@ argument:
 
 %type <parameter list> parameters
 parameters:
-  | parameters1
+  | ps = parameters1
+    { ps }
   | (* empty *)
+    { [] }
   ;
 
 (* TODO: other productions (constructor) require the
    nonempty property, but just [list] is okay for now *)
 %type <parameter list> parameters1
 parameters1:
-  | separated_nonempty_list("," parameter)
+  | ps = separated_nonempty_list("," parameter)
+    { ps }
   ;
 
 %type <parameter> parameter
 parameter:
   | id = paramid; ":"; type_ = paramtype
-    { {id; type_} }
+    { { id; type_ } }
   (* | paramid ":" paramtype "=" expr *)
   ;
 

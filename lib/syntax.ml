@@ -1,13 +1,11 @@
 (* TODO: rewrite to use modules? *)
-(* XXX: desugaring now *)
 (* TODO: ** doc comments *)
 (* TODO: deriving sexp *)
-(* TODO: Identifiable for names *)
-
-(* TODO: don't copy grammar too closely *)
-(* TODO: but make sure to desscribe the syntax only (don't throw out badly typed terms)*)
 
 open Core
+
+(* Names: *)
+
 module Var_id : Identifiable = String
 module Operator_id : Identifiable = String
 module Constructor_id : Identifiable = String
@@ -28,6 +26,8 @@ module Identifier = struct
   include Identifiable.Make (T)
 end
 
+(* Kinds: *)
+
 type kind_atom =
   | Effect_type
   | Effect_row
@@ -36,6 +36,8 @@ type kind_atom =
 type kind =
   | Arrow of kind list * kind_atom
   | Atom of kind_atom
+
+(* types and effects: *)
 
 (** parameter which stands for a type
 
@@ -103,13 +105,54 @@ and effect_row =
 (** an empty effect row - i.e. the 'total' effect (`<>`) *)
 let total_effect_row : effect_row = Closed []
 
+(* Parameters and binders: *)
+
+type parameter_id =
+  | Id of Identifier.t
+  | Wildcard
+
+(** a 'plain' parameter with just a name and type. used when declaring effect operations *)
+type parameter =
+  { id : parameter_id
+  ; type_ : type_
+  }
+
+type pattern =
+  | Id of Identifier.t
+  | Wildcard
+
+type annotated_pattern =
+  { pattern : pattern
+  ; scheme : type_scheme
+  }
+
+(** a function parameter, which may be annotated, and perform an irrefutable pattern match *)
+type pattern_parameter =
+  { pattern : pattern
+  ; type_ : type_ option
+  }
+
+(** binds a single identifier, such as in a [Val] operation *)
+type binder =
+  { id : Identifier.t
+  ; type_ : type_ option
+  }
+
+let pattern_parameter_of_binder : binder -> pattern_parameter =
+ fun binder ->
+  let ({ id; type_ } : binder) = binder in
+  { pattern = Id id; type_ }
+;;
+
+(* operations: *)
+
 (* TODO: better name *)
 type operation_shape =
   (* TODO: name fields? *)
   | Val of type_
-  | Fun of parameters * type_
-  | Except of parameters * type_
-  | Control of parameters * type_
+  | Fun of parameter list * type_
+  | Except of parameter list * type_
+  | Control of parameter list * type_
 
 type operation_declaration =
   { id : Var_id.t
@@ -120,77 +163,21 @@ type operation_declaration =
 type effect_declaration =
   { id : Var_id.t
   ; type_parameters : type_parameter list
-  ; kind : option kind
+  ; kind : kind option
   ; operations : operation_declaration list
   }
-
-type operation_parameter =
-  { id : parameter_id
-  ; type_ : option type_
-  }
-
-type operation_handler =
-  | Val of
-      { id : Var_id.t
-      ; type_ : option type_
-      ; value : blockexpr
-      }
-  (* TODO: sharing betweem different shapes? *)
-  | Fun of
-      { id : Var_id.t
-      ; parameters : operation_parameter list
-      ; body : block
-      }
-  | Except of
-      { id : Var_id.t
-      ; parameters : operation_parameter list
-      ; body : block
-      }
-  | Control of
-      { id : Var_id.t
-      ; parameters : operation_parameter list
-      ; body : block
-      }
-  | Return of
-      { parameter : operation_parameter
-      ; body : block
-      }
-
-type handler = Handler of operation_handler list
 
 type type_declaration =
   (* TODO: records/Effect.t *)
   | Effect_declaration of effect_declaration
 (* | Type *)
 
-(* TODO: better naming *)
-type fn =
-  { type_parameters : type_parameter list
-  ; parameters : pattern_parameter list
-  ; result_type : type_result option
-  ; body : block
+type operation_parameter =
+  { id : parameter_id
+  ; type_ : type_ option
   }
 
-(** builds a 0 argument anonymous function with a given body *)
-let anonymous_of_block : block -> fn =
- fun body -> { type_parameters = []; parameters = []; result_type = None; body }
-;;
-
-(** builds a 1 argument anonymous function with a given parameter and body *)
-let anonymous_of_bound_block : binder:binder -> block:block -> fn =
- fun ~binder ~block ->
-  let parameter = pattern_parameter_of_binder binder in
-  { type_parameters = []; parameters = [ parameter ]; result_type = None; body = block }
-;;
-
-type fun_declaration =
-  { id : Identifier.t
-  ; fn : fn
-  }
-
-type declaration =
-  | Fun of fun_declaration
-  | Val of apattern * block
+(* expressions: *)
 
 type literal =
   | Int of int
@@ -215,62 +202,107 @@ type binary_operator =
   | Greater_than
   | Greater_equal
 
-type argument = expr
-
-(* these do coincide for now, but they may not later *)
-type parameter_id =
-  | Id of Identifier.t
-  | Wildcard
-
-type parameter =
-  { id : parameter_id
-  ; type_ : type_
-  }
-
-type pattern =
-  | Id of Identifier.t
-  | Wildcard
-
-type pattern_parameter =
-  { pattern : pattern
-  ; type_ : option type_
-  }
-
-let pattern_parameter_of_binder : pattern_parameter -> binder =
- fun binder ->
-  let { id; type_ } = binder in
-  { pattern = Id id; type_ }
-;;
-
-type annotated_pattern =
-  { pattern : pattern
-  ; scheme : type_scheme
-  }
-
+(** an expression - evaluates to a value *)
 type expr =
   | Return of expr
-  (* | withexpr *)
-  | Val_in of apattern * blockexpr * expr
-  | If_then_else of ntl_expr * expr * expr
-  | If_then of ntl_expr * expr
+  (* TODO: val_in_ syntax not common in koka - drop? *)
+  | Val_in of annotated_pattern * block * expr
+  | If_then_else of expr * expr * expr
+  | If_then of expr * expr
   (* | Match *)
   (* TODO: which of [handle]/[handler] is the logical primitive? *)
-  | Handler of handler
+  | Handler of effect_handler
   | Fn of fn
   | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr
-  | Application of expr * argument list
+  | Application of expr * expr list
   | Identifier of Identifier.t
   | Literal of literal
   (* | Tuple of expr list *)
   (* | List of expr list *)
-  (* TODO: how best to do annotations? *)
   | Annotated of expr * type_scheme
 
-type statement =
+and statement =
   | Declaration of declaration
   (* note this may be a return expression! *)
   | Expr of expr
+
+(** a list of statements, the final an expression, evaluates to a value*)
+and block =
+  { statements : statement list
+  ; last : expr
+  }
+
+(** a function, either anonymous or named, but the name must be held elsewhere *)
+and fn =
+  { type_parameters : type_parameter list
+  ; parameters : pattern_parameter list
+  ; result_type : type_result option
+  ; body : block
+  }
+
+and declaration =
+  | Fun of fun_declaration
+  | Val of annotated_pattern * block
+
+(** declaration of a named function *)
+and fun_declaration =
+  { id : Identifier.t
+  ; fn : fn
+  }
+
+and operation_handler =
+  | Op_val of
+      { id : Var_id.t
+      ; type_ : type_ option
+      ; value : block
+      }
+  (* TODO: sharing betweem different shapes? *)
+  | Op_fun of
+      { id : Var_id.t
+      ; parameters : operation_parameter list
+      ; body : block
+      }
+  | Op_except of
+      { id : Var_id.t
+      ; parameters : operation_parameter list
+      ; body : block
+      }
+  | Op_control of
+      { id : Var_id.t
+      ; parameters : operation_parameter list
+      ; body : block
+      }
+  | Op_return of
+      { parameter : operation_parameter
+      ; body : block
+      }
+
+and effect_handler = Effect_handler of operation_handler list
+
+(** a declaration of a value/function which can appear at the toplevel *)
+type pure_declaration =
+  | Val of binder * block
+  | Fun of fun_declaration
+
+type toplevel_declaration =
+  | Pure_declaration of pure_declaration
+  | Type_declaration of type_declaration
+
+(** root of the AST: represents and entire program *)
+type program = Program of toplevel_declaration list
+
+(** builds a 0 argument anonymous function with a given body *)
+let anonymous_of_block : block -> fn =
+ fun body -> { type_parameters = []; parameters = []; result_type = None; body }
+;;
+
+(** builds a 1 argument anonymous function with a given parameter and body *)
+let anonymous_of_bound_block : binder:binder -> block:block -> fn =
+ fun ~binder ~block ->
+  let parameter = pattern_parameter_of_binder binder in
+  { type_parameters = []; parameters = [ parameter ]; result_type = None; body = block }
+;;
 
 (** `with` syntax: insert an anonymous function as the last argument to an application (or
     apply the [expr] to the callback if it is not already an [Application]) *)
@@ -281,23 +313,3 @@ let insert_with_callback : callback:fn -> expr -> expr =
   (* TODO: wildcard match is brittle *)
   | _ -> Application (e, [ Fn callback ])
 ;;
-
-type block =
-  { statements : statement list
-  ; last : expr
-  }
-
-type binder =
-  { id : Identifier.t
-  ; type_ : type_ option
-  }
-
-type pure_declaration =
-  | Val of binder * block
-  | Fun of fun_declaration
-
-type toplevel_declaration =
-  | Pure_declaration of pure_declaration
-  | Type_declaration of type_declaration
-
-type program = Program of toplevel_declaration list
