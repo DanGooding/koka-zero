@@ -8,15 +8,15 @@ let string_of_position lexbuf =
 ;;
 
 let parse lexbuf =
-  try Parser.program Lexer.read lexbuf |> Or_error.return with
+  try Parser.program Lexer.read lexbuf |> Result.Ok with
   | Lexer.Syntax_error message ->
     let pos = string_of_position lexbuf in
     let message = sprintf "%s: %s" pos message in
-    Or_error.error_string message
+    Result.Error message
   | Parser.Error ->
     let pos = string_of_position lexbuf in
     let message = sprintf "%s: syntax error" pos in
-    Or_error.error_string message
+    Result.Error message
 ;;
 
 let parse_channel ch = parse (Lexing.from_channel ch)
