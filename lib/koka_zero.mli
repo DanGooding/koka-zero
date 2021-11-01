@@ -1,8 +1,4 @@
-(** Reimplementatin of core Koka, compiling to LLVM-IR, for my dissertation *)
+open Core
 
-(** Returns a greeting message.
-
-    {4 Examples}
-
-    {[ print_endline @@ greet "Jane" ]} *)
-val greet : string -> string
+val parse_channel : in_channel -> Syntax.program Or_error.t
+val parse_string : string -> Syntax.program Or_error.t

@@ -21,7 +21,7 @@
 open Parser
 open Lexing
 
-exception SyntaxError of string
+exception Syntax_error of string
 
 (** Update the [lexbuf]'s position information,
     incrementing the line number *)
@@ -44,11 +44,11 @@ let well_formed identifier =
   not (Str.string_match bad_dash identifier 0)
 
 (** Return the matched identifier from the lexbuf,
-    raising SyntaxError if it is not well formed *)
+    raising Syntax_error if it is not well formed *)
 let lex_identifier lexbuf : string =
   let identifier = Lexing.lexeme lexbuf in
     if not (well_formed identifier)
-    then raise (SyntaxError
+    then raise (Syntax_error
       "malformed identifier: a dash must be preceded and followed by a letter")
     else identifier
 ;;
@@ -207,7 +207,7 @@ rule read =
   | newline { next_line lexbuf; read lexbuf }
 
   | eof { EOF }
-  | _ { raise (SyntaxError ("Unexpected character: " ^ Lexing.lexeme lexbuf)) }
+  | _ { raise (Syntax_error ("Unexpected character: " ^ Lexing.lexeme lexbuf)) }
 
 and read_single_line_comment =
   parse
