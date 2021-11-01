@@ -108,7 +108,7 @@ type pattern =
 
 type annotated_pattern =
   { pattern : pattern
-  ; scheme : type_scheme
+  ; scheme : type_scheme option
   }
 
 (** a function parameter, which may be annotated, and perform an irrefutable pattern match *)
@@ -185,6 +185,10 @@ type expr =
   | If_then_else of expr * expr * expr
   | If_then of expr * expr
   | Handler of effect_handler
+  | Handle of
+      { subject : expr (** this expression evaluates to a 0 argument function *)
+      ; handler : effect_handler (** which is called under this effect handler *)
+      }
   | Fn of fn
   | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr

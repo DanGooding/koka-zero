@@ -155,7 +155,7 @@
 %type <pattern_parameter> pparameter
 (* %type <expr list> aexprs *)
 %type <expr> aexpr
-%type <type_scheme> annot
+%type <type_scheme option> annot
 %type <Identifier.t> identifier
 %type <Var_id.t> varid
 %type <annotated_pattern> apattern
@@ -270,16 +270,16 @@ effectdecl:
   | EFFECT;
     id = varid;
     type_parameters = typeparams;
-    kind_annotation = kannot;
+    kind = kannot;
     operations = opdecls
-    { { id; type_parameters; kind_annotation; operations } }
+    { { id; type_parameters; kind; operations } }
   | EFFECT;
     type_parameters = typeparams;
-    kind_annotation = kannot;
+    kind = kannot;
     operation = operation
     { let id = operation.id in
       let operations = [operation] in
-      { id; type_parameters; kind_annotation; operations }
+      { id; type_parameters; kind; operations }
     }
   ;
 
@@ -398,7 +398,7 @@ binder:
   | id = identifier
     { { id; type_ = None } }
   | id = identifier; ":"; type_ = type_
-    { { id; type_ } }
+    { { id; type_ = Some type_ } }
   ;
 
 (* %type <Identifier.t> funid *)
@@ -415,11 +415,11 @@ funid:
 funbody:
   | type_parameters = typeparams; "("; parameters = pparameters; ")";
     body = bodyexpr
-    { { type_parameters; parameteres; result_type = None; body } }
+    { { type_parameters; parameters; result_type = None; body } }
   | type_parameters = typeparams; "("; parameters = pparameters; ")";
     ":"; result_type = tresult;
     body = block
-    { { type_parameters; parameteres; result_type; body } }
+    { { type_parameters; parameters; result_type = Some result_type; body } }
   ;
 
 (* annotres??
@@ -463,7 +463,7 @@ decl:
     { Fun f }
   (* local value declaration can use a pattern binding *)
   | VAL; annotated_pattern = apattern; "="; body = blockexpr
-    { Val(annotated_patten, body) }
+    { Val(annotated_pattern, body) }
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
 ;
 
@@ -544,7 +544,7 @@ expr_except_block:
 expr:
   (* `block` interpreted as an anonymous function *)
   | b = block
-    { anonymous_of_block b }
+    { Fn (anonymous_of_block b) }
   | e = expr_except_block
     { e }
 
@@ -557,7 +557,7 @@ basicexpr:
     { e }
   | e = fnexpr
     { e }
-  | opexpr
+  | e = opexpr
     %prec RARROW
     { e }
   ;
@@ -720,17 +720,17 @@ appexpr:
   | a = auxappexpr
     { match a with
       | `Dot_application(f, arg0) -> Application(f, [arg0])
-      | `Application(f, args)
-      | `Expr e -> e
+      | `Application(f, args)     -> Application(f, args)
+      | `Expr e                   -> e
     }
 
 (*
 {[
 %type <
   [ (** a [`Dot_application] can be followed by more bracketed args *)
-    `Dot_application of expr * argument
+    `Dot_application of expr * expr
     (** an [`Application] can be followed by a trailing lambda *)
-  | `Application of expr * argument list
+  | `Application of expr * expr list
   | `Expr of expr
   ]> auxappexpr
 ]}
@@ -751,7 +751,7 @@ auxappexpr:
     { match app with
       | `Application(f, args)     -> `Application(f, args @ [last_arg])
       | `Dot_application(f, arg0) -> `Application(f, [arg0; last_arg])
-      | `Expr e                   -> `Application(Expr e, [last_arg])
+      | `Expr e                   -> `Application(e, [last_arg])
     }
   | e = atom
     { `Expr e }
@@ -800,8 +800,8 @@ auxntlappexpr:
   (* application *)
   | f = auxntlappexpr; "("; args = arguments; ")"
     { match f with
-      | `Dot_application(f', arg0) -> `Expr(Application(f, arg0 :: args))
-      | `Expr e -> `Expr(Application(e, args))
+      | `Dot_application(f', arg0) -> `Expr(Application(f', arg0 :: args))
+      | `Expr e                    -> `Expr(Application(e, args))
     }
   (* dot application *)
   | arg0 = ntlappexpr; "."; f = atom
@@ -823,7 +823,7 @@ ntlappexpr:
 (* %type <expr> atom *)
 atom:
   | id = identifier
-    { Identfier id }
+    { Identifier id }
   (* | constructor *)
   | lit = literal
     { Literal lit }
@@ -944,11 +944,15 @@ pparameter:
 
 (* %type <expr> aexpr *)
 aexpr:
-  | e = expr; a = annot
-    { Annotated(e, a) }
+  (* TODO: annot is nullable - this may cause a conflict? *)
+  | e = expr; scheme = annot
+    { match scheme with
+      | Some scheme -> Annotated(e, scheme)
+      | None -> e
+    }
   ;
 
-(* %type <type_scheme> annot *)
+(* %type <type_scheme option> annot *)
 annot:
   | ":"; s = typescheme
     { Some s }
@@ -1048,8 +1052,8 @@ varid:
 (* %type <annotated_pattern> apattern *)
 apattern:
   (* annotated pattern *)
-  | pattern = pattern; annotation = annot
-    { { pattern; annotation } }
+  | pattern = pattern; scheme = annot
+    { { pattern; scheme } }
   ;
 
 (* %type <pattern> pattern *)
@@ -1095,7 +1099,7 @@ handlerexpr:
     { Handler handler }
   (* [handle (action) { ops }] *)
   | HANDLE; subject = ntlexpr; handler = opclauses
-    { Application(Handler handler, [subject]) }
+    { Handle { subject; handler } }
   ;
 
 (* %type <effect_handler> opclauses *)

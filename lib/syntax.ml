@@ -112,7 +112,7 @@ type pattern =
 
 type annotated_pattern =
   { pattern : pattern
-  ; scheme : type_scheme
+  ; scheme : type_scheme option
   }
 
 type pattern_parameter =
@@ -198,6 +198,10 @@ type expr =
   (* | Match *)
   (* TODO: which of [handle]/[handler] is the logical primitive? *)
   | Handler of effect_handler
+  | Handle of
+      { subject : expr
+      ; handler : effect_handler
+      }
   | Fn of fn
   | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr
@@ -295,7 +299,7 @@ let insert_with_callback : callback:fn -> expr -> expr =
   | Val_in (_, _, _)
   | If_then_else (_, _, _)
   | If_then (_, _)
-  | Handler _ | Fn _
+  | Handler _ | Handle _ | Fn _
   | Binary_op (_, _, _)
   | Unary_op (_, _)
   | Identifier _ | Literal _ -> Application (e, [ Fn callback ])
