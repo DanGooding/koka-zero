@@ -7,12 +7,14 @@ open Core
 (* Names: *)
 
 module Var_id : Identifiable = String
+module Wildcard_id : Identifiable = String
 module Operator_id : Identifiable = String
 module Constructor_id : Identifiable = String
 
 module Identifier = struct
   module T = struct
     type t = Var of Var_id.t
+    (* | Wildcard of Wildcard_id.t *)
     (* | Operator of Operator_id.t *)
     (* | Constructor of Constructor_id.t *)
     [@@deriving compare, bin_io, hash, sexp]
@@ -35,7 +37,7 @@ type kind_atom =
 
 type kind =
   | Arrow of kind list * kind_atom
-  | Atom of kind_atom
+  | Kind_atom of kind_atom
 
 (* types and effects: *)
 
@@ -54,7 +56,7 @@ type type_ =
   | Arrow of parameter_type list * type_result
   | Effect_row of effect_row
   | Scheme of type_scheme
-  | Atom of
+  | Type_atom of
       { constructor : type_constructor
       ; arguments : type_ list
       }
@@ -70,11 +72,10 @@ and type_scheme =
 
 and type_constructor =
   | Variable_or_name of Var_id.t
-  (* TODO: wildcard names are disjoint from Var_id.t, maybe a new type? *)
-  | Wildcard of Var_id.t
+  | Wildcard of Wildcard_id.t
   (* builtin types *)
-  | Int
-  | Bool
+  | Type_int
+  | Type_bool
 
 and parameter_type =
   { parameter_id : Identifier.t option

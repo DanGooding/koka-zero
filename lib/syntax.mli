@@ -3,9 +3,22 @@ open Core
 (* Names: *)
 
 module Var_id : Identifiable
+module Wildcard_id : Identifiable
 module Operator_id : Identifiable
 module Constructor_id : Identifiable
-module Identifier : Identifiable
+
+module Identifier : sig
+  module T : sig
+    type t = Var of Var_id.t [@@deriving compare, bin_io, hash, sexp]
+
+    val module_name : string
+    val of_string : string -> t
+    val to_string : t -> string
+  end
+
+  include T
+  include Identifiable with type t := t
+end
 
 (* Kinds: *)
 
@@ -16,7 +29,7 @@ type kind_atom =
 
 type kind =
   | Arrow of kind list * kind_atom
-  | Atom of kind_atom
+  | Kind_atom of kind_atom
 
 (* types and effects: *)
 
@@ -39,7 +52,7 @@ type type_ =
   | Arrow of parameter_type list * type_result
   | Effect_row of effect_row
   | Scheme of type_scheme
-  | Atom of
+  | Type_atom of
       { constructor : type_constructor
       ; arguments : type_ list
       }
@@ -55,10 +68,10 @@ and type_scheme =
 
 and type_constructor =
   | Variable_or_name of Var_id.t
-  | Wildcard of Var_id.t
+  | Wildcard of Wildcard_id.t
   (* builtin types *)
-  | Int
-  | Bool
+  | Type_int
+  | Type_bool
 
 (** represents the `x : int` in `(x : int, y : int) -> int` *)
 and parameter_type =

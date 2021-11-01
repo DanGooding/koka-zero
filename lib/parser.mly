@@ -11,7 +11,7 @@
 %token EOF
 
 %token <string> ID (* CONID OP IDOP *)
-%token WILDCARD
+%token <string> WILDCARD
 
 %token <int> INT
 %token <bool> BOOL
@@ -144,8 +144,8 @@
 %type <expr> ntlappexpr
 %type <expr> atom
 %type <literal> literal
-%type <argument list> arguments
-%type <argument> argument
+%type <expr list> arguments
+%type <expr> argument
 %type <parameter list> parameters
 %type <parameter list> parameters1
 %type <parameter> parameter
@@ -161,7 +161,7 @@
 %type <annotated_pattern> apattern
 %type <pattern> pattern
 %type <expr> handlerexpr
-%type <handler> opclauses
+%type <effect_handler> opclauses
 %type <operation_handler> opclausex
 %type <operation_handler> opclause
 %type <operation_parameter list> opparams
@@ -197,7 +197,7 @@
 (* %type <program> program *)
 program:
   | semi*; ds = declarations; EOF
-    { ds }
+    { Program ds }
   ;
 
 semi:
@@ -245,7 +245,7 @@ topdecl:
   | p = puredecl { Pure_declaration p }
   (* TODO: keep aliases? *)
   (* | aliasdecl                            { printDecl("alias",$2); } *)
-  | t = typedecl { Type_delcaration t }
+  | t = typedecl { Type_declaration t }
   ;
 
 
@@ -496,15 +496,15 @@ withstat:
   (* shorthand for handler *)
   | WITH; handler = opclauses; block = blockcontents
     { let callback = anonymous_of_block block in
-      Application(Handler handler, callback)
+      Application(Handler handler, [Fn callback])
     }
   | WITH; binder = binder; "<-"; e = basicexpr; block = blockcontents
-    { let callback = anonymous_of_bound_block ~binder ~block:body in
+    { let callback = anonymous_of_bound_block ~binder ~block in
       insert_with_callback ~callback e
     }
   (* deprecated *)
   | WITH; binder = binder; "="; e = basicexpr; block = blockcontents
-    { let callback = anonymous_of_bound_block ~binder ~block:body in
+    { let callback = anonymous_of_bound_block ~binder ~block in
       insert_with_callback ~callback e
     }
 ;
@@ -705,9 +705,9 @@ opexpr_l70(prefixexpr_):
 (* %type <expr> prefixexpr *)
 prefixexpr:
   | "!"; e = prefixexpr
-    { Un_op(Exclamation, e) }
+    { Unary_op(Exclamation, e) }
   (* | "~"; e = prefixexpr *)
-  (*   { Un_op(?, e) } *)
+  (*   { Unary_op(?, e) } *)
   | e = appexpr
     %prec RARROW
     { e }
@@ -762,7 +762,7 @@ trailinglambda:
   | e = fnexpr
     { e }
   | body = block
-    { Fn (anonymous_of_body body) }
+    { Fn (anonymous_of_block body) }
   ;
 
 
@@ -854,13 +854,13 @@ literal:
 
 (* arguments: separated by comma *)
 
-(* %type <argument list> arguments *)
+(* %type <expr list> arguments *)
 arguments:
   | args = separated_list(",", argument)
     { args }
   ;
 
-(* %type <argument> argument *)
+(* %type <expr> argument *)
 argument:
   | e = expr
     { e }
@@ -924,7 +924,9 @@ pparameter:
   | pattern = pattern
     { { pattern; type_ = None } }
   | pattern = pattern; ":"; type_ = paramtype
-    { { pattern; type_ } }
+    { let type_ = Some type_ in
+      { pattern; type_ }
+    }
   (* pattern=expr - strange form of pattern matching
      seems to be for struct members, or e.g. (fst=1, snd=2) *)
   (* | pattern ":" paramtype "=" expr *)
@@ -1166,17 +1168,17 @@ tbinder:
 (* used for type annotations *)
 (* %type <type_scheme> typescheme *)
 typescheme:
-  | FORALL; forall_quantified = typeparams1; type_ = tarrow
-    { { forall_quanitifed; type_ } }
-  | type_ = tarrow
-    { { forall_quantified = []; type_ } }
+  | FORALL; forall_quantified = typeparams1; body = tarrow
+    { { forall_quantified; body } }
+  | body = tarrow
+    { { forall_quantified = []; body } }
   (* note: spec allowed `some<>` as well here *)
   ;
 
 (* %type <type_> type_ *)
 type_:
-  | FORALL; forall_quantified = typeparams1; type_ = tarrow
-    { Scheme { forall_quantified; type_ } }
+  | FORALL; forall_quantified = typeparams1; body = tarrow
+    { Scheme { forall_quantified; body } }
   | t = tarrow
     { t }
   ;
@@ -1203,8 +1205,9 @@ tarrow:
     { Arrow(ps, result) }
   (* TODO: I think there will be a shift/reduce conflict here
      for e.g. `(int) -> int` *)
-  | p = tatomic; "->"; result = tresult
-    { Arrow([p], result) }
+  | type_ = tatomic; "->"; result = tresult
+    { let p = { parameter_id = None; type_ } in
+      Arrow([p], result) }
   | t = tatomic
     { t }
   ;
@@ -1216,7 +1219,7 @@ tresult:
     { { effect; result } }
   (* just a result type (with a default total effect) *)
   | result = tatomic
-    { { effect = total_effect_row; result } }
+    { { effect = Effect_row total_effect_row; result } }
   ;
 
 (* %type <type_> tatomic *)
@@ -1247,24 +1250,24 @@ tbasic:
 
 (* %type <type_> typeapp *)
 typeapp:
-  | t = typecon
-    { Atom(t, []) }
-  | t = typecon; "<"; args = targuments; ">"
-    { Atom(t, args) }
+  | constructor = typecon
+    { Type_atom { constructor ; arguments = [] } }
+  | constructor = typecon; "<"; arguments = targuments; ">"
+    { Type_atom { constructor ; arguments } }
   ;
 
 (* %type <type_constructor> typecon *)
 typecon:
   (* type name *)
   | id = varid
-    { Variable_or_name (Var_id.of_string id) }
+    { Variable_or_name id }
   (* wildcard type variable *)
   | id = WILDCARD
-    { Wildcard (Var_id.of_string id) }
+    { Wildcard (Wildcard_id.of_string id) }
   | TYPE_INT
-    { Int }
+    { Type_int }
   | TYPE_BOOL
-    { Bool }
+    { Type_bool }
   (* these unapplied forms don't seem to actually exist *)
   (* | "(" commas1 ")"                (\* tuple constructor *\) *)
   (* | "[" "]"                        (\* list constructor *\) *)
@@ -1283,10 +1286,10 @@ tparams:
 (* %type <parameter_type> tparam *)
 tparam:
   (* named parameter *)
-  | id = identifier; ":"; anntype = anntype
-    { (Some id, anntype) }
-  | anntype = anntype
-    { (None, anntype) }
+  | id = identifier; ":"; type_ = anntype
+    { { parameter_id = Some id; type_} }
+  | type_ = anntype
+    { { parameter_id = None; type_} }
   ;
 
 
@@ -1328,11 +1331,11 @@ kannot:
 (* %type <kind> kind *)
 kind:
   | "("; ks = kinds1; ")"; "->"; a = katom
-    { Arrow(ks, (Atom a)) }
+    { Arrow(ks, (Kind_atom a)) }
   | a = katom; "->"; k = kind
-    { Arrow([Atom a], k) }
+    { Arrow([Kind_atom a], k) }
   | a = katom
-    { Atom a }
+    { Kind_atom a }
   ;
 
 (* %type <kind list> kinds1 *)
