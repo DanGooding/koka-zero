@@ -10,6 +10,7 @@
 
 {
 open Parser
+open Lexing
 
 exception SyntaxError of string
 
@@ -19,9 +20,8 @@ let next_line : Lexing.lexbuf -> unit =
   fun lexbuf ->
     let pos = lexbuf.lex_curr_p in
     let pos =
-      { pos with
-        pos_bol = pos.pos_cnum
-        pos_lnum = pos.pos_lnum + 1
+      { pos with pos_bol = pos.pos_cnum
+               ; pos_lnum = pos.pos_lnum + 1
       }
     in
     lexbuf.lex_curr_p <- pos
@@ -39,8 +39,8 @@ let well_formed identifier =
 let lex_identifier lexbuf : string =
   let identifier = Lexing.lexeme lexbuf in
     if not (well_formed identifier)
-    then raise SyntaxError (
-        "malformed identifier: a dash must be preceded and followed by a letter")
+    then raise (SyntaxError
+      "malformed identifier: a dash must be preceded and followed by a letter")
     else identifier
 ;;
 
@@ -118,7 +118,7 @@ rule read =
   | "handler"                   { HANDLER }
   | "effect"                    { EFFECT }
 
-  | "mask"                      { MASK }
+  (* | "mask"                      { MASK } *)
   (* | "override"                  { OVERRIDE } *)
   (* | "named"                     { NAMED } *)
 
@@ -136,7 +136,7 @@ rule read =
 
   (* literals *)
   | "True"                      { BOOL true }
-  | "False"                     { BOOl false }
+  | "False"                     { BOOL false }
 
   (* reserved operators *)
   | ':'                         { COLON }
@@ -184,8 +184,8 @@ rule read =
   | "/*" { read_multi_line_comment 1 lexbuf }
 
   (* Numbers *)
-  | sign '0' ['x' 'X'] hex+ { int_of_string (Lexing.lexeme lexbuf) }
-  | sign digit+             { int_of_string (Lexing.lexeme lexbuf) }
+  | sign '0' ['x' 'X'] hex+ { INT (int_of_string (Lexing.lexeme lexbuf)) }
+  | sign digit+             { INT (int_of_string (Lexing.lexeme lexbuf)) }
 
   (* Identifiers and operators *)
   (* | con_id           { CONID (lex_identifier lexbuf) } *)
@@ -195,10 +195,10 @@ rule read =
   | '_' id_char*     { WILDCARD (lex_identifier lexbuf) }
 
   | space+ { read lexbuf }
-  | newline { next_line lexbuf; read_lexbuf }
+  | newline { next_line lexbuf; read lexbuf }
 
   | eof { EOF }
-  | _ { raise SyntaxError ("Unexpected character: " ^ Lexing.lexeme lexbuf) }
+  | _ { raise (SyntaxError ("Unexpected character: " ^ Lexing.lexeme lexbuf)) }
 
 and read_single_line_comment =
   parse
@@ -223,7 +223,7 @@ and read_multi_line_comment depth =
   (* allow end of file to terminate a comment *)
   | eof { EOF }
   (* TODO: match as much as possible for effciency? *)
-  | _ { read_multi_line_comment ~depth lexbuf }
+  | _ { read_multi_line_comment depth lexbuf }
 
 
 
