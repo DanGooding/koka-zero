@@ -8,16 +8,9 @@ module Operator_id : Identifiable
 module Constructor_id : Identifiable
 
 module Identifier : sig
-  module T : sig
-    type t = Var of Var_id.t [@@deriving compare, bin_io, hash, sexp]
+  type t = Var of Var_id.t [@@deriving compare, hash, sexp]
 
-    val module_name : string
-    val of_string : string -> t
-    val to_string : t -> string
-  end
-
-  include T
-  include Identifiable with type t := t
+  include Identifiable.S_plain with type t := t
 end
 
 (* Kinds: *)

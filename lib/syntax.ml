@@ -17,7 +17,7 @@ module Identifier = struct
     (* | Wildcard of Wildcard_id.t *)
     (* | Operator of Operator_id.t *)
     (* | Constructor of Constructor_id.t *)
-    [@@deriving compare, bin_io, hash, sexp]
+    [@@deriving compare, hash, sexp]
 
     let module_name = "Identifier"
     let of_string s = Sexp.of_string s |> t_of_sexp
@@ -25,7 +25,7 @@ module Identifier = struct
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
-  include Identifiable.Make (T)
+  include Identifiable.Make_plain (T)
 end
 
 (* Kinds: *)
