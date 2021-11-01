@@ -36,7 +36,7 @@ type kind_atom =
   | Value
 
 type kind =
-  | Arrow of kind list * kind_atom
+  | Arrow of kind list * kind
   | Kind_atom of kind_atom
 
 (* types and effects: *)
@@ -72,7 +72,7 @@ and type_scheme =
 
 and type_constructor =
   | Variable_or_name of Var_id.t
-  | Wildcard of Wildcard_id.t
+  | Type_wildcard of Wildcard_id.t
   (* builtin types *)
   | Type_int
   | Type_bool
@@ -98,8 +98,8 @@ let total_effect_row : effect_row = Closed []
 (* Parameters and binders: *)
 
 type parameter_id =
-  | Id of Identifier.t
-  | Wildcard
+  | Parameter_id of Identifier.t
+  | Parameter_wildcard
 
 type parameter =
   { id : parameter_id
@@ -107,8 +107,8 @@ type parameter =
   }
 
 type pattern =
-  | Id of Identifier.t
-  | Wildcard
+  | Pattern_id of Identifier.t
+  | Pattern_wildcard
 
 type annotated_pattern =
   { pattern : pattern
@@ -128,7 +128,7 @@ type binder =
 let pattern_parameter_of_binder : binder -> pattern_parameter =
  fun binder ->
   let ({ id; type_ } : binder) = binder in
-  { pattern = Id id; type_ }
+  { pattern = Pattern_id id; type_ }
 ;;
 
 (* operations: *)
@@ -136,10 +136,10 @@ let pattern_parameter_of_binder : binder -> pattern_parameter =
 (* TODO: better name *)
 type operation_shape =
   (* TODO: name fields? *)
-  | Val of type_
-  | Fun of parameter list * type_
-  | Except of parameter list * type_
-  | Control of parameter list * type_
+  | Shape_val of type_
+  | Shape_fun of parameter list * type_
+  | Shape_except of parameter list * type_
+  | Shape_control of parameter list * type_
 
 type operation_declaration =
   { id : Var_id.t

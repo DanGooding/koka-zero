@@ -357,20 +357,20 @@ operations:
 (* %type <operation_declaration> operation *)
 operation:
   | VAL; id = varid; type_parameters = typeparams; ":"; result_type = tatomic
-    { let shape = Val result_type in
+    { let shape = Shape_val result_type in
       { id; type_parameters; shape } }
   | FUN;
     id = varid; type_parameters = typeparams;
     "("; parameters = parameters; ")"; ":"; result_type = tatomic
-    { let shape = Fun(parameters, result_type) in
+    { let shape = Shape_fun(parameters, result_type) in
       { id; type_parameters; shape } }
   | EXCEPT; id = varid; type_parameters = typeparams;
     "("; parameters = parameters; ")"; ":"; result_type = tatomic
-    { let shape = Except(parameters, result_type) in
+    { let shape = Shape_except(parameters, result_type) in
       { id; type_parameters; shape } }
   | CONTROL; id = varid; type_parameters = typeparams;
     "("; parameters = parameters; ")"; ":"; result_type = tatomic
-    { let shape = Control(parameters, result_type) in
+    { let shape = Shape_control(parameters, result_type) in
       { id; type_parameters; shape } }
   ;
 
@@ -683,7 +683,7 @@ op_l60:
 
 opexpr_l60(prefixexpr_):
   | el = opexpr_l60(prefixexpr_); op = op_l60; er = opexpr_l70(prefixexpr_)
-    { Binay_op(el, op, er) }
+    { Binary_op(el, op, er) }
   | e = opexpr_l70(prefixexpr_)
     { e }
   ;
@@ -782,7 +782,7 @@ ntlopexpr:
 (* %type <expr> ntlprefixexpr *)
 ntlprefixexpr:
   (* | "~"; e = ntlprefixexpr *)
-  | "!" ntlprefixexpr
+  | "!"; e = ntlprefixexpr
     { Unary_op(Exclamation, e) }
   | e = ntlappexpr
     { e }
@@ -897,9 +897,9 @@ parameter:
 (* %type <parameter_id> paramid *)
 paramid:
   | id = identifier
-    { Id id }
+    { Parameter_id id }
   | WILDCARD
-    { Wildcard }
+    { Parameter_wildcard }
   ;
 
 (* %type <type_> paramtype *)
@@ -975,7 +975,7 @@ annot:
 (* %type <Identifier.t> identifier *)
 identifier:
   | var_id = varid
-    { Var var_id }
+    { Identifier.Var var_id }
   (* | IDOP *)
   ;
 
@@ -1055,7 +1055,7 @@ apattern:
 (* %type <pattern> pattern *)
 pattern:
   | id = identifier
-    { Id id }
+    { Pattern_id id }
   (* (* named pattern *) *)
   (* | identifier AS pattern *)
   (* | conid *)
@@ -1066,7 +1066,7 @@ pattern:
   (* | "[" apatterns "]" *)
   (* | literal *)
   | WILDCARD
-    { Wildcard }
+    { Pattern_wildcard }
   ;
 
 (* patargs:
@@ -1095,15 +1095,15 @@ handlerexpr:
     { Handler handler }
   (* [handle (action) { ops }] *)
   | HANDLE; subject = ntlexpr; handler = opclauses
-    { Application(Handler handler, subject) }
+    { Application(Handler handler, [subject]) }
   ;
 
-(* %type <handler> opclauses *)
+(* %type <effect_handler> opclauses *)
 opclauses:
   | op = opclause
-    { [op] }
+    { Effect_handler [op] }
   | "{"; semi*; ops = list(op = opclausex; semi+ { op }); "}"
-    { ops }
+    { Effect_handler ops }
   ;
 
 (* %type <operation_handler> opclausex *)
@@ -1117,18 +1117,18 @@ opclausex:
 (* %type <operation_handler> opclause *)
 opclause:
   | VAL; id = varid; "="; value = blockexpr
-    { Val { id; type_ = None; value }}
+    { Op_val { id; type_ = None; value }}
   | VAL; id = varid; ":"; type_ = type_; "="; value = blockexpr
-    { Val { id; type_; value }}
+    { Op_val { id; type_ = Some type_; value }}
   | FUN; id = varid; parameters = opparams; body = bodyexpr
-    { Fun { id; parameters; body } }
+    { Op_fun { id; parameters; body } }
   | EXCEPT; id = varid; parameters = opparams; body = bodyexpr
-    { Except { id; parameters; body } }
+    { Op_except { id; parameters; body } }
   | CONTROL; id = varid; parameters = opparams; body = bodyexpr
-    { Control { id; parameters; body } }
+    { Op_control { id; parameters; body } }
   (* | RCONTROL varid opparams bodyexpr *)
   | RETURN; "("; parameter = opparam; ")"; body = bodyexpr
-    { Return { parameter; body } }
+    { Op_return { parameter; body } }
   (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
   ;
 
@@ -1143,7 +1143,7 @@ opparam:
   | id = paramid
     { { id; type_ = None } }
   | id = paramid; ":"; type_ = type_
-    { { id; type_ } }
+    { { id; type_ = Some type_ } }
   ;
 
 
@@ -1263,7 +1263,7 @@ typecon:
     { Variable_or_name id }
   (* wildcard type variable *)
   | id = WILDCARD
-    { Wildcard (Wildcard_id.of_string id) }
+    { Type_wildcard (Wildcard_id.of_string id) }
   | TYPE_INT
     { Type_int }
   | TYPE_BOOL
