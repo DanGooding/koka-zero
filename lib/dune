@@ -12,3 +12,11 @@
   (modules parser)
   (flags --explain --dump)
 )
+
+(env
+ (dev
+  (flags
+   ;; disable:
+   ;; 4 [fragile-match] since menhir parsers have hundreds of these
+   ;; 70 [missing-mli] since lexers don't neeed these
+   (:standard -w +A-48-42-44-4-70 -warn-error +A-3))))
