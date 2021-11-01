@@ -1,11 +1,20 @@
 (*
   Modified from the koka (v2.3.2) grammar specification
   https://github.com/koka-lang/koka/blob/v2.3.2/doc/spec/grammar/lexer.lex
-  the license of which is reproduced below
+
+  Some lexing boilerplate was adapted from code examples in:
+  "Real World OCaml" - Yaron Minsky, Anil Madhavapeddy & Jason Hickey
+
+  the licenses of these are reproduced below
 *)
 (* Copyright 2012-2021, Microsoft Research, Daan Leijen
    This is free software; you can redistribute it and/or modify it under the
    terms of the Apache License, Version 2.0.
+*)
+(*
+   All of the code examples included in this book are licensed under the
+   UNLICENSE and are intended to be reused freely for your own purposes
+   https://unlicense.org/
 *)
 
 {
