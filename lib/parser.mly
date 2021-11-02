@@ -1353,11 +1353,11 @@ kinds1:
 (* %type <kind_atom> katom *)
 katom:
   | KIND_E
-    { Effect_row }
+    { Kind_effect_row }
   | KIND_X
-    { Effect_type }
+    { Kind_effect_type }
   | KIND_V
-    { Value }
+    { Kind_value }
   ;
 
 %%

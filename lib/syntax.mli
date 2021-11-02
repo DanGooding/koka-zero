@@ -16,9 +16,9 @@ end
 (* Kinds: *)
 
 type kind_atom =
-  | Effect_type
-  | Effect_row
-  | Value
+  | Kind_effect_type
+  | Kind_effect_row
+  | Kind_value
 
 type kind =
   | Arrow of kind list * kind
