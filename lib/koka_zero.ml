@@ -1,5 +1,6 @@
 open Core
 open Lexing
+module LexerUtil = MenhirLib.LexerUtil
 
 let string_of_position lexbuf =
   let pos = lexbuf.lex_curr_p in
@@ -19,5 +20,16 @@ let parse lexbuf =
     Result.Error message
 ;;
 
-let parse_channel ch = parse (Lexing.from_channel ch)
-let parse_string s = parse (Lexing.from_string s)
+let set_filename ?filename lexbuf =
+  match filename with
+  | Some filename -> LexerUtil.init filename lexbuf
+  | None -> lexbuf
+;;
+
+let parse_with_filename ?filename lexbuf =
+  let lexbuf = set_filename ?filename lexbuf in
+  parse lexbuf
+;;
+
+let parse_channel ?filename ch = parse_with_filename ?filename (Lexing.from_channel ch)
+let parse_string ?filename s = parse_with_filename ?filename (Lexing.from_string s)

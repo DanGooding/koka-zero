@@ -1,40 +1,18 @@
 (*
   Modified from the koka (v2.3.2) grammar specification
   https://github.com/koka-lang/koka/blob/v2.3.2/doc/spec/grammar/lexer.lex
-
-  Some lexing boilerplate was adapted from code examples in:
-  "Real World OCaml" - Yaron Minsky, Anil Madhavapeddy & Jason Hickey
-
-  the licenses of these are reproduced below
+  the license of which is reproduced below
 *)
 (* Copyright 2012-2021, Microsoft Research, Daan Leijen
    This is free software; you can redistribute it and/or modify it under the
    terms of the Apache License, Version 2.0.
 *)
-(*
-   All of the code examples included in this book are licensed under the
-   UNLICENSE and are intended to be reused freely for your own purposes
-   https://unlicense.org/
-*)
 
 {
 open Parser
-open Lexing
+module LexerUtil = MenhirLib.LexerUtil
 
 exception Syntax_error of string
-
-(** Update the [lexbuf]'s position information,
-    incrementing the line number *)
-let next_line : Lexing.lexbuf -> unit =
-  fun lexbuf ->
-    let pos = lexbuf.lex_curr_p in
-    let pos =
-      { pos with pos_bol = pos.pos_cnum
-               ; pos_lnum = pos.pos_lnum + 1
-      }
-    in
-    lexbuf.lex_curr_p <- pos
-;;
 
 let bad_dash = Str.regexp "[^A-Za-z0-9]-[^A-Za-z]"
 
@@ -204,7 +182,7 @@ rule read =
   | '_' id_char*     { WILDCARD (lex_identifier lexbuf) }
 
   | space+ { read lexbuf }
-  | newline { next_line lexbuf; read lexbuf }
+  | newline { LexerUtil.newline lexbuf; read lexbuf }
 
   | eof { EOF }
   | _ { raise (Syntax_error ("Unexpected character: " ^ Lexing.lexeme lexbuf)) }
@@ -212,7 +190,7 @@ rule read =
 and read_single_line_comment =
   parse
   (* TODO: ensure newlines handled the same in all modes *)
-  | newline { next_line lexbuf; read lexbuf }
+  | newline { LexerUtil.newline lexbuf; read lexbuf }
   | eof { EOF }
   (* TODO: match as much as possible for effciency? *)
   | _ { read_single_line_comment lexbuf }
@@ -228,7 +206,7 @@ and read_multi_line_comment depth =
              then read_multi_line_comment (depth - 1) lexbuf
              else read lexbuf
          }
-  | newline { next_line lexbuf; read_multi_line_comment depth lexbuf }
+  | newline { LexerUtil.newline lexbuf; read_multi_line_comment depth lexbuf }
   (* allow end of file to terminate a comment *)
   | eof { EOF }
   (* TODO: match as much as possible for effciency? *)

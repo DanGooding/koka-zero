@@ -1,7 +1,7 @@
 (library
  (name koka_zero)
  (public_name koka-zero)
- (libraries core str)
+ (libraries core menhirLib str)
  (preprocess (pps ppx_jane)))
 
 (ocamllex
