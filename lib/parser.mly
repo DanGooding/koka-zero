@@ -82,15 +82,18 @@
 %nonassoc THEN
 %nonassoc ELSE ELIF
 
-(* TODO: should I support this syntax - it makes parsing etc. harder *)
+(* TODO: perhaps don't allow elision of -> ? *)
 (* resolve s/r conflict to have a `FN funparams -> expr` span as far as possible,
    e.g. `fn(x) -> x + 1` is `(fn(x) -> x + 1)` and not `(fn(x) -> x) + 1`
    and  `fn(x) -> x.foo` is `(fn(x) -> x.foo)` and not `(fn(x) -> x).foo`
    note: we could avoid these rules by disallowing the `->` form in trailing lambdas.
 *)
 %nonassoc RARROW                     (* -> *)
-%nonassoc "(" (* "[" *) FN "{" "."         (* applications *)
-%nonassoc (* OP ASSIGN *) ">" "<" (* "|" *)      (* operators *)
+(* redundant prec annotations removed *)
+(* %nonassoc "(" (\* "[" *\) FN "{" "."         (\* applications *\) *)
+(* %nonassoc (\* OP ASSIGN *\) ">" "<" (\* "|" *\)      (\* operators *\) *)
+(* TODO: try adding OP_PLUS etc here *)
+%nonassoc "."
 
 (* %prec "?" *)
 
@@ -205,6 +208,11 @@ semi:
   { () }
   ;
 
+(* TODO inline this? *)
+semi_terminated_list(X):
+  | xs = list(x = X; semi+ { x })
+    { xs }
+
 
 (* ---------------------------------------------------------
 -- Top level declarations
@@ -235,7 +243,7 @@ declarations:
 
 (* %type <toplevel_declaration list> topdecls *)
 topdecls:
-  | ts = list(t = topdecl; semi+ { t })
+  | ts = semi_terminated_list(topdecl)
     { ts }
   ;
 (* TODO: error recovery? [(topdecl | error) semi+] *)
@@ -351,7 +359,7 @@ opdecls:
 
 (* %type <operation_declaration list> operations *)
 operations:
-  | operations = separated_list(semi+, operation) semi+
+  | operations = semi_terminated_list(operation)
     { operations }
 
 (* %type <operation_declaration> operation *)
@@ -444,8 +452,9 @@ block:
 (* %type <block> blockcontents *)
 blockcontents:
   | semi*;
-    statements = separated_list(semi+, statement); semi+;
-    last = laststatement; semi*
+    statements = semi_terminated_list(statement);
+    last = laststatement
+    (* laststatement itself is responsible for the final semicolon *)
     { { statements; last } }
   ;
 
@@ -481,7 +490,7 @@ laststatement:
     { e }
   (* has unclear semantics, leaving out for now *)
   (* | withstat; IN; blockexpr *)
-  | e = exprstatement
+  | e = exprstatement; semi+
     { e }
   ;
 
@@ -1106,7 +1115,7 @@ handlerexpr:
 opclauses:
   | op = opclause
     { Effect_handler [op] }
-  | "{"; semi*; ops = list(op = opclausex; semi+ { op }); "}"
+  | "{"; semi*; ops = semi_terminated_list(opclausex); "}"
     { Effect_handler ops }
   ;
 
