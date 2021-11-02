@@ -94,6 +94,41 @@ fun one(aa, bb, cc, dd) {
 }
   |}
       (* TODO: more complex with syntax example *) )
+  ; ( "single line comments"
+    , {|
+// this is a comment 12 + 13 == 25
+// and this is another
+val speed = 100; // they can go after declarations too!
+
+fun documented() {
+  // comments
+  val x = 1
+    + 2  // can ...
+    + 3; // go on lines within expressions!
+  x * x; // after them
+  // and even at the end of blocks
+}
+// multiline comments do not start within them! /*
+val not-commented-out = True;
+// // /// ////
+|}
+    )
+  ; ( "multiline comments"
+    , {|
+/* these multiline comments
+can of course go over multiple lines!
+     */
+val x = 1;
+/* they /* can
+     /* be
+     /* nested */
+     */
+     */
+as much as is required */
+
+val y = x * /* can be within expressions! */ 5;
+|}
+    )
   ]
 ;;
 
