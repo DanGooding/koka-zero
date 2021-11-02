@@ -202,11 +202,8 @@ and statement =
   (* note this may be a return expression! *)
   | Expr of expr
 
-(** a list of statements, the final an expression, evaluates to a value*)
-and block =
-  { statements : statement list
-  ; last : expr
-  }
+(** a list of statements *)
+and block = { statements : statement list }
 
 (** a function, either anonymous or named, but the name must be held elsewhere *)
 and fn =

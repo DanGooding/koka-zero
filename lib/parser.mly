@@ -120,7 +120,6 @@
 %type <statement> statement
 %type <declaration> decl
 %type <expr> exprstatement
-%type <expr> laststatement
 %type <expr> withstat
 %type <block> bodyexpr
 %type <block> blockexpr
@@ -213,6 +212,9 @@ semi_terminated_list(X):
   | xs = list(x = X; semi+ { x })
     { xs }
 
+semi_terminated_nonempty_list(X):
+  | xs = nonempty_list(x = X; semi+ { x })
+    { xs }
 
 (* ---------------------------------------------------------
 -- Top level declarations
@@ -444,18 +446,20 @@ funbody:
 (* %type <block> block *)
 block:
   (* must end with an expression statement (and not a declaration) *)
-  | "{"; block = blockcontents; "}"
+  | "{"; semi*; block = blockcontents; "}"
     { block }
   ;
 
 (* merely a helper function for `with` statement desugaring *)
 (* %type <block> blockcontents *)
 blockcontents:
-  | semi*;
-    statements = semi_terminated_list(statement);
-    last = laststatement
-    (* laststatement itself is responsible for the final semicolon *)
-    { { statements; last } }
+  (* block cannot be empty *)
+  | statements = semi_terminated_nonempty_list(statement)
+    { { statements } }
+  | statements = semi_terminated_list(statement); last = withstat
+    { let statements = statements @ [Expr last] in
+      { statements }
+    }
   ;
 
 (* %type <statement> statement *)
@@ -481,16 +485,6 @@ exprstatement:
   | e = returnexpr
     { e }
   | e = basicexpr
-    { e }
-  ;
-
-(* %type <expr> laststatement *)
-laststatement:
-  | e = withstat
-    { e }
-  (* has unclear semantics, leaving out for now *)
-  (* | withstat; IN; blockexpr *)
-  | e = exprstatement; semi+
     { e }
   ;
 
@@ -536,7 +530,7 @@ blockexpr:
   | b = block
     { b }
   | e = expr_except_block
-    { { statements = []; last = e } }
+    { { statements = [Expr e] } }
   ;
 
 (* %type <expr> expr_except_block *)

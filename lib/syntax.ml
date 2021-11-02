@@ -217,10 +217,9 @@ and statement =
   (* note this may be a return expression! *)
   | Expr of expr
 
-and block =
-  { statements : statement list
-  ; last : expr
-  }
+(* TODO: last should be an expression, but parser cannot enforce this (requires unbounded
+   lookahead) *)
+and block = { statements : statement list }
 
 and fn =
   { type_parameters : type_parameter list
