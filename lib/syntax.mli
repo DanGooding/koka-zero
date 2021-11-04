@@ -30,7 +30,8 @@ type kind =
 
 (** parameter which stands for a type
 
-    e.g. in `forall<a> a -> list<a>`, `forall` and `list` each accept one [type_parameter] *)
+    e.g. in `forall<a> a -> list<a>`, `forall` and `list` each accept one
+    [type_parameter] *)
 type type_parameter =
   { id : Var_id.t
   ; kind : kind option
@@ -39,9 +40,9 @@ type type_parameter =
 
 (* note: typechecker will remove the nonsensical cases based on kind checking
 
-   the parser does nothing in this regard, but here is little it can do, since `a` can
-   always be a type variable or an effect variable, and `eff` can always be a type or an
-   effect *)
+   the parser does nothing in this regard, but here is little it can do, since
+   `a` can always be a type variable or an effect variable, and `eff` can always
+   be a type or an effect *)
 
 (** types and effects are the same thing. *)
 type type_ =
@@ -81,15 +82,16 @@ and parameter_type =
 
 (** a function call results may perform some effects, and result in a value
 
-    if a result type is given, the effect must be given too, or it defaults to total (<>) *)
+    if a result type is given, the effect must be given too, or it defaults to
+    total (<>) *)
 and type_result =
   { effect : type_
   ; result : type_
   }
 [@@deriving sexp]
 
-(** A fixed length effect row such as `<x,y,z>`, or one with a variable tail such as
-    `<x,y,z|e>` *)
+(** A fixed length effect row such as `<x,y,z>`, or one with a variable tail
+    such as `<x,y,z|e>` *)
 and effect_row =
   | Closed of type_ list
   (* note: open row is guaranted to be nonempty *)
@@ -106,7 +108,8 @@ type parameter_id =
   | Parameter_wildcard
 [@@deriving sexp]
 
-(** a 'plain' parameter with just a name and type. used when declaring effect operations *)
+(** a 'plain' parameter with just a name and type. used when declaring effect
+    operations *)
 type parameter =
   { id : parameter_id
   ; type_ : type_
@@ -124,7 +127,8 @@ type annotated_pattern =
   }
 [@@deriving sexp]
 
-(** a function parameter, which may be annotated, and perform an irrefutable pattern match *)
+(** a function parameter, which may be annotated, and perform an irrefutable
+    pattern match *)
 type pattern_parameter =
   { pattern : pattern
   ; type_ : type_ option
@@ -209,7 +213,8 @@ type expr =
   | Handler of effect_handler
   | Handle of
       { subject : expr (** this expression evaluates to a 0 argument function *)
-      ; handler : effect_handler (** which is called under this effect handler *)
+      ; handler : effect_handler
+            (** which is called under this effect handler *)
       }
   | Fn of fn
   | Binary_op of expr * binary_operator * expr
@@ -277,7 +282,8 @@ and operation_handler =
       }
 [@@deriving sexp]
 
-and effect_handler = Effect_handler of operation_handler list [@@deriving sexp]
+and effect_handler = Effect_handler of operation_handler list
+[@@deriving sexp]
 
 (** a declaration of a value/function which can appear at the toplevel *)
 type pure_declaration =
@@ -299,6 +305,7 @@ val anonymous_of_block : block -> fn
 (** builds a 1 argument anonymous function with a given parameter and body *)
 val anonymous_of_bound_block : binder:binder -> block:block -> fn
 
-(** `with` syntax: insert an anonymous function as the last argument to an application (or
-    apply the [expr] to the callback if it is not already an [Application]) *)
+(** `with` syntax: insert an anonymous function as the last argument to an
+    application (or apply the [expr] to the callback if it is not already an
+    [Application]) *)
 val insert_with_callback : callback:fn -> expr -> expr

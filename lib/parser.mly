@@ -78,7 +78,8 @@
    i.e. the last precedence declaration has the highest precedence.
 *)
 
-(* resolve s/r conflict by shifting on ELSE so the ELSE binds to the closest IF.*)
+(* resolve s/r conflict by shifting on ELSE so the ELSE binds to the closest
+   IF. *)
 %nonassoc THEN
 %nonassoc ELSE ELIF
 
@@ -86,7 +87,8 @@
 (* resolve s/r conflict to have a `FN funparams -> expr` span as far as possible,
    e.g. `fn(x) -> x + 1` is `(fn(x) -> x + 1)` and not `(fn(x) -> x) + 1`
    and  `fn(x) -> x.foo` is `(fn(x) -> x.foo)` and not `(fn(x) -> x).foo`
-   note: we could avoid these rules by disallowing the `->` form in trailing lambdas.
+   note: we could avoid these rules by disallowing the `->` form in trailing
+   lambdas.
 *)
 %nonassoc RARROW                     (* -> *)
 (* redundant prec annotations removed *)
@@ -270,8 +272,8 @@ topdecl:
 
 (* %type <type_declaration> typedecl *)
 typedecl:
-  (* | typemod TYPE typeid typeparams kannot typebody      { Var_id.of_string $3; } *)
-  (* | structmod STRUCT typeid typeparams kannot conparams { Var_id.of_string $3; } *)
+  (* | typemod TYPE typeid typeparams kannot typebody       *)
+  (* | structmod STRUCT typeid typeparams kannot conparams  *)
   | e = effectdecl { Effect_declaration e }
   ;
 
@@ -310,11 +312,11 @@ effectdecl:
 (*  ; *)
 
 (* typeid:
-  | "(" commas ")"      { Var_id.of_string "(,)"; }       (\* tuples *\) *)
-(*  | "[" "]"             { Var_id.of_string "[]"; }        (\* lists *\) *)
-(*  | "<" ">"             { Var_id.of_string "<>"; }        (\* total effect *\) *)
-(*  | "<" "|" ">"         { Var_id.of_string "<|>"; }       (\* effect extension *\) *)
-(*  | varid               { Var_id.of_string $1; } *)
+  | "(" commas ")"     { Var_id.of_string "(,)"; }       (\* tuples *\) *)
+(*  | "[" "]"          { Var_id.of_string "[]"; }        (\* lists *\) *)
+(*  | "<" ">"          { Var_id.of_string "<>"; }         (\* total effect *\) *)
+(*  | "<" "|" ">"      { Var_id.of_string "<|>"; }    (\* effect extension *\) *)
+(*  | varid            { Var_id.of_string $1; } *)
 (*  ; *)
 
 
@@ -835,7 +837,8 @@ atom:
     { e }
   (* not yet supported: *)
     (* unit, parenthesized (possibly annotated) expression, tuple expression *)
-    (* list expression (elements may be terminated with comma instead of separated) *)
+    (* list expression (elements may be terminated with comma instead of
+       separated) *)
 
 (* %type <literal> literal *)
 literal:

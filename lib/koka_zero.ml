@@ -31,5 +31,10 @@ let parse_with_filename ?filename lexbuf =
   parse lexbuf
 ;;
 
-let parse_channel ?filename ch = parse_with_filename ?filename (Lexing.from_channel ch)
-let parse_string ?filename s = parse_with_filename ?filename (Lexing.from_string s)
+let parse_channel ?filename ch =
+  parse_with_filename ?filename (Lexing.from_channel ch)
+;;
+
+let parse_string ?filename s =
+  parse_with_filename ?filename (Lexing.from_string s)
+;;

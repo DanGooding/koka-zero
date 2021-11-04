@@ -51,9 +51,9 @@ type type_parameter =
 
 (* note: typechecker will remove the nonsensical cases based on kind checking
 
-   the parser does nothing in this regard, but here is little it can do, since `a` can
-   always be a type variable or an effect variable, and `eff` can always be a type or an
-   effect *)
+   the parser does nothing in this regard, but here is little it can do, since
+   `a` can always be a type variable or an effect variable, and `eff` can always
+   be a type or an effect *)
 
 type type_ =
   | Arrow of parameter_type list * type_result
@@ -241,8 +241,8 @@ and statement =
   | Expr of expr
 [@@deriving sexp]
 
-(* TODO: last should be an expression, but parser cannot enforce this (requires unbounded
-   lookahead) *)
+(* TODO: last should be an expression, but parser cannot enforce this (requires
+   unbounded lookahead) *)
 and block = { statements : statement list } [@@deriving sexp]
 
 and fn =
@@ -292,7 +292,8 @@ and operation_handler =
       }
 [@@deriving sexp]
 
-and effect_handler = Effect_handler of operation_handler list [@@deriving sexp]
+and effect_handler = Effect_handler of operation_handler list
+[@@deriving sexp]
 
 type pure_declaration =
   | Val of binder * block
@@ -313,7 +314,11 @@ let anonymous_of_block : block -> fn =
 let anonymous_of_bound_block : binder:binder -> block:block -> fn =
  fun ~binder ~block ->
   let parameter = pattern_parameter_of_binder binder in
-  { type_parameters = []; parameters = [ parameter ]; result_type = None; body = block }
+  { type_parameters = []
+  ; parameters = [ parameter ]
+  ; result_type = None
+  ; body = block
+  }
 ;;
 
 let insert_with_callback : callback:fn -> expr -> expr =
@@ -321,8 +326,8 @@ let insert_with_callback : callback:fn -> expr -> expr =
   match e with
   | Application (f, args) -> Application (f, args @ [ Fn callback ])
   (* note: technically, [Annotated(e, scheme)] should be possible if [e] is an
-     application, but real koka also forbids this. (There may be some difficulies with
-     capture of type variables) *)
+     application, but real koka also forbids this. (There may be some
+     difficulies with capture of type variables) *)
   | Annotated (_, _)
   | Return _
   | Val_in (_, _, _)
