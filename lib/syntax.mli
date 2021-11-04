@@ -19,10 +19,12 @@ type kind_atom =
   | Kind_effect_type
   | Kind_effect_row
   | Kind_value
+[@@deriving sexp]
 
 type kind =
   | Arrow of kind list * kind
   | Kind_atom of kind_atom
+[@@deriving sexp]
 
 (* types and effects: *)
 
@@ -33,6 +35,7 @@ type type_parameter =
   { id : Var_id.t
   ; kind : kind option
   }
+[@@deriving sexp]
 
 (* note: typechecker will remove the nonsensical cases based on kind checking
 
@@ -53,11 +56,13 @@ type type_ =
       { type_ : type_
       ; kind : kind
       }
+[@@deriving sexp]
 
 and type_scheme =
   { forall_quantified : type_parameter list
   ; body : type_
   }
+[@@deriving sexp]
 
 and type_constructor =
   | Variable_or_name of Var_id.t
@@ -65,12 +70,14 @@ and type_constructor =
   (* builtin types *)
   | Type_int
   | Type_bool
+[@@deriving sexp]
 
 (** represents the `x : int` in `(x : int, y : int) -> int` *)
 and parameter_type =
   { parameter_id : Identifier.t option
   ; type_ : type_
   }
+[@@deriving sexp]
 
 (** a function call results may perform some effects, and result in a value
 
@@ -79,6 +86,7 @@ and type_result =
   { effect : type_
   ; result : type_
   }
+[@@deriving sexp]
 
 (** A fixed length effect row such as `<x,y,z>`, or one with a variable tail such as
     `<x,y,z|e>` *)
@@ -86,6 +94,7 @@ and effect_row =
   | Closed of type_ list
   (* note: open row is guaranted to be nonempty *)
   | Open of type_ list * type_
+[@@deriving sexp]
 
 (** an empty effect row - i.e. the 'total' effect (`<>`) *)
 val total_effect_row : effect_row
@@ -95,33 +104,39 @@ val total_effect_row : effect_row
 type parameter_id =
   | Parameter_id of Identifier.t
   | Parameter_wildcard
+[@@deriving sexp]
 
 (** a 'plain' parameter with just a name and type. used when declaring effect operations *)
 type parameter =
   { id : parameter_id
   ; type_ : type_
   }
+[@@deriving sexp]
 
 type pattern =
   | Pattern_id of Identifier.t
   | Pattern_wildcard
+[@@deriving sexp]
 
 type annotated_pattern =
   { pattern : pattern
   ; scheme : type_scheme option
   }
+[@@deriving sexp]
 
 (** a function parameter, which may be annotated, and perform an irrefutable pattern match *)
 type pattern_parameter =
   { pattern : pattern
   ; type_ : type_ option
   }
+[@@deriving sexp]
 
 (** binds a single identifier, such as in a [Val] operation *)
 type binder =
   { id : Identifier.t
   ; type_ : type_ option
   }
+[@@deriving sexp]
 
 val pattern_parameter_of_binder : binder -> pattern_parameter
 
@@ -132,12 +147,14 @@ type operation_shape =
   | Shape_fun of parameter list * type_
   | Shape_except of parameter list * type_
   | Shape_control of parameter list * type_
+[@@deriving sexp]
 
 type operation_declaration =
   { id : Var_id.t
   ; type_parameters : type_parameter list
   ; shape : operation_shape
   }
+[@@deriving sexp]
 
 type effect_declaration =
   { id : Var_id.t
@@ -145,22 +162,26 @@ type effect_declaration =
   ; kind : kind option
   ; operations : operation_declaration list
   }
+[@@deriving sexp]
 
 type type_declaration = Effect_declaration of effect_declaration
 (* | Type *)
+[@@deriving sexp]
 
 type operation_parameter =
   { id : parameter_id
   ; type_ : type_ option
   }
+[@@deriving sexp]
 
 (* expressions: *)
 
 type literal =
   | Int of int
   | Bool of bool
+[@@deriving sexp]
 
-type unary_operator = Exclamation
+type unary_operator = Exclamation [@@deriving sexp]
 
 type binary_operator =
   | Plus
@@ -177,6 +198,7 @@ type binary_operator =
   | Less_equal
   | Greater_than
   | Greater_equal
+[@@deriving sexp]
 
 (** an expression - evaluates to a value *)
 type expr =
@@ -196,14 +218,16 @@ type expr =
   | Identifier of Identifier.t
   | Literal of literal
   | Annotated of expr * type_scheme
+[@@deriving sexp]
 
 and statement =
   | Declaration of declaration
   (* note this may be a return expression! *)
   | Expr of expr
+[@@deriving sexp]
 
 (** a list of statements *)
-and block = { statements : statement list }
+and block = { statements : statement list } [@@deriving sexp]
 
 (** a function, either anonymous or named, but the name must be held elsewhere *)
 and fn =
@@ -212,16 +236,19 @@ and fn =
   ; result_type : type_result option
   ; body : block
   }
+[@@deriving sexp]
 
 and declaration =
   | Fun of fun_declaration
   | Val of annotated_pattern * block
+[@@deriving sexp]
 
 (** declaration of a named function *)
 and fun_declaration =
   { id : Identifier.t
   ; fn : fn
   }
+[@@deriving sexp]
 
 and operation_handler =
   | Op_val of
@@ -248,20 +275,23 @@ and operation_handler =
       { parameter : operation_parameter
       ; body : block
       }
+[@@deriving sexp]
 
-and effect_handler = Effect_handler of operation_handler list
+and effect_handler = Effect_handler of operation_handler list [@@deriving sexp]
 
 (** a declaration of a value/function which can appear at the toplevel *)
 type pure_declaration =
   | Val of binder * block
   | Fun of fun_declaration
+[@@deriving sexp]
 
 type toplevel_declaration =
   | Pure_declaration of pure_declaration
   | Type_declaration of type_declaration
+[@@deriving sexp]
 
 (** root of the AST: represents and entire program *)
-type program = Program of toplevel_declaration list
+type program = Program of toplevel_declaration list [@@deriving sexp]
 
 (** builds a 0 argument anonymous function with a given body *)
 val anonymous_of_block : block -> fn
