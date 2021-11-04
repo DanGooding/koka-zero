@@ -1,5 +1,16 @@
 open Core
-open Alcotest
+open Koka_zero
+
+let%expect_test "toplevel value declaration" =
+  let code = {|
+  val number : int = 1729;
+|} in
+  let ast = parse_string code in
+  [%sexp (ast : (Syntax.program, string) Result.t)]
+  |> Sexp.to_string_hum
+  |> print_endline;
+  [%expect {| |}]
+;;
 
 let correct_cases =
   [ "single expression function", {|
@@ -62,19 +73,21 @@ fun if-example() {
 }
     |}
     )
-  ; "nested if statements", {|
+  ; ( "nested if statements"
+    , {|
 fun i() {
   if a then
     if b then
       c
   else d;
 }
-|}
-  ; "dot application", {|
+|} )
+  ; ( "dot application"
+    , {|
 fun dot-application() {
   x.best.fst.pow(3).print;
 ;
-  |}
+  |} )
   ; ( "trailing lambda application"
     , {|
 fun trailing-lambda() {
@@ -146,30 +159,4 @@ val n- = n
   ]
 ;;
 
-let test_is_valid_syntax code () =
-  match Koka_zero.parse_string code with
-  | Ok _ast -> ()
-  | Error _message -> fail "expected successful parse"
-;;
-
-let test_is_not_valid_syntax code () =
-  match Koka_zero.parse_string code with
-  | Ok _ast -> fail "expected syntax error"
-  | Error _message -> ()
-;;
-
-let correct_suite =
-  List.map correct_cases ~f:(fun (title, code) ->
-      title, `Quick, test_is_valid_syntax code)
-;;
-
-let wrong_suite =
-  List.map wrong_cases ~f:(fun (title, code) ->
-      title, `Quick, test_is_not_valid_syntax code)
-;;
-
-let () =
-  Alcotest.run
-    "koka-zero"
-    [ "Valid syntax", correct_suite; "Incorrect syntax", wrong_suite ]
-;;
+let (_ : (string * string) list) = correct_cases @ wrong_cases

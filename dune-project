@@ -23,6 +23,6 @@
  (depends
   (ocaml (>= 4.08.0))
   dune
-  (alcotest :with-test)
+  (ppx_expect :with-test)
   (odoc :with-doc)))
 (using menhir 2.0)

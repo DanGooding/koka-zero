@@ -1,4 +1,11 @@
-(tests
- (names koka_zero_test)
- (package koka-zero)
- (libraries alcotest koka_zero))
+(library
+ (name koka_zero_test)
+ (inline_tests)
+ (libraries core koka_zero)
+ (preprocess (pps ppx_jane)))
+
+(env
+ (dev
+  (flags
+   (:standard -w +A-48-42-44-40-70 -warn-error +A-3))))
+
