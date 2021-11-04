@@ -9,7 +9,14 @@ let%expect_test "toplevel value declaration" =
   [%sexp (ast : (Syntax.program, string) Result.t)]
   |> Sexp.to_string_hum
   |> print_endline;
-  [%expect {| |}]
+  [%expect {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val
+         ((id (Var number))
+          (type_ ((Type_atom (constructor Type_int) (arguments ())))))
+         ((statements ((Expr (Literal (Int 1729))))))))))) |}]
 ;;
 
 let correct_cases =
