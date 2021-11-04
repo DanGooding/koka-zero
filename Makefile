@@ -16,11 +16,6 @@ deps: ## Install development dependencies
 create_switch: ## Create an opam switch without any dependency
 	opam switch create . ocaml-base-compiler.4.13.1 --no-install -y
 
-.PHONY: switch
-switch: ## Create an opam switch and install development dependencies
-	opam install . --deps-only --with-doc --with-test
-	opam install -y dune-release ocamlformat utop ocaml-lsp-server merlin ocp-indent
-
 .PHONY: lock
 lock: ## Generate a lock file
 	opam lock -y .
