@@ -24,6 +24,21 @@ fun main() {
   [%expect {| |}]
 ;;
 
+let%expect_test "multi statement function" =
+  let code =
+    {|
+fun main() {
+  val x = 1;
+  print(x);
+  val y = foo(x);
+  y * 2;
+}
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect {| |}]
+;;
+
 let%expect_test "dashes in identifiers" =
   let code = {|
 val kebab-case = 0;
@@ -137,43 +152,63 @@ fun if-example() {
   [%expect {| |}]
 ;;
 
-let _correct_cases =
-  [ ( "nested if statements"
-    , {|
+let%expect_test "nested if statements" =
+  let code = {|
 fun i() {
   if a then
     if b then
       c
   else d;
 }
-|} )
-  ; ( "dot application"
-    , {|
+|} in
+  Test_parser_util.print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "dot application" =
+  let code = {|
 fun dot-application() {
   x.best.fst.pow(3).print;
 ;
-  |} )
-  ; ( "trailing lambda application"
-    , {|
+  |} in
+  Test_parser_util.print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "trailing lambda application" =
+  let code =
+    {|
 fun trailing-lambda() {
   f(x,y,z) { alpha } fn(b) {beta} {gamma};
   a.g(1).h(2) { zzz };
 }
   |}
-    )
-  ; ( "with syntax"
-    , {|
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "with syntax" =
+  let code =
+    {|
 fun one(aa, bb, cc, dd) {
+  val z = 1;
   with aa;
+  println(zz);
   with bb();
   with cc(3);
   with x <- dd(5);
   println(x : string);
 }
   |}
-      (* TODO: more complex with syntax example *) )
-  ; ( "single line comments"
-    , {|
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "single line comments" =
+  let code =
+    {|
 // this is a comment 12 + 13 == 25
 // and this is another
 val speed = 100; // they can go after declarations too!
@@ -190,9 +225,14 @@ fun documented() {
 val not-commented-out = True;
 // // /// ////
 |}
-    )
-  ; ( "multiline comments"
-    , {|
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "multiline comments" =
+  let code =
+    {|
 /* these multiline comments
 can of course go over multiple lines!
      */
@@ -206,6 +246,16 @@ as much as is required */
 
 val y = x * /* can be within expressions! */ 5;
 |}
-    )
-  ]
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val ((id (Var x)) (type_ ())) ((statements ((Expr (Literal (Int 1))))))))
+       (Pure_declaration
+        (Val ((id (Var y)) (type_ ()))
+         ((statements
+           ((Expr (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))))) |}]
 ;;
