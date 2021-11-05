@@ -36,6 +36,10 @@ start: all ## Run the produced executable
 test: ## Run the unit tests
 	opam exec -- dune runtest --root .
 
+.PHONY: promote
+promote: ## Accept corrections to expect tests
+	opam exec -- dune promote --root .
+
 .PHONY: clean
 clean: ## Clean build artifacts and other generated files
 	opam exec -- dune clean --root .

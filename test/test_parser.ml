@@ -1,18 +1,8 @@
-open Core
-open Koka_zero
-
-let print_parse_result code =
-  let ast = parse_string code in
-  [%sexp (ast : (Syntax.program, string) Result.t)]
-  |> Sexp.to_string_hum
-  |> print_endline
-;;
-
 let%expect_test "toplevel value declaration" =
   let code = {|
   val number : int = 1729;
 |} in
-  print_parse_result code;
+  Test_parser_util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -30,19 +20,17 @@ fun main() {
   0;
 }
 |} in
-  print_parse_result code;
+  Test_parser_util.print_parse_result code;
   [%expect {| |}]
 ;;
 
 let%expect_test "dashes in identifiers" =
-  let code =
-    {|
+  let code = {|
 val kebab-case = 0;
 val x-y-z = 1;
 val number3-letter = 2;
-      |}
-  in
-  print_parse_result code;
+|} in
+  Test_parser_util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -58,25 +46,18 @@ val number3-letter = 2;
          ((statements ((Expr (Literal (Int 2))))))))))) |}]
 ;;
 
-let _e =
-  {e|
-
-let%expect_test
-  =
-  let code =
-  in print_parse_result code;
-  [%expect {| |}]
-;;
-
-|e}
-;;
-
 let%expect_test "hex literals" =
   let code = {|
-val abcd = 0x1234;
+val abcd = 0x1234ABCD;
 |} in
-  print_parse_result code;
-  [%expect {| |}]
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val ((id (Var abcd)) (type_ ()))
+         ((statements ((Expr (Literal (Int 305441741))))))))))) |}]
 ;;
 
 let%expect_test "prime at end of identifier" =
@@ -85,7 +66,7 @@ val f' = dif
 f(f);
 val f'' = diff(f')
   |} in
-  print_parse_result code;
+  Test_parser_util.print_parse_result code;
   [%expect {| |}]
 ;;
 
@@ -101,7 +82,7 @@ val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11
 val inside = 0 <= x && x < 7 || 100 < x && x <= 9000;
 |}
   in
-  print_parse_result code;
+  Test_parser_util.print_parse_result code;
   [%expect {| |}]
 ;;
 
@@ -109,7 +90,7 @@ let%expect_test "negative integer literals" =
   let code = {|
 val minus-fourty = -40;
 |} in
-  print_parse_result code;
+  Test_parser_util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -124,7 +105,7 @@ let%expect_test "boolean literals" =
 val t = True;
 val f = False;
   |} in
-  print_parse_result code;
+  Test_parser_util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -152,11 +133,11 @@ fun if-example() {
 }
     |}
   in
-  print_parse_result code;
+  Test_parser_util.print_parse_result code;
   [%expect {| |}]
 ;;
 
-let correct_cases =
+let _correct_cases =
   [ ( "nested if statements"
     , {|
 fun i() {
@@ -228,19 +209,3 @@ val y = x * /* can be within expressions! */ 5;
     )
   ]
 ;;
-
-let wrong_cases =
-  [ "function without parameters", {|
-fun compute-the-answer {
-  42;
-}
-|}
-  ; "dashes in wrong place in identifier", {|
-val n-3 = n - 3;
-val n- = n
-|}
-    (* TODO: more incorrect examples *)
-  ]
-;;
-
-let (_ : (string * string) list) = correct_cases @ wrong_cases
