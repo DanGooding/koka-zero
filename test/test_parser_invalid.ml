@@ -5,43 +5,35 @@ fun compute-the-answer {
 }
 |} in
   Test_parser_util.print_parse_result code;
-  [%expect {|  |}]
+  [%expect {| (Error "2:25 : syntax error") |}]
 ;;
 
-let%expect_test "dashes in wrong place in identifier" =
+let%expect_test "dash before number in identifier" =
   let code = {|
 val n-3 = n - 3;
+|} in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Error
+     "2:8 : malformed identifier: a dash must be preceded by a letter or number, and followed by a letter") |}]
+;;
+
+let%expect_test "dash at end of identifier" =
+  let code = {|
 val n- = n;
 |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Error
+     "2:7 : malformed identifier: a dash must be preceded by a letter or number, and followed by a letter") |}]
 ;;
 
-let _e =
-  {e|
-
-let%expect_test
-  =
-  let code =
-  in Test_parser_util.print_parse_result code;
-  [%expect {| |}]
-;;
-
-|e}
-;;
-
-let _wrong_cases =
-  [ "function without parameters", {|
-fun compute-the-answer {
-  42;
-}
-|}
-  ; ( "dashes in wrong place in identifier"
-    , {|
-val n-3 = n - 3;
-val n- = n;
-val -a = 1;
-|} )
-    (* TODO: more incorrect examples *)
-  ]
+let%expect_test "dash at start of identifier" =
+  let code = {|
+  val -n = 0 - n;
+  |} in
+  Test_parser_util.print_parse_result code;
+  [%expect {| (Error "2:8 : syntax error") |}]
 ;;

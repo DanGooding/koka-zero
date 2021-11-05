@@ -14,12 +14,16 @@ module LexerUtil = MenhirLib.LexerUtil
 
 exception Syntax_error of string
 
-let bad_dash = Str.regexp "[^A-Za-z0-9]-[^A-Za-z]"
+let bad_dash = Str.regexp "[^A-Za-z0-9]-\\|^-\\|-[^A-Za-z]\\|-$"
 
 (** An identifier is well formed if dashes are unambiguously not
     subtraction signs. *)
 let well_formed identifier =
-  not (Str.string_match bad_dash identifier 0)
+  let position =
+    try Some (Str.search_forward bad_dash identifier 0) with
+      Not_found -> None
+  in Option.is_none position
+;;
 
 (** Return the matched identifier from the lexbuf,
     raising Syntax_error if it is not well formed *)
@@ -27,7 +31,8 @@ let lex_identifier lexbuf : string =
   let identifier = Lexing.lexeme lexbuf in
     if not (well_formed identifier)
     then raise (Syntax_error
-      "malformed identifier: a dash must be preceded and followed by a letter")
+      "malformed identifier: a dash must be preceded by a letter or number, \
+       and followed by a letter")
     else identifier
 ;;
 
