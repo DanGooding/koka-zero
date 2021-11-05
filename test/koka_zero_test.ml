@@ -1,15 +1,20 @@
 open Core
 open Koka_zero
 
+let print_parse_result code =
+  let ast = parse_string code in
+  [%sexp (ast : (Syntax.program, string) Result.t)]
+  |> Sexp.to_string_hum
+  |> print_endline
+;;
+
 let%expect_test "toplevel value declaration" =
   let code = {|
   val number : int = 1729;
 |} in
-  let ast = parse_string code in
-  [%sexp (ast : (Syntax.program, string) Result.t)]
-  |> Sexp.to_string_hum
-  |> print_endline;
-  [%expect {|
+  print_parse_result code;
+  [%expect
+    {|
     (Ok
      (Program
       ((Pure_declaration
@@ -19,55 +24,122 @@ let%expect_test "toplevel value declaration" =
          ((statements ((Expr (Literal (Int 1729))))))))))) |}]
 ;;
 
-let correct_cases =
-  [ "single expression function", {|
+let%expect_test "single expression function" =
+  let code = {|
 fun main() {
   0;
 }
-|}
-  ; "toplevel value declaration", {|
-val number : int = 1729;
-|}
-  ; ( "dashes in identifiers"
-    , {|
+|} in
+  print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "dashes in identifiers" =
+  let code =
+    {|
 val kebab-case = 0;
 val x-y-z = 1;
 val number3-letter = 2;
-      |} )
-  ; "hex literals", {|
+      |}
+  in
+  print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val ((id (Var kebab-case)) (type_ ()))
+         ((statements ((Expr (Literal (Int 0))))))))
+       (Pure_declaration
+        (Val ((id (Var x-y-z)) (type_ ()))
+         ((statements ((Expr (Literal (Int 1))))))))
+       (Pure_declaration
+        (Val ((id (Var number3-letter)) (type_ ()))
+         ((statements ((Expr (Literal (Int 2))))))))))) |}]
+;;
+
+let _e =
+  {e|
+
+let%expect_test
+  =
+  let code =
+  in print_parse_result code;
+  [%expect {| |}]
+;;
+
+|e}
+;;
+
+let%expect_test "hex literals" =
+  let code = {|
 val abcd = 0x1234;
-|}
-  ; "prime at end of identifier", {|
-val f' = diff(f);
+|} in
+  print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "prime at end of identifier" =
+  let code = {|
+val f' = dif
+f(f);
 val f'' = diff(f')
-  |}
-  ; "boolean literals", {|
-val t = True;
-val f = False;
-  |}
-  ; "negative integer literals", {|
-val minus-fourty = -40;
-  |}
-  ; ( "operators"
-    , {|
+  |} in
+  print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "operators" =
+  let code =
+    {|
 fun hypotenuse(a : int, b : int) {
   val c-squared = a * a + b * b;
   val c = isqrt(c-squared);
   c;
 }
 val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11
-va inside = 0 <= x && x < 7 || 100 < x && x <= 9000;
+val inside = 0 <= x && x < 7 || 100 < x && x <= 9000;
 |}
-    )
-  ; ( "mixing infix & prefix operators"
-    , {|
-fun xnor(a, b) {
-  a && b || !a && !b;
-}
-val sum = 3 + -1 * -7;
-|} )
-  ; ( "if statements"
-    , {|
+  in
+  print_parse_result code;
+  [%expect {| |}]
+;;
+
+let%expect_test "negative integer literals" =
+  let code = {|
+val minus-fourty = -40;
+|} in
+  print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val ((id (Var minus-fourty)) (type_ ()))
+         ((statements ((Expr (Literal (Int -40))))))))))) |}]
+;;
+
+let%expect_test "boolean literals" =
+  let code = {|
+val t = True;
+val f = False;
+  |} in
+  print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val ((id (Var t)) (type_ ()))
+         ((statements ((Expr (Literal (Bool true))))))))
+       (Pure_declaration
+        (Val ((id (Var f)) (type_ ()))
+         ((statements ((Expr (Literal (Bool false))))))))))) |}]
+;;
+
+let%expect_test "if statements" =
+  let code =
+    {|
 fun if-example() {
   if x % 2 == 0 then
     123
@@ -79,8 +151,13 @@ fun if-example() {
     1 + 1;
 }
     |}
-    )
-  ; ( "nested if statements"
+  in
+  print_parse_result code;
+  [%expect {| |}]
+;;
+
+let correct_cases =
+  [ ( "nested if statements"
     , {|
 fun i() {
   if a then
