@@ -108,10 +108,21 @@ val abcd = 0x1234ABCD;
 let%expect_test "prime at end of identifier" =
   let code = {|
 val f' = diff(f);
-val f'' = diff(f')
+val f'' = diff(f');
   |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val ((id (Var f')) (type_ ()))
+         ((statements ())
+          (last (Application (Identifier (Var diff)) ((Identifier (Var f))))))))
+       (Pure_declaration
+        (Val ((id (Var f'')) (type_ ()))
+         ((statements ())
+          (last (Application (Identifier (Var diff)) ((Identifier (Var f'))))))))))) |}]
 ;;
 
 let%expect_test "operators" =
