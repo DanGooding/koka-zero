@@ -261,22 +261,32 @@ fun if-example() {
                 (Binary_op
                  (Binary_op (Identifier (Var x)) Modulo (Literal (Int 2))) Equals
                  (Literal (Int 0)))
-                (Literal (Int 123))
-                (If_then_else
-                 (Binary_op
-                  (Binary_op (Identifier (Var y)) Modulo (Literal (Int 2)))
-                  Equals (Literal (Int 0)))
-                 (Binary_op
-                  (Binary_op (Literal (Int 400)) Plus (Literal (Int 50))) Plus
-                  (Literal (Int 6)))
-                 (If_then_else (Literal (Bool false)) (Literal (Int -1))
-                  (Binary_op (Literal (Int 1)) Plus (Literal (Int 1))))))))))))))))) |}]
+                ((statements ()) (last (Literal (Int 123))))
+                ((statements ())
+                 (last
+                  (If_then_else
+                   (Binary_op
+                    (Binary_op (Identifier (Var y)) Modulo (Literal (Int 2)))
+                    Equals (Literal (Int 0)))
+                   ((statements ())
+                    (last
+                     (Binary_op
+                      (Binary_op (Literal (Int 400)) Plus (Literal (Int 50)))
+                      Plus (Literal (Int 6)))))
+                   ((statements ())
+                    (last
+                     (If_then_else (Literal (Bool false))
+                      ((statements ()) (last (Literal (Int -1))))
+                      ((statements ())
+                       (last
+                        (Binary_op (Literal (Int 1)) Plus (Literal (Int 1))))))))))))))))))))))) |}]
 ;;
 
 let%expect_test "nested if statements" =
   (* TODO: note that indentation is ignored - a dangling `else` always
      associates to the innermost `if`. This may be unintuitive and perhaps
-     should be changed *)
+     should be changed. see koka's layout algorithm, which warns when
+     indentation doesn't match the parse *)
   let code = {|
 fun i() {
   if a then
@@ -299,8 +309,58 @@ fun i() {
              ((statements ())
               (last
                (If_then (Identifier (Var a))
-                (If_then_else (Identifier (Var b)) (Identifier (Var c))
-                 (Identifier (Var d))))))))))))))) |}]
+                ((statements ())
+                 (last
+                  (If_then_else (Identifier (Var b))
+                   ((statements ()) (last (Identifier (Var c))))
+                   ((statements ()) (last (Identifier (Var d))))))))))))))))))) |}]
+;;
+
+let%expect_test "if statement body" =
+  let code =
+    {|
+fun i() {
+  if condition then {
+    val x = 101;
+    print(x % 7);
+  };
+  if b then {
+    aaa();
+    bbb();
+  } else {
+    ccc();
+    ddd();
+  };
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var i))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements
+               ((Expr
+                 (If_then (Identifier (Var condition))
+                  ((statements
+                    ((Declaration
+                      (Val ((pattern (Pattern_id (Var x))) (scheme ()))
+                       ((statements ()) (last (Literal (Int 101))))))))
+                   (last
+                    (Application (Identifier (Var print))
+                     ((Binary_op (Identifier (Var x)) Modulo (Literal (Int 7)))))))))))
+              (last
+               (If_then_else (Identifier (Var b))
+                ((statements ((Expr (Application (Identifier (Var aaa)) ()))))
+                 (last (Application (Identifier (Var bbb)) ())))
+                ((statements ((Expr (Application (Identifier (Var ccc)) ()))))
+                 (last (Application (Identifier (Var ddd)) ()))))))))))))))) |}]
 ;;
 
 let%expect_test "dot application" =
@@ -308,7 +368,7 @@ let%expect_test "dot application" =
 fun dot-application() {
   x.best.fst.pow(3).print;
 };
-  |} in
+|} in
   Test_parser_util.print_parse_result code;
   [%expect
     {|

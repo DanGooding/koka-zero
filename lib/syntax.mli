@@ -208,8 +208,8 @@ type binary_operator =
 type expr =
   | Return of expr
   | Val_in of annotated_pattern * block * expr
-  | If_then_else of expr * expr * expr
-  | If_then of expr * expr
+  | If_then_else of expr * block * block
+  | If_then of expr * block
   | Handler of effect_handler
   | Handle of
       { subject : expr (** this expression evaluates to a 0 argument function *)
@@ -302,6 +302,12 @@ type toplevel_declaration =
 
 (** root of the AST: represents and entire program *)
 type program = Program of toplevel_declaration list [@@deriving sexp]
+
+(** build a single line block from a single expression *)
+val singleton_block : expr -> block
+
+(** add a statement to the start of a block *)
+val block_cons : statement -> block -> block
 
 (** builds a 0 argument anonymous function with a given body *)
 val anonymous_of_block : block -> fn

@@ -130,7 +130,7 @@
 %type <expr> fnexpr
 %type <expr> returnexpr
 %type <expr> ifexpr
-%type <expr> elifs
+%type <block> elifs
 %type <expr> valexpr
 %type <expr> opexpr
 %type <expr> opexpr_of(prefixexpr)
@@ -454,20 +454,14 @@ block:
 (* merely a helper function for `with` statement desugaring *)
 (* %type <block> blockcontents *)
 blockcontents:
-  | last = exprstatement; semi+
-    { { statements = []; last } }
-  | last = withstat
-    { { statements = []; last } }
+  | e = exprstatement; semi+
+    { singleton_block e }
+  | e = withstat
+    { singleton_block e }
   | e = exprstatement; semi+; block = blockcontents
-    { let { statements; last } = block in
-      let statements = Expr e :: statements in
-      { statements; last }
-    }
+    { block_cons (Expr e) block }
   | d = decl; semi+; block = blockcontents
-    { let { statements; last } = block in
-      let statements = Declaration d :: statements in
-      { statements; last }
-    }
+    { block_cons (Declaration d) block }
   ;
 
 (* %type <declaration> decl *)
@@ -529,8 +523,8 @@ blockexpr:
      grouping *)
   | b = block
     { b }
-  | last = expr_except_block
-    { { statements = []; last } }
+  | e = expr_except_block
+    { singleton_block e }
   ;
 
 (* %type <expr> expr_except_block *)
@@ -587,20 +581,21 @@ returnexpr:
 
 (* %type <expr> ifexpr *)
 ifexpr:
-  | IF; cond = ntlexpr; THEN; a = expr; b = elifs
-    { If_then_else(cond, a, b) }
-  | IF; cond = ntlexpr; THEN; e = expr
-    { If_then(cond, e) }
+  | IF; cond = ntlexpr; THEN; yes_branch = blockexpr; no_branch = elifs
+    { If_then_else(cond, yes_branch, no_branch) }
+  | IF; cond = ntlexpr; THEN; branch = blockexpr
+    { If_then(cond, branch) }
   | IF; cond = ntlexpr; RETURN; e = expr
-    { If_then(cond, Return e) }
+    { If_then(cond, singleton_block (Return e)) }
   ;
 
-(* %type <expr> elifs *)
+(* %type <block> elifs *)
 elifs:
-  | ELIF; cond = ntlexpr; THEN; a = expr; b = elifs
-    { If_then_else(cond, a, b)  }
-  | ELSE; e = expr
-    { e }
+  | ELIF; cond = ntlexpr; THEN; yes_branch = blockexpr; no_branch = elifs
+    { If_then_else(cond, yes_branch, no_branch)
+      |> singleton_block }
+  | ELSE; block = blockexpr
+    { block }
   ;
 
 (* %type <expr> valexpr *)

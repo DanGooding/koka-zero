@@ -215,8 +215,8 @@ type expr =
   | Return of expr
   (* TODO: val_in_ syntax not common in koka - drop? *)
   | Val_in of annotated_pattern * block * expr
-  | If_then_else of expr * expr * expr
-  | If_then of expr * expr
+  | If_then_else of expr * block * block
+  | If_then of expr * block
   (* | Match *)
   (* TODO: which of [handle]/[handler] is the logical primitive? *)
   | Handler of effect_handler
@@ -310,6 +310,14 @@ type toplevel_declaration =
 [@@deriving sexp]
 
 type program = Program of toplevel_declaration list [@@deriving sexp]
+
+let singleton_block last = { statements = []; last }
+
+let block_cons s block =
+  let { statements; last } = block in
+  let statements = s :: statements in
+  { statements; last }
+;;
 
 let anonymous_of_block : block -> fn =
  fun body -> { type_parameters = []; parameters = []; result_type = None; body }
