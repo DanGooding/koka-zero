@@ -2,7 +2,7 @@ let%expect_test "function without parameters" =
   let code = {|
 fun compute-the-answer {
   42;
-}
+};
 |} in
   Test_parser_util.print_parse_result code;
   [%expect {| (Error "2:25 : syntax error") |}]

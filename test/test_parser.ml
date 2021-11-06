@@ -18,10 +18,19 @@ let%expect_test "single expression function" =
   let code = {|
 fun main() {
   0;
-}
+};
 |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var main))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body ((statements ()) (last (Literal (Int 0))))))))))))) |}]
 ;;
 
 let%expect_test "multi statement function" =
@@ -32,11 +41,32 @@ fun main() {
   print(x);
   val y = foo(x);
   y * 2;
-}
+};
 |}
   in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var main))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val ((pattern (Pattern_id (Var x))) (scheme ()))
+                  ((statements ()) (last (Literal (Int 1))))))
+                (Expr
+                 (Application (Identifier (Var print)) ((Identifier (Var x)))))
+                (Declaration
+                 (Val ((pattern (Pattern_id (Var y))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Var foo)) ((Identifier (Var x))))))))))
+              (last (Binary_op (Identifier (Var y)) Times (Literal (Int 2)))))))))))))) |}]
 ;;
 
 let%expect_test "dashes in identifiers" =
@@ -92,7 +122,7 @@ fun hypotenuse(a : int, b : int) {
   val c-squared = a * a + b * b;
   val c = isqrt(c-squared);
   c;
-}
+};
 val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11
 val inside = 0 <= x && x < 7 || 100 < x && x <= 9000;
 |}
@@ -145,24 +175,41 @@ fun if-example() {
     -1
   else
     1 + 1;
-}
-    |}
+};
+|}
   in
   Test_parser_util.print_parse_result code;
   [%expect {| |}]
 ;;
 
 let%expect_test "nested if statements" =
+  (* TODO: note that indentation is ignored - a dangling `else` always
+     associates to the innermost `if`. This may be unintuitive and perhaps
+     should be changed *)
   let code = {|
 fun i() {
   if a then
     if b then
       c
   else d;
-}
+};
 |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var i))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements ())
+              (last
+               (If_then (Identifier (Var a))
+                (If_then_else (Identifier (Var b)) (Identifier (Var c))
+                 (Identifier (Var d))))))))))))))) |}]
 ;;
 
 let%expect_test "dot application" =
@@ -181,7 +228,7 @@ let%expect_test "trailing lambda application" =
 fun trailing-lambda() {
   f(x,y,z) { alpha } fn(b) {beta} {gamma};
   a.g(1).h(2) { zzz };
-}
+};
   |}
   in
   Test_parser_util.print_parse_result code;
@@ -199,7 +246,7 @@ fun one(aa, bb, cc, dd) {
   with cc(3);
   with x <- dd(5);
   println(x : string);
-}
+};
   |}
   in
   Test_parser_util.print_parse_result code;
@@ -220,14 +267,38 @@ fun documented() {
     + 3; // go on lines within expressions!
   x * x; // after them
   // and even at the end of blocks
-}
+};
 // multiline comments do not start within them! /*
 val not-commented-out = True;
 // // /// ////
 |}
   in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val ((id (Var speed)) (type_ ()))
+         ((statements ()) (last (Literal (Int 100))))))
+       (Pure_declaration
+        (Fun
+         ((id (Var documented))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val ((pattern (Pattern_id (Var x))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Binary_op
+                     (Binary_op (Literal (Int 1)) Plus (Literal (Int 2))) Plus
+                     (Literal (Int 3)))))))))
+              (last (Binary_op (Identifier (Var x)) Times (Identifier (Var x)))))))))))
+       (Pure_declaration
+        (Val ((id (Var not-commented-out)) (type_ ()))
+         ((statements ()) (last (Literal (Bool true))))))))) |}]
 ;;
 
 let%expect_test "multiline comments" =
