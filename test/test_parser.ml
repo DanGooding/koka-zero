@@ -388,12 +388,70 @@ fun one(aa, bb, cc, dd) {
   with bb();
   with cc(3);
   with x <- dd(5);
-  println(x : string);
+  println(x);
 };
   |}
   in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var one))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var aa))) (type_ ()))
+              ((pattern (Pattern_id (Var bb))) (type_ ()))
+              ((pattern (Pattern_id (Var cc))) (type_ ()))
+              ((pattern (Pattern_id (Var dd))) (type_ ()))))
+            (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val ((pattern (Pattern_id (Var z))) (scheme ()))
+                  ((statements ()) (last (Literal (Int 1))))))))
+              (last
+               (Application (Identifier (Var aa))
+                ((Fn
+                  ((type_parameters ()) (parameters ()) (result_type ())
+                   (body
+                    ((statements
+                      ((Expr
+                        (Application (Identifier (Var println))
+                         ((Identifier (Var zz)))))))
+                     (last
+                      (Application (Identifier (Var bb))
+                       ((Fn
+                         ((type_parameters ()) (parameters ()) (result_type ())
+                          (body
+                           ((statements ())
+                            (last
+                             (Application (Identifier (Var cc))
+                              ((Literal (Int 3))
+                               (Fn
+                                ((type_parameters ()) (parameters ())
+                                 (result_type ())
+                                 (body
+                                  ((statements ())
+                                   (last
+                                    (Application (Identifier (Var dd))
+                                     ((Literal (Int 5))
+                                      (Fn
+                                       ((type_parameters ())
+                                        (parameters
+                                         (((pattern (Pattern_id (Var x)))
+                                           (type_ ()))))
+                                        (result_type ())
+                                        (body
+                                         ((statements ())
+                                          (last
+                                           (Application
+                                            (Identifier (Var println))
+                                            ((Identifier (Var x)))))))))))))))))))))))))))))))))))))))))))
+|}]
 ;;
 
 let%expect_test "single line comments" =

@@ -492,21 +492,21 @@ exprstatement:
    so can only be [laststatement] *)
 (* %type <expr> withstat *)
 withstat:
-  | WITH; e = basicexpr; block = blockcontents
+  | WITH; e = basicexpr; semi+; block = blockcontents
     { let callback = anonymous_of_block block in
       insert_with_callback ~callback e
     }
   (* shorthand for handler *)
-  | WITH; handler = opclauses; block = blockcontents
+  | WITH; handler = opclauses; semi+; block = blockcontents
     { let callback = anonymous_of_block block in
       Application(Handler handler, [Fn callback])
     }
-  | WITH; binder = binder; "<-"; e = basicexpr; block = blockcontents
+  | WITH; binder = binder; "<-"; e = basicexpr; semi+; block = blockcontents
     { let callback = anonymous_of_bound_block ~binder ~block in
       insert_with_callback ~callback e
     }
   (* deprecated *)
-  | WITH; binder = binder; "="; e = basicexpr; block = blockcontents
+  | WITH; binder = binder; "="; e = basicexpr; semi+; block = blockcontents
     { let callback = anonymous_of_bound_block ~binder ~block in
       insert_with_callback ~callback e
     }
