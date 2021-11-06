@@ -37,3 +37,15 @@ let%expect_test "dash at start of identifier" =
   Test_parser_util.print_parse_result code;
   [%expect {| (Error "2:8 : syntax error") |}]
 ;;
+
+let%expect_test "operators and trailing lambdas" =
+  (* note: this is likely to be parsed incorrectly with semicolon+brace
+     insertion, so I'm leaving it here in case that gets added *)
+  let code = {|
+fun op-trailing-lambda-example() {
+  5 * fn() 3 + 4;
+};
+|} in
+  Test_parser_util.print_parse_result code;
+  [%expect {| (Error "3:9 : syntax error") |}]
+;;

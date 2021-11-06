@@ -603,3 +603,16 @@ val y = x * /* can be within expressions! */ 5;
          ((statements ())
           (last (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))) |}]
 ;;
+
+let%expect_test "operators and trailing lambdas" =
+  (* TODO: this test is a lot more interesting when braces aren't required *)
+  let code =
+    {|
+fun op-trailing-lambda-example() {
+  5 * fn() { 3 + 4; };
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect {| |}]
+;;
