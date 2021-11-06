@@ -119,7 +119,6 @@
 %type <fn> funbody
 %type <block> block
 %type <block> blockcontents
-%type <statement> statement
 %type <declaration> decl
 %type <expr> exprstatement
 %type <expr> withstat
@@ -455,21 +454,20 @@ block:
 (* merely a helper function for `with` statement desugaring *)
 (* %type <block> blockcontents *)
 blockcontents:
-  (* block cannot be empty *)
-  | statements = semi_terminated_nonempty_list(statement)
-    { { statements } }
-  | statements = semi_terminated_list(statement); last = withstat
-    { let statements = statements @ [Expr last] in
-      { statements }
+  | last = exprstatement; semi+
+    { { statements = []; last } }
+  | last = withstat
+    { { statements = []; last } }
+  | e = exprstatement; semi+; block = blockcontents
+    { let { statements; last } = block in
+      let statements = Expr e :: statements in
+      { statements; last }
     }
-  ;
-
-(* %type <statement> statement *)
-statement:
-  | d = decl
-    { Declaration d }
-  | e = exprstatement
-    { Expr e }
+  | d = decl; semi+; block = blockcontents
+    { let { statements; last } = block in
+      let statements = Declaration d :: statements in
+      { statements; last }
+    }
   ;
 
 (* %type <declaration> decl *)
@@ -478,7 +476,7 @@ decl:
     { Fun f }
   (* local value declaration can use a pattern binding *)
   | VAL; annotated_pattern = apattern; "="; body = blockexpr
-    { Val(annotated_pattern, body) }
+    { Val(annotated_pattern, body) : declaration }
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
 ;
 
@@ -531,8 +529,8 @@ blockexpr:
      grouping *)
   | b = block
     { b }
-  | e = expr_except_block
-    { { statements = [Expr e] } }
+  | last = expr_except_block
+    { { statements = []; last } }
   ;
 
 (* %type <expr> expr_except_block *)

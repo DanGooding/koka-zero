@@ -10,5 +10,5 @@
    ;; disable:
    ;; warning 40 [name-out-of-scope]: plays badly with ppx_expect
    ;; warning 70 [missing-mli]: don't require these for tests
-   (:standard -w +A-48-42-44-70 -warn-error +A-3))))
+   (:standard -w +A-48-42-44-40-70 -warn-error +A-3))))
 

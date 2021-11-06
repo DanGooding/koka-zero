@@ -232,7 +232,11 @@ and statement =
 [@@deriving sexp]
 
 (** a list of statements *)
-and block = { statements : statement list } [@@deriving sexp]
+and block =
+  { statements : statement list
+  ; last : expr
+  }
+[@@deriving sexp]
 
 (** a function, either anonymous or named, but the name must be held elsewhere *)
 and fn =

@@ -243,7 +243,11 @@ and statement =
 
 (* TODO: last should be an expression, but parser cannot enforce this (requires
    unbounded lookahead) *)
-and block = { statements : statement list } [@@deriving sexp]
+and block =
+  { statements : statement list
+  ; last : expr
+  }
+[@@deriving sexp]
 
 and fn =
   { type_parameters : type_parameter list

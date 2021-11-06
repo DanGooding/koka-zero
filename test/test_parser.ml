@@ -11,7 +11,7 @@ let%expect_test "toplevel value declaration" =
         (Val
          ((id (Var number))
           (type_ ((Type_atom (constructor Type_int) (arguments ())))))
-         ((statements ((Expr (Literal (Int 1729))))))))))) |}]
+         ((statements ()) (last (Literal (Int 1729))))))))) |}]
 ;;
 
 let%expect_test "single expression function" =
@@ -52,13 +52,13 @@ val number3-letter = 2;
      (Program
       ((Pure_declaration
         (Val ((id (Var kebab-case)) (type_ ()))
-         ((statements ((Expr (Literal (Int 0))))))))
+         ((statements ()) (last (Literal (Int 0))))))
        (Pure_declaration
         (Val ((id (Var x-y-z)) (type_ ()))
-         ((statements ((Expr (Literal (Int 1))))))))
+         ((statements ()) (last (Literal (Int 1))))))
        (Pure_declaration
         (Val ((id (Var number3-letter)) (type_ ()))
-         ((statements ((Expr (Literal (Int 2))))))))))) |}]
+         ((statements ()) (last (Literal (Int 2))))))))) |}]
 ;;
 
 let%expect_test "hex literals" =
@@ -72,7 +72,7 @@ val abcd = 0x1234ABCD;
      (Program
       ((Pure_declaration
         (Val ((id (Var abcd)) (type_ ()))
-         ((statements ((Expr (Literal (Int 305441741))))))))))) |}]
+         ((statements ()) (last (Literal (Int 305441741))))))))) |}]
 ;;
 
 let%expect_test "prime at end of identifier" =
@@ -112,7 +112,7 @@ val minus-fourty = -40;
      (Program
       ((Pure_declaration
         (Val ((id (Var minus-fourty)) (type_ ()))
-         ((statements ((Expr (Literal (Int -40))))))))))) |}]
+         ((statements ()) (last (Literal (Int -40))))))))) |}]
 ;;
 
 let%expect_test "boolean literals" =
@@ -127,10 +127,10 @@ val f = False;
      (Program
       ((Pure_declaration
         (Val ((id (Var t)) (type_ ()))
-         ((statements ((Expr (Literal (Bool true))))))))
+         ((statements ()) (last (Literal (Bool true))))))
        (Pure_declaration
         (Val ((id (Var f)) (type_ ()))
-         ((statements ((Expr (Literal (Bool false))))))))))) |}]
+         ((statements ()) (last (Literal (Bool false))))))))) |}]
 ;;
 
 let%expect_test "if statements" =
@@ -253,9 +253,10 @@ val y = x * /* can be within expressions! */ 5;
     (Ok
      (Program
       ((Pure_declaration
-        (Val ((id (Var x)) (type_ ())) ((statements ((Expr (Literal (Int 1))))))))
+        (Val ((id (Var x)) (type_ ()))
+         ((statements ()) (last (Literal (Int 1))))))
        (Pure_declaration
         (Val ((id (Var y)) (type_ ()))
-         ((statements
-           ((Expr (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))))) |}]
+         ((statements ())
+          (last (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))) |}]
 ;;
