@@ -107,8 +107,7 @@ val abcd = 0x1234ABCD;
 
 let%expect_test "prime at end of identifier" =
   let code = {|
-val f' = dif
-f(f);
+val f' = diff(f);
 val f'' = diff(f')
   |} in
   Test_parser_util.print_parse_result code;
@@ -123,12 +122,68 @@ fun hypotenuse(a : int, b : int) {
   val c = isqrt(c-squared);
   c;
 };
-val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11
-val inside = 0 <= x && x < 7 || 100 < x && x <= 9000;
+val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11;
+val inside = 0 <= x && x < 7 || 100 < x && x >= 9000;
 |}
   in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var hypotenuse))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var a)))
+               (type_ ((Type_atom (constructor Type_int) (arguments ())))))
+              ((pattern (Pattern_id (Var b)))
+               (type_ ((Type_atom (constructor Type_int) (arguments ())))))))
+            (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val ((pattern (Pattern_id (Var c-squared))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Binary_op
+                     (Binary_op (Identifier (Var a)) Times (Identifier (Var a)))
+                     Plus
+                     (Binary_op (Identifier (Var b)) Times (Identifier (Var b))))))))
+                (Declaration
+                 (Val ((pattern (Pattern_id (Var c))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Var isqrt))
+                     ((Identifier (Var c-squared))))))))))
+              (last (Identifier (Var c))))))))))
+       (Pure_declaration
+        (Val ((id (Var all)) (type_ ()))
+         ((statements ())
+          (last
+           (Binary_op
+            (Binary_op
+             (Binary_op
+              (Binary_op (Literal (Int 12)) Plus
+               (Binary_op (Literal (Int 33)) Times (Literal (Int 44))))
+              Minus (Binary_op (Literal (Int 36)) Divide (Literal (Int 4))))
+             Plus (Binary_op (Literal (Int 91)) Modulo (Literal (Int 7))))
+            Plus (Literal (Int 11)))))))
+       (Pure_declaration
+        (Val ((id (Var inside)) (type_ ()))
+         ((statements ())
+          (last
+           (Binary_op
+            (Binary_op
+             (Binary_op (Literal (Int 0)) Less_equal (Identifier (Var x))) And
+             (Binary_op (Identifier (Var x)) Less_than (Literal (Int 7))))
+            Or
+            (Binary_op
+             (Binary_op (Literal (Int 100)) Less_than (Identifier (Var x))) And
+             (Binary_op (Identifier (Var x)) Greater_equal (Literal (Int 9000))))))))))))
+|}]
 ;;
 
 let%expect_test "negative integer literals" =
@@ -171,7 +226,7 @@ fun if-example() {
     123
   elif y % 2 == 0 then
     400 + 50 + 6
-  elif False
+  elif False then
     -1
   else
     1 + 1;
@@ -179,7 +234,32 @@ fun if-example() {
 |}
   in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var if-example))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements ())
+              (last
+               (If_then_else
+                (Binary_op
+                 (Binary_op (Identifier (Var x)) Modulo (Literal (Int 2))) Equals
+                 (Literal (Int 0)))
+                (Literal (Int 123))
+                (If_then_else
+                 (Binary_op
+                  (Binary_op (Identifier (Var y)) Modulo (Literal (Int 2)))
+                  Equals (Literal (Int 0)))
+                 (Binary_op
+                  (Binary_op (Literal (Int 400)) Plus (Literal (Int 50))) Plus
+                  (Literal (Int 6)))
+                 (If_then_else (Literal (Bool false)) (Literal (Int -1))
+                  (Binary_op (Literal (Int 1)) Plus (Literal (Int 1))))))))))))))))) |}]
 ;;
 
 let%expect_test "nested if statements" =
@@ -216,23 +296,86 @@ let%expect_test "dot application" =
   let code = {|
 fun dot-application() {
   x.best.fst.pow(3).print;
-;
+};
   |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var dot-application))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Application (Identifier (Var print))
+                ((Application (Identifier (Var pow))
+                  ((Application (Identifier (Var fst))
+                    ((Application (Identifier (Var best)) ((Identifier (Var x))))))
+                   (Literal (Int 3))))))))))))))))) |}]
 ;;
 
 let%expect_test "trailing lambda application" =
   let code =
     {|
 fun trailing-lambda() {
-  f(x,y,z) { alpha } fn(b) {beta} {gamma};
-  a.g(1).h(2) { zzz };
+  for(1, 10) fn(i) { println(i * i); };
+  f(x,y,z) { alpha; } fn(b) {beta;} {gamma;};
+  a.g(1).h(2) { zzz; };
 };
   |}
   in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var trailing-lambda))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements
+               ((Expr
+                 (Application (Identifier (Var for))
+                  ((Literal (Int 1)) (Literal (Int 10))
+                   (Fn
+                    ((type_parameters ())
+                     (parameters (((pattern (Pattern_id (Var i))) (type_ ()))))
+                     (result_type ())
+                     (body
+                      ((statements ())
+                       (last
+                        (Application (Identifier (Var println))
+                         ((Binary_op (Identifier (Var i)) Times
+                           (Identifier (Var i)))))))))))))
+                (Expr
+                 (Application (Identifier (Var f))
+                  ((Identifier (Var x)) (Identifier (Var y)) (Identifier (Var z))
+                   (Fn
+                    ((type_parameters ()) (parameters ()) (result_type ())
+                     (body ((statements ()) (last (Identifier (Var alpha)))))))
+                   (Fn
+                    ((type_parameters ())
+                     (parameters (((pattern (Pattern_id (Var b))) (type_ ()))))
+                     (result_type ())
+                     (body ((statements ()) (last (Identifier (Var beta)))))))
+                   (Fn
+                    ((type_parameters ()) (parameters ()) (result_type ())
+                     (body ((statements ()) (last (Identifier (Var gamma))))))))))))
+              (last
+               (Application (Identifier (Var h))
+                ((Application (Identifier (Var g))
+                  ((Identifier (Var a)) (Literal (Int 1))))
+                 (Literal (Int 2))
+                 (Fn
+                  ((type_parameters ()) (parameters ()) (result_type ())
+                   (body ((statements ()) (last (Identifier (Var zzz))))))))))))))))))))
+    |}]
 ;;
 
 let%expect_test "with syntax" =
