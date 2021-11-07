@@ -38,9 +38,9 @@ let%expect_test "dash at start of identifier" =
   [%expect {| (Error "2:8 : syntax error") |}]
 ;;
 
-let%expect_test "operators and trailing lambdas" =
-  (* note: this is likely to be parsed incorrectly with semicolon+brace
-     insertion, so I'm leaving it here in case that gets added *)
+let%expect_test "lambda as operand" =
+  (* Koka forbids this - presumably applying an operator to a function like this
+     is rare *)
   let code = {|
 fun op-trailing-lambda-example() {
   5 * fn() 3 + 4;

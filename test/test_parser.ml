@@ -604,15 +604,60 @@ val y = x * /* can be within expressions! */ 5;
           (last (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))) |}]
 ;;
 
-let%expect_test "operators and trailing lambdas" =
-  (* TODO: this test is a lot more interesting when braces aren't required *)
+let%expect_test "" =
   let code =
     {|
 fun op-trailing-lambda-example() {
-  5 * fn() { 3 + 4; };
+  5 * a fn() 3 + 4 * 5;
 };
 |}
   in
   Test_parser_util.print_parse_result code;
   [%expect {| |}]
+;;
+
+let%expect_test "trailing and single line lambda" =
+  let code = {|
+fun trailing-lambdas() {
+  fn(a) a fn(b) b fn(c) c;
+};
+|} in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var trailing-lambdas))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Fn
+                ((type_parameters ())
+                 (parameters (((pattern (Pattern_id (Var a))) (type_ ()))))
+                 (result_type ())
+                 (body
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Var a))
+                     ((Fn
+                       ((type_parameters ())
+                        (parameters
+                         (((pattern (Pattern_id (Var b))) (type_ ()))))
+                        (result_type ())
+                        (body
+                         ((statements ())
+                          (last
+                           (Application (Identifier (Var b))
+                            ((Fn
+                              ((type_parameters ())
+                               (parameters
+                                (((pattern (Pattern_id (Var c))) (type_ ()))))
+                               (result_type ())
+                               (body
+                                ((statements ()) (last (Identifier (Var c))))))))))))))))))))))))))))))))
+    |}]
 ;;
