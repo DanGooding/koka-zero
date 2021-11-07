@@ -613,7 +613,27 @@ fun op-trailing-lambda-example() {
 |}
   in
   Test_parser_util.print_parse_result code;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var op-trailing-lambda-example))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Binary_op (Literal (Int 5)) Times
+                (Application (Identifier (Var a))
+                 ((Fn
+                   ((type_parameters ()) (parameters ()) (result_type ())
+                    (body
+                     ((statements ())
+                      (last
+                       (Binary_op (Literal (Int 3)) Plus
+                        (Binary_op (Literal (Int 4)) Times (Literal (Int 5))))))))))))))))))))))) |}]
 ;;
 
 let%expect_test "trailing and single line lambda" =
@@ -660,4 +680,39 @@ fun trailing-lambdas() {
                                (body
                                 ((statements ()) (last (Identifier (Var c))))))))))))))))))))))))))))))))
     |}]
+;;
+
+let%expect_test "application after trailing lambda" =
+  let code =
+    {|
+fun app-after-trailing-lambda() {
+  xs.foo fn(x) {x;} (y, z).bar();
+  // desugars to:
+  // bar(foo(xs, fn(x) {x;})(y, z));
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var app-after-trailing-lambda))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Application (Identifier (Var bar))
+                ((Application
+                  (Application (Identifier (Var foo))
+                   ((Identifier (Var xs))
+                    (Fn
+                     ((type_parameters ())
+                      (parameters (((pattern (Pattern_id (Var x))) (type_ ()))))
+                      (result_type ())
+                      (body ((statements ()) (last (Identifier (Var x)))))))))
+                  ((Identifier (Var y)) (Identifier (Var z))))))))))))))))) |}]
 ;;

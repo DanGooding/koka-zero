@@ -794,6 +794,14 @@ ntlprefixexpr:
     { e }
   ;
 
+(* %type <expr> ntlappexpr *)
+ntlappexpr:
+  | a = auxntlappexpr
+    { match a with
+      | `Dot_application(f, arg0) -> Application(f, [arg0])
+      | `Expr e -> e
+    }
+
 (* {[
 %type <
   [ (** a [`Dot_application] can be followed by more bracketed args *)
@@ -815,14 +823,6 @@ auxntlappexpr:
   | e = atom
     { `Expr e }
   ;
-
-(* %type <expr> ntlappexpr *)
-ntlappexpr:
-  | a = auxntlappexpr
-    { match a with
-      | `Dot_application(f, arg0) -> Application(f, [arg0])
-      | `Expr e -> e
-    }
 
 (* atomic expressions *)
 
