@@ -489,10 +489,14 @@ block:
 (* merely a helper function for `with` statement desugaring *)
 (* %type <block> blockcontents *)
 blockcontents:
-  | e = exprstatement; semi+
+  (* last in block: expression *)
+  | e = exprstatement; semi*
     { singleton_block e }
+  (* a with statement wraps the remainder of the block *)
   | e = withstat
     { singleton_block e }
+  (* expressions can fgo anywhere in a block, but declarations
+     cannot be last *)
   | e = exprstatement; semi+; block = blockcontents
     { block_cons (Expr e) block }
   | d = decl; semi+; block = blockcontents
@@ -507,7 +511,7 @@ decl:
   | VAL; annotated_pattern = apattern; "="; body = blockexpr
     { Val(annotated_pattern, body) : declaration }
   (* | VAR binder ASSIGN blockexpr   (\* local variable declaration *\) *)
-;
+  ;
 
 (* %type <expr> exprstatement *)
 exprstatement:

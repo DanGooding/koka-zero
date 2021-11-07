@@ -393,9 +393,9 @@ let%expect_test "trailing lambda application" =
   let code =
     {|
 fun trailing-lambda() {
-  for(1, 10) fn(i) { println(i * i); };
-  f(x,y,z) { alpha; } fn(b) {beta;} {gamma;};
-  a.g(1).h(2) { zzz; };
+  for(1, 10) fn(i) { println(i * i) };
+  f(x,y,z) { alpha } fn(b) {beta} {gamma};
+  a.g(1).h(2) { zzz };
 };
   |}
   in
@@ -686,9 +686,9 @@ let%expect_test "application after trailing lambda" =
   let code =
     {|
 fun app-after-trailing-lambda() {
-  xs.foo fn(x) {x;} (y, z).bar();
+  xs.foo fn(x) {x} (y, z).bar();
   // desugars to:
-  // bar(foo(xs, fn(x) {x;})(y, z));
+  // bar(foo(xs, fn(x) {x})(y, z));
 };
 |}
   in
