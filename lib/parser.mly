@@ -73,7 +73,6 @@
 %token TYPE_INT
 
 
-(* TODO: check if I need precedence stuff (including some on individual rules) *)
 (* precedence declarations are in increasing order,
    i.e. the last precedence declaration has the highest precedence.
 *)
@@ -90,7 +89,6 @@
    lambdas.
 *)
 %nonassoc RARROW                     (* -> *)
-(* redundant prec annotations removed *)
 %nonassoc "(" (* "[" *) FN "{" "."         (* applications *)
 (* %nonassoc (\* OP ASSIGN *\) ">" "<" (\* "|" *\)      (\* operators *\) *)
 (* %prec "?" *)
@@ -767,6 +765,7 @@ appexpr:
     { e }
   ;
 
+(* %type <partial_appexpr> auxappexpr *)
 auxappexpr:
   (* application *)
   | f = auxappexpr; "("; args = arguments; ")"
@@ -817,6 +816,7 @@ ntlappexpr:
     %prec RARROW
     { close_after_desugaring a }
 
+(* %type <partial_appexpr> auxntlappexpr *)
 auxntlappexpr:
   (* application *)
   | f = auxntlappexpr; "("; args = arguments; ")"
