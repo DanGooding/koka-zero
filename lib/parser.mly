@@ -83,7 +83,6 @@
 %nonassoc THEN
 %nonassoc ELSE ELIF
 
-(* TODO: perhaps don't allow elision of -> ? *)
 (* resolve s/r conflict to have a `FN funparams -> expr` span as far as possible,
    e.g. `fn(x) -> x + 1` is `(fn(x) -> x + 1)` and not `(fn(x) -> x) + 1`
    and  `fn(x) -> x.foo` is `(fn(x) -> x.foo)` and not `(fn(x) -> x).foo`
@@ -92,14 +91,50 @@
 *)
 %nonassoc RARROW                     (* -> *)
 (* redundant prec annotations removed *)
-(* %nonassoc "(" (\* "[" *\) FN "{" "."         (\* applications *\) *)
+%nonassoc "(" (* "[" *) FN "{" "."         (* applications *)
 (* %nonassoc (\* OP ASSIGN *\) ">" "<" (\* "|" *\)      (\* operators *\) *)
-(* TODO: try adding OP_PLUS etc here *)
-%nonassoc "."
-
 (* %prec "?" *)
 
-%{ open Syntax %}
+%{
+open Syntax
+
+(** an intermediate type for desugaring function application *)
+type partial_appexpr =
+  [ `Application of expr * expr list
+     (** an [`Application] can be followed by a trailing lambda *)
+  | `Expr of expr
+     (** an [`Expr] is opaque to the desugaring algorithm -
+         it maybe have been wrapped in brackets, so we should not look inside it
+     *)
+  | `Dot_application of expr * expr
+     (** a [`Dot_application] can be followed by more bracketed args *)
+  ]
+;;
+
+(** desugar the application of [app] (<= [partial_appexpr]) to [trailing] *)
+let desugar_add_trailing_lambda app (trailing : expr) : partial_appexpr =
+    match app with
+    | `Application(f, args)     -> `Application(f, args @ [trailing])
+    | `Dot_application(f, arg0) -> `Application(f, [arg0; trailing])
+    | `Expr e                   -> `Application(e, [trailing])
+;;
+
+let desugar_add_args app (args : expr list) : partial_appexpr =
+  match app with
+  | `Dot_application(f, arg0) -> `Application(f, arg0 :: args)
+  | `Application(f, args')    -> `Application(Application(f, args'), args)
+  | `Expr f                   -> `Application(f, args)
+;;
+
+(** turn a partial desugaring intermediate back into a plain expression *)
+let close_after_desugaring app : expr =
+  match app with
+  | `Dot_application(f, arg0) -> Application(f, [arg0])
+  | `Application(f, args)     -> Application(f, args)
+  | `Expr e                   -> e
+;;
+
+%}
 
 %start program
 
@@ -140,11 +175,13 @@
 %type <binary_operator> op_l70
 %type <expr> prefixexpr
 %type <expr> appexpr
+%type <partial_appexpr> auxappexpr
 %type <expr> trailinglambda
 %type <expr> ntlexpr
 %type <expr> ntlopexpr
 %type <expr> ntlprefixexpr
 %type <expr> ntlappexpr
+%type <partial_appexpr> auxntlappexpr
 %type <expr> atom
 %type <literal> literal
 %type <expr list> arguments
@@ -555,7 +592,6 @@ basicexpr:
   | e = fnexpr
     { e }
   | e = opexpr
-    %prec RARROW
     { e }
   ;
 
@@ -724,43 +760,24 @@ prefixexpr:
 (* %type <expr> appexpr *)
 appexpr:
   | a = auxappexpr
-    { match a with
-      | `Dot_application(f, arg0) -> Application(f, [arg0])
-      | `Application(f, args)     -> Application(f, args)
-      | `Expr e                   -> e
-    }
+    %prec RARROW
+    { close_after_desugaring a }
+  | e = ntlappexpr
+    %prec RARROW
+    { e }
+  ;
 
-(*
-{[
-%type <
-  [ (** a [`Dot_application] can be followed by more bracketed args *)
-    `Dot_application of expr * expr
-    (** an [`Application] can be followed by a trailing lambda *)
-  | `Application of expr * expr list
-  | `Expr of expr
-  ]> auxappexpr
-]}
- *)
 auxappexpr:
   (* application *)
   | f = auxappexpr; "("; args = arguments; ")"
-    { match f with
-      | `Dot_application(f', arg0) -> `Application(f', arg0 :: args)
-      | `Application(f', args')    -> `Application(Application(f', args'), args)
-      | `Expr f'                   -> `Application(f', args)
-    }
+    { desugar_add_args f args }
   (* dot application *)
   | arg0 = appexpr; "."; f = atom
     { `Dot_application(f, arg0) }
   (* trailing function application *)
   | app = auxappexpr; last_arg = trailinglambda
-    { match app with
-      | `Application(f, args)     -> `Application(f, args @ [last_arg])
-      | `Dot_application(f, arg0) -> `Application(f, [arg0; last_arg])
-      | `Expr e                   -> `Application(e, [last_arg])
-    }
-  | e = atom
-    { `Expr e }
+  | app = auxntlappexpr; last_arg = trailinglambda
+    { desugar_add_trailing_lambda app last_arg }
   ;
 
 (* %type <expr> trailinglambda *)
@@ -797,26 +814,13 @@ ntlprefixexpr:
 (* %type <expr> ntlappexpr *)
 ntlappexpr:
   | a = auxntlappexpr
-    { match a with
-      | `Dot_application(f, arg0) -> Application(f, [arg0])
-      | `Expr e -> e
-    }
+    %prec RARROW
+    { close_after_desugaring a }
 
-(* {[
-%type <
-  [ (** a [`Dot_application] can be followed by more bracketed args *)
-    `Dot_application of expr * argument
-  | `Expr of expr
-  ]> ntlappexpr
-]}
- *)
 auxntlappexpr:
   (* application *)
   | f = auxntlappexpr; "("; args = arguments; ")"
-    { match f with
-      | `Dot_application(f', arg0) -> `Expr(Application(f', arg0 :: args))
-      | `Expr e                    -> `Expr(Application(e, args))
-    }
+    { desugar_add_args f args }
   (* dot application *)
   | arg0 = ntlappexpr; "."; f = atom
     { `Dot_application(f, arg0) }
