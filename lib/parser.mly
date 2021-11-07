@@ -1220,13 +1220,10 @@ typeparams1:
 (* 'mono' types *)
 (* %type <type_> tarrow *)
 tarrow:
-  | "("; ps = tparams; ")"; "->"; result = tresult
-    { Arrow(ps, result) }
-  (* TODO: I think there will be a shift/reduce conflict here
-     for e.g. `(int) -> int` *)
-  | type_ = tatomic; "->"; result = tresult
-    { let p = { parameter_id = None; type_ } in
-      Arrow([p], result) }
+  (* TODO: the grammar leaves a lot of decisions until after parsing
+     - perhaps move these back into the parser *)
+  | source = tatomic; "->"; result = tresult
+    { Arrow(source, result) }
   | t = tatomic
     { t }
   ;
@@ -1257,12 +1254,10 @@ tatomic:
 tbasic:
   | t = typeapp
     { t }
-  (* kept to allow returning functions (brackets for precedence only) *)
-  | "("; t = anntype; ")"
-    { t }
   (* note: this below appears to permit named tuple members in types! *)
   (* unit, parenthesis, tuple, named parameters *)
-  (* | "(" tparams ")" *)
+  | "("; ts = tparams; ")"
+    { Parameters_or_tuple ts }
   (* TODO: [] as the list type doesn't seem to actually be supported *)
   (* | "[" anntype "]"                (\* list type *\) *)
   ;

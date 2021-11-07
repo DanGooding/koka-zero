@@ -716,3 +716,490 @@ fun app-after-trailing-lambda() {
                       (body ((statements ()) (last (Identifier (Var x)))))))))
                   ((Identifier (Var y)) (Identifier (Var z))))))))))))))))) |}]
 ;;
+
+let%expect_test "effect declaration" =
+  let code =
+    {|
+effect my-effect<a :: V> {
+  control choose(x : a, y : a) : a;
+  val depth : int;
+  fun get() : a;
+  fun set(x : a) : bool;
+  except raise(x : a) : b;
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Type_declaration
+        (Effect_declaration
+         ((id my-effect)
+          (type_parameters (((id a) (kind ((Kind_atom Kind_value)))))) (kind ())
+          (operations
+           (((id choose) (type_parameters ())
+             (shape
+              (Shape_control
+               (((id (Parameter_id (Var x)))
+                 (type_
+                  (Type_atom (constructor (Variable_or_name a)) (arguments ()))))
+                ((id (Parameter_id (Var y)))
+                 (type_
+                  (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
+               (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
+            ((id depth) (type_parameters ())
+             (shape
+              (Shape_val (Type_atom (constructor Type_int) (arguments ())))))
+            ((id get) (type_parameters ())
+             (shape
+              (Shape_fun ()
+               (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
+            ((id set) (type_parameters ())
+             (shape
+              (Shape_fun
+               (((id (Parameter_id (Var x)))
+                 (type_
+                  (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
+               (Type_atom (constructor Type_bool) (arguments ())))))
+            ((id raise) (type_parameters ())
+             (shape
+              (Shape_except
+               (((id (Parameter_id (Var x)))
+                 (type_
+                  (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
+               (Type_atom (constructor (Variable_or_name b)) (arguments ()))))))))))))) |}]
+;;
+
+let%expect_test "shorthand effect declaration" =
+  let code = {|
+effect control yield(x : a) : bool;
+|} in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Type_declaration
+        (Effect_declaration
+         ((id yield) (type_parameters ()) (kind ())
+          (operations
+           (((id yield) (type_parameters ())
+             (shape
+              (Shape_control
+               (((id (Parameter_id (Var x)))
+                 (type_
+                  (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
+               (Type_atom (constructor Type_bool) (arguments ()))))))))))))) |}]
+;;
+
+let%expect_test "handler" =
+  let code =
+    {|
+fun fail-to-default(default, action) {
+  with handler {
+    except fail() default;
+    return(x) x;
+  };
+  action();
+};
+fun many-operations() {
+  val h = handler {
+    control choose(x, y) {
+      resume(x) || resume(y);
+    };
+    return(x) is-goal(x);
+    val depth = 42;
+    fun get() {
+      y;
+    };
+    fun set(x) 0;
+    except raise(x) { println(x) };
+  };
+  h;
+};
+fun one-operation() {
+  with val depth = depth + 1;
+  subject();
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var fail-to-default))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var default))) (type_ ()))
+              ((pattern (Pattern_id (Var action))) (type_ ()))))
+            (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Application
+                (Handler
+                 (Effect_handler
+                  ((Op_except (id fail) (parameters ())
+                    (body ((statements ()) (last (Identifier (Var default))))))
+                   (Op_return
+                    (parameter ((id (Parameter_id (Var x))) (type_ ())))
+                    (body ((statements ()) (last (Identifier (Var x)))))))))
+                ((Fn
+                  ((type_parameters ()) (parameters ()) (result_type ())
+                   (body
+                    ((statements ())
+                     (last (Application (Identifier (Var action)) ()))))))))))))))))
+       (Pure_declaration
+        (Fun
+         ((id (Var many-operations))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val ((pattern (Pattern_id (Var h))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Handler
+                     (Effect_handler
+                      ((Op_control (id choose)
+                        (parameters
+                         (((id (Parameter_id (Var x))) (type_ ()))
+                          ((id (Parameter_id (Var y))) (type_ ()))))
+                        (body
+                         ((statements ())
+                          (last
+                           (Binary_op
+                            (Application (Identifier (Var resume))
+                             ((Identifier (Var x))))
+                            Or
+                            (Application (Identifier (Var resume))
+                             ((Identifier (Var y)))))))))
+                       (Op_return
+                        (parameter ((id (Parameter_id (Var x))) (type_ ())))
+                        (body
+                         ((statements ())
+                          (last
+                           (Application (Identifier (Var is-goal))
+                            ((Identifier (Var x))))))))
+                       (Op_val (id depth) (type_ ())
+                        (value ((statements ()) (last (Literal (Int 42))))))
+                       (Op_fun (id get) (parameters ())
+                        (body ((statements ()) (last (Identifier (Var y))))))
+                       (Op_fun (id set)
+                        (parameters (((id (Parameter_id (Var x))) (type_ ()))))
+                        (body ((statements ()) (last (Literal (Int 0))))))
+                       (Op_except (id raise)
+                        (parameters (((id (Parameter_id (Var x))) (type_ ()))))
+                        (body
+                         ((statements ())
+                          (last
+                           (Application (Identifier (Var println))
+                            ((Identifier (Var x)))))))))))))))))
+              (last (Identifier (Var h))))))))))
+       (Pure_declaration
+        (Fun
+         ((id (Var one-operation))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Application
+                (Handler
+                 (Effect_handler
+                  ((Op_val (id depth) (type_ ())
+                    (value
+                     ((statements ())
+                      (last
+                       (Binary_op (Identifier (Var depth)) Plus
+                        (Literal (Int 1))))))))))
+                ((Fn
+                  ((type_parameters ()) (parameters ()) (result_type ())
+                   (body
+                    ((statements ())
+                     (last (Application (Identifier (Var subject)) ()))))))))))))))))))) |}]
+;;
+
+let%expect_test "handle" =
+  let code =
+    {|
+fun handle-example(action) {
+  handle (action) {
+    fun scramble(x) x * x + x;
+  }
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var handle-example))
+          (fn
+           ((type_parameters ())
+            (parameters (((pattern (Pattern_id (Var action))) (type_ ()))))
+            (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Handle (subject (Identifier (Var action)))
+                (handler
+                 (Effect_handler
+                  ((Op_fun (id scramble)
+                    (parameters (((id (Parameter_id (Var x))) (type_ ()))))
+                    (body
+                     ((statements ())
+                      (last
+                       (Binary_op
+                        (Binary_op (Identifier (Var x)) Times
+                         (Identifier (Var x)))
+                        Plus (Identifier (Var x)))))))))))))))))))))) |}]
+;;
+
+let%expect_test "type annotations" =
+  let code =
+    {|
+fun sqrt(x : int) : exn int {
+  raise();
+};
+fun square(x : int) : <> int {
+  x * x;
+};
+  |}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var sqrt))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var x)))
+               (type_ ((Type_atom (constructor Type_int) (arguments ())))))))
+            (result_type
+             (((effect
+                (Type_atom (constructor (Variable_or_name exn)) (arguments ())))
+               (result (Type_atom (constructor Type_int) (arguments ()))))))
+            (body
+             ((statements ()) (last (Application (Identifier (Var raise)) ())))))))))
+       (Pure_declaration
+        (Fun
+         ((id (Var square))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var x)))
+               (type_ ((Type_atom (constructor Type_int) (arguments ())))))))
+            (result_type
+             (((effect (Effect_row (Closed ())))
+               (result (Type_atom (constructor Type_int) (arguments ()))))))
+            (body
+             ((statements ())
+              (last (Binary_op (Identifier (Var x)) Times (Identifier (Var x)))))))))))))) |}]
+;;
+
+let%expect_test "effect annotations" =
+  let code =
+    {|
+fun compose(f : a -> e b, g : b -> e c) : (a -> e c) {
+  fn(a) g(f(a));
+};
+fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
+  with handler {
+    except fail() x;
+  };
+  action();
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Fun
+         ((id (Var compose))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var f)))
+               (type_
+                ((Arrow
+                  (Type_atom (constructor (Variable_or_name a)) (arguments ()))
+                  ((effect
+                    (Type_atom (constructor (Variable_or_name e)) (arguments ())))
+                   (result
+                    (Type_atom (constructor (Variable_or_name b)) (arguments ()))))))))
+              ((pattern (Pattern_id (Var g)))
+               (type_
+                ((Arrow
+                  (Type_atom (constructor (Variable_or_name b)) (arguments ()))
+                  ((effect
+                    (Type_atom (constructor (Variable_or_name e)) (arguments ())))
+                   (result
+                    (Type_atom (constructor (Variable_or_name c)) (arguments ()))))))))))
+            (result_type
+             (((effect (Effect_row (Closed ())))
+               (result
+                (Parameters_or_tuple
+                 (((parameter_id ())
+                   (type_
+                    (Arrow
+                     (Type_atom (constructor (Variable_or_name a))
+                      (arguments ()))
+                     ((effect
+                       (Type_atom (constructor (Variable_or_name e))
+                        (arguments ())))
+                      (result
+                       (Type_atom (constructor (Variable_or_name c))
+                        (arguments ())))))))))))))
+            (body
+             ((statements ())
+              (last
+               (Fn
+                ((type_parameters ())
+                 (parameters (((pattern (Pattern_id (Var a))) (type_ ()))))
+                 (result_type ())
+                 (body
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Var g))
+                     ((Application (Identifier (Var f)) ((Identifier (Var a)))))))))))))))))))
+       (Pure_declaration
+        (Fun
+         ((id (Var fail-with-default))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var x)))
+               (type_
+                ((Type_atom (constructor (Variable_or_name a)) (arguments ())))))
+              ((pattern (Pattern_id (Var action)))
+               (type_
+                ((Arrow (Parameters_or_tuple ())
+                  ((effect
+                    (Effect_row
+                     (Open
+                      ((Type_atom (constructor (Variable_or_name fail))
+                        (arguments ())))
+                      (Type_atom (constructor (Variable_or_name e))
+                       (arguments ())))))
+                   (result
+                    (Type_atom (constructor (Variable_or_name a)) (arguments ()))))))))))
+            (result_type
+             (((effect
+                (Type_atom (constructor (Variable_or_name e)) (arguments ())))
+               (result
+                (Type_atom (constructor (Variable_or_name a)) (arguments ()))))))
+            (body
+             ((statements ())
+              (last
+               (Application
+                (Handler
+                 (Effect_handler
+                  ((Op_except (id fail) (parameters ())
+                    (body ((statements ()) (last (Identifier (Var x)))))))))
+                ((Fn
+                  ((type_parameters ()) (parameters ()) (result_type ())
+                   (body
+                    ((statements ())
+                     (last (Application (Identifier (Var action)) ()))))))))))))))))))) |}]
+;;
+
+let%expect_test "unnecessary brackets in arrow types" =
+  (* TODO: maybe these aren't unnecessary? *)
+  let code = {|
+val f : ((x : int, y : int)) -> (() -> (int)) = f_;
+|} in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Val
+         ((id (Var f))
+          (type_
+           ((Arrow
+             (Parameters_or_tuple
+              (((parameter_id ())
+                (type_
+                 (Parameters_or_tuple
+                  (((parameter_id ((Var x)))
+                    (type_ (Type_atom (constructor Type_int) (arguments ()))))
+                   ((parameter_id ((Var y)))
+                    (type_ (Type_atom (constructor Type_int) (arguments ()))))))))))
+             ((effect (Effect_row (Closed ())))
+              (result
+               (Parameters_or_tuple
+                (((parameter_id ())
+                  (type_
+                   (Arrow (Parameters_or_tuple ())
+                    ((effect (Effect_row (Closed ())))
+                     (result
+                      (Parameters_or_tuple
+                       (((parameter_id ())
+                         (type_
+                          (Type_atom (constructor Type_int) (arguments ())))))))))))))))))))
+         ((statements ()) (last (Identifier (Var f_))))))))) |}]
+;;
+
+let%expect_test "kind annotations" =
+  let code =
+    {|
+effect eff<a :: X, b :: X, c :: E, d :: V> {
+  control foo(_ : d) : (() -> <a, b | c>);
+};
+|}
+  in
+  Test_parser_util.print_parse_result code;
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Type_declaration
+        (Effect_declaration
+         ((id eff)
+          (type_parameters
+           (((id a) (kind ((Kind_atom Kind_effect_type))))
+            ((id b) (kind ((Kind_atom Kind_effect_type))))
+            ((id c) (kind ((Kind_atom Kind_effect_row))))
+            ((id d) (kind ((Kind_atom Kind_value))))))
+          (kind ())
+          (operations
+           (((id foo) (type_parameters ())
+             (shape
+              (Shape_control
+               (((id Parameter_wildcard)
+                 (type_
+                  (Type_atom (constructor (Variable_or_name d)) (arguments ())))))
+               (Parameters_or_tuple
+                (((parameter_id ())
+                  (type_
+                   (Arrow (Parameters_or_tuple ())
+                    ((effect (Effect_row (Closed ())))
+                     (result
+                      (Effect_row
+                       (Open
+                        ((Type_atom (constructor (Variable_or_name a))
+                          (arguments ()))
+                         (Type_atom (constructor (Variable_or_name b))
+                          (arguments ())))
+                        (Type_atom (constructor (Variable_or_name c))
+                         (arguments ())))))))))))))))))))))) |}]
+;;

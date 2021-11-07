@@ -46,7 +46,7 @@ type type_parameter =
 
 (** types and effects are the same thing. *)
 type type_ =
-  | Arrow of parameter_type list * type_result
+  | Arrow of type_ * type_result
   | Effect_row of effect_row
   | Scheme of type_scheme
   | Type_atom of
@@ -57,6 +57,7 @@ type type_ =
       { type_ : type_
       ; kind : kind
       }
+  | Parameters_or_tuple of parameter_type list
 [@@deriving sexp]
 
 and type_scheme =
