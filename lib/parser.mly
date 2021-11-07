@@ -133,8 +133,8 @@
 %type <block> elifs
 %type <expr> valexpr
 %type <expr> opexpr
-%type <expr> opexpr_of(prefixexpr)
-%type <expr> opexpr_of(ntlprefixexpr)
+%type <expr> opexpr_of(ntlprefixexpr, prefixexpr)
+%type <expr> opexpr_of(ntlprefixexpr, ntlprefixexpr)
 %type <binary_operator> op_n40
 %type <binary_operator> op_l60
 %type <binary_operator> op_l70
@@ -504,7 +504,7 @@ withstat:
     { let callback = anonymous_of_bound_block ~binder ~block in
       insert_with_callback ~callback e
     }
-;
+  ;
 
 (* ---------------------------------------------------------
 -- Expressions
@@ -609,18 +609,22 @@ valexpr:
 
 (* %type <expr> opexpr *)
 opexpr:
-  | e = opexpr_of(prefixexpr)
+  | e = opexpr_of(ntlprefixexpr, prefixexpr)
     { e }
   ;
 
-(** [opexpr_of] is parameterised by [prefixexpr_]
-    the nonterminal which operators are surrounded by.
-    This allows sharing between standard and
-    non-trailing-lambda usages *)
-(* %type <expr> opexpr_of(prefixexpr) *)
-(* %type <expr> opexpr_of(ntlprefixexpr) *)
-opexpr_of(prefixexpr_):
-  | e = opexpr_r20(prefixexpr_)
+(** [opexpr_of] is parameterised by [operand] and the nonterminal which
+    operators are surrounded by, and also [rightmost_operand], used for the
+    last operand.
+    This allows sharing between standard and non-trailing-lambda usages.
+    It is intended that [rightmost_operand] produces more strings than
+    [operand], and this is used to remove ambiguity, by only allowing trailing
+    lambdas in the final operands.
+ *)
+(* %type <expr> opexpr_of(ntlprefixexpr, prefixexpr) *)
+(* %type <expr> opexpr_of(ntlprefixexpr, ntlprefixexpr) *)
+opexpr_of(operand, rightmost_operand):
+  | e = opexpr_r20(operand, rightmost_operand)
     { e }
   ;
 
@@ -641,17 +645,17 @@ opexpr_of(prefixexpr_):
 *)
 
 (* opexpr_[associativity][koka precedence level] *)
-opexpr_r20(prefixexpr_):
-  | el = opexpr_r30(prefixexpr_); "||"; er = opexpr_r20(prefixexpr_)
+opexpr_r20(operand, rightmost_operand):
+  | el = opexpr_r30(operand, operand); "||"; er = opexpr_r20(operand, rightmost_operand)
     { Binary_op(el, Or, er) }
-  | e = opexpr_r30(prefixexpr_)
+  | e = opexpr_r30(operand, rightmost_operand)
     { e }
   ;
 
-opexpr_r30(prefixexpr_):
-  | el = opexpr_n40(prefixexpr_); "&&"; er = opexpr_r30(prefixexpr_)
+opexpr_r30(operand, rightmost_operand):
+  | el = opexpr_n40(operand, operand); "&&"; er = opexpr_r30(operand, rightmost_operand)
     { Binary_op(el, And, er) }
-  | e = opexpr_n40(prefixexpr_)
+  | e = opexpr_n40(operand, rightmost_operand)
     { e }
   ;
 
@@ -666,10 +670,12 @@ op_n40:
   ;
 
 (* non-associative *)
-opexpr_n40(prefixexpr_):
-  | el = opexpr_l60(prefixexpr_); op = op_n40; er = opexpr_l60(prefixexpr_)
+opexpr_n40(operand, rightmost_operand):
+  | el = opexpr_l60(operand, operand);
+    op = op_n40;
+    er = opexpr_l60(operand, rightmost_operand)
     { Binary_op(el, op, er) }
-  | e = opexpr_l60(prefixexpr_)
+  | e = opexpr_l60(operand, rightmost_operand)
     { e }
   ;
 
@@ -679,10 +685,12 @@ op_l60:
   | "-" { Minus }
   ;
 
-opexpr_l60(prefixexpr_):
-  | el = opexpr_l60(prefixexpr_); op = op_l60; er = opexpr_l70(prefixexpr_)
+opexpr_l60(operand, rightmost_operand):
+  | el = opexpr_l60(operand, operand);
+    op = op_l60;
+    er = opexpr_l70(operand, rightmost_operand)
     { Binary_op(el, op, er) }
-  | e = opexpr_l70(prefixexpr_)
+  | e = opexpr_l70(operand, rightmost_operand)
     { e }
   ;
 
@@ -693,10 +701,10 @@ op_l70:
   | "/" { Divide }
   ;
 
-opexpr_l70(prefixexpr_):
-  | el = opexpr_l70(prefixexpr_); op = op_l70; er = prefixexpr_
+opexpr_l70(operand, rightmost_operand):
+  | el = opexpr_l70(operand, operand); op = op_l70; er = rightmost_operand
     { Binary_op(el, op, er) }
-  | e = prefixexpr_
+  | e = rightmost_operand
     { e }
   ;
 
@@ -773,7 +781,7 @@ ntlexpr:
 
 (* %type <expr> ntlopexpr *)
 ntlopexpr:
-  | e = opexpr_of(ntlprefixexpr)
+  | e = opexpr_of(ntlprefixexpr, ntlprefixexpr)
     { e }
   ;
 
