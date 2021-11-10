@@ -212,8 +212,6 @@ type binary_operator =
 
 type expr =
   | Return of expr
-  (* TODO: val_in_ syntax not common in koka - drop? *)
-  | Val_in of annotated_pattern * block * expr
   | If_then_else of expr * block * block
   | If_then of expr * block
   (* | Match *)
@@ -240,8 +238,6 @@ and statement =
   | Expr of expr
 [@@deriving sexp]
 
-(* TODO: last should be an expression, but parser cannot enforce this (requires
-   unbounded lookahead) *)
 and block =
   { statements : statement list
   ; last : expr
@@ -273,7 +269,7 @@ and operation_handler =
       ; type_ : type_ option
       ; value : block
       }
-  (* TODO: sharing betweem different shapes? *)
+  (* TODO: sharing between different shapes? *)
   | Op_fun of
       { id : Var_id.t
       ; parameters : operation_parameter list
@@ -341,7 +337,6 @@ let insert_with_callback : callback:fn -> expr -> expr =
      difficulies with capture of type variables) *)
   | Annotated (_, _)
   | Return _
-  | Val_in (_, _, _)
   | If_then_else (_, _, _)
   | If_then (_, _)
   | Handler _ | Handle _ | Fn _

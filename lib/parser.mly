@@ -164,7 +164,6 @@ let close_after_desugaring app : expr =
 %type <expr> returnexpr
 %type <expr> ifexpr
 %type <block> elifs
-%type <expr> valexpr
 %type <expr> opexpr
 %type <expr> opexpr_of(ntlprefixexpr, prefixexpr)
 %type <expr> opexpr_of(ntlprefixexpr, ntlprefixexpr)
@@ -570,8 +569,6 @@ blockexpr:
 expr_except_block:
   | e = returnexpr
     { e }
-  | e = valexpr
-    { e }
   | e = basicexpr
     { e }
   ;
@@ -634,12 +631,6 @@ elifs:
       |> singleton_block }
   | ELSE; block = blockexpr
     { block }
-  ;
-
-(* %type <expr> valexpr *)
-valexpr:
-  | VAL; pat = apattern; "="; e1 = blockexpr; IN; e2 = expr
-    { Val_in(pat, e1, e2) }
   ;
 
 

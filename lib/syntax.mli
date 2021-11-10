@@ -208,7 +208,6 @@ type binary_operator =
 (** an expression - evaluates to a value *)
 type expr =
   | Return of expr
-  | Val_in of annotated_pattern * block * expr
   | If_then_else of expr * block * block
   | If_then of expr * block
   | Handler of effect_handler
@@ -232,7 +231,8 @@ and statement =
   | Expr of expr
 [@@deriving sexp]
 
-(** a list of statements *)
+(** a list of statements, the last an expression, therefore this evaluates to a
+    value *)
 and block =
   { statements : statement list
   ; last : expr
