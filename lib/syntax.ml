@@ -1,6 +1,4 @@
 (* TODO: rewrite to use modules? *)
-(* TODO: ** doc comments *)
-(* TODO: deriving sexp *)
 
 open Core
 
