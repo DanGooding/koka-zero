@@ -5,7 +5,10 @@ fun compute-the-answer {
 };
 |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| (Error "2:25 : syntax error") |}]
+  [%expect {|
+    (Error
+     ((kind Syntax_error) (message "parse error")
+      (location (((filename ()) (line 2) (char 25)))))) |}]
 ;;
 
 let%expect_test "dash before number in identifier" =
@@ -16,7 +19,10 @@ val n-3 = n - 3;
   [%expect
     {|
     (Error
-     "2:8 : malformed identifier: a dash must be preceded by a letter or number, and followed by a letter") |}]
+     ((kind Syntax_error)
+      (message
+       "malformed identifier: a dash must be preceded by a letter or number, and followed by a letter")
+      (location (((filename ()) (line 2) (char 8)))))) |}]
 ;;
 
 let%expect_test "dash at end of identifier" =
@@ -27,7 +33,10 @@ val n- = n;
   [%expect
     {|
     (Error
-     "2:7 : malformed identifier: a dash must be preceded by a letter or number, and followed by a letter") |}]
+     ((kind Syntax_error)
+      (message
+       "malformed identifier: a dash must be preceded by a letter or number, and followed by a letter")
+      (location (((filename ()) (line 2) (char 7)))))) |}]
 ;;
 
 let%expect_test "dash at start of identifier" =
@@ -35,7 +44,10 @@ let%expect_test "dash at start of identifier" =
   val -n = 0 - n;
   |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| (Error "2:8 : syntax error") |}]
+  [%expect {|
+    (Error
+     ((kind Syntax_error) (message "parse error")
+      (location (((filename ()) (line 2) (char 8)))))) |}]
 ;;
 
 let%expect_test "lambda as operand" =
@@ -47,5 +59,8 @@ fun op-trailing-lambda-example() {
 };
 |} in
   Test_parser_util.print_parse_result code;
-  [%expect {| (Error "3:9 : syntax error") |}]
+  [%expect {|
+    (Error
+     ((kind Syntax_error) (message "parse error")
+      (location (((filename ()) (line 3) (char 9)))))) |}]
 ;;

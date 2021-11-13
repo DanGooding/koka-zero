@@ -2,13 +2,14 @@ open Core
 
 (* TODO: expose syntax abstractly? *)
 module Syntax = Syntax
+module Static_error = Static_error
 
 val parse_channel
   :  ?filename:string
   -> in_channel
-  -> (Syntax.program, string) Result.t
+  -> (Syntax.program, Static_error.t) Result.t
 
 val parse_string
   :  ?filename:string
   -> string
-  -> (Syntax.program, string) Result.t
+  -> (Syntax.program, Static_error.t) Result.t
