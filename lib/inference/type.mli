@@ -8,24 +8,30 @@ module Primitive : sig
   [@@deriving sexp]
 end
 
-module Variable = Identifiable
+module Variable : Identifiable.S
 
-type t =
-  | Arrow of t * t
-  | Variable of Variable.t
-  | Primitive of Primitive.t
-[@@deriving]
+module Mono : sig
+  type t =
+    | Arrow of t * t
+    | Variable of Variable.t
+    | Primitive of Primitive.t
+  [@@deriving sexp]
+end
 
 (* TODO: probably deserves its own module *)
-module Scheme : sig
-  type type_ := t
-
+module Poly : sig
   type t =
     { (* TODO: make these private *)
       forall_bound : Variable.Set.t
-    ; monotype : type_
+    ; monotype : Mono.t
     }
+  [@@deriving sexp]
 
-  val generalise : type_ -> t
-  val instantiate : t -> name_source:(unit -> Variable.t) -> type_
+  val generalise : in_:Context.t -> Mono.t -> t
+  val instantiate : t -> name_source:(unit -> Variable.t) -> Mono.t
 end
+
+type t =
+  | Monotype of Mono.t
+  | Polytype of Poly.t
+[@@deriving sexp]
