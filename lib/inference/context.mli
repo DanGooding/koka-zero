@@ -1,3 +1,4 @@
+(* TODO: ensure representation allow shadowing *)
 (** represents a typing context, mapping [Minimal_syntax.Variable.t]s to
     [Type.t]s *)
 type t [@@deriving sexp]
