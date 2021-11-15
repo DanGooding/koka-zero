@@ -1,5 +1,7 @@
 (library
  (name infer)
- (libraries core)
- (preprocess (pps ppx_jane)))
+ (libraries core koka_zero_parsing koka_zero_util)
+ (preprocess (pps ppx_jane))
+ ;; TODO: remove this
+ (modules_without_implementation context minimal_syntax type))
 
