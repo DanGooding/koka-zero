@@ -1,10 +1,20 @@
 open Core
 
 module Kind = struct
-  type t = Syntax_error [@@deriving sexp]
+  module T = struct
+    type t =
+      | Syntax_error
+      | Type_error
+    [@@deriving sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+  (* submodule used to limit the scope for which the above warning is
+     disabled *)
+  include T
 
   let string_of_t = function
-    | Syntax_error -> "syntax_error"
+    | Syntax_error -> "syntax error"
+    | Type_error -> "type error"
   ;;
 end
 
@@ -15,9 +25,9 @@ type t =
   }
 [@@deriving sexp]
 
-let syntax_error ?at message =
-  { kind = Kind.Syntax_error; message; location = at }
-;;
+let error_of_kind kind ?at message = { kind; message; location = at }
+let syntax_error = error_of_kind Kind.Syntax_error
+let type_error = error_of_kind Kind.Type_error
 
 let string_of_t t =
   let { kind; message; location } = t in
