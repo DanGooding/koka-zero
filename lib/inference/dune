@@ -1,0 +1,5 @@
+(library
+ (name infer)
+ (libraries core)
+ (preprocess (pps ppx_jane)))
+
