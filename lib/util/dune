@@ -1,0 +1,6 @@
+(library
+ (name koka_zero_util)
+ (public_name koka-zero.util)
+ (libraries core)
+ (preprocess (pps ppx_jane))
+ (modules_without_implementation koka_zero_util))
