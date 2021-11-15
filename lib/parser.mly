@@ -36,7 +36,7 @@
 %token EXCLAMATION_MARK "!"
 
 %token IF THEN ELSE ELIF
-%token WITH IN
+%token WITH
 (* %token MATCH *)
 %token RARROW "->" LARROW "<-"
 

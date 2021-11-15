@@ -95,7 +95,6 @@ rule read =
   | "else"                      { ELSE }
   | "elif"                      { ELIF }
   | "with"                      { WITH }
-  | "in"                        { IN }
   (* | "match"                     { MATCH } *)
   | "return"                    { RETURN }
 
