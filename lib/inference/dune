@@ -1,5 +1,6 @@
 (library
- (name infer)
+ (name koka_zero_inference)
+ (public_name koka-zero.inference)
  (libraries core koka_zero_parsing koka_zero_util)
  (preprocess (pps ppx_jane))
  ;; TODO: remove this
