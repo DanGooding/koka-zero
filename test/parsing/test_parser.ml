@@ -2,7 +2,7 @@ let%expect_test "toplevel value declaration" =
   let code = {|
   val number : int = 1729;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -20,7 +20,7 @@ fun main() {
   0;
 };
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -44,7 +44,7 @@ fun main() {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -75,7 +75,7 @@ val kebab-case = 0;
 val x-y-z = 1;
 val number3-letter = 2;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -95,7 +95,7 @@ let%expect_test "hex literals" =
   let code = {|
 val abcd = 0x1234ABCD;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -110,7 +110,7 @@ let%expect_test "prime at end of identifier" =
 val f' = diff(f);
 val f'' = diff(f');
   |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -137,7 +137,7 @@ val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11;
 val inside = 0 <= x && x < 7 || 100 < x && x >= 9000;
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -201,7 +201,7 @@ let%expect_test "negative integer literals" =
   let code = {|
 val minus-fourty = -40;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -216,7 +216,7 @@ let%expect_test "boolean literals" =
 val t = True;
 val f = False;
   |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -244,7 +244,7 @@ fun if-example() {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -295,7 +295,7 @@ fun i() {
   else d;
 };
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -334,7 +334,7 @@ fun i() {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -369,7 +369,7 @@ fun dot-application() {
   x.best.fst.pow(3).print;
 };
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -399,7 +399,7 @@ fun trailing-lambda() {
 };
   |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -463,7 +463,7 @@ fun one(aa, bb, cc, dd) {
 };
   |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -545,7 +545,7 @@ val not-commented-out = True;
 // // /// ////
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -590,7 +590,7 @@ as much as is required */
 val y = x * /* can be within expressions! */ 5;
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -612,7 +612,7 @@ fun op-trailing-lambda-example() {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -642,7 +642,7 @@ fun trailing-lambdas() {
   fn(a) a fn(b) b fn(c) c;
 };
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -692,7 +692,7 @@ fun app-after-trailing-lambda() {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -729,7 +729,7 @@ effect my-effect<a :: V> {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -776,7 +776,7 @@ let%expect_test "shorthand effect declaration" =
   let code = {|
 effect control yield(x : a) : bool;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -825,7 +825,7 @@ fun one-operation() {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -937,7 +937,7 @@ fun handle-example(action) {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -977,7 +977,7 @@ fun square(x : int) : <> int {
 };
   |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -1026,7 +1026,7 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -1126,7 +1126,7 @@ let%expect_test "unnecessary brackets in arrow types" =
   let code = {|
 val f : ((x : int, y : int)) -> (() -> (int)) = f_;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok
@@ -1167,7 +1167,7 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
 };
 |}
   in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Ok

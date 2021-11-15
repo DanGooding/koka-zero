@@ -1,5 +1,6 @@
 open Core
-open Koka_zero
+open Koka_zero_parsing
+open Koka_zero_util
 
 let print_parse_result code =
   let ast = parse_string code in
