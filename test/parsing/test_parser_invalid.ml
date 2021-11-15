@@ -4,8 +4,9 @@ fun compute-the-answer {
   42;
 };
 |} in
-  Test_parser_util.print_parse_result code;
-  [%expect {|
+  Util.print_parse_result code;
+  [%expect
+    {|
     (Error
      ((kind Syntax_error) (message "parse error")
       (location (((filename ()) (line 2) (char 25)))))) |}]
@@ -15,7 +16,7 @@ let%expect_test "dash before number in identifier" =
   let code = {|
 val n-3 = n - 3;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Error
@@ -29,7 +30,7 @@ let%expect_test "dash at end of identifier" =
   let code = {|
 val n- = n;
 |} in
-  Test_parser_util.print_parse_result code;
+  Util.print_parse_result code;
   [%expect
     {|
     (Error
@@ -43,8 +44,9 @@ let%expect_test "dash at start of identifier" =
   let code = {|
   val -n = 0 - n;
   |} in
-  Test_parser_util.print_parse_result code;
-  [%expect {|
+  Util.print_parse_result code;
+  [%expect
+    {|
     (Error
      ((kind Syntax_error) (message "parse error")
       (location (((filename ()) (line 2) (char 8)))))) |}]
@@ -58,8 +60,9 @@ fun op-trailing-lambda-example() {
   5 * fn() 3 + 4;
 };
 |} in
-  Test_parser_util.print_parse_result code;
-  [%expect {|
+  Util.print_parse_result code;
+  [%expect
+    {|
     (Error
      ((kind Syntax_error) (message "parse error")
       (location (((filename ()) (line 3) (char 9)))))) |}]

@@ -1,0 +1,5 @@
+(library
+ (name koka_zero_test_parsing)
+ (libraries core koka-zero.parsing koka-zero.util)
+ (inline_tests)
+ (preprocess (pps ppx_jane)))
