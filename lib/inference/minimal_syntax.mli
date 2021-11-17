@@ -8,7 +8,7 @@ module Literal : sig
   [@@deriving sexp]
 end
 
-module Variable : Identifiable
+module Variable : Identifiable.S
 (* TODO: work out identifier/var_id/wildcard etc.*)
 
 module Expr : sig
