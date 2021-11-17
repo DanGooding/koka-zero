@@ -1,82 +1,49 @@
+open Core
 open Minimal_syntax
 
-let infer_type _e = failwith "not implemented"
-
-(* requirements: - name source - free variables of a thing - substitutions -
-   contexts (composition etc.)
-
-   chain together as a monad? *)
-
-let infer_literal : Literal.t -> Type.Literal.t = function
-  | Int _ -> Int
-  | Bool _ -> Bool
-  | Unit -> Unit
+let infer_literal : Literal.t -> Type.Primitive.t = function
+  | Literal.Int _ -> Type.Primitive.Int
+  | Literal.Bool _ -> Type.Primitive.Bool
+  | Literal.Unit -> Type.Primitive.Unit
 ;;
 
-let rec infer (env : Context.t) (e : Expr.t) : Substitution.t * Type.t =
+let rec infer : Context.t -> Expr.t -> Type.Mono.t Inference.t =
+ fun env e ->
+  let open Inference.Let_syntax in
   match e with
-  | Expr.Literal lit -> infer_literal lit
+  | Expr.Literal lit -> Type.Mono.Primitive (infer_literal lit) |> return
   | Expr.Variable var ->
     (match Context.find env var with
-     | None ->
-       let message = sprintf "unbound variable: %s" (Variable.to_string var) in
-       Static_error.type_error message
-     | Some t ->
-      let t =
-        match t with
-        | Mono t -> t
-        | Poly s -> Type.Poly.instantiate ~name_source s
-      in
-      Substitution.identity, t)
-  | Expr.Apply(e_f, e_arg) -> (
-      let s0, t_f = infer env e_f in
-      let s1, t_arg = infer env e_arg in
-      let t_result = Type.Variable (fresh_name ()) in
-      let s2 = unify (Substitution.apply s1 t_t) (Type.Arrow(t_arg, t_result)) in
-      Substitution.compose s1 s0, Substitution.apply s2 t_result
-      )
-  | Expr.If_then_else(e_cond, e_yes, e_no) -> (
-      (* this is unreadable... *)
-      let s0, t_cond = infer env e_cond in
-      let s1 = unify t_cond Type.Primitive.Bool in
-      let s1s0 = Substitution.compose s1 s0 in
-      let env' = Substitution.apply (s1s0) env in
-      let s2, t_yes = infer env' e_yes in
-      let s2s1s0 = Substitution.compose s2 s1s0 in
-      let env'' = Substitution.apply (s2s1s0) env in
-      let s2_no, t_no = infer env'' e_no in
-      let _ = () in
-      ()
-
-    (*  BE CAREFUL - generalisation should act on a type after all substitutions have
-        been applied
-        e.g.  forall a. a->a
-        is different to  forall b. (b->b) -> (b->b)
-    *)
-      (* let s0, t_cond = infer env e_cond in *)
-      (* let env' = Substitution.apply s0, env in *)
-      (* let s1, t_yes = infer (env') e_yes in *)
-      (* let s2, t_no = infer (env') e_no in *)
-      (* let s3 = unify t_cond (Type.Primitive Type.Primitive.Bool) *)
-      (* let s4 = unify t_yes t_no in *)
-
-
-
-
-
-  | Let (x, subject, body) ->
-    let s0, t_subject = infer subject in
-    let env = Substitution.apply s env in
-    let poly_subject = Type.Scheme.generalise ~in_:env t_subject in
-    let env' = Context.extend env ~var:x ~type_:(Type.Poly poly_subject) in
-    let s1, t_body = infer env' body in
-    Substitution.compose s1 s0, t_body
-
-  | Lambda (x, body) ->
-    let t_param = fresh_variable () in
-    let context' = Context.extend ~var:x ~type_:(Type.Mono ( Type.Variable t_param )) in
-    let s, t_body = infer body context' in
-    s, Type.Arrow(Substitution.apply s t_param, t_body)
-
-  | Fix (f, body) ->
+    | None ->
+      let message = sprintf "unbound variable: %s" (Variable.to_string var) in
+      Inference.type_error message
+    | Some t ->
+      (match t with
+      | Type.Mono t -> return t
+      | Type.Poly s -> Inference.instantiate s)
+      (* TODO: instantiation occurs within the Infer monad *))
+  | Expr.Application (e_f, e_arg) ->
+    let%bind t_f = infer env e_f in
+    let%bind t_arg = infer env e_arg in
+    let%bind t_result = Inference.fresh_metavariable in
+    let t_result = Type.Mono.Metavariable t_result in
+    let%map () = Inference.unify t_f (Type.Mono.Arrow (t_arg, t_result)) in
+    (* TODO: definitely need to backsubstitute over the result - here we give a
+       metavariable as the type *)
+    t_result
+  | Expr.Let (_, _, _)
+  | Expr.Lambda (_, _)
+  | Expr.Fix (_, _)
+  | Expr.If_then_else (_, _, _) -> failwith "not implemented"
 ;;
+
+(* | Expr. *)
+(* appel p359 *)
+
+let infer_type e =
+  let _r = Inference.run (infer Context.empty e) in
+  failwith "not implemented"
+;;
+(* TODO: [infer] doesn't give the final type, get that here (could save this
+   type on the tree, and then apply the global substitution over the whole tree
+   at the end) *)

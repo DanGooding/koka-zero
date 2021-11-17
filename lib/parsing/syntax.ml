@@ -4,10 +4,10 @@ open Core
 
 (* Names: *)
 
-module Var_id : Identifiable = String
-module Wildcard_id : Identifiable = String
-module Operator_id : Identifiable = String
-module Constructor_id : Identifiable = String
+module Var_id : Identifiable.S = String
+module Wildcard_id : Identifiable.S = String
+module Operator_id : Identifiable.S = String
+module Constructor_id : Identifiable.S = String
 
 module Identifier = struct
   module T = struct

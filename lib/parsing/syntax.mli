@@ -2,10 +2,10 @@ open Core
 
 (* Names: *)
 
-module Var_id : Identifiable
-module Wildcard_id : Identifiable
-module Operator_id : Identifiable
-module Constructor_id : Identifiable
+module Var_id : Identifiable.S
+module Wildcard_id : Identifiable.S
+module Operator_id : Identifiable.S
+module Constructor_id : Identifiable.S
 
 module Identifier : sig
   type t = Var of Var_id.t [@@deriving compare, hash, sexp]
