@@ -31,10 +31,33 @@ let rec infer : Context.t -> Expr.t -> Type.Mono.t Inference.t =
     (* TODO: definitely need to backsubstitute over the result - here we give a
        metavariable as the type *)
     t_result
-  | Expr.Let (_, _, _)
-  | Expr.Lambda (_, _)
-  | Expr.Fix (_, _)
-  | Expr.If_then_else (_, _, _) -> failwith "not implemented"
+  | Expr.If_then_else (e_cond, e_yes, e_no) ->
+    let%bind t_cond = infer env e_cond in
+    let%bind () =
+      Inference.unify t_cond (Type.Mono.Primitive Type.Primitive.Bool)
+    in
+    let%bind t_yes = infer env e_yes in
+    let%bind t_no = infer env e_no in
+    let%map () = Inference.unify t_yes t_no in
+    t_yes
+  | Expr.Lambda (x, e) ->
+    let%bind t_x = Inference.fresh_metavariable in
+    let t_x = Type.Mono.Metavariable t_x in
+    let env' = Context.extend env ~var:x ~type_:(Type.Mono t_x) in
+    let%map t_e = infer env' e in
+    Type.Mono.Arrow (t_x, t_e)
+  | Expr.Fix (x, e) ->
+    let%bind t_x = Inference.fresh_metavariable in
+    let t_x = Type.Mono.Metavariable t_x in
+    let env' = Context.extend env ~var:x ~type_:(Type.Mono t_x) in
+    let%bind t_e = infer env' e in
+    let%map () = Inference.unify t_x t_e in
+    t_x
+  | Expr.Let (x, e_subject, e_body) ->
+    let%bind t_subject = infer env e_subject in
+    let%bind p_subject = generalise type_env t_subject in
+    let env' = Context.extend env ~var:x ~type_:(Type.Poly p_subject) in
+    infer env' e_body
 ;;
 
 (* | Expr. *)
