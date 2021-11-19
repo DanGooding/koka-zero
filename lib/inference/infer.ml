@@ -55,18 +55,14 @@ let rec infer : Context.t -> Expr.t -> Type.Mono.t Inference.t =
     t_x
   | Expr.Let (x, e_subject, e_body) ->
     let%bind t_subject = infer env e_subject in
-    let%bind p_subject = generalise type_env t_subject in
+    let%bind p_subject = Inference.generalise t_subject ~in_:env in
     let env' = Context.extend env ~var:x ~type_:(Type.Poly p_subject) in
     infer env' e_body
 ;;
 
-(* | Expr. *)
-(* appel p359 *)
-
 let infer_type e =
-  let _r = Inference.run (infer Context.empty e) in
-  failwith "not implemented"
+  let open Result.Let_syntax in
+  let%map t, substitution = Inference.run (infer Context.empty e) in
+  (* TODO: is returning a [Mono.t] expected *)
+  Substitution.apply_to_mono substitution t
 ;;
-(* TODO: [infer] doesn't give the final type, get that here (could save this
-   type on the tree, and then apply the global substitution over the whole tree
-   at the end) *)

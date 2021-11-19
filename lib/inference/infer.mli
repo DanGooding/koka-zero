@@ -3,4 +3,4 @@
 open Core
 open Koka_zero_util
 
-val infer_type : Minimal_syntax.Expr.t -> (Type.Poly.t, Static_error.t) Result.t
+val infer_type : Minimal_syntax.Expr.t -> (Type.Mono.t, Static_error.t) Result.t

@@ -8,5 +8,10 @@ val extend : t -> var:Minimal_syntax.Variable.t -> type_:Type.t -> t
 (** lookup a variable's type in the context *)
 val find : t -> Minimal_syntax.Variable.t -> Type.t option
 
-(** a context with no names in scope*)
+(** a context with no names in scope *)
 val empty : t
+
+(* TODO: [Context.apply_substitution] is inconsistent with
+   [Substitution.apply_to_mono] *)
+val apply_substitution : t -> Substitution.t -> t
+val metavariables : t -> Type.Metavariable.Set.t

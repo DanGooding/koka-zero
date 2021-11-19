@@ -67,15 +67,25 @@ let lookup_meta a s =
   (t, s) |> Result.Ok
 ;;
 
-let substitute_meta_exn ~var ~type_ s =
+(** gives read access to the global substitution *)
+let get_substitution s =
   let { State.substitution; _ } = s in
-  let substitution =
-    match Substitution.extend substitution ~var ~type_ with
-    | `Duplicate -> raise_s [%message "metavariable already has a type"]
-    | `Ok substitution -> substitution
-  in
-  let s = State.{ s with substitution } in
+  Result.Ok (substitution, s)
+;;
+
+(** apply a pure function to the global substitution *)
+let map_substitution (f : Substitution.t -> Substitution.t) s =
+  let { State.substitution; _ } = s in
+  let substitution = f substitution in
+  let s = { s with State.substitution } in
   Result.Ok ((), s)
+;;
+
+let substitute_meta_exn ~var ~type_ =
+  map_substitution (fun substitution ->
+      match Substitution.extend substitution ~var ~type_ with
+      | `Duplicate -> raise_s [%message "metavariable already has a type"]
+      | `Ok substitution -> substitution)
 ;;
 
 let type_error message _s = Static_error.type_error message |> Result.Error
@@ -87,6 +97,7 @@ let unification_error_of to_sexp t1 t2 =
   type_error message
 ;;
 
+(* TODO: use pretty printing instead *)
 let unification_error_primitive = unification_error_of Type.Primitive.sexp_of_t
 let unification_error_mono = unification_error_of Type.Mono.sexp_of_t
 let unification_error = unification_error_of Type.sexp_of_t
@@ -144,15 +155,54 @@ and unify_with_meta (a : Type.Metavariable.t) t2 : unit t =
       else substitute_meta_exn ~var:a ~type_:t2)
 ;;
 
-(* TODO: used in infence - should this be part of [substitution] *)
-let _subst = failwith "not implemented"
-
-let instantiate _poly s =
-  let State.{ substitution = _; metavariable_source = _; _ } = s in
-  failwith "not implemented"
+let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
+  let open Let_syntax in
+  let { Type.Poly.forall_bound; monotype } = poly in
+  let%map (var_to_meta : Type.Metavariable.t Type.Variable.Map.t) =
+    (* generate a fresh metavariale for each variable. Messy since the monadic
+       calls must be sequenced *)
+    Set.fold
+      forall_bound
+      ~init:(return Type.Variable.Map.empty)
+      ~f:(fun acc v ->
+        let%bind acc = acc in
+        let%map m = fresh_metavariable in
+        Map.add_exn acc ~key:v ~data:m)
+  in
+  Type.Mono.instantiate_as monotype var_to_meta
 ;;
 
-let generalise = failwith "not implemented"
+(* TODO: should this be in infer instead (doesn't need internal access)? *)
+let generalise (t : Type.Mono.t) ~in_:(env : Context.t) : Type.Poly.t t =
+  let open Let_syntax in
+  let%bind substitution = get_substitution in
+  let t =
+    Substitution.apply_to_mono substitution t
+    (* TODO: should this belong to Mono?*)
+  in
+  let t_meta = Type.Mono.metavariables t in
+  let env = Context.apply_substitution env substitution in
+  let env_meta = Context.metavariables env in
+  let meta = Set.diff t_meta env_meta in
+  (* replace each of these metavariables with a fresh variable, and universally
+     quanitfy over all those *)
+  let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
+    Set.fold meta ~init:(return Type.Metavariable.Map.empty) ~f:(fun acc m ->
+        let%bind acc = acc in
+        let%map v = fresh_variable in
+        Map.add_exn acc ~key:m ~data:v)
+  in
+  let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
+  let%map () =
+    map_substitution (fun substitution ->
+        Substitution.extend_many_exn substitution meta_to_mono)
+  in
+  let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
+  { Type.Poly.forall_bound; monotype = t }
+;;
+
+(* TODO: does it matter whether this is [t] before or after applying the
+   substitution? (and th new vs the old substitution) *)
 
 let run (f : 'a t) =
   let%map.Result x, s = f State.initial in
