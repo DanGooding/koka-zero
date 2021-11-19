@@ -32,6 +32,11 @@ install: all ## Install the packages on the system
 start: all ## Run the produced executable
 	opam exec -- dune exec --root . bin/main.exe $(ARGS)
 
+.PHONY: debug
+debug: ## Debug the main executable
+	opam exec -- dune build --root . bin/main.bc
+	opam exec -- ocamldebug _build/default/bin/main.bc
+
 .PHONY: test
 test: ## Run the unit tests
 	opam exec -- dune runtest --root .

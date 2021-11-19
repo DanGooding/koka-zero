@@ -2,5 +2,6 @@
  (name main)
  (public_name koka-zero)
  (libraries koka-zero)
- (preprocess (pps ppx_jane)))
+ (preprocess (pps ppx_jane))
+ (modes byte exe))
 
