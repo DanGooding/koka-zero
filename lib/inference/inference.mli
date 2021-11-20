@@ -5,7 +5,8 @@ open Koka_zero_util
 
 (** monad tracking the state of type inference
 
-    encapsulates a global substitution, and type variable source internally *)
+    encapsulates a global substitution, and type variable sources internally, as
+    well as failures producing [Static_error.t]s *)
 type 'a t
 
 include Monad.S with type 'a t := 'a t

@@ -20,16 +20,13 @@ let rec infer : Context.t -> Expr.t -> Type.Mono.t Inference.t =
     | Some t ->
       (match t with
       | Type.Mono t -> return t
-      | Type.Poly s -> Inference.instantiate s)
-      (* TODO: instantiation occurs within the Infer monad *))
+      | Type.Poly s -> Inference.instantiate s))
   | Expr.Application (e_f, e_arg) ->
     let%bind t_f = infer env e_f in
     let%bind t_arg = infer env e_arg in
     let%bind t_result = Inference.fresh_metavariable in
     let t_result = Type.Mono.Metavariable t_result in
     let%map () = Inference.unify t_f (Type.Mono.Arrow (t_arg, t_result)) in
-    (* TODO: definitely need to backsubstitute over the result - here we give a
-       metavariable as the type *)
     t_result
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind t_cond = infer env e_cond in
@@ -63,6 +60,7 @@ let rec infer : Context.t -> Expr.t -> Type.Mono.t Inference.t =
 let infer_type e =
   let open Result.Let_syntax in
   let%map t, substitution = Inference.run (infer Context.empty e) in
-  (* TODO: is returning a [Mono.t] expected *)
+  (* TODO: convert to a type without metavariables (not possible for [Expr]s
+     without generalising here, but should/will be) *)
   Substitution.apply_to_mono substitution t
 ;;
