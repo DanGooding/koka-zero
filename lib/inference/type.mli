@@ -44,6 +44,7 @@ module Mono : sig
   [@@deriving sexp]
 
   val metavariables : t -> Metavariable.Set.t
+
   (** [instantiate_as t var_to_meta] replaces variables with metavariables as
       described by the map [var_to_meta] *)
   val instantiate_as : t -> Metavariable.t Variable.Map.t -> t

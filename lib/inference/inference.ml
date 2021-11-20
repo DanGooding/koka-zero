@@ -176,10 +176,7 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
 let generalise (t : Type.Mono.t) ~in_:(env : Context.t) : Type.Poly.t t =
   let open Let_syntax in
   let%bind substitution = get_substitution in
-  let t =
-    Substitution.apply_to_mono substitution t
-    (* TODO: should this belong to Mono?*)
-  in
+  let t = Substitution.apply_to_mono substitution t in
   let t_meta = Type.Mono.metavariables t in
   let env = Context.apply_substitution env substitution in
   let env_meta = Context.metavariables env in
@@ -193,22 +190,23 @@ let generalise (t : Type.Mono.t) ~in_:(env : Context.t) : Type.Poly.t t =
         Map.add_exn acc ~key:m ~data:v)
   in
   let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
-  let%map () =
+  let%bind () =
+    (* TODO: is applying this globally the right thing to do?
+
+       it is at least inefficient, we are about to replace the only references
+       to these metavariables. However, when backsubstituting, need to be
+       careful *)
     map_substitution (fun substitution ->
         Substitution.extend_many_exn substitution meta_to_mono)
   in
+  let%map substitution = get_substitution in
+  let t = Substitution.apply_to_mono substitution t in
   let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
   { Type.Poly.forall_bound; monotype = t }
 ;;
-
-(* TODO: does it matter whether this is [t] before or after applying the
-   substitution? (and th new vs the old substitution) *)
 
 let run (f : 'a t) =
   let%map.Result x, s = f State.initial in
   let State.{ substitution; _ } = s in
   x, substitution
 ;;
-
-(* TODO: - substitutions: - of both metavaraibles and variables
-   (instantiation)! *)

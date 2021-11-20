@@ -26,6 +26,8 @@ let%expect_test "occurs check rejects omega combinator" =
 ;;
 
 let%expect_test "identity gets polymorphic type" =
+  (* TODO: once introduce declarations, add a better test than this (expressions
+     never have polymorphic type themselves) *)
   let expr =
     (* let id = \x. x in id id () *)
     (* tests id can be applied to functions, and units *)
@@ -37,5 +39,8 @@ let%expect_test "identity gets polymorphic type" =
       , E.Application (E.Application (id, id), E.Literal M.Literal.Unit) )
   in
   Util.print_inference_result expr;
-  [%expect {| |}]
+  [%expect {| (Ok (Primitive Unit)) |}]
 ;;
+
+(* TODO: tests to add: static scoping, not generalising free varaibles, not
+   gemeralising lambdas fix working properly *)
