@@ -1,13 +1,6 @@
 (lang dune 2.0)
 
-;; don't require `dune__exe__` prefix when debugging
-;; TODO: check the loss of namespacing is not an issue
-(wrapped_executables false)
-
 (name koka-zero)
-
-
-
 
 (license ISC)
 
@@ -28,5 +21,9 @@
   dune
   (ppx_expect :with-test)
   (odoc :with-doc)))
+
 (using menhir 2.0)
 
+;; don't require `dune__exe__` prefix when debugging
+;; TODO: check the loss of namespacing is not an issue
+(wrapped_executables false)

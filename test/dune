@@ -2,7 +2,8 @@
  (name koka_zero_test)
  (inline_tests)
  (libraries core koka_zero)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))
 
 (env
  (dev
@@ -11,4 +12,3 @@
    ;; warning 40 [name-out-of-scope]: plays badly with ppx_expect
    ;; warning 70 [missing-mli]: don't require these for tests
    (:standard -w +A-48-42-44-40-70 -warn-error +A-3))))
-

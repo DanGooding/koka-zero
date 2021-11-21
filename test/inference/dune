@@ -2,4 +2,5 @@
  (name koka_zero_test_inference)
  (libraries core koka-zero.inference koka-zero.util)
  (inline_tests)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))
