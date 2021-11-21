@@ -2,4 +2,5 @@
  (name koka_zero)
  (public_name koka-zero)
  (libraries core koka-zero.util koka-zero.parsing koka-zero.inference)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))

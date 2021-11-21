@@ -2,16 +2,15 @@
  (name koka_zero_parsing)
  (public_name koka-zero.parsing)
  (libraries core menhirLib str koka-zero.util)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))
 
 (ocamllex
- (modules lexer)
-)
+ (modules lexer))
 
 (menhir
  (modules parser)
- (flags --explain --dump)
-)
+ (flags --explain --dump))
 
 (env
  (dev
