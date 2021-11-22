@@ -12,6 +12,60 @@ module Literal = struct
   include T
 end
 
+module Operator = struct
+  module Int = struct
+    module T = struct
+      type t =
+        | Plus
+        | Minus
+        | Times
+        | Divide
+        | Modulo
+        | Equals
+        | Less_than
+      [@@deriving sexp]
+    end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+    include T
+  end
+
+  module Bool = struct
+    module Unary = struct
+      module T = struct
+        type t = Not [@@deriving sexp]
+      end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+      include T
+    end
+
+    module T = struct
+      type t =
+        | And
+        | Or
+      [@@deriving sexp]
+    end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+    include T
+  end
+
+  module Unary = struct
+    module T = struct
+      type t = Bool of Bool.Unary.t [@@deriving sexp]
+    end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+    include T
+  end
+
+  module T = struct
+    type t =
+      | Int of Int.t
+      | Bool of Bool.t
+    [@@deriving sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+  include T
+end
+
 module Variable : Identifiable.S = String
 (* TODO: work out identifier/var_id/wildcard etc.*)
 
@@ -27,6 +81,8 @@ module Expr = struct
       | Application of t * t
       | Literal of Literal.t
       | If_then_else of t * t * t
+      | Operator of t * Operator.t * t
+      | Unary_operator of Operator.Unary.t * t
     [@@deriving sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 

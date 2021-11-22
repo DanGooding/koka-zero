@@ -24,3 +24,22 @@ let%expect_test "occurs check rejects omega combinator" =
        \n")
       (location ()))) |}]
 ;;
+
+let%expect_test "if statement's branches must have the same type" =
+  (* if true then 1 else () *)
+  let expr =
+    E.If_then_else
+      ( E.Literal (M.Literal.Bool true)
+      , E.Literal (M.Literal.Int 1)
+      , E.Literal M.Literal.Unit )
+  in
+  Util.print_inference_result expr;
+  [%expect {|
+    (Error
+     ((kind Type_error) (message  "cannot unify\
+                                 \nInt\
+                                 \nwith\
+                                 \nUnit\
+                                 \n")
+      (location ()))) |}]
+;;

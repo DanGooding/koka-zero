@@ -7,6 +7,26 @@ let infer_literal : Literal.t -> Type.Primitive.t = function
   | Literal.Unit -> Type.Primitive.Unit
 ;;
 
+let operand_type : Operator.t -> Type.Primitive.t = function
+  | Operator.Int _ -> Type.Primitive.Int
+  | Operator.Bool _ -> Type.Primitive.Bool
+;;
+
+let operator_result_type : Operator.t -> Type.Primitive.t = function
+  | Operator.Bool Operator.Bool.(And | Or) -> Type.Primitive.Bool
+  | Operator.Int Operator.Int.(Plus | Minus | Times | Divide | Modulo) ->
+    Type.Primitive.Int
+  | Operator.Int Operator.Int.(Equals | Less_than) -> Type.Primitive.Bool
+;;
+
+let unary_operand_type : Operator.Unary.t -> Type.Primitive.t = function
+  | Operator.Unary.Bool Operator.Bool.Unary.Not -> Type.Primitive.Bool
+;;
+
+let unary_operator_result_type : Operator.Unary.t -> Type.Primitive.t = function
+  | Operator.Unary.Bool Operator.Bool.Unary.Not -> Type.Primitive.Bool
+;;
+
 let rec infer : Context.t -> Expr.t -> Type.Mono.t Inference.t =
  fun env e ->
   let open Inference.Let_syntax in
@@ -55,6 +75,20 @@ let rec infer : Context.t -> Expr.t -> Type.Mono.t Inference.t =
     let%bind p_subject = Inference.generalise t_subject ~in_:env in
     let env' = Context.extend env ~var:x ~type_:(Type.Poly p_subject) in
     infer env' e_body
+  | Expr.Operator (e_l, op, e_r) ->
+    let%bind t_l = infer env e_l in
+    let%bind t_r = infer env e_r in
+    let t_operand = operand_type op |> Type.Mono.Primitive in
+    let t_result = operator_result_type op |> Type.Mono.Primitive in
+    let%bind () = Inference.unify t_l t_operand in
+    let%map () = Inference.unify t_r t_operand in
+    t_result
+  | Expr.Unary_operator (uop, e) ->
+    let%bind t_e = infer env e in
+    let t_operand = unary_operand_type uop |> Type.Mono.Primitive in
+    let t_result = unary_operator_result_type uop |> Type.Mono.Primitive in
+    let%map () = Inference.unify t_operand t_e in
+    t_result
 ;;
 
 let infer_type e =

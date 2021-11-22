@@ -55,3 +55,42 @@ let%expect_test "literal int" =
   Util.print_inference_result expr;
   [%expect {| (Ok (Primitive Int)) |}]
 ;;
+
+let%expect_test "int operators" =
+  let i n = E.Literal (M.Literal.Int n) in
+  let oi o = M.Operator.Int o in
+  let expr =
+    E.Operator
+      ( i 1
+      , oi M.Operator.Int.Plus
+      , E.Operator
+          ( i 2
+          , oi M.Operator.Int.Minus
+          , E.Operator
+              ( i 3
+              , oi M.Operator.Int.Times
+              , E.Operator
+                  ( i 4
+                  , oi M.Operator.Int.Divide
+                  , E.Operator (i 5, oi M.Operator.Int.Modulo, i 7) ) ) ) )
+  in
+  Util.print_inference_result expr;
+  [%expect {| (Ok (Primitive Int)) |}]
+;;
+
+let%expect_test "comparsion operators" =
+  let i n = E.Literal (M.Literal.Int n) in
+  let oi o = M.Operator.Int o in
+  let ob o = M.Operator.Bool o in
+  let expr =
+    E.Operator
+      ( E.Operator
+          ( E.Operator (i 3, oi M.Operator.Int.Less_than, i 5)
+          , ob M.Operator.Bool.Or
+          , E.Operator (i 3, oi M.Operator.Int.Less_than, i 5) )
+      , ob M.Operator.Bool.Or
+      , E.Operator (i 3, oi M.Operator.Int.Equals, i 5) )
+  in
+  Util.print_inference_result expr;
+  [%expect {| (Ok (Primitive Bool)) |}]
+;;
