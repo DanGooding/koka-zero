@@ -58,6 +58,28 @@ module Expr : sig
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
+    | Handle of handler * t
   [@@deriving sexp]
-  (* TODO: operators, handlers *)
+
+  and handler =
+    { ops : op_handler Variable.Map.t
+    ; return : op_handler option
+    }
+  [@@deriving sexp]
+
+  and op_handler =
+    { argument : Variable.t
+          (* TODO: extend to multiple args (requires checking against
+             declaration) *)
+    ; body : t
+    }
+  [@@deriving sexp]
+end
+
+module Effect_decl : sig
+  type t =
+    { name : Effect.Label.t
+    ; operations : Effect.Operation.t Variable.Map.t
+    }
+  [@@deriving sexp]
 end
