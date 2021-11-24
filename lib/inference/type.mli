@@ -37,7 +37,7 @@ end
 (** a monotype contains no forall quantifiers*)
 module Mono : sig
   type t =
-    | Arrow of t * t
+    | Arrow of t * Effect.t * t
     | Variable of Variable.t
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
@@ -53,7 +53,7 @@ end
 (** a polytype has a toplevel forall quantifier *)
 module Poly : sig
   type t =
-    { forall_bound : Variable.Set.t
+    { forall_bound : Variable.Set.t * Effect.Variable.Set.t
     ; monotype : Mono.t
     }
   [@@deriving sexp]
@@ -69,3 +69,24 @@ type t =
 
 (** find all the metavariables in this type *)
 val metavariables : t -> Metavariable.Set.t
+
+module And_effect : sig
+  type type_ := t
+  type t = type_ * Effect.t
+
+  (* need separate namespaces for type & effect varaibles - but at the same time
+     it would be much easier not to... *)
+  (* module Variable : sig *)
+  (*   type t = *)
+  (*     | Type of Variable.t *)
+  (*     | Effect of Effect.Variable.t *)
+  (*   [@@deriving sexp] *)
+  (* end *)
+
+  (* module Metavariable : sig *)
+  (*   type t = *)
+  (*     | Type of Metavariable.t *)
+  (*     | Effect of Effect.Metavariable.t *)
+  (*   [@@deriving sexp] *)
+  (* end *)
+end

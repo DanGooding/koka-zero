@@ -21,10 +21,19 @@ val lookup_meta : Type.Metavariable.t -> Type.Mono.t option t
     has already been done for this metavariable *)
 val substitute_meta_exn : var:Type.Metavariable.t -> type_:Type.Mono.t -> unit t
 
+(** add a fresh metavaraible for a type's effect *)
+val with_any_effect : 'a -> ('a * Effect.t) t
+
 val type_error : string -> 'a t
 val unification_error : Type.t -> Type.t -> 'a t
 val unification_error_mono : Type.Mono.t -> Type.Mono.t -> 'a t
 val unify : Type.Mono.t -> Type.Mono.t -> unit t
+val unify_effects : Effect.t -> Effect.t -> unit t
 val instantiate : Type.Poly.t -> Type.Mono.t t
-val generalise : Type.Mono.t -> in_:Context.t -> Type.Poly.t t
+
+val generalise
+  :  Type.Mono.t * Effect.t
+  -> in_:Context.t
+  -> (Type.t * Effect.t) t
+
 val run : 'a t -> ('a * Substitution.t, Static_error.t) Result.t

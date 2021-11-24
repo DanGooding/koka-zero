@@ -88,6 +88,11 @@ let substitute_meta_exn ~var ~type_ =
       | `Ok substitution -> substitution)
 ;;
 
+let with_any_effect t =
+  let%map v = fresh_effect_metavariable in
+  t, Effect.Metavariable v
+;;
+
 let type_error message _s = Static_error.type_error message |> Result.Error
 
 let unification_error_of to_sexp t1 t2 =
@@ -173,36 +178,49 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
 ;;
 
 (* TODO: should this be in infer instead (doesn't need internal access)? *)
-let generalise (t : Type.Mono.t) ~in_:(env : Context.t) : Type.Poly.t t =
+
+(* TODO: should this return [Type.t], [Type.Poly.t] or fail for impure [e]? *)
+let generalise ((t, e) : Type.Mono.t * Effect.t) ~in_:(env : Context.t)
+    : (Type.t * Effect.t) t
+  =
   let open Let_syntax in
   let%bind substitution = get_substitution in
   let t = Substitution.apply_to_mono substitution t in
-  let t_meta = Type.Mono.metavariables t in
-  let env = Context.apply_substitution env substitution in
-  let env_meta = Context.metavariables env in
-  let meta = Set.diff t_meta env_meta in
-  (* replace each of these metavariables with a fresh variable, and universally
-     quanitfy over all those *)
-  let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
-    Set.fold meta ~init:(return Type.Metavariable.Map.empty) ~f:(fun acc m ->
-        let%bind acc = acc in
-        let%map v = fresh_variable in
-        Map.add_exn acc ~key:m ~data:v)
-  in
-  let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
-  let%bind () =
-    (* TODO: is applying this globally the right thing to do?
+  let e = Substitution.apply_to_effect substitution e in
+  (* can only generalise a pure term *)
+  if not (Effect.total e)
+     (* TODO: can technically generalise a pure term (<exn,div>), but then need
+        to keep those effects in the final effect [e'] *)
+  then Type.Mono t, e
+  else (
+    let t_meta = Type.Mono.metavariables t in
+    let env = Context.apply_substitution env substitution in
+    let env_meta = Context.metavariables env in
+    let meta = Set.diff (Set.union t_meta e_meta) env_meta in
+    (* replace each of these metavariables with a fresh variable, and
+       universally quanitfy over all those *)
+    let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
+      Set.fold meta ~init:(return Type.Metavariable.Map.empty) ~f:(fun acc m ->
+          let%bind acc = acc in
+          let%map v = fresh_variable in
+          Map.add_exn acc ~key:m ~data:v)
+    in
+    let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
+    let%bind () =
+      (* TODO: is applying this globally the right thing to do?
 
-       it is at least inefficient, we are about to replace the only references
-       to these metavariables. However, when backsubstituting, need to be
-       careful *)
-    map_substitution (fun substitution ->
-        Substitution.extend_many_exn substitution meta_to_mono)
-  in
-  let%map substitution = get_substitution in
-  let t = Substitution.apply_to_mono substitution t in
-  let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
-  { Type.Poly.forall_bound; monotype = t }
+         it is at least inefficient, we are about to replace the only references
+         to these metavariables. However, when backsubstituting, need to be
+         careful *)
+      map_substitution (fun substitution ->
+          Substitution.extend_many_exn substitution meta_to_mono)
+    in
+    let%bind substitution = get_substitution in
+    let t = Substitution.apply_to_mono substitution t in
+    let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
+    (* still total - so free to choose any effect *)
+    let%map e' = fresh_effect_metavariable in
+    Type.Poly.t { Type.Poly.forall_bound; monotype = t }, Effect.Metavariable e')
 ;;
 
 let run (f : 'a t) =
