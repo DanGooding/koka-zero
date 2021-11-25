@@ -44,6 +44,8 @@ val with_any_effect : 'a -> ('a * Effect.t) t
 val type_error : string -> 'a t
 val unification_error : Type.t -> Type.t -> 'a t
 val unification_error_mono : Type.Mono.t -> Type.Mono.t -> 'a t
+val unification_error_effect : Effect.t -> Effect.t -> 'a t
+val unification_error_effect_row : Effect.Row.t -> Effect.Row.t -> 'a t
 val unify : Type.Mono.t -> Type.Mono.t -> unit t
 val unify_effects : Effect.t -> Effect.t -> unit t
 val instantiate : Type.Poly.t -> Type.Mono.t t

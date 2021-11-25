@@ -1,71 +1,79 @@
 open Core
 
-(** the name of an individual effect *)
-module Label : Identifiable.S
-
-(** a variable standing for an effect, either free, or quantified in a [Type.Poly.t]*)
 module Variable : sig
-  type t [@@deriving sexp]
+  (** a variable standing for an effect, either free, or quantified in a
+      [Type.Poly.t]*)
+  type t
 
   include Identifiable.S with type t := t
   include Name_source.S with type t := t
 end
 
-(** a placeholder variable introduced during unification, an effect will be
-    substituted for this *)
 module Metavariable : sig
-  type t [@@deriving sexp]
+  (** a placeholder variable introduced during unification, an effect will be
+      substituted for this *)
+  type t
 
   include Identifiable.S with type t := t
   include Name_source.S with type t := t
 end
 
-(* are rows difference lists? *)
-(* or ordinary lists?*)
+module Label : sig
+  (** the name of an individual effect *)
+  type t
+
+  include Identifiable.S with type t := t
+
+  module Multiset : sig
+    type label := t
+    type t [@@deriving sexp]
+
+    val empty : t
+    val add : t -> label -> t
+    val union : t -> t -> t
+
+    (** intersection: if an element appears `m` times in one multiset and `n`
+        times in the other, then it appears `min m n` in their intersection *)
+    val inter : t -> t -> t
+
+    (** difference: if an element appears `m` times in the first argument, and
+        `n` times in the second, then it appears `max (m - n) 0` times in the
+        result *)
+    val diff : t -> t -> t
+
+    val is_empty : t -> bool
+  end
+end
+
 module Row : sig
-  (* a' = Metavariable / Variable / unit ? *)
-  type 'a t =
-    { labels : Label.Multiset.t
-    (* TODO: really should just be a cons list (label * Effect.t option) but then
-       everything gets mutauly recursive *)
-    ; tail : 'a option (* TODO better representation *)
-    }
+  module Tail : sig
+    type t =
+      | Variable of Variable.t
+      | Metavariable of Metavariable.t
     [@@deriving sexp]
+  end
 
-    val extend : t -> Label.t -> t
-    val empty : 'a t
-
-
-
-    val is_open 'a t -> bool
-
-
-    (* TODO: doesn't work - recursive modules! *)
-    val open : ? t -> varaible_source -> Metavaraiable.t t
-    (* TODO: start without open/close*)
-
-end
-
-
-module Operation : sig
+  (** An effect row - a multiset of labels, possibly with a variable in the tail *)
   type t =
-    { argument_type : Type.Mono.t
-    ; result_type : Type.Mono.t
+    { labels : Label.Multiset.t
+    ; tail : Tail.t option
     }
-    [@@deriving sexp]
-end
-
-(** set of operation names (used for structural matchijng to handlers) *)
-module Signature : sig
-  (* TODO: include number of arguments when this becomes varaiable *)
-  type t = (* abstractly *) Mininmal_syntax.Variable.Set.t
   [@@deriving sexp]
+
+  val empty : t
+  val extend : t -> Label.t -> t
+  val is_open : t -> bool
+
+  (* TODO: start without open/close*)
+  (* val open : t -> varaible_source -> t *)
+
+  val metavariables : t -> Metavariable.Set.t
 end
 
-(* forall can quantify over effect varaibles too *)
 type t =
   | Metavariable of Metavariable.t
   | Variable of Variable.t
   | Row of Row.t
 [@@deriving sexp]
 
+val metavariables : t -> Metavariable.Set.t

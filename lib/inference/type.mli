@@ -5,7 +5,7 @@ open Core
 
 (** a variable standing for a type, either free, or quantified in a [Poly.t]*)
 module Variable : sig
-  type t [@@deriving sexp]
+  type t
 
   include Identifiable.S with type t := t
   include Name_source.S with type t := t
@@ -14,7 +14,7 @@ end
 (** a placeholder variable introduced during unification, a type will be
     substituted for this *)
 module Metavariable : sig
-  type t [@@deriving sexp]
+  type t
 
   include Identifiable.S with type t := t
   include Name_source.S with type t := t

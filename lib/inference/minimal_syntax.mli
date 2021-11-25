@@ -83,7 +83,8 @@ end
 
 module Effect_decl : sig
   type t =
-    { name : Effect.Label.t
+    { (* TODO: should be defined here / or should just use [Variable]? *)
+      name : Effect.Label.t
     ; operations : Effect.Operation.t Variable.Map.t
     }
   [@@deriving sexp]

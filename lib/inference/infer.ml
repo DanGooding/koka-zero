@@ -111,17 +111,21 @@ let rec infer : Context.t -> Expr.t -> (Type.Mono.t * Effect.t) Inference.t =
   | Expr.Handle (handler, expr_subject) ->
     let { Expr.operations; return_clause } = handler in
     let%bind lab_handled : Effect.Label.t =
-      let signature = Map.key_set operations in
+      let signature = Effect_signature.of_handler handler in
       (* TODO: move this into Inference *)
-      match Effect_context.lookup signature with
-      | Some handled_effect -> return handled_effect
+      match Effect_signature.Context.find signature with
+      | Some lab_handled -> return lab_handled
       | None ->
-        (* TODO: give more informative message - list the operations *)
-        let message = "handler does not match any effect" in
+        (* TODO: use actual to_string to give nice output *)
+        let signature_str =
+          Effect_signature.sexp_of_t signature |> Sexp.to_string_hum
+        in
+        let message =
+          sprintf "handler does not match any effect: %s" signature_str
+        in
         Inference.type_error message
     in
     let%bind t_subject, eff_subject = infer env e_subject in
-    (* TODO: this is the bit which might be tricky *)
     (* eff_subject ~ <lab_handled|eff_rest> *)
     let%bind eff_rest = Inference.fresh_effect_metavaraible in
     let effect_pre_handle =
