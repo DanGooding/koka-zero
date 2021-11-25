@@ -169,8 +169,11 @@ and infer_operation
     | Type.Mono
         (Type.Mono.Arrow
           ( t_argument
-          , Effect.Row { Effect.Row.labels = [ lab_handled ]; tail = None }
-          , t_result )) -> t_argument, t_result
+          , Effect.Row { Effect.Row.labels = [ label ]; tail = None }
+          , t_result )) ->
+      if Effect.Label.(lab_handled = label)
+      then t_argument, t_result
+      else assert false
     | _ -> assert false
   in
   let t_resume =
