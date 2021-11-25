@@ -43,6 +43,35 @@ end
 include T
 include Monad.Make (T)
 
+let sequence ts =
+  let open Let_syntax in
+  List.fold ts ~init:(return []) ~f:(fun acc t ->
+      (* TODO: un + re wrapping acc every time is inefficient *)
+      let%bind xs = acc in
+      let%map x = t in
+      x :: xs)
+;;
+
+let sequence_units ts =
+  let open Let_syntax in
+  let%map (_ : unit list) = sequence ts in
+  ()
+;;
+
+let sequence_map ts =
+  let open Let_syntax in
+  let cmp = Map.comparator_s ts in
+  Map.fold
+    ts
+    ~init:(return (Map.empty cmp))
+    ~f:(fun ~key ~data acc ->
+      let%bind m = acc in
+      let%map data = data in
+      Map.add_exn m ~key ~data)
+;;
+
+let sequence_map_units ts = Map.data ts |> sequence_units
+
 let fresh_variable s =
   let { State.variable_source; _ } = s in
   let name, variable_source =
@@ -139,7 +168,7 @@ let rec unify t1 t2 =
   | (Type.Mono.Arrow (_, _) | Type.Mono.Variable _ | Type.Mono.Primitive _), _
     -> unification_error_mono t1 t2
 
-and unify_with_meta (a : Type.Metavariable.t) t2 : unit t =
+and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
   let open Let_syntax in
   match%bind lookup_meta a with
   | Some ta -> unify ta t2
@@ -160,19 +189,31 @@ and unify_with_meta (a : Type.Metavariable.t) t2 : unit t =
       else substitute_meta_exn ~var:a ~type_:t2)
 ;;
 
+let unify_effects e1 e2 =
+  match e1, e2 with
+  | Effect.Metavariable a, _ -> unify_effect_with_meta a e2
+  | _, Effect.Metavariable a -> unify_effect_with_meta b e1
+  | Effect.Variable a, Effect.Variable b ->
+    if Effect.Variable.(a = b)
+    then return ()
+    else unification_error_effect e1 e2
+  | Effect.Row r1, Effect.Row r2 -> unify_effect_rows r1 r2
+  | (Effect.Variable _ | Effect.Row _), _ -> unification_error_effect e1 e2
+
+and unify_effect_rows r1 r2 =
+  let common = intersect r1 r2 in
+  let r1 = r1 - common
+
+and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t =
+  (* TODO: this will be literally identical to [unify_with_meta] *)
+  failwith "not implemented"
+;;
+
 let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
   let open Let_syntax in
   let { Type.Poly.forall_bound; monotype } = poly in
   let%map (var_to_meta : Type.Metavariable.t Type.Variable.Map.t) =
-    (* generate a fresh metavariale for each variable. Messy since the monadic
-       calls must be sequenced *)
-    Set.fold
-      forall_bound
-      ~init:(return Type.Variable.Map.empty)
-      ~f:(fun acc v ->
-        let%bind acc = acc in
-        let%map m = fresh_metavariable in
-        Map.add_exn acc ~key:v ~data:m)
+    Set.to_map forall_bound ~f:(fun _v -> fresh_metavariable) |> sequence_map
   in
   Type.Mono.instantiate_as monotype var_to_meta
 ;;
@@ -200,10 +241,7 @@ let generalise ((t, e) : Type.Mono.t * Effect.t) ~in_:(env : Context.t)
     (* replace each of these metavariables with a fresh variable, and
        universally quanitfy over all those *)
     let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
-      Set.fold meta ~init:(return Type.Metavariable.Map.empty) ~f:(fun acc m ->
-          let%bind acc = acc in
-          let%map v = fresh_variable in
-          Map.add_exn acc ~key:m ~data:v)
+      Set.to_map meta ~f:(fun _m -> fresh_variable) |> sequence_map
     in
     let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
     let%bind () =
