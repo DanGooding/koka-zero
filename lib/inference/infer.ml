@@ -46,11 +46,11 @@ let rec infer : Context.t -> Expr.t -> (Type.Mono.t * Effect.t) Inference.t =
         Inference.with_any_effect t))
   | Expr.Application (expr_f, expr_arg) ->
     let%bind t_f, eff_f = infer env expr_f in
-    let%bind t_arg, eff_arg = infer env expr_arg in
+    let%bind t_argument, eff_arg = infer env expr_arg in
     let%bind t_result = Inference.fresh_metavariable in
     let t_result = Type.Mono.Metavariable t_result in
     let%bind () =
-      Inference.unify t_f (Type.Mono.Arrow (t_arg, eff_f, t_result))
+      Inference.unify t_f (Type.Mono.Arrow (t_argument, eff_f, t_result))
     in
     let%map () = Inference.unify_effects eff_f eff_arg in
     t_result, eff_f
@@ -102,13 +102,109 @@ let rec infer : Context.t -> Expr.t -> (Type.Mono.t * Effect.t) Inference.t =
     let%bind () = Inference.unify t_r t_operand in
     let%map () = Inference.unify_effects eff_l eff_r in
     t_result, eff_l
-  | Expr.Unary_operator (uop, e_arg) ->
-    let%bind t_arg, eff_arg = infer env e_arg in
+  | Expr.Unary_operator (uop, expr_arg) ->
+    let%bind t_argument, eff_arg = infer env expr_arg in
     let t_operand = unary_operand_type uop |> Type.Mono.Primitive in
     let t_result = unary_operator_result_type uop |> Type.Mono.Primitive in
-    let%map () = Inference.unify t_operand t_arg in
+    let%map () = Inference.unify t_operand t_argument in
     t_result, eff_arg
-  | Expr.Handle (_, _) -> failwith "not implemented"
+  | Expr.Handle (handler, expr_subject) ->
+    let { Expr.operations; return_clause } = handler in
+    let%bind lab_handled : Effect.Label.t =
+      let signature = Map.key_set operations in
+      (* TODO: move this into Inference *)
+      match Effect_context.lookup signature with
+      | Some handled_effect -> return handled_effect
+      | None ->
+        (* TODO: give more informative message - list the operations *)
+        let message = "handler does not match any effect" in
+        Inference.type_error message
+    in
+    let%bind t_subject, eff_subject = infer env e_subject in
+    (* TODO: this is the bit which might be tricky *)
+    (* eff_subject ~ <lab_handled|eff_rest> *)
+    let%bind eff_rest = Inference.fresh_effect_metavaraible in
+    let effect_pre_handle =
+      let labels = [ lab_handled ] in
+      let tail = Some eff_rest in
+      Effect.Row { Effect.Row.labels; tail }
+    in
+    let%bind () = Inference.unify_effects eff_subject effect_pre_handle in
+    let%bind t_handler_result = Inference.fresh_metavariable in
+    (* `return` maps `t_subject -> t_handler_result` *)
+    let%bind () =
+      infer_operation_clause
+        ~eff_rest
+        ~env
+        ~t_handler_result
+        ~t_argument:t_subject
+        return_clause
+    in
+    (* check each op body has the right type *)
+    let%bind () =
+      Map.mapi operations ~f:(fun ~key:name ~data:handler ->
+          infer_operation
+            ~lab_handled
+            ~eff_rest
+            ~env
+            ~t_handler_result
+            ~name
+            handler)
+      |> sequence_map_units
+    in
+    t_handler_result, eff_rest
+
+(** Infer and check an operation handler' type *)
+and infer_operation
+    :  lab_handled:Effect.Label.t -> eff_rest:Effect.t -> env:Context.t
+    -> t_handler_result:Type.Mono.t -> name:Expr.Variable.t -> Expr.op_handler
+    -> unit
+  =
+ fun ~lab_handled ~eff_rest ~name ~handler_result op ->
+  let { Expr.op_argument; _ } = op in
+  let t_argument, t_result =
+    match Context.find_exn env name with
+    (* operations must be delcared to have a single effect (the one they belong
+       to) *)
+    | Type.Mono
+        (Type.Mono.Arrow
+          ( t_argument
+          , Effect.Row { Effect.Row.labels = [ lab_handled ]; tail = None }
+          , t_result )) -> t_argument, t_result
+    | _ -> assert false
+  in
+  let t_resume =
+    Type.Mono (Type.Mono.Arrow (t_result, eff_rest, t_handler_result))
+  in
+  let env_with_resume =
+    (* TODO: need to prevent escape of non first-class resume *)
+    Context.extend env ~var:Keyword.resume ~type_:t_resume
+  in
+  infer_operation_clause
+    ~lab_handled
+    ~eff_rest
+    ~env:env_with_resume
+    ~t_handler_result
+    ~t_argument
+    op
+
+(** Infer and check an operartion clause's body's type
+
+    This is a helper function which applies to any unnamed body, so works for
+    both oeprations and `return`. Notably it does not add `resume` to the
+    context. *)
+and infer_operation_clause
+    :  eff_rest:Effect.t -> env:Context.t -> t_handler_result:Type.Mono.t
+    -> t_argument:Type.Mono.t -> Effect.op_hander -> unit
+  =
+ fun ~eff_rest ~env ~t_handler_result ~t_argument op ->
+  let { Expr.op_argument; op_body } = op in
+  let env' =
+    Context.extend env ~var:op_argument ~type_:(Type.Mono t_argument)
+  in
+  let%bind t_result, eff_result = infer env' op_body in
+  let%bind () = Inference.unify t_result t_handler_result in
+  Inference.unify_effects eff_result eff_rest
 ;;
 
 let infer_type e =

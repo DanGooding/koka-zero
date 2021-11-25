@@ -43,7 +43,12 @@ module Operator : sig
 end
 
 module Variable : Identifiable.S
+
 (* TODO: work out identifier/var_id/wildcard etc.*)
+module Keyword : sig
+  (* TODO: ensure resume is not used in a first-class way *)
+  val resume : Variable.t
+end
 
 module Expr : sig
   type t =
@@ -62,16 +67,16 @@ module Expr : sig
   [@@deriving sexp]
 
   and handler =
-    { ops : op_handler Variable.Map.t
-    ; return : op_handler option
+    { operations : op_handler Variable.Map.t
+    ; return_clause : op_handler option
     }
   [@@deriving sexp]
 
   and op_handler =
-    { argument : Variable.t
+    { op_argument : Variable.t
           (* TODO: extend to multiple args (requires checking against
              declaration) *)
-    ; body : t
+    ; op_body : t
     }
   [@@deriving sexp]
 end

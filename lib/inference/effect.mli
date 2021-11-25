@@ -1,9 +1,24 @@
 open Core
+
+(** the name of an individual effect *)
 module Label : Identifiable.S
 
-(* TODO: should these be merged with type? *)
-module Metavariable : Identifiable.S
-module Variable : Identifiable.S
+(** a variable standing for an effect, either free, or quantified in a [Type.Poly.t]*)
+module Variable : sig
+  type t [@@deriving sexp]
+
+  include Identifiable.S with type t := t
+  include Name_source.S with type t := t
+end
+
+(** a placeholder variable introduced during unification, an effect will be
+    substituted for this *)
+module Metavariable : sig
+  type t [@@deriving sexp]
+
+  include Identifiable.S with type t := t
+  include Name_source.S with type t := t
+end
 
 (* are rows difference lists? *)
 (* or ordinary lists?*)
@@ -11,17 +26,14 @@ module Row : sig
   (* a' = Metavariable / Variable / unit ? *)
   type 'a t =
     { labels : Label.Multiset.t
+    (* TODO: really should just be a cons list (label * Effect.t option) but then
+       everything gets mutauly recursive *)
     ; tail : 'a option (* TODO better representation *)
     }
     [@@deriving sexp]
 
     val extend : t -> Label.t -> t
-    val remove : t -> Label.t -> t option
-    val contains : t -> Label.t -> bool
-
-    val is_empty : t -> bool
-
-    val empty : ? t
+    val empty : 'a t
 
 
 
@@ -31,7 +43,6 @@ module Row : sig
     (* TODO: doesn't work - recursive modules! *)
     val open : ? t -> varaible_source -> Metavaraiable.t t
     (* TODO: start without open/close*)
-
 
 end
 
@@ -44,17 +55,12 @@ module Operation : sig
     [@@deriving sexp]
 end
 
-(* set of operation names (used for structural matchijng to handlers) *)
+(** set of operation names (used for structural matchijng to handlers) *)
 module Signature : sig
-  type t = (* abstractly *) Operation_name_or_generic_variable.Set.t
+  (* TODO: include number of arguments when this becomes varaiable *)
+  type t = (* abstractly *) Mininmal_syntax.Variable.Set.t
   [@@deriving sexp]
-
-
-
-
 end
-
-
 
 (* forall can quantify over effect varaibles too *)
 type t =
