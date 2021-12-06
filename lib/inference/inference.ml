@@ -93,7 +93,7 @@ let fresh_metavariable s =
 let lookup_meta a s =
   let { State.substitution; _ } = s in
   let t = Substitution.find substitution a in
-  (t, s) |> Result.Ok
+  Result.Ok (t, s)
 ;;
 
 (** gives read access to the global substitution *)
