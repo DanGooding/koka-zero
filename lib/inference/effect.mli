@@ -64,7 +64,7 @@ module Row : sig
   val extend : t -> Label.t -> t
   val is_open : t -> bool
 
-  (* TODO: start without open/close*)
+  (* TODO: start without open/close *)
   (* val open : t -> varaible_source -> t *)
 
   val metavariables : t -> Metavariable.Set.t

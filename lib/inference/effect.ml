@@ -1,13 +1,23 @@
 open Core
 
 module Variable = struct
-  module T = String
+  module T = struct
+    include String
+
+    let module_name = "Variable"
+  end
+
   include Identifiable.Make_plain (T)
   include Name_source.Make (T)
 end
 
 module Metavariable = struct
-  module T = String
+  module T = struct
+    include String
+
+    let module_name = "Metavariable"
+  end
+
   include Identifiable.Make_plain (T)
   include Name_source.Make (T)
 end
@@ -23,12 +33,12 @@ module Label = struct
     let empty = T.Map.empty
 
     let add x xs =
-      T.Map.update xs x ~f:(function
+      Map.update xs x ~f:(function
           | Some n -> n + 1
           | None -> 0)
     ;;
 
-    let union xs ys = T.Map.merge_skewed xs ys ~combine:Int.( + )
+    let union xs ys = Map.merge_skewed xs ys ~combine:Int.( + )
 
     let diff xs ys =
       Map.mapi xs ~f:(fun ~key:label ~data:nx ->
