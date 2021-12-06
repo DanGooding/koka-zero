@@ -135,8 +135,23 @@ let unification_error_of to_sexp t1 t2 =
 let unification_error_primitive = unification_error_of Type.Primitive.sexp_of_t
 let unification_error_mono = unification_error_of Type.Mono.sexp_of_t
 let unification_error = unification_error_of Type.sexp_of_t
-let unification_errror_effect = unification_error_of Effect.sexp_of_t
-let unification_errror_effect_row = unification_error_of Effect.Row.sexp_of_t
+let unification_error_effect = unification_error_of Effect.sexp_of_t
+let unification_error_effect_row = unification_error_of Effect.Row.sexp_of_t
+
+let raise_for_unexpected_variable a =
+  (* currently, variables are only bound by foralls in polytypes, but
+     unification of those is not currently supported. (Indeed the easiest way to
+     do that correctly involves instantiating them)
+
+     so variables should never occur in types to be unified *)
+  raise_s [%message "variable encountered in unification" (a : Type.Variable.t)]
+;;
+
+let raise_for_unexpected_effect_variable a =
+  raise_s
+    [%message
+      "effect variable encountered in unification" (a : Effect.Variable.t)]
+;;
 
 let occurs (v : Type.Metavariable.t) ~in_:(t : Type.Mono.t) =
   Set.mem (Type.Mono.metavariables t) v
@@ -152,16 +167,15 @@ let unify_primitives p1 p2 =
 let rec unify t1 t2 =
   let open Let_syntax in
   match t1, t2 with
+  | Type.Mono.Variable a, _ | _, Type.Mono.Variable a ->
+    raise_for_unexpected_variable a
   | Type.Mono.Metavariable a, _ -> unify_with_meta a t2
   | _, Type.Mono.Metavariable b -> unify_with_meta b t1
   | Type.Mono.Arrow (t1_arg, t1_result), Type.Mono.Arrow (t2_arg, t2_result) ->
     let%bind () = unify t1_arg t2_arg in
     unify t1_result t2_result
   | Type.Mono.Primitive p1, Type.Mono.Primitive p2 -> unify_primitives p1 p2
-  | Type.Mono.Variable a, Type.Mono.Variable b ->
-    if Type.Variable.(a = b) then return () else unification_error_mono t1 t2
-  | (Type.Mono.Arrow (_, _) | Type.Mono.Variable _ | Type.Mono.Primitive _), _
-    -> unification_error_mono t1 t2
+  | Type.Mono.(Arrow (_, _) | Primitive _), _ -> unification_error_mono t1 t2
 
 and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
   let open Let_syntax in
@@ -170,6 +184,7 @@ and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
   | None ->
     (* [a] has not been substitued for yet... *)
     (match t2 with
+    | Type.Mono.Variable a -> raise_for_unexpected_variable a
     | Type.Mono.Metavariable b ->
       if Type.Metavariable.(a = b)
       then return ()
@@ -178,7 +193,7 @@ and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
         (* [b] has been substituted for, unify with that *)
         | Some tb -> unify_with_meta a tb
         | None -> substitute_meta_exn ~var:a ~type_:(Type.Mono.Metavariable b))
-    | Type.Mono.(Arrow (_, _) | Variable _ | Primitive _) ->
+    | Type.Mono.(Arrow (_, _) | Primitive _) ->
       if occurs a ~in_:t2
       then unification_error_mono (Type.Mono.Metavariable a) t2
       else substitute_meta_exn ~var:a ~type_:t2)
@@ -188,69 +203,80 @@ let occurs_effect (a : Effect.Metavariable.t) ~in_:(e : Effect.t) =
   Set.mem (Effect.metavaraibles e) a
 ;;
 
-let unify_effects e1 e2 =
+let rec unify_effects e1 e2 =
   match e1, e2 with
+  | Effect.Variable a, _ | _, Effect.Variable a ->
+    raise_for_unexpected_effect_variable a
   | Effect.Metavariable a, _ -> unify_effect_with_meta a e2
-  | _, Effect.Metavariable a -> unify_effect_with_meta b e1
-  | Effect.Variable a, Effect.Variable b ->
-    if Effect.Variable.(a = b)
-    then return ()
-    else unification_error_effect e1 e2
+  | _, Effect.Metavariable b -> unify_effect_with_meta b e1
   | Effect.Row r1, Effect.Row r2 -> unify_effect_rows r1 r2
-  | (Effect.Variable _ | Effect.Row _), _ -> unification_error_effect e1 e2
 
 and unify_effect_rows r1 r2 =
+  let open Let_syntax in
   let r1 = Substitution.apply_to_effect r1 in
   let r2 = Substitution.apply_to_effect r2 in
   let { Effect.Row.labels = labels1; tail = tail1 } = r1 in
   let { Effect.Row.labels = labels2; tail = tail2 } = r2 in
-  let common_labels = intersect r1 r2 in
-  let labels1 = diff labels1 common in
-  let labels2 = diff labels2 common in
-  (* construct the effects for error output and further unification,
-     but pattern match as tuples for readability *)
+  let common_labels = Effect.Label.Multiset.inter r1 r2 in
+  let labels1 = Effect.Label.Multiset.diff labels1 common_labels in
+  let labels2 = Effect.Label.Multiset.diff labels2 common_labels in
+  (* construct the effects for error output and further unification, but pattern
+     match as tuples for readability *)
   let r1 = { Effect.Row.labels = labels1; tail = tail1 } in
-  let r2 = { Effect.Row.labels = labels1; tail = tail1 } in
-  match (labels1, tail1), (labels2, tail2) with
-  (* meta = _ *)
-  | ([], Some a), _ ->
-    (* substitution was previously applied, so [a] is guaranteed to be unknown,
-       therefore directly substituting here is safe *)
-    substitutute_meta_effect_exn ~var:a ~effect:(Effect.Row r2)
-  | _, ([], Some a) ->
-    substitutute_meta_effect_exn ~var:a ~effect:(Effect.Row r1)
-  (* <> = <> *)
-  | ([], None), ([], None) -> return ()
-  (* <ls> != _   (as [labels1] & [labels2] alrady have zero intersection) *)
+  let r2 = { Effect.Row.labels = labels2; tail = tail2 } in
+  (* all univerally quantified variables should be instantiated before
+     unification *)
+  let get_tail_metavariable tail =
+    Option.map tail ~f:(function
+        | Effect.Row.Tail.Metavariable a -> a
+        | Effect.Row.Tail.Variable a -> raise_for_unexpected_effect_variable a)
+  in
+  let tail_meta1 = get_tail_metavariable tail1 in
+  let tail_meta2 = get_tail_metavariable tail2 in
+  match
+    ( (Effect.Label.Multiset.is_empty labels1, tail_meta1)
+    , (Effect.Label.Multiset.is_empty labels2, tail_meta2) )
+  with
+  (* meta ~ _ *)
+  (* substitution was previously applied, so [a] is guaranteed to be unknown,
+     therefore directly substituting here is safe However we use
+     [unify_with_meta] since we do still need the occurs check *)
+  | (true, Some a), _ -> unify_effect_with_meta a (Effect.Row r2)
+  | _, (true, Some b) -> unify_effect_with_meta b (Effect.Row r1)
+  (* <> ~ <> *)
+  | (true, None), (true, None) -> return ()
+  (* <ls> !~ _ (as [labels1] & [labels2] are already disjoint) *)
   | (_, None), _ | _, (_, None) -> unification_error_effect_row r1 r2
-  (* <ls|meta> = <ls'|meta'> *)
-  | (labels1, Some a1), (labels2, Some a2) ->
+  (* <ls|meta> ~ <ls'|meta'> *)
+  | (false, Some a1), (false, Some a2) ->
     let%bind b = fresh_effect_metavariable in
     let tail = Some b in
     let r1' = { Effect.Row.labels = labels2; tail } in
     let r2' = { Effect.Row.labels = labels1; tail } in
-    (* their unification is <labels1,labels2|b> *)
-    let%bind () = unify_effect_rows r1 r1' in
-    unify_effect_rows r1 r1' in
+    (* their unification is <labels1+labels2|b> *)
+    let%bind () = unify_effect_with_meta a1 (Effect.Row r1') in
+    unify_effect_with_meta a2 (Effect.Row r2')
 
 and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t =
+  let open Let_syntax in
   match%bind lookup_meta_effect a with
   | Some ea -> unify_effects ea e2
   | None ->
     (* [a] has not been substitued for yet... *)
     (match e2 with
-     | Effect.Metavariable b ->
-       if Effect.Metavariable.(a = b)
-       then return ()
-       else (
-         match%bind lookup_meta_effect b with
-         (* [b] has been substituted for, unify with that *)
-         | Some tb -> unify_effect_with_meta a tb
-         | None -> substitute_meta_effect_exn ~var:a ~effect:(Effect.Metavariable b))
-     | Effect.Row _ | Effect.Variable _ ->
-       if occurs_effect a ~in_:e2
-       then unification_error_effect (Effect.Metavariable a) e2
-       else substitute_meta_effect_exn ~var:a ~effect:t2)
+    | Effect.Metavariable b ->
+      if Effect.Metavariable.(a = b)
+      then return ()
+      else (
+        match%bind lookup_meta_effect b with
+        (* [b] has been substituted for, unify with that *)
+        | Some tb -> unify_effect_with_meta a tb
+        | None ->
+          substitute_meta_effect_exn ~var:a ~effect:(Effect.Metavariable b))
+    | Effect.Row _ | Effect.Variable _ ->
+      if occurs_effect a ~in_:e2
+      then unification_error_effect (Effect.Metavariable a) e2
+      else substitute_meta_effect_exn ~var:a ~effect:t2)
 ;;
 
 let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
