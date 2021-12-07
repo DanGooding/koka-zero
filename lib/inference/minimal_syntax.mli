@@ -82,10 +82,21 @@ module Expr : sig
 end
 
 module Effect_decl : sig
+  module Operation : sig
+    type t =
+      { (* TODO: different shapes (fun/var/ctl/except) *)
+        argument : Type.Mono.t
+            (* TODO: should annotations be separate, then converted into
+               types? *)
+      ; result : Type.Mono.t
+      }
+    [@@deriving sexp]
+  end
+
   type t =
     { (* TODO: should be defined here / or should just use [Variable]? *)
       name : Effect.Label.t
-    ; operations : Effect.Operation.t Variable.Map.t
+    ; operations : Operation.t Variable.Map.t
     }
   [@@deriving sexp]
 end

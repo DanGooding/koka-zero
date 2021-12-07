@@ -30,7 +30,10 @@ val sequence_map_unit : ('a, unit t, 'cmp) Map.t -> unit t
 
 val fresh_variable : Type.Variable.t t
 val fresh_metavariable : Type.Metavariable.t t
+val fresh_effect_variable : Effect.Variable.t t
+val fresh_effect_metavariable : Effect.Metavariable.t t
 val lookup_meta : Type.Metavariable.t -> Type.Mono.t option t
+val lookup_effect_meta : Effect.Metavariable.t -> Effect.t option t
 
 (* TODO: is this used externally? *)
 
