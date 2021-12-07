@@ -26,7 +26,83 @@ end
 
 module T = struct
   (** a state monad to store the global substitution and the name source, plus
-      an exception monad for type errors ;;
+      an exception monad for type errors *)
+  type 'a t = State.t -> ('a * State.t, Static_error.t) Result.t
+
+  let bind m ~f s =
+    let%bind.Result x, s' = m s in
+    f x s'
+  ;;
+
+  let return x s = Result.Ok (x, s)
+
+  let map =
+    let map m ~f s =
+      let%map.Result x, s' = m s in
+      f x, s'
+    in
+    `Custom map
+  ;;
+end
+
+include T
+include Monad.Make (T)
+
+let sequence ts =
+  let open Let_syntax in
+  List.fold ts ~init:(return []) ~f:(fun acc t ->
+      (* TODO: un + re wrapping acc every time is inefficient *)
+      let%bind xs = acc in
+      let%map x = t in
+      x :: xs)
+;;
+
+let sequence_units ts =
+  let open Let_syntax in
+  let%map (_ : unit list) = sequence ts in
+  ()
+;;
+
+let sequence_map ts =
+  let open Let_syntax in
+  let cmp = Map.comparator_s ts in
+  Map.fold
+    ts
+    ~init:(return (Map.empty cmp))
+    ~f:(fun ~key ~data acc ->
+      let%bind m = acc in
+      let%map data = data in
+      Map.add_exn m ~key ~data)
+;;
+
+let sequence_map_units ts = Map.data ts |> sequence_units
+
+let fresh_variable s =
+  let { State.variable_source; _ } = s in
+  let name, variable_source =
+    Type.Variable.Name_source.next_name variable_source
+  in
+  let s = State.{ s with variable_source } in
+  Result.Ok (name, s)
+;;
+
+let fresh_metavariable s =
+  let { State.metavariable_source; _ } = s in
+  let name, metavariable_source =
+    Type.Metavariable.Name_source.next_name metavariable_source
+  in
+  let s = State.{ s with metavariable_source } in
+  Result.Ok (name, s)
+;;
+
+let fresh_effect_variable s =
+  let { State.effect_variable_source; _ } = s in
+  let name, effect_variable_source =
+    Effect.Variable.Name_source.next_name effect_variable_source
+  in
+  let s = State.{ s with effect_variable_source } in
+  Result.Ok (name, s)
+;;
 
 let fresh_effect_metavariable s =
   let { State.effect_metavariable_source; _ } = s in
@@ -71,6 +147,7 @@ let substitute_meta_exn ~var ~type_ =
 ;;
 
 let with_any_effect t =
+  let open Let_syntax in
   let%map v = fresh_effect_metavariable in
   t, Effect.Metavariable v
 ;;
@@ -212,7 +289,7 @@ and unify_effect_rows r1 r2 =
 
 and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t =
   let open Let_syntax in
-  match%bind lookup_meta_effect a with
+  match%bind lookup_effect_meta a with
   | Some ea -> unify_effects ea e2
   | None ->
     (* [a] has not been substitued for yet... *)
@@ -221,15 +298,15 @@ and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t 
       if Effect.Metavariable.(a = b)
       then return ()
       else (
-        match%bind lookup_meta_effect b with
+        match%bind lookup_effect_meta b with
         (* [b] has been substituted for, unify with that *)
         | Some tb -> unify_effect_with_meta a tb
         | None ->
-          substitute_meta_effect_exn ~var:a ~effect:(Effect.Metavariable b))
+          substitute_effect_meta_exn ~var:a ~effect:(Effect.Metavariable b))
     | Effect.Row _ | Effect.Variable _ ->
       if occurs_effect a ~in_:e2
       then unification_error_effect (Effect.Metavariable a) e2
-      else substitute_meta_effect_exn ~var:a ~effect:t2)
+      else substitute_effect_meta_exn ~var:a ~effect:t2)
 ;;
 
 let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
