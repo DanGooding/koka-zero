@@ -70,6 +70,12 @@ module Row = struct
     }
   [@@deriving sexp]
 
+  let total =
+    let labels = Label.Multiset.empty in
+    let tail = None in
+    { labels; tail }
+  ;;
+
   let extend t l =
     let { labels; tail } = t in
     let labels = Label.Multiset.add labels l in
@@ -91,6 +97,15 @@ module Row = struct
       let%map m = Map.find var_to_meta v in
       Tail.Metavariable m
     | Tail.Metavariable v -> Some (Tail.Metavariable v)
+  ;;
+
+  let is_total { labels; tail } =
+    if Label.Multiset.is_empty labels
+    then (
+      match tail with
+      | Some Tail.(Metavariable _ | Variable _) -> None
+      | None -> Some true)
+    else Some false
   ;;
 end
 
@@ -117,4 +132,9 @@ let instantiate_as ~var_to_meta = function
     | None -> Variable v)
   | Metavariable a -> Metavariable a
   | Row r -> Row.instantiate_as r ~var_to_meta
+;;
+
+let is_total = function
+  | Variable _ | Metavariable _ -> None
+  | Row r -> Row.is_total r
 ;;

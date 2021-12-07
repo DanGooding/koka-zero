@@ -24,7 +24,7 @@ module Primitive = struct
   include T
 
   let metavariables = function
-    | Int | Bool | Unit -> Metavariable.Set.empty
+    | Int | Bool | Unit -> Metavariable.Set.empty, Effect.Metavariable.Set.empty
   ;;
 
   let instantiate_as t ~var_to_meta:_ ~effect_var_to_meta:_ =
@@ -49,11 +49,17 @@ module Mono = struct
   include T
 
   let rec metavariables = function
-    | Metavariable v -> Metavariable.Set.singleton v
-    | Variable _ -> Metavariable.Set.empty
+    | Metavariable v ->
+      Metavariable.Set.singleton v, Effect.Metavariable.Set.empty
+    | Variable _ -> Metavariable.Set.empty, Effect.Metavariable.Set.empty
     | Primitive p -> Primitive.metavariables p
-    | Arrow (t_arg, _, t_result) ->
-      Set.union (metavariables t_arg) (metavariables t_result)
+    | Arrow (t_arg, effect, t_result) ->
+      let arg_meta, arg_effect_meta = metavariables t_arg in
+      let result_meta, result_effect_meta = metavariables t_result in
+      let effect_meta = Effect.metavariables effect in
+      ( Set.union arg_meta result_meta
+      , Effect.Metavariable.Set.union_list
+          [ arg_effect_meta; effect_meta; result_effect_meta ] )
   ;;
 
   let rec instantiate_as t ~var_to_meta ~effect_var_to_meta =
