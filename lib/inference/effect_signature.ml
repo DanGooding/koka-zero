@@ -1,3 +1,4 @@
+open Core
 open Minimal_syntax
 
 module Operation = struct
