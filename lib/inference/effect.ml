@@ -7,7 +7,7 @@ module Variable = struct
     let module_name = "Variable"
   end
 
-  include Identifiable.Make_plain (T)
+  include T
   include Name_source.Make (T)
 end
 
@@ -18,7 +18,7 @@ module Metavariable = struct
     let module_name = "Metavariable"
   end
 
-  include Identifiable.Make_plain (T)
+  include T
   include Name_source.Make (T)
 end
 
@@ -33,7 +33,7 @@ module Label = struct
     let of_list xs = T.Map.of_alist_fold ~init:0 ~f:Int.( + ) xs
     let empty = T.Map.empty
 
-    let add x xs =
+    let add xs x =
       Map.update xs x ~f:(function
           | Some n -> n + 1
           | None -> 0)
@@ -76,12 +76,21 @@ module Row = struct
     { labels; tail }
   ;;
 
-  let is_open { labels; _ } = Option.is_some labels
+  let is_open { tail; _ } = Option.is_some tail
 
   let metavariables { tail; _ } =
     match tail with
-    | Variable _ -> Metavariable.Set.empty
-    | Metavariable v -> Metavariable.Set.singleton v
+    | Some (Tail.Metavariable v) -> Metavariable.Set.singleton v
+    | Some (Tail.Variable _) | None -> Metavariable.Set.empty
+  ;;
+
+  let instantiate_as { tail; _ } ~var_to_meta =
+    let open Option.Let_syntax in
+    match%bind tail with
+    | Tail.Variable v ->
+      let%map m = Map.find var_to_meta v in
+      Tail.Metavariable m
+    | Tail.Metavariable v -> Some (Tail.Metavariable v)
   ;;
 end
 
@@ -99,4 +108,13 @@ let metavariables = function
   | Variable _ -> Metavariable.Set.empty
   | Metavariable v -> Metavariable.Set.singleton v
   | Row r -> Row.metavariables r
+;;
+
+let instantiate_as ~var_to_meta = function
+  | Variable v ->
+    (match Map.find var_to_meta v with
+    | Some m -> Metavariable m
+    | None -> Variable v)
+  | Metavariable a -> Metavariable a
+  | Row r -> Row.instantiate_as r ~var_to_meta
 ;;

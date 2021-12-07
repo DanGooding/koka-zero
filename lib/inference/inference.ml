@@ -311,11 +311,15 @@ and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t 
 
 let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
   let open Let_syntax in
-  let { Type.Poly.forall_bound; monotype } = poly in
-  let%map (var_to_meta : Type.Metavariable.t Type.Variable.Map.t) =
+  let { Type.Poly.forall_bound; forall_bound_effects; monotype } = poly in
+  let%bind (var_to_meta : Type.Metavariable.t Type.Variable.Map.t) =
     Set.to_map forall_bound ~f:(fun _v -> fresh_metavariable) |> sequence_map
   in
-  Type.Mono.instantiate_as monotype var_to_meta
+  let%map (effect_var_to_meta : Effect.Metavariable.t Effect.Variable.Map.t) =
+    Set.to_map forall_bound_effects ~f:(fun _v -> fresh_effect_metavariable)
+    |> sequence_map
+  in
+  Type.Mono.instantiate_as monotype ~var_to_meta ~effect_var_to_meta
 ;;
 
 (* TODO: should this be in infer instead (doesn't need internal access)? *)
@@ -329,12 +333,15 @@ let generalise ((t, e) : Type.Mono.t * Effect.t) ~in_:(env : Context.t)
   let t = Substitution.apply_to_mono substitution t in
   let e = Substitution.apply_to_effect substitution e in
   (* can only generalise a pure term *)
-  if not (Effect.total e)
+  (* TODO: here we should unify [e] with total if possible - but *not* fail when
+     that's impossible *)
+  if not (Effect.is_total e)
      (* TODO: can technically generalise a pure term (<exn,div>), but then need
         to keep those effects in the final effect [e'] *)
   then Type.Mono t, e
   else (
-    let t_meta = Type.Mono.metavariables t in
+    (* TODO: this should also include effect metavariables in arrow types *)
+    let t_meta, eff_meta1 = Type.Mono.metavariables t in
     let env = Context.apply_substitution env substitution in
     let env_meta = Context.metavariables env in
     let meta = Set.diff (Set.union t_meta e_meta) env_meta in

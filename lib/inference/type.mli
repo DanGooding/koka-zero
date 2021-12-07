@@ -28,7 +28,12 @@ module Primitive : sig
   [@@deriving sexp]
 
   val metavariables : t -> Metavariable.Set.t
-  val instantiate_as : t -> Metavariable.t Variable.Map.t -> t
+
+  val instantiate_as
+    :  t
+    -> var_to_meta:Metavariable.t Variable.Map.t
+    -> effect_var_to_meta:Effect.Metavariable.t Effect.Variable.Map.t
+    -> t
 end
 
 (* TODO: have a version of [Mono.t] without metavariables (for the output of
@@ -47,7 +52,11 @@ module Mono : sig
 
   (** [instantiate_as t var_to_meta] replaces variables with metavariables as
       described by the map [var_to_meta] *)
-  val instantiate_as : t -> Metavariable.t Variable.Map.t -> t
+  val instantiate_as
+    :  t
+    -> var_to_meta:Metavariable.t Variable.Map.t
+    -> effect_var_to_meta:Effect.Metavariable.t Effect.Variable.Map.t
+    -> t
 end
 
 (** a polytype has a toplevel forall quantifier *)

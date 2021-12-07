@@ -41,3 +41,4 @@ val apply : t -> Type.t -> Type.t
 
 val apply_to_mono : t -> Type.Mono.t -> Type.Mono.t
 val apply_to_primitive : t -> Type.Primitive.t -> Type.Primitive.t
+val apply_to_effect : t -> Effect.t -> Effect.t
