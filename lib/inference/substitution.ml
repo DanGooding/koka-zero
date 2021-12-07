@@ -28,9 +28,13 @@ let extend_many_exn t vars =
       [%message "Substitution.extend_many_exn: found duplicate metavariable"]
 ;;
 
-let find t var = Map.find t var
+let rec lookup subst var =
+  match Map.find subst var with
+  | None -> None
+  (* TODO: here we repeatedly substitute, since [subst] is not normalised *)
+  | Some t -> apply subst t
 
-let rec apply subst = function
+and apply subst = function
   | Type.Mono t -> Type.Mono (apply_to_mono subst t)
   | Type.Poly p ->
     let { Type.Poly.forall_bound; monotype } = p in
@@ -39,9 +43,8 @@ let rec apply subst = function
 
 and apply_to_mono subst = function
   | Type.Mono.Metavariable v ->
-    (match find subst v with
-    (* TODO: here we repeatedly substitute, since [subst] is not normalised *)
-    | Some t' -> apply_to_mono subst t'
+    (match lookup subst v with
+    | Some t' -> t'
     | None -> Type.Mono.Metavariable v)
   | Type.Mono.Primitive p -> Type.Mono.Primitive (apply_to_primitive subst p)
   | Type.Mono.Arrow (t_arg, t_result) ->

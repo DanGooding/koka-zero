@@ -1,7 +1,7 @@
 (* TODO: this isn't really a substitution anymore - more like a metavariable
    context *)
-(** a substitution maps metavariabes to monotypes, which may themselves contain
-    more metavariables *)
+(** a substitution maps type metavariables to monotypes, and effect
+    metavaraiables to effects, which may themselves contain more metavariables *)
 type t [@@deriving sexp]
 
 (** the empty substitution *)
@@ -30,10 +30,13 @@ val extend_many
     the metavariables already exist *)
 val extend_many_exn : t -> Type.Mono.t Type.Metavariable.Map.t -> t
 
-(** lookup a metavariable's type *)
-val find : t -> Type.Metavariable.t -> Type.Mono.t option
+(** Lookup a metavariable's type. Like [apply] this recursively replaces
+    metavariables in the result until the only unknown metavariables remain. If
+    the queried metavariable itself is unknown, then the result is None *)
+val lookup : t -> Type.Metavariable.t -> Type.Mono.t option
 
-(** replace all metavaraibes with their known types *)
+(** Replace all metavaraibes with their known types. Any unknown metavariables
+    will still be present in the result *)
 val apply : t -> Type.t -> Type.t
 
 val apply_to_mono : t -> Type.Mono.t -> Type.Mono.t
