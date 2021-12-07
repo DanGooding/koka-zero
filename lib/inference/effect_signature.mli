@@ -1,3 +1,5 @@
+open Core
+
 module Operation : sig
   type t =
     { argument_type : Type.Mono.t
@@ -17,6 +19,7 @@ val of_handler : Minimal_syntax.Expr.handler -> t
 
 module Context : sig
   type signature := t
+
   (** maps signatures to their effect labels *)
   type t [@@deriving sexp]
 

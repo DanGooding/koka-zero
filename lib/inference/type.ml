@@ -39,7 +39,7 @@ end
 module Mono = struct
   module T = struct
     type t =
-      | Arrow of t * t
+      | Arrow of t * Effect.t * t
       | Variable of Variable.t
       | Metavariable of Metavariable.t
       | Primitive of Primitive.t
