@@ -27,7 +27,7 @@ module Primitive : sig
     | Unit
   [@@deriving sexp]
 
-  val metavariables : t -> Metavariable.Set.t
+  val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 
   val instantiate_as
     :  t
@@ -48,7 +48,7 @@ module Mono : sig
     | Primitive of Primitive.t
   [@@deriving sexp]
 
-  val metavariables : t -> Metavariable.Set.t
+  val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 
   (** [instantiate_as t var_to_meta] replaces variables with metavariables as
       described by the map [var_to_meta] *)
@@ -68,7 +68,7 @@ module Poly : sig
     }
   [@@deriving sexp]
 
-  val metavariables : t -> Metavariable.Set.t
+  val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 end
 
 (* TODO: is [Type.t] redundant, or logically meaningful? *)
@@ -78,4 +78,4 @@ type t =
 [@@deriving sexp]
 
 (** find all the metavariables in this type *)
-val metavariables : t -> Metavariable.Set.t
+val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t

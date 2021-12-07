@@ -61,7 +61,7 @@ module Row : sig
     }
   [@@deriving sexp]
 
-  val empty : t
+  val total : t
   val extend : t -> Label.t -> t
   val is_open : t -> bool
 
@@ -70,6 +70,7 @@ module Row : sig
 
   val metavariables : t -> Metavariable.Set.t
   val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
+  val is_total : t -> bool option
 end
 
 type t =
@@ -80,3 +81,8 @@ type t =
 
 val metavariables : t -> Metavariable.Set.t
 val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
+
+(** returns whether an effect is definitely total [Some true], definitely not
+    [Some false], or could be unified into either [None]. "Total" means exactly
+    zero effects - i.e. the empty closed row *)
+val is_total : t -> bool option
