@@ -115,7 +115,7 @@ let fresh_effect_metavariable s =
 
 let lookup_meta a s =
   let { State.substitution; _ } = s in
-  let t = Substitution.find substitution a in
+  let t = Substitution.lookup substitution a in
   Result.Ok (t, s)
 ;;
 
