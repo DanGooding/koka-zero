@@ -69,6 +69,7 @@ module Row : sig
   (* val open : t -> varaible_source -> t *)
 
   val metavariables : t -> Metavariable.Set.t
+  val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
 end
 
 type t =
@@ -78,3 +79,4 @@ type t =
 [@@deriving sexp]
 
 val metavariables : t -> Metavariable.Set.t
+val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
