@@ -28,6 +28,7 @@ module Label : sig
     type label := t
     type t [@@deriving sexp]
 
+    val of_list : label list -> t
     val empty : t
     val add : t -> label -> t
     val union : t -> t -> t

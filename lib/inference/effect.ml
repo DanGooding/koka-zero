@@ -30,6 +30,7 @@ module Label = struct
     (* TODO: is this the right way to make a Label.Map? *)
     type t = int T.Map.t [@@deriving sexp]
 
+    let of_list xs = T.Map.of_alist_fold ~init:0 ~f:Int.( + ) xs
     let empty = T.Map.empty
 
     let add x xs =

@@ -8,6 +8,8 @@ module State = struct
               [unify] rather than ever propagating over a whole type *)
     ; variable_source : Type.Variable.Name_source.t
     ; metavariable_source : Type.Metavariable.Name_source.t
+    ; effect_variable_source : Effect.Variable.Name_source.t
+    ; effect_metavariable_source : Effect.Metavariable.Name_source.t
     }
   [@@deriving sexp]
 
@@ -15,78 +17,23 @@ module State = struct
     { substitution = Substitution.identity
     ; variable_source = Type.Variable.Name_source.fresh ~prefix:"$a" ()
     ; metavariable_source = Type.Metavariable.Name_source.fresh ~prefix:"$m" ()
+    ; effect_variable_source = Effect.Variable.Name_source.fresh ~prefix:"@e" ()
+    ; effect_metavariable_source =
+        Effect.Metavariable.Name_source.fresh ~prefix:"@m" ()
     }
   ;;
 end
 
 module T = struct
   (** a state monad to store the global substitution and the name source, plus
-      an exception monad for type errors *)
-  type 'a t = State.t -> ('a * State.t, Static_error.t) Result.t
+      an exception monad for type errors ;;
 
-  let bind m ~f s =
-    let%bind.Result x, s' = m s in
-    f x s'
-  ;;
-
-  let return x s = Result.Ok (x, s)
-
-  let map =
-    let map m ~f s =
-      let%map.Result x, s' = m s in
-      f x, s'
-    in
-    `Custom map
-  ;;
-end
-
-include T
-include Monad.Make (T)
-
-let sequence ts =
-  let open Let_syntax in
-  List.fold ts ~init:(return []) ~f:(fun acc t ->
-      (* TODO: un + re wrapping acc every time is inefficient *)
-      let%bind xs = acc in
-      let%map x = t in
-      x :: xs)
-;;
-
-let sequence_units ts =
-  let open Let_syntax in
-  let%map (_ : unit list) = sequence ts in
-  ()
-;;
-
-let sequence_map ts =
-  let open Let_syntax in
-  let cmp = Map.comparator_s ts in
-  Map.fold
-    ts
-    ~init:(return (Map.empty cmp))
-    ~f:(fun ~key ~data acc ->
-      let%bind m = acc in
-      let%map data = data in
-      Map.add_exn m ~key ~data)
-;;
-
-let sequence_map_units ts = Map.data ts |> sequence_units
-
-let fresh_variable s =
-  let { State.variable_source; _ } = s in
-  let name, variable_source =
-    Type.Variable.Name_source.next_name variable_source
+let fresh_effect_metavariable s =
+  let { State.effect_metavariable_source; _ } = s in
+  let name, effect_metavariable_source =
+    Effect.Metavariable.Name_source.next_name effect_metavariable_source
   in
-  let s = State.{ s with variable_source } in
-  Result.Ok (name, s)
-;;
-
-let fresh_metavariable s =
-  let { State.metavariable_source; _ } = s in
-  let name, metavariable_source =
-    Type.Metavariable.Name_source.next_name metavariable_source
-  in
-  let s = State.{ s with metavariable_source } in
+  let s = State.{ s with effect_metavariable_source } in
   Result.Ok (name, s)
 ;;
 
@@ -94,6 +41,12 @@ let lookup_meta a s =
   let { State.substitution; _ } = s in
   let t = Substitution.find substitution a in
   Result.Ok (t, s)
+;;
+
+let lookup_effect_meta a s =
+  let { State.effect_substitution; _ } = s in
+  let e = Effect_substitution.find effect_substitution a in
+  Result.Ok (e, s)
 ;;
 
 (** gives read access to the global substitution *)
@@ -333,6 +286,6 @@ let generalise ((t, e) : Type.Mono.t * Effect.t) ~in_:(env : Context.t)
 
 let run (f : 'a t) =
   let%map.Result x, s = f State.initial in
-  let State.{ substitution; _ } = s in
+  let State.{ substitution; effect_substitution; _ } = s in
   x, substitution
 ;;

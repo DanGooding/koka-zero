@@ -52,7 +52,7 @@ module Mono = struct
     | Metavariable v -> Metavariable.Set.singleton v
     | Variable _ -> Metavariable.Set.empty
     | Primitive p -> Primitive.metavariables p
-    | Arrow (t_arg, t_result) ->
+    | Arrow (t_arg, _, t_result) ->
       Set.union (metavariables t_arg) (metavariables t_result)
   ;;
 
@@ -63,9 +63,13 @@ module Mono = struct
       | Some m -> Metavariable m
       | None -> Variable v)
     | Metavariable m -> Metavariable m
-    | Arrow (t_arg, t_result) ->
+    | Arrow (t_arg, eff, t_result) ->
       Arrow
-        (instantiate_as t_arg var_to_meta, instantiate_as t_result var_to_meta)
+        ( instantiate_as t_arg var_to_meta
+          (* TODO: this isn't the right thing - would want
+             [effect_var_to_effect_meta] *)
+        , Effect.instantiate_as eff var_to_meta
+        , instantiate_as t_result var_to_meta )
     | Primitive p -> Primitive (Primitive.instantiate_as p var_to_meta)
   ;;
 end

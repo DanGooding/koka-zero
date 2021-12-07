@@ -89,3 +89,19 @@ module Expr = struct
   include T
   (* TODO: operators, handlers *)
 end
+
+module Effect_decl = struct
+  module Operation = struct
+    type t =
+      { argument : Type.Mono.t
+      ; result : Type.Mono.t
+      }
+    [@@deriving sexp]
+  end
+
+  type t =
+    { name : Effect.Label.t
+    ; operations : Operation.t Variable.Map.t
+    }
+  [@@deriving sexp]
+end
