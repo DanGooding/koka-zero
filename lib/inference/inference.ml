@@ -325,32 +325,47 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
 (* TODO: should this be in infer instead (doesn't need internal access)? *)
 
 (* TODO: should this return [Type.t], [Type.Poly.t] or fail for impure [e]? *)
-let generalise ((t, e) : Type.Mono.t * Effect.t) ~in_:(env : Context.t)
-    : (Type.t * Effect.t) t
+let generalise
+    : Type.Mono.t * Effect.t -> in_:Context.t -> (Type.t * Effect.t) t
   =
+ fun (t, e) ~in_:env ->
   let open Let_syntax in
   let%bind substitution = get_substitution in
   let t = Substitution.apply_to_mono substitution t in
   let e = Substitution.apply_to_effect substitution e in
-  (* can only generalise a pure term *)
-  (* TODO: here we should unify [e] with total if possible - but *not* fail when
-     that's impossible *)
-  if not (Effect.is_total e)
-     (* TODO: can technically generalise a pure term (<exn,div>), but then need
-        to keep those effects in the final effect [e'] *)
-  then Type.Mono t, e
-  else (
-    (* TODO: this should also include effect metavariables in arrow types *)
-    let t_meta, eff_meta1 = Type.Mono.metavariables t in
+  (* can only generalise a pure term - here we restrict to total for
+     simplicity. *)
+  match Effect.is_total e with
+  | Some false ->
+    (* TODO: can technically generalise a 'pure' term (<exn,div>), but then need
+       to keep those effects in the final effect [e'] *)
+    return (Type.Mono t, e)
+  | Some true | None ->
+    let%bind () = unify_effects e Effect.total in
+    (* TODO: is there a better pattern for this? it is easy to forget and use a
+       stale substitution *)
+    let%bind substitution = get_substitution in
+    let t_meta, t_effect_meta = Type.Mono.metavariables t in
+    (* [e] was unified with total - has no metavariables *)
     let env = Context.apply_substitution env substitution in
-    let env_meta = Context.metavariables env in
-    let meta = Set.diff (Set.union t_meta e_meta) env_meta in
+    let env_meta, env_effect_meta = Context.metavariables env in
+    (* entirely free metavariables *)
+    let meta = Set.diff t_meta env_meta in
+    let effect_meta = Set.diff t_effect_meta env_effect_meta in
     (* replace each of these metavariables with a fresh variable, and
        universally quanitfy over all those *)
+    (* TODO: factor out the similarity here? *)
     let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
       Set.to_map meta ~f:(fun _m -> fresh_variable) |> sequence_map
     in
     let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
+    let%bind (effect_meta_to_var : Effect.Variable.t Effect.Metavariable.Map.t) =
+      Set.to_map effect_meta ~f:(fun _m -> fresh_effect_variable)
+      |> sequence_map
+    in
+    let effect_meta_to_effect =
+      Map.map effect_meta_to_var ~f:(fun v -> Effect.Variable v)
+    in
     let%bind () =
       (* TODO: is applying this globally the right thing to do?
 
@@ -358,14 +373,23 @@ let generalise ((t, e) : Type.Mono.t * Effect.t) ~in_:(env : Context.t)
          to these metavariables. However, when backsubstituting, need to be
          careful *)
       map_substitution (fun substitution ->
-          Substitution.extend_many_exn substitution meta_to_mono)
+          (* TODO: labelled parameters would make this much nicer *)
+          let substitution =
+            Substitution.extend_many_exn substitution meta_to_mono
+          in
+          Substitution.extend_many_effect_exn substitution effect_meta_to_effect)
     in
     let%bind substitution = get_substitution in
+    (* actually relpace the free metavariables with variables *)
     let t = Substitution.apply_to_mono substitution t in
     let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
-    (* still total - so free to choose any effect *)
-    let%map e' = fresh_effect_metavariable in
-    Type.Poly.t { Type.Poly.forall_bound; monotype = t }, Effect.Metavariable e')
+    let forall_bound_effects =
+      Map.data effect_meta_to_var |> Effect.Variable.Set.of_list
+    in
+    let p =
+      Type.Poly.t { Type.Poly.forall_bound; forall_bound_effects; monotype = t }
+    in
+    with_any_effect p
 ;;
 
 let run (f : 'a t) =

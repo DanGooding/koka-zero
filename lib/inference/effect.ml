@@ -134,6 +134,8 @@ let instantiate_as ~var_to_meta = function
   | Row r -> Row.instantiate_as r ~var_to_meta
 ;;
 
+let total = Row Row.total
+
 let is_total = function
   | Variable _ | Metavariable _ -> None
   | Row r -> Row.is_total r
