@@ -14,4 +14,4 @@ val empty : t
 (* TODO: [Context.apply_substitution] is inconsistent with
    [Substitution.apply_to_mono] *)
 val apply_substitution : t -> Substitution.t -> t
-val metavariables : t -> Type.Metavariable.Set.t
+val metavariables : t -> Type.Metavariable.Set.t * Effect.Metavariable.Set.t

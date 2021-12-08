@@ -8,7 +8,9 @@ let empty = Minimal_syntax.Variable.Map.empty
 let apply_substitution t subst = Map.map t ~f:(Substitution.apply subst)
 
 let metavariables t =
-  Map.map t ~f:Type.metavariables
-  |> Map.data
-  |> Type.Metavariable.Set.union_list
+  let metavariable_sets, effect_metavariable_sets =
+    Map.map t ~f:Type.metavariables |> Map.data |> List.unzip
+  in
+  ( Type.Metavariable.Set.union_list metavariable_sets
+  , Effect.Metavariable.Set.union_list effect_metavariable_sets )
 ;;
