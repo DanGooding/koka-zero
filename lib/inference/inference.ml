@@ -185,7 +185,8 @@ let raise_for_unexpected_effect_variable a =
 ;;
 
 let occurs (v : Type.Metavariable.t) ~in_:(t : Type.Mono.t) =
-  Set.mem (Type.Mono.metavariables t) v
+  let meta, _effect_meta = Type.Mono.metavariables t in
+  Set.mem meta v
 ;;
 
 let unify_primitives p1 p2 =
@@ -231,7 +232,7 @@ and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
 ;;
 
 let occurs_effect (a : Effect.Metavariable.t) ~in_:(e : Effect.t) =
-  Set.mem (Effect.metavaraibles e) a
+  Set.mem (Effect.metavariables e) a
 ;;
 
 let rec unify_effects e1 e2 =
