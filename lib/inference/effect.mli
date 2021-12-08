@@ -86,6 +86,7 @@ val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
 val total : t
 
 (** returns whether an effect is definitely total [Some true], definitely not
-    [Some false], or could be unified into either [None]. "Total" means exactly
-    zero effects - i.e. the empty closed row *)
+    [Some false], or could be unified into either [None]. "Total" means having
+    exactly zero effects - i.e. the empty closed row. Note that this assumes any
+    metavariables are unknown. *)
 val is_total : t -> bool option

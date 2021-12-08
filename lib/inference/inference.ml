@@ -120,18 +120,19 @@ let lookup_meta a s =
 ;;
 
 let lookup_effect_meta a s =
-  let { State.effect_substitution; _ } = s in
-  let e = Effect_substitution.find effect_substitution a in
+  let { State.substitution; _ } = s in
+  let e = Substitution.find_effect substitution a in
   Result.Ok (e, s)
 ;;
 
-(** gives read access to the global substitution *)
-let get_substitution s =
+(** pass the current global substitution as an argument to a pure function *)
+let use_substitution : (Substitution.t -> 'a) -> 'a t =
+ fun f s ->
   let { State.substitution; _ } = s in
-  Result.Ok (substitution, s)
+  Result.Ok (f substitution, s)
 ;;
 
-(** apply a pure function to the global substitution *)
+(** modify the global substitution using a pure function *)
 let map_substitution (f : Substitution.t -> Substitution.t) s =
   let { State.substitution; _ } = s in
   let substitution = f substitution in
@@ -330,9 +331,10 @@ let generalise
   =
  fun (t, e) ~in_:env ->
   let open Let_syntax in
-  let%bind substitution = get_substitution in
-  let t = Substitution.apply_to_mono substitution t in
-  let e = Substitution.apply_to_effect substitution e in
+  let%bind e =
+    use_substitution (fun substitution ->
+        Substitution.apply_to_effect substitution e)
+  in
   (* can only generalise a pure term - here we restrict to total for
      simplicity. *)
   match Effect.is_total e with
@@ -341,13 +343,12 @@ let generalise
        to keep those effects in the final effect [e'] *)
     return (Type.Mono t, e)
   | Some true | None ->
+    (* [e] will unify with total *)
     let%bind () = unify_effects e Effect.total in
-    (* TODO: is there a better pattern for this? it is easy to forget and use a
-       stale substitution *)
-    let%bind substitution = get_substitution in
-    let t_meta, t_effect_meta = Type.Mono.metavariables t in
+    let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
+    let%bind env = use_substitution (Context.apply_substitution env) in
     (* [e] was unified with total - has no metavariables *)
-    let env = Context.apply_substitution env substitution in
+    let t_meta, t_effect_meta = Type.Mono.metavariables t in
     let env_meta, env_effect_meta = Context.metavariables env in
     (* entirely free metavariables *)
     let meta = Set.diff t_meta env_meta in
@@ -367,11 +368,6 @@ let generalise
       Map.map effect_meta_to_var ~f:(fun v -> Effect.Variable v)
     in
     let%bind () =
-      (* TODO: is applying this globally the right thing to do?
-
-         it is at least inefficient, we are about to replace the only references
-         to these metavariables. However, when backsubstituting, need to be
-         careful *)
       map_substitution (fun substitution ->
           (* TODO: labelled parameters would make this much nicer *)
           let substitution =
@@ -379,9 +375,8 @@ let generalise
           in
           Substitution.extend_many_effect_exn substitution effect_meta_to_effect)
     in
-    let%bind substitution = get_substitution in
-    (* actually relpace the free metavariables with variables *)
-    let t = Substitution.apply_to_mono substitution t in
+    (* actually replace the free metavariables with variables *)
+    let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
     let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
     let forall_bound_effects =
       Map.data effect_meta_to_var |> Effect.Variable.Set.of_list
@@ -394,6 +389,6 @@ let generalise
 
 let run (f : 'a t) =
   let%map.Result x, s = f State.initial in
-  let State.{ substitution; effect_substitution; _ } = s in
+  let State.{ substitution; _ } = s in
   x, substitution
 ;;
