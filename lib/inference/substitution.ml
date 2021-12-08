@@ -28,18 +28,23 @@ let extend_many_exn t vars =
       [%message "Substitution.extend_many_exn: found duplicate metavariable"]
 ;;
 
-let rec lookup subst var =
-  match Map.find subst var with
-  | None -> None
-  (* TODO: here we repeatedly substitute, since [subst] is not normalised *)
-  | Some t -> apply subst t
+let lookup_effect subst (var : Effect.Metavariable.t) =
+  failwith "not implemented"
+;;
+
+let apply_to_effect subst effect = failwith "not implemented"
+let apply_to_effect_row subst row = failwith "not implemented"
+
+let rec lookup subst (var : Type.Metavariable.t) =
+  (* here we repeatedly substitute, since [subst] is not normalised *)
+  Map.find subst var |> Option.map ~f:(apply_to_mono subst)
 
 and apply subst = function
   | Type.Mono t -> Type.Mono (apply_to_mono subst t)
   | Type.Poly p ->
-    let { Type.Poly.forall_bound; monotype } = p in
+    let { Type.Poly.forall_bound; forall_bound_effects; monotype } = p in
     let monotype = apply_to_mono subst monotype in
-    Type.Poly { Type.Poly.forall_bound; monotype }
+    Type.Poly { Type.Poly.forall_bound; forall_bound_effects; monotype }
 
 and apply_to_mono subst = function
   | Type.Mono.Metavariable v ->
@@ -47,8 +52,11 @@ and apply_to_mono subst = function
     | Some t' -> t'
     | None -> Type.Mono.Metavariable v)
   | Type.Mono.Primitive p -> Type.Mono.Primitive (apply_to_primitive subst p)
-  | Type.Mono.Arrow (t_arg, t_result) ->
-    Type.Mono.Arrow (apply_to_mono subst t_arg, apply_to_mono subst t_result)
+  | Type.Mono.Arrow (t_arg, e, t_result) ->
+    Type.Mono.Arrow
+      ( apply_to_mono subst t_arg
+      , apply_to_effect subst e
+      , apply_to_mono subst t_result )
   | Type.Mono.Variable v -> Type.Mono.Variable v
 
 and apply_to_primitive _subst = function

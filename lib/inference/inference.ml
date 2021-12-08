@@ -147,6 +147,14 @@ let substitute_meta_exn ~var ~type_ =
       | `Ok substitution -> substitution)
 ;;
 
+let substitute_effect_meta_exn ~var ~effect =
+  map_substitution (fun substitution ->
+      match Substitution.extend_effect substitution ~var ~effect with
+      | `Duplicate ->
+        raise_s [%message "effect metavariable already has a type"]
+      | `Ok substitution -> substitution)
+;;
+
 let with_any_effect t =
   let open Let_syntax in
   let%map v = fresh_effect_metavariable in
@@ -245,11 +253,15 @@ let rec unify_effects e1 e2 =
 
 and unify_effect_rows r1 r2 =
   let open Let_syntax in
-  let r1 = Substitution.apply_to_effect r1 in
-  let r2 = Substitution.apply_to_effect r2 in
+  let%bind r1 =
+    use_substitution (fun s -> Substitution.apply_to_effect_row s r1)
+  in
+  let%bind r2 =
+    use_substitution (fun s -> Substitution.apply_to_effect_row s r2)
+  in
   let { Effect.Row.labels = labels1; tail = tail1 } = r1 in
   let { Effect.Row.labels = labels2; tail = tail2 } = r2 in
-  let common_labels = Effect.Label.Multiset.inter r1 r2 in
+  let common_labels = Effect.Label.Multiset.inter labels1 labels2 in
   let labels1 = Effect.Label.Multiset.diff labels1 common_labels in
   let labels2 = Effect.Label.Multiset.diff labels2 common_labels in
   (* construct the effects for error output and further unification, but pattern
@@ -282,7 +294,7 @@ and unify_effect_rows r1 r2 =
   (* <ls|meta> ~ <ls'|meta'> *)
   | (false, Some a1), (false, Some a2) ->
     let%bind b = fresh_effect_metavariable in
-    let tail = Some b in
+    let tail = Some (Effect.Row.Tail.Metavariable b) in
     let r1' = { Effect.Row.labels = labels2; tail } in
     let r2' = { Effect.Row.labels = labels1; tail } in
     (* their unification is <labels1+labels2|b> *)
@@ -308,7 +320,7 @@ and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t 
     | Effect.Row _ | Effect.Variable _ ->
       if occurs_effect a ~in_:e2
       then unification_error_effect (Effect.Metavariable a) e2
-      else substitute_effect_meta_exn ~var:a ~effect:t2)
+      else substitute_effect_meta_exn ~var:a ~effect:e2)
 ;;
 
 let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
@@ -383,7 +395,7 @@ let generalise
       Map.data effect_meta_to_var |> Effect.Variable.Set.of_list
     in
     let p =
-      Type.Poly.t { Type.Poly.forall_bound; forall_bound_effects; monotype = t }
+      Type.Poly { Type.Poly.forall_bound; forall_bound_effects; monotype = t }
     in
     with_any_effect p
 ;;
