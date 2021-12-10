@@ -49,7 +49,11 @@ val unification_error : Type.t -> Type.t -> 'a t
 val unification_error_mono : Type.Mono.t -> Type.Mono.t -> 'a t
 val unification_error_effect : Effect.t -> Effect.t -> 'a t
 val unification_error_effect_row : Effect.Row.t -> Effect.Row.t -> 'a t
+
+(** make two types equal if possible (by updating the metavariable substitution)
+    or otherwise fail with a type error *)
 val unify : Type.Mono.t -> Type.Mono.t -> unit t
+
 val unify_effects : Effect.t -> Effect.t -> unit t
 val instantiate : Type.Poly.t -> Type.Mono.t t
 
