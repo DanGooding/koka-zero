@@ -84,6 +84,7 @@ module Poly = struct
   type t =
     { (* TODO: make these private *)
       forall_bound : Variable.Set.t
+    ; forall_bound_effects : Effect.Variable.Set.t
     ; monotype : Mono.t
     }
   [@@deriving sexp]
