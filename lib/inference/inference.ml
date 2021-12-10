@@ -121,7 +121,7 @@ let lookup_meta a s =
 
 let lookup_effect_meta a s =
   let { State.substitution; _ } = s in
-  let e = Substitution.find_effect substitution a in
+  let e = Substitution.lookup_effect substitution a in
   Result.Ok (e, s)
 ;;
 
