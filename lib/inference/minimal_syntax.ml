@@ -67,7 +67,10 @@ module Operator = struct
 end
 
 module Variable : Identifiable.S = String
-(* TODO: work out identifier/var_id/wildcard etc.*)
+
+module Keyword = struct
+  let resume = Variable.of_string "resume"
+end
 
 module Expr = struct
   module T = struct
@@ -83,6 +86,21 @@ module Expr = struct
       | If_then_else of t * t * t
       | Operator of t * Operator.t * t
       | Unary_operator of Operator.Unary.t * t
+      | Handle of handler * t
+    [@@deriving sexp]
+
+    and handler =
+      { operations : op_handler Variable.Map.t
+      ; return_clause : op_handler option
+      }
+    [@@deriving sexp]
+
+    and op_handler =
+      { op_argument : Variable.t
+            (* TODO: extend to multiple args (requires checking against
+               declaration) *)
+      ; op_body : t
+      }
     [@@deriving sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
