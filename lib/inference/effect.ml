@@ -59,6 +59,7 @@ module Row = struct
     { labels; tail }
   ;;
 
+  let closed_singleton l = extend total l
   let is_open { tail; _ } = Option.is_some tail
 
   let metavariables { tail; _ } =
