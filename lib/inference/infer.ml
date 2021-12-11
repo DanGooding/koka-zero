@@ -173,7 +173,7 @@ let rec infer
             ~t_handler_result
             ~name
             handler)
-      |> Inference.sequence_map_unit
+      |> Inference.sequence_map_units
     in
     t_handler_result, eff_rest
 
