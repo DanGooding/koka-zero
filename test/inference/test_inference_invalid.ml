@@ -11,7 +11,7 @@ let%expect_test "occurs check rejects omega combinator" =
           ( E.Variable (M.Variable.of_string "x")
           , E.Variable (M.Variable.of_string "x") ) )
   in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect
     {|
     (Error
@@ -33,8 +33,9 @@ let%expect_test "if statement's branches must have the same type" =
       , E.Literal (M.Literal.Int 1)
       , E.Literal M.Literal.Unit )
   in
-  Util.print_inference_result expr;
-  [%expect {|
+  Util.print_expr_inference_result expr;
+  [%expect
+    {|
     (Error
      ((kind Type_error) (message  "cannot unify\
                                  \nInt\
