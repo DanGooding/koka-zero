@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 
 module Variable = struct
   module T = struct
@@ -23,49 +24,8 @@ module Metavariable = struct
 end
 
 module Label = struct
-  module Label = String
-
-  module Multiset = struct
-    (* invariant: if a label is present, then it has count >= 1 *)
-    type t = int Label.Map.t [@@deriving sexp]
-
-    (* TODO: [Label.Map.whatever] shouldn't be necessary, but here [Map] seems
-       to refer to the parent module's map, giving confusing type errors *)
-
-    (** restore the invariant that only items 'in' the multiset are keys in the
-        map *)
-    let remove_zeros xs = Label.Map.filter xs ~f:(fun n -> n > 0)
-
-    let of_list xs =
-      List.map xs ~f:(fun x -> x, 1) |> Label.Map.of_alist_reduce ~f:Int.( + )
-    ;;
-
-    let empty = Label.Map.empty
-
-    let add xs x =
-      Label.Map.update xs x ~f:(fun n -> Option.value ~default:0 n + 1)
-    ;;
-
-    let union xs ys =
-      Map.merge xs ys ~f:(fun ~key:_ data ->
-          match data with
-          | `Left n | `Right n -> Some n
-          | `Both (m, n) -> Some (m + n))
-    ;;
-
-    let diff xs ys =
-      Map.mapi xs ~f:(fun ~key:label ~data:nx ->
-          let ny = Label.Map.find ys label |> Option.value ~default:0 in
-          max (nx - ny) 0)
-      |> remove_zeros
-    ;;
-
-    let is_empty xs = Label.Map.is_empty xs
-  end
-
-  (* TODO: putting this before [Multiset] gives weird type errors when using map
-     methods *)
-  include Label
+  module T = String
+  include Multiset.Make (T)
 end
 
 module Row = struct
