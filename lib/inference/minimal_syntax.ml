@@ -105,7 +105,6 @@ module Expr = struct
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
-  (* TODO: operators, handlers *)
 end
 
 module Effect_decl = struct

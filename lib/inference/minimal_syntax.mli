@@ -42,9 +42,9 @@ module Operator : sig
   [@@deriving sexp]
 end
 
+(* TODO: work out identifier/var_id/wildcard etc.*)
 module Variable : Identifiable.S
 
-(* TODO: work out identifier/var_id/wildcard etc.*)
 module Keyword : sig
   (* TODO: ensure resume is not used in a first-class way *)
   val resume : Variable.t
@@ -66,12 +66,14 @@ module Expr : sig
     | Handle of handler * t
   [@@deriving sexp]
 
+  (** an effect handler *)
   and handler =
     { operations : op_handler Variable.Map.t
     ; return_clause : op_handler option
     }
   [@@deriving sexp]
 
+  (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
     { op_argument : Variable.t
           (* TODO: extend to multiple args (requires checking against

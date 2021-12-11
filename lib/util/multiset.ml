@@ -29,7 +29,7 @@ struct
     let empty = Element.Map.empty
 
     let add xs x =
-      Element.Map.update xs x ~f:(fun n -> Option.value ~default:0 n + 1)
+      Element.Map.update xs x ~f:(fun n -> Option.value n ~default:0 + 1)
     ;;
 
     let union xs ys =

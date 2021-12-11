@@ -59,9 +59,9 @@ module Row = struct
   ;;
 
   let extend t l =
-    let { labels; tail } = t in
+    let { labels; _ } = t in
     let labels = Label.Multiset.add labels l in
-    { labels; tail }
+    { t with labels }
   ;;
 
   let closed_singleton l = extend total l
