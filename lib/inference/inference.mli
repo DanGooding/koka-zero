@@ -26,7 +26,7 @@ val sequence_map : ('a, 'b t, 'cmp) Map.t -> ('a, 'b, 'cmp) Map.t t
 
 (** a more efficient form of [sequence_map] for when the computations only have
     side effects and don't produce values *)
-val sequence_map_unit : ('a, unit t, 'cmp) Map.t -> unit t
+val sequence_map_units : ('a, unit t, 'cmp) Map.t -> unit t
 
 val fresh_variable : Type.Variable.t t
 val fresh_metavariable : Type.Metavariable.t t

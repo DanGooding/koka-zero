@@ -192,53 +192,6 @@ let raise_for_unexpected_effect_variable a =
       "effect variable encountered in unification" (a : Effect.Variable.t)]
 ;;
 
-let occurs (v : Type.Metavariable.t) ~in_:(t : Type.Mono.t) =
-  let meta, _effect_meta = Type.Mono.metavariables t in
-  Set.mem meta v
-;;
-
-let unify_primitives p1 p2 =
-  let open Type.Primitive in
-  match p1, p2 with
-  | Int, Int | Bool, Bool | Unit, Unit -> return ()
-  | (Int | Bool | Unit), _ -> unification_error_primitive p1 p2
-;;
-
-let rec unify t1 t2 =
-  let open Let_syntax in
-  match t1, t2 with
-  | Type.Mono.Variable a, _ | _, Type.Mono.Variable a ->
-    raise_for_unexpected_variable a
-  | Type.Mono.Metavariable a, _ -> unify_with_meta a t2
-  | _, Type.Mono.Metavariable b -> unify_with_meta b t1
-  | Type.Mono.Arrow (t1_arg, t1_result), Type.Mono.Arrow (t2_arg, t2_result) ->
-    let%bind () = unify t1_arg t2_arg in
-    unify t1_result t2_result
-  | Type.Mono.Primitive p1, Type.Mono.Primitive p2 -> unify_primitives p1 p2
-  | Type.Mono.(Arrow (_, _) | Primitive _), _ -> unification_error_mono t1 t2
-
-and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
-  let open Let_syntax in
-  match%bind lookup_meta a with
-  | Some ta -> unify ta t2
-  | None ->
-    (* [a] has not been substitued for yet... *)
-    (match t2 with
-    | Type.Mono.Variable a -> raise_for_unexpected_variable a
-    | Type.Mono.Metavariable b ->
-      if Type.Metavariable.(a = b)
-      then return ()
-      else (
-        match%bind lookup_meta b with
-        (* [b] has been substituted for, unify with that *)
-        | Some tb -> unify_with_meta a tb
-        | None -> substitute_meta_exn ~var:a ~type_:(Type.Mono.Metavariable b))
-    | Type.Mono.(Arrow (_, _) | Primitive _) ->
-      if occurs a ~in_:t2
-      then unification_error_mono (Type.Mono.Metavariable a) t2
-      else substitute_meta_exn ~var:a ~type_:t2)
-;;
-
 let occurs_effect (a : Effect.Metavariable.t) ~in_:(e : Effect.t) =
   Set.mem (Effect.metavariables e) a
 ;;
@@ -323,6 +276,55 @@ and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t 
       else substitute_effect_meta_exn ~var:a ~effect:e2)
 ;;
 
+let occurs (v : Type.Metavariable.t) ~in_:(t : Type.Mono.t) =
+  let meta, _effect_meta = Type.Mono.metavariables t in
+  Set.mem meta v
+;;
+
+let unify_primitives p1 p2 =
+  let open Type.Primitive in
+  match p1, p2 with
+  | Int, Int | Bool, Bool | Unit, Unit -> return ()
+  | (Int | Bool | Unit), _ -> unification_error_primitive p1 p2
+;;
+
+let rec unify t1 t2 =
+  let open Let_syntax in
+  match t1, t2 with
+  | Type.Mono.Variable a, _ | _, Type.Mono.Variable a ->
+    raise_for_unexpected_variable a
+  | Type.Mono.Metavariable a, _ -> unify_with_meta a t2
+  | _, Type.Mono.Metavariable b -> unify_with_meta b t1
+  | ( Type.Mono.Arrow (t1_arg, eff1, t1_result)
+    , Type.Mono.Arrow (t2_arg, eff2, t2_result) ) ->
+    let%bind () = unify t1_arg t2_arg in
+    let%bind () = unify_effects eff1 eff2 in
+    unify t1_result t2_result
+  | Type.Mono.Primitive p1, Type.Mono.Primitive p2 -> unify_primitives p1 p2
+  | Type.Mono.(Arrow (_, _, _) | Primitive _), _ -> unification_error_mono t1 t2
+
+and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
+  let open Let_syntax in
+  match%bind lookup_meta a with
+  | Some ta -> unify ta t2
+  | None ->
+    (* [a] has not been substitued for yet... *)
+    (match t2 with
+    | Type.Mono.Variable a -> raise_for_unexpected_variable a
+    | Type.Mono.Metavariable b ->
+      if Type.Metavariable.(a = b)
+      then return ()
+      else (
+        match%bind lookup_meta b with
+        (* [b] has been substituted for, unify with that *)
+        | Some tb -> unify_with_meta a tb
+        | None -> substitute_meta_exn ~var:a ~type_:(Type.Mono.Metavariable b))
+    | Type.Mono.(Arrow (_, _, _) | Primitive _) ->
+      if occurs a ~in_:t2
+      then unification_error_mono (Type.Mono.Metavariable a) t2
+      else substitute_meta_exn ~var:a ~type_:t2)
+;;
+
 let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
   let open Let_syntax in
   let { Type.Poly.forall_bound; forall_bound_effects; monotype } = poly in
@@ -337,8 +339,6 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
 ;;
 
 (* TODO: should this be in infer instead (doesn't need internal access)? *)
-
-(* TODO: should this return [Type.t], [Type.Poly.t] or fail for impure [e]? *)
 let generalise
     : Type.Mono.t * Effect.t -> in_:Context.t -> (Type.t * Effect.t) t
   =
