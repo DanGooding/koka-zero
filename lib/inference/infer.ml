@@ -47,6 +47,7 @@ let lookup_effect_label_for_handler
     Inference.type_error message
 ;;
 
+(* TODO: perhaps a reader monad for environment? *)
 (** attempt to add a binding to the environment, giving a type error if [var] is
     not shadowable *)
 let add_binding
@@ -269,7 +270,7 @@ let infer_program : Program.t -> (Type.Mono.t * Effect.t) Inference.t =
             let { Effect_decl.Operation.argument; result } = op in
             let eff = Effect.closed_singleton label in
             let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, result)) in
-            match Context.extend env ~shadowable:false ~var:op_name ~type_ with
+            match Context.extend_unshadowable env ~var:op_name ~type_ with
             | Some env' -> return env'
             | None ->
               let message =

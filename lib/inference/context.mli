@@ -4,9 +4,12 @@ type t [@@deriving sexp]
 
 (** add a new variable to the context, or shadow an existing one. This returns
     [None] if [var] is not shadowable *)
-val extend
-  :  ?shadowable:bool
-  -> t
+val extend : t -> var:Minimal_syntax.Variable.t -> type_:Type.t -> t option
+
+(** add a new variable, which cannot be shadowed later, to the context. This
+    returns [None] if [var] is already present *)
+val extend_unshadowable
+  :  t
   -> var:Minimal_syntax.Variable.t
   -> type_:Type.t
   -> t option
