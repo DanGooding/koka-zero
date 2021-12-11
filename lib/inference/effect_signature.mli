@@ -15,7 +15,7 @@ type t [@@deriving sexp]
 
 include Comparable.S_plain with type t := t
 
-val of_handler : Minimal_syntax.Expr.handler -> t
+val t_of_handler : Minimal_syntax.Expr.handler -> t
 
 module Context : sig
   type signature := t
@@ -25,5 +25,6 @@ module Context : sig
 
   val empty : t
   val extend : t -> label:Effect.Label.t -> signature:signature -> t
+  val extend_decl : t -> Minimal_syntax.Effect_decl.t -> t
   val find : t -> signature -> Effect.Label.t option
 end
