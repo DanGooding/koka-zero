@@ -33,6 +33,9 @@ module Row : sig
       | Variable of Variable.t
       | Metavariable of Metavariable.t
     [@@deriving sexp]
+
+    val metavariables : t -> Metavariable.Set.t
+    val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
   end
 
   (** An effect row - a multiset of labels, possibly with a variable in the tail *)
