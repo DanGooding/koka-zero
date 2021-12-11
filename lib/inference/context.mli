@@ -2,8 +2,14 @@
     [Type.t]s *)
 type t [@@deriving sexp]
 
-(** add a new variaable to the context, or shadow an existing one *)
-val extend : t -> var:Minimal_syntax.Variable.t -> type_:Type.t -> t
+(** add a new variable to the context, or shadow an existing one. This returns
+    [None] if [var] is not shadowable *)
+val extend
+  :  ?shadowable:bool
+  -> t
+  -> var:Minimal_syntax.Variable.t
+  -> type_:Type.t
+  -> t option
 
 (** lookup a variable's type in the context *)
 val find : t -> Minimal_syntax.Variable.t -> Type.t option

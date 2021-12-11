@@ -43,6 +43,7 @@ module Row : sig
   [@@deriving sexp]
 
   val total : t
+  val closed_singleton : Label.t -> t
   val extend : t -> Label.t -> t
   val is_open : t -> bool
 

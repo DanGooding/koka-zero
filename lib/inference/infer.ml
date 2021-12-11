@@ -47,6 +47,20 @@ let lookup_effect_label_for_handler
     Inference.type_error message
 ;;
 
+(** attempt to add a binding to the environment, giving a type error if [var] is
+    not shadowable *)
+let add_binding
+    : env:Context.t -> var:Variable.t -> type_:Type.t -> Context.t Inference.t
+  =
+ fun ~env ~var ~type_ ->
+  let open Inference.Let_syntax in
+  match Context.extend env ~var ~type_ with
+  | Some env' -> return env'
+  | None ->
+    let message = sprintf "cannot shadow '%s'" (Variable.to_string var) in
+    Inference.type_error message
+;;
+
 let rec infer
     :  env:Context.t -> effect_env:Effect_signature.Context.t -> Expr.t
     -> (Type.Mono.t * Effect.t) Inference.t
@@ -93,14 +107,14 @@ let rec infer
   | Expr.Lambda (x, expr_body) ->
     let%bind t_x = Inference.fresh_metavariable in
     let t_x = Type.Mono.Metavariable t_x in
-    let env' = Context.extend env ~var:x ~type_:(Type.Mono t_x) in
+    let%bind env' = add_binding ~env ~var:x ~type_:(Type.Mono t_x) in
     let%bind t_body, eff_body = infer ~env:env' ~effect_env expr_body in
     let t = Type.Mono.Arrow (t_x, eff_body, t_body) in
     Inference.with_any_effect t
   | Expr.Fix (x, e) ->
     let%bind t_x = Inference.fresh_metavariable in
     let t_x = Type.Mono.Metavariable t_x in
-    let env' = Context.extend env ~var:x ~type_:(Type.Mono t_x) in
+    let%bind env' = add_binding ~env ~var:x ~type_:(Type.Mono t_x) in
     let%bind t_e, eff_e = infer ~env:env' ~effect_env e in
     let%map () = Inference.unify t_x t_e in
     (* TODO: if tracking divergence: unify eff_e with <div|fresh> *)
@@ -111,7 +125,7 @@ let rec infer
     let%bind (t_subject : Type.t), eff_subject =
       Inference.generalise (t_subject, eff_subject) ~in_:env
     in
-    let env' = Context.extend env ~var:x ~type_:t_subject in
+    let%bind env' = add_binding ~env ~var:x ~type_:t_subject in
     let%bind t_body, eff_body = infer ~env:env' ~effect_env expr_body in
     (* this is needed since we mustn't hide any of [expr_subject]'s effects (if
        it happens to be non total) *)
@@ -206,7 +220,10 @@ and infer_operation
   in
   let env_with_resume =
     (* TODO: need to prevent escape of non first-class resume *)
-    Context.extend env ~var:Keyword.resume ~type_:t_resume
+    match Context.extend env ~var:Keyword.resume ~type_:t_resume with
+    | Some env -> env
+    | None ->
+      raise_s [%message "`resume` must be shadowable - can nest handlers"]
   in
   infer_operation_clause
     ~eff_rest
@@ -237,17 +254,46 @@ and infer_operation_clause
   Inference.unify_effects eff_result eff_rest
 ;;
 
-let infer_type { Program.effect_declarations; body } =
+let infer_program : Program.t -> (Type.Mono.t * Effect.t) Inference.t =
+ fun { Program.effect_declarations; body } ->
+  let open Inference.Let_syntax in
+  let%bind env =
+    (* add all operation names to the context *)
+    List.fold
+      effect_declarations
+      ~init:(return Context.empty)
+      ~f:(fun env declaration ->
+        let { Effect_decl.name = label; operations } = declaration in
+        Map.fold operations ~init:env ~f:(fun ~key:op_name ~data:op env ->
+            let%bind env = env in
+            let { Effect_decl.Operation.argument; result } = op in
+            let eff = Effect.closed_singleton label in
+            let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, result)) in
+            match Context.extend env ~shadowable:false ~var:op_name ~type_ with
+            | Some env' -> return env'
+            | None ->
+              let message =
+                sprintf
+                  "operation names must be unique: '%s' is reused"
+                  (Variable.to_string op_name)
+              in
+              Inference.type_error message))
+  in
   let effect_env =
     List.fold
-      declarations
+      effect_declarations
       ~init:Effect_signature.Context.empty
       ~f:Effect_signature.Context.extend_decl
   in
+  infer ~env ~effect_env body
+;;
+
+let infer_type program =
   let%map.Result (t, eff), substitution =
-    Inference.run (infer ~env:Context.empty ~effect_env body)
+    Inference.run (infer_program program)
   in
   (* TODO: convert to a type without metavariables (not possible for [Expr]s
      without generalising here, but should/will be) *)
-  Substitution.apply_to_mono substitution t, Substitution.apply_to_effect eff
+  ( Substitution.apply_to_mono substitution t
+  , Substitution.apply_to_effect substitution eff )
 ;;
