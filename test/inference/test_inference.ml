@@ -35,7 +35,8 @@ let%expect_test "fix combinator allows recursion" =
               , E.Variable (M.Variable.of_string "x") ) ) )
   in
   Util.print_expr_inference_result expr;
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((Arrow (Metavariable $m2) (Metavariable @m2) (Metavariable $m4))
       (Metavariable @m4))) |}]
