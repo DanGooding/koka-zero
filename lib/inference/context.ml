@@ -16,14 +16,21 @@ let can_bind t var =
   | None -> true
 ;;
 
-let extend t ?(shadowable = true) ~var ~type_ =
+let extend t ~var ~type_ =
   (* TODO: requiring two map lookups to do this is probably unnecessary *)
   if can_bind t var
-  then
-    Some
-      (let new_entry = { Entry.shadowable; type_ } in
-       Map.set t ~key:var ~data:new_entry)
+  then (
+    let entry = { Entry.shadowable = true; type_ } in
+    Some (Map.set t ~key:var ~data:entry))
   else None
+;;
+
+let extend_unshadowable t ~var ~type_ =
+  if Map.mem t var
+  then None
+  else (
+    let entry = { Entry.shadowable = false; type_ } in
+    Some (Map.set t ~key:var ~data:entry))
 ;;
 
 let find t var =
