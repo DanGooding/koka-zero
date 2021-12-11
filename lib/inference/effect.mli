@@ -3,7 +3,7 @@ open Koka_zero_util
 
 module Variable : sig
   (** a variable standing for an effect, either free, or quantified in a
-      [Type.Poly.t]*)
+      [Type.Poly.t] *)
   type t
 
   include Identifiable.S with type t := t

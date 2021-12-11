@@ -2,7 +2,7 @@ open Core
 open Koka_zero_util
 
 module Name : sig
-  type t
+  type t [@@deriving sexp_of]
 
   val t_of_string : string -> t
 
@@ -21,10 +21,13 @@ let print_multiset names =
   Name.Multiset.sexp_of_t names |> Sexp.to_string_hum |> print_endline
 ;;
 
-let%expect_test "can build from list" =
+let%expect_test "can convert to and from list" =
   let names = of_strings [ "a"; "b"; "c"; "c"; "a"; "e"; "f"; "f"; "f" ] in
   print_multiset names;
-  [%expect {| ((a 2) (b 1) (c 2) (e 1) (f 3)) |}]
+  [%expect {| ((a 2) (b 1) (c 2) (e 1) (f 3)) |}];
+  let names = Name.Multiset.to_list names in
+  [%sexp (names : Name.t list)] |> Sexp.to_string_hum |> print_endline;
+  [%expect {| (f f f e c c b a a) |}]
 ;;
 
 let%expect_test "set operations work correctly" =
