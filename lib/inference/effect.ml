@@ -38,6 +38,20 @@ module Row = struct
     end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
     include T
+
+    let metavariables = function
+      | Metavariable v -> Metavariable.Set.singleton v
+      | Variable _ -> Metavariable.Set.empty
+    ;;
+
+    let instantiate_as t ~var_to_meta =
+      match t with
+      | Metavariable v -> Metavariable v
+      | Variable v ->
+        (match Map.find var_to_meta v with
+        | Some m -> Metavariable m
+        | None -> Variable v)
+    ;;
   end
 
   (** An effect row - a multiset of labels, possibly with a variable in the tail *)
@@ -64,17 +78,14 @@ module Row = struct
 
   let metavariables { tail; _ } =
     match tail with
-    | Some (Tail.Metavariable v) -> Metavariable.Set.singleton v
-    | Some (Tail.Variable _) | None -> Metavariable.Set.empty
+    | Some tail -> Tail.metavariables tail
+    | None -> Metavariable.Set.empty
   ;;
 
-  let instantiate_as { tail; _ } ~var_to_meta =
-    let open Option.Let_syntax in
-    match%bind tail with
-    | Tail.Variable v ->
-      let%map m = Map.find var_to_meta v in
-      Tail.Metavariable m
-    | Tail.Metavariable v -> Some (Tail.Metavariable v)
+  let instantiate_as row ~var_to_meta =
+    let { tail; _ } = row in
+    let tail = Option.map tail ~f:(Tail.instantiate_as ~var_to_meta) in
+    { row with tail }
   ;;
 
   let is_total { labels; tail } =
@@ -109,7 +120,7 @@ let instantiate_as ~var_to_meta = function
     | Some m -> Metavariable m
     | None -> Variable v)
   | Metavariable a -> Metavariable a
-  | Row r -> Row.instantiate_as r ~var_to_meta
+  | Row r -> Row (Row.instantiate_as r ~var_to_meta)
 ;;
 
 let total = Row Row.total
