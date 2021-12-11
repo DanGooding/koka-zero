@@ -24,7 +24,8 @@ module Metavariable = struct
 end
 
 module Label = struct
-  module T = String
+  module T : Identifiable.S = String
+  include T
   include Multiset.Make (T)
 end
 
