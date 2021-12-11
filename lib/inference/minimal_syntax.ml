@@ -126,7 +126,7 @@ end
 
 module Program = struct
   type t =
-    { declarations : Effect_decl.t list
+    { effect_declarations : Effect_decl.t list
     ; body : Expr.t
     }
   [@@deriving sexp]
