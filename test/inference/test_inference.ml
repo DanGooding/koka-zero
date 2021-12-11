@@ -16,7 +16,7 @@ let%expect_test "identity gets polymorphic type" =
           (M.Variable.of_string "z", E.Variable (M.Variable.of_string "z"))
       , E.Application (E.Application (id, id), E.Literal M.Literal.Unit) )
   in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect {| (Ok (Primitive Unit)) |}]
 ;;
 
@@ -34,25 +34,25 @@ let%expect_test "fix combinator allows recursion" =
               ( E.Variable (M.Variable.of_string "f")
               , E.Variable (M.Variable.of_string "x") ) ) )
   in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect {| (Ok (Arrow (Metavariable $m2) (Metavariable $m4))) |}]
 ;;
 
 let%expect_test "literal unit" =
   let expr = E.Literal M.Literal.Unit in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect {| (Ok (Primitive Unit)) |}]
 ;;
 
 let%expect_test "literal bool" =
   let expr = E.Literal (M.Literal.Bool true) in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect {| (Ok (Primitive Bool)) |}]
 ;;
 
 let%expect_test "literal int" =
   let expr = E.Literal (M.Literal.Int 1) in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect {| (Ok (Primitive Int)) |}]
 ;;
 
@@ -74,7 +74,7 @@ let%expect_test "int operators" =
                   , oi M.Operator.Int.Divide
                   , E.Operator (i 5, oi M.Operator.Int.Modulo, i 7) ) ) ) )
   in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect {| (Ok (Primitive Int)) |}]
 ;;
 
@@ -91,6 +91,6 @@ let%expect_test "comparsion operators" =
       , ob M.Operator.Bool.Or
       , E.Operator (i 3, oi M.Operator.Int.Equals, i 5) )
   in
-  Util.print_inference_result expr;
+  Util.print_expr_inference_result expr;
   [%expect {| (Ok (Primitive Bool)) |}]
 ;;
