@@ -10,7 +10,7 @@ struct
   module Multiset = struct
     module Element = Element
 
-    (* invariant: if a label is present, then it has count >= 1 *)
+    (* invariant: all entries have value (count) >= 1 *)
     type t = int Element.Map.t [@@deriving sexp]
 
     (** restore the invariant that only items 'in' the multiset are keys in the
@@ -47,8 +47,8 @@ struct
     ;;
 
     let diff xs ys =
-      Map.mapi xs ~f:(fun ~key:label ~data:nx ->
-          let ny = Element.Map.find ys label |> Option.value ~default:0 in
+      Map.mapi xs ~f:(fun ~key:element ~data:nx ->
+          let ny = Element.Map.find ys element |> Option.value ~default:0 in
           max (nx - ny) 0)
       |> remove_zeros
     ;;
