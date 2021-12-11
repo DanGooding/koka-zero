@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 
 module Variable : sig
   (** a variable standing for an effect, either free, or quantified in a
@@ -23,27 +24,7 @@ module Label : sig
   type t
 
   include Identifiable.S with type t := t
-
-  module Multiset : sig
-    type label := t
-    type t [@@deriving sexp]
-
-    val of_list : label list -> t
-    val empty : t
-    val add : t -> label -> t
-    val union : t -> t -> t
-
-    (** intersection: if an element appears `m` times in one multiset and `n`
-        times in the other, then it appears `min m n` in their intersection *)
-    val inter : t -> t -> t
-
-    (** difference: if an element appears `m` times in the first argument, and
-        `n` times in the second, then it appears `max (m - n) 0` times in the
-        result *)
-    val diff : t -> t -> t
-
-    val is_empty : t -> bool
-  end
+  include Multiset.S with type Multiset.Element.t := t
 end
 
 module Row : sig

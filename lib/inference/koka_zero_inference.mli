@@ -1,6 +1,7 @@
 open Core
 open Koka_zero_util
 module Type = Type
+module Effect = Effect
 module Minimal_syntax = Minimal_syntax
 
 (* TODO: this should interface with [Koka_zero_parsing] *)
