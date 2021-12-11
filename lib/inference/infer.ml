@@ -219,7 +219,7 @@ and infer_operation
 (** Infer and check an operartion clause's body's type
 
     This is a helper function which applies to any unnamed body, so works for
-    both oeprations and `return`. Notably it does not add `resume` to the
+    both operations and `return`. Notably it does not add `resume` to the
     context. *)
 and infer_operation_clause
     :  eff_rest:Effect.t -> env:Context.t
