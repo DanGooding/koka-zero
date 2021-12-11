@@ -123,3 +123,11 @@ module Effect_decl = struct
     }
   [@@deriving sexp]
 end
+
+module Program = struct
+  type t =
+    { declarations : Effect_decl.t list
+    ; body : Expr.t
+    }
+  [@@deriving sexp]
+end

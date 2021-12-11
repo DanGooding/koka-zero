@@ -100,3 +100,12 @@ module Effect_decl : sig
     }
   [@@deriving sexp]
 end
+
+module Program : sig
+  type t =
+    { effect_declarations : Effect_decl.t list
+    ; body : Expr.t
+    }
+  [@@deriving sexp]
+  (* TODO: add toplevel functions, main as entry point *)
+end

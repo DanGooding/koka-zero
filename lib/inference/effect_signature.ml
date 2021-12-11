@@ -5,16 +5,28 @@ module T = struct
   type t = Variable.Set.t [@@deriving compare, sexp]
 end
 
-include T
-include Comparable.Make (T)
+module Signature = struct
+  include T
+  include Comparable.Make (T)
+end
 
-let of_handler { Expr.operations; _ } = Variable.Map.key_set operations
+include Signature
+
+let t_of_map m = Variable.Map.key_set m
+let t_of_handler { Expr.operations; _ } = t_of_map operations
 
 module Context = struct
-  (** maps signatures to their effect labels *)
-  type t = Effect.Label.t T.Map.t [@@deriving sexp]
+  let signature_of_map = t_of_map
 
-  let empty = T.Map.empty
-  let extend t ~label ~signature = T.Map.add t ~key:signature ~data:label
-  let find t s = T.Map.find t s
+  type t = Effect.Label.t Signature.Map.t [@@deriving sexp]
+
+  let empty = Signature.Map.empty
+  let extend t ~label ~signature = Map.add t ~key:signature ~data:label
+
+  let extend_decl t { Effect_decl.name; operations } =
+    let signature = signature_of_map operations in
+    extend t ~label:name ~signature
+  ;;
+
+  let find t s = Map.find t s
 end

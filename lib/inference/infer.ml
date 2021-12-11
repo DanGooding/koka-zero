@@ -33,7 +33,7 @@ let lookup_effect_label_for_handler
   =
  fun ~effect_env handler ->
   let open Inference.Let_syntax in
-  let signature = Effect_signature.of_handler handler in
+  let signature = Effect_signature.t_of_handler handler in
   match Effect_signature.Context.find effect_env signature with
   | Some lab_handled -> return lab_handled
   | None ->
@@ -237,9 +237,16 @@ and infer_operation_clause
   Inference.unify_effects eff_result eff_rest
 ;;
 
-let infer_type e =
-  let open Result.Let_syntax in
-  let%map (t, eff), substitution = Inference.run (infer Context.empty e) in
+let infer_type { Program.effect_declarations; body } =
+  let effect_env =
+    List.fold
+      declarations
+      ~init:Effect_signature.Context.empty
+      ~f:Effect_signature.Context.extend_decl
+  in
+  let%map.Result (t, eff), substitution =
+    Inference.run (infer ~env:Context.empty ~effect_env body)
+  in
   (* TODO: convert to a type without metavariables (not possible for [Expr]s
      without generalising here, but should/will be) *)
   Substitution.apply_to_mono substitution t, Substitution.apply_to_effect eff

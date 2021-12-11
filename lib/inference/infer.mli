@@ -4,5 +4,5 @@ open Core
 open Koka_zero_util
 
 val infer_type
-  :  Minimal_syntax.Expr.t
+  :  Minimal_syntax.Program.t
   -> (Type.Mono.t * Effect.t, Static_error.t) Result.t
