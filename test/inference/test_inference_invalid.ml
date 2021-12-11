@@ -20,7 +20,7 @@ let%expect_test "occurs check rejects omega combinator" =
         "cannot unify\
        \n(Metavariable $m0)\
        \nwith\
-       \n(Arrow (Metavariable $m0) (Metavariable $m2))\
+       \n(Arrow (Metavariable $m0) (Metavariable @m0) (Metavariable $m2))\
        \n")
       (location ()))) |}]
 ;;
