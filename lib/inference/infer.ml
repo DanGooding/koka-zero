@@ -139,26 +139,31 @@ let rec infer
     in
     let%bind t_subject, eff_subject = infer ~env ~effect_env e_subject in
     (* eff_subject ~ <lab_handled|eff_rest> *)
-    let%bind eff_rest = Inference.fresh_effect_metavariable in
+    let%bind eff_rest_meta = Inference.fresh_effect_metavariable in
     let effect_pre_handle =
       let labels = Effect.Label.Multiset.of_list [ lab_handled ] in
-      let tail = Some (Effect.Row.Tail.Metavariable eff_rest) in
+      let tail = Some (Effect.Row.Tail.Metavariable eff_rest_meta) in
       Effect.Row { Effect.Row.labels; tail }
     in
+    let eff_rest = Effect.Metavariable eff_rest_meta in
     let%bind () = Inference.unify_effects eff_subject effect_pre_handle in
     let%bind t_handler_result = Inference.fresh_metavariable in
-    (* `return` clause has type `t_subject -> t_handler_result` *)
+    let t_handler_result = Type.Mono.Metavariable t_handler_result in
     let%bind () =
-      infer_operation_clause
-        ~eff_rest:(Effect.Metavariable eff_rest)
-        ~env
-        ~effect_env
-        ~t_handler_result:(Type.Mono.Metavariable t_handler_result)
-        ~t_argument:t_subject
-        (Some return_clause)
+      match return_clause with
+      | None -> return ()
+      | Some return_clause ->
+        (* `return` clause has type `t_subject -> t_handler_result` *)
+        infer_operation_clause
+          ~eff_rest
+          ~env
+          ~effect_env
+          ~t_handler_result
+          ~t_argument:t_subject
+          return_clause
     in
     (* check each op body has the right type *)
-    let%bind () =
+    let%map () =
       Map.mapi operations ~f:(fun ~key:name ~data:handler ->
           infer_operation
             ~lab_handled
@@ -168,7 +173,7 @@ let rec infer
             ~t_handler_result
             ~name
             handler)
-      |> sequence_map_units
+      |> Inference.sequence_map_unit
     in
     t_handler_result, eff_rest
 
@@ -204,7 +209,6 @@ and infer_operation
     Context.extend env ~var:Keyword.resume ~type_:t_resume
   in
   infer_operation_clause
-    ~lab_handled
     ~eff_rest
     ~env:env_with_resume
     ~effect_env
