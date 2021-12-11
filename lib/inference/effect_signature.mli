@@ -24,7 +24,17 @@ module Context : sig
   type t [@@deriving sexp]
 
   val empty : t
-  val extend : t -> label:Effect.Label.t -> signature:signature -> t
-  val extend_decl : t -> Minimal_syntax.Effect_decl.t -> t
+
+  val extend
+    :  t
+    -> label:Effect.Label.t
+    -> signature:signature
+    -> [ `Ok of t | `Duplicate ]
+
+  val extend_decl
+    :  t
+    -> Minimal_syntax.Effect_decl.t
+    -> [ `Ok of t | `Duplicate ]
+
   val find : t -> signature -> Effect.Label.t option
 end

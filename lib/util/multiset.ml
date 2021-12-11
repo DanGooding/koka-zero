@@ -21,6 +21,11 @@ struct
       List.map xs ~f:(fun x -> x, 1) |> Element.Map.of_alist_reduce ~f:Int.( + )
     ;;
 
+    let to_list xs =
+      Element.Map.fold xs ~init:[] ~f:(fun ~key:element ~data:n acc ->
+          List.init n ~f:(fun _i -> element) @ acc)
+    ;;
+
     let empty = Element.Map.empty
 
     let add xs x =

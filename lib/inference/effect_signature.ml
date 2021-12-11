@@ -1,11 +1,20 @@
 open Core
 open Minimal_syntax
 
-module T = struct
-  type t = Variable.Set.t [@@deriving compare, sexp]
+module Operation = struct
+  type t =
+    { argument_type : Type.Mono.t
+    ; result_type : Type.Mono.t
+    }
+  [@@deriving sexp]
+  (* TODO: include number of arguments when this becomes varaiable *)
 end
 
 module Signature = struct
+  module T = struct
+    type t = Variable.Set.t [@@deriving compare, sexp]
+  end
+
   include T
   include Comparable.Make (T)
 end

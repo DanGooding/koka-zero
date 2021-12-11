@@ -198,23 +198,28 @@ and infer_operation
     -> effect_env:Effect_signature.Context.t -> t_handler_result:Type.Mono.t
     -> name:Variable.t -> Expr.op_handler -> unit Inference.t
   =
- fun ~lab_handled ~eff_rest ~env ~effect_env ~t_handler_result ~name op ->
-  let { Expr.op_argument; _ } = op in
+ fun ~lab_handled ~eff_rest ~env ~effect_env ~t_handler_result ~name op_handler ->
   let t_argument, t_result =
-    (* TODO: this is horrible code - plus it will erroneously fail due to
-       shadowing *)
-    match Context.find_exn env name with
+    (* TODO: rather than checking for an exact type here, use a different
+       context containing the declarations *)
+    match Context.find env name with
     (* operations must be delcared to have a single effect (the one they belong
        to) *)
-    | Type.Mono
-        (Type.Mono.Arrow
-          ( t_argument
-          , Effect.Row { Effect.Row.labels = [ label ]; tail = None }
-          , t_result )) ->
-      if Effect.Label.(lab_handled = label)
-      then t_argument, t_result
-      else assert false
-    | _ -> assert false
+    | Some (Type.Mono (Type.Mono.Arrow (t_argument, eff, t_result))) ->
+      (match eff with
+      | Effect.Row { Effect.Row.labels; tail = None } ->
+        (match Effect.Label.Multiset.to_list labels with
+        | [ label ] ->
+          if Effect.Label.(lab_handled = label)
+          then t_argument, t_result
+          else raise_s [%message "operation's label should be its effect"]
+        | [] | _ :: _ :: _ ->
+          raise_s [%message "operation's declared effect should be a singleton"])
+      | Effect.(Variable _ | Metavariable _ | Row { Row.tail = Some _; _ }) ->
+        raise_s [%message "operation's declared effect should be a closed row"])
+    | None
+    | Some Type.(Poly _ | Mono Mono.(Variable _ | Metavariable _ | Primitive _))
+      -> raise_s [%message "operation should have arrow type"]
   in
   let t_resume =
     Type.Mono (Type.Mono.Arrow (t_result, eff_rest, t_handler_result))
@@ -232,7 +237,7 @@ and infer_operation
     ~effect_env
     ~t_handler_result
     ~t_argument
-    op
+    op_handler
 
 (** Infer and check an operartion clause's body's type
 
@@ -244,11 +249,11 @@ and infer_operation_clause
     -> effect_env:Effect_signature.Context.t -> t_handler_result:Type.Mono.t
     -> t_argument:Type.Mono.t -> Expr.op_handler -> unit Inference.t
   =
- fun ~eff_rest ~env ~effect_env ~t_handler_result ~t_argument op ->
+ fun ~eff_rest ~env ~effect_env ~t_handler_result ~t_argument op_handler ->
   let open Inference.Let_syntax in
-  let { Expr.op_argument; op_body } = op in
-  let env' =
-    Context.extend env ~var:op_argument ~type_:(Type.Mono t_argument)
+  let { Expr.op_argument; op_body } = op_handler in
+  let%bind env' =
+    add_binding ~env ~var:op_argument ~type_:(Type.Mono t_argument)
   in
   let%bind t_result, eff_result = infer ~env:env' ~effect_env op_body in
   let%bind () = Inference.unify t_result t_handler_result in
@@ -268,7 +273,7 @@ let infer_program : Program.t -> (Type.Mono.t * Effect.t) Inference.t =
         Map.fold operations ~init:env ~f:(fun ~key:op_name ~data:op env ->
             let%bind env = env in
             let { Effect_decl.Operation.argument; result } = op in
-            let eff = Effect.closed_singleton label in
+            let eff = Effect.Row (Effect.Row.closed_singleton label) in
             let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, result)) in
             match Context.extend_unshadowable env ~var:op_name ~type_ with
             | Some env' -> return env'
@@ -280,11 +285,22 @@ let infer_program : Program.t -> (Type.Mono.t * Effect.t) Inference.t =
               in
               Inference.type_error message))
   in
-  let effect_env =
+  let%bind effect_env =
     List.fold
       effect_declarations
-      ~init:Effect_signature.Context.empty
-      ~f:Effect_signature.Context.extend_decl
+      ~init:(return Effect_signature.Context.empty)
+      ~f:(fun effect_env declaration ->
+        let%bind effect_env = effect_env in
+        match Effect_signature.Context.extend_decl effect_env declaration with
+        | `Duplicate ->
+          let { Effect_decl.name; _ } = declaration in
+          let message =
+            sprintf
+              "effect '%s' is already defined"
+              (Effect.Label.to_string name)
+          in
+          Inference.type_error message
+        | `Ok effect_env -> return effect_env)
   in
   infer ~env ~effect_env body
 ;;

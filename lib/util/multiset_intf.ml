@@ -12,6 +12,7 @@ module type S = sig
     type t [@@deriving sexp]
 
     val of_list : Element.t list -> t
+    val to_list : t -> Element.t list
     val empty : t
     val add : t -> Element.t -> t
     val union : t -> t -> t
