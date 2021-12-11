@@ -2,23 +2,13 @@ open Core
 open Koka_zero_util
 
 module Variable = struct
-  module T = struct
-    include String
-
-    let module_name = "Variable"
-  end
-
+  module T = String
   include T
   include Name_source.Make (T)
 end
 
 module Metavariable = struct
-  module T = struct
-    include String
-
-    let module_name = "Metavariable"
-  end
-
+  module T = String
   include T
   include Name_source.Make (T)
 end
@@ -115,7 +105,8 @@ let metavariables = function
   | Row r -> Row.metavariables r
 ;;
 
-let instantiate_as ~var_to_meta = function
+let instantiate_as t ~var_to_meta =
+  match t with
   | Variable v ->
     (match Map.find var_to_meta v with
     | Some m -> Metavariable m
