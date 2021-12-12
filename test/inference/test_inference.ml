@@ -98,3 +98,104 @@ let%expect_test "comparsion operators" =
   Util.print_expr_inference_result expr;
   [%expect {| (Ok ((Primitive Bool) (Metavariable @m10))) |}]
 ;;
+
+let decl_read =
+  let name = Effect.Label.of_string "read" in
+  let op_ask =
+    let argument = Type.Mono.Primitive Type.Primitive.Unit in
+    let answer = Type.Mono.Primitive Type.Primitive.Int in
+    { M.Effect_decl.Operation.argument; answer }
+  in
+  let operations =
+    M.Variable.Map.singleton (M.Variable.of_string "ask") op_ask
+  in
+  { M.Effect_decl.name; operations }
+;;
+
+let decl_exn =
+  let name = Effect.Label.of_string "exn" in
+  let op_ask =
+    let argument = Type.Mono.Primitive Type.Primitive.Unit in
+    (* TODO: this should be forall a. a, once polymorphic effects are added *)
+    let answer = Type.Mono.Primitive Type.Primitive.Unit in
+    { M.Effect_decl.Operation.argument; answer }
+  in
+  let operations =
+    M.Variable.Map.singleton (M.Variable.of_string "throw") op_ask
+  in
+  { M.Effect_decl.name; operations }
+;;
+
+let decl_query =
+  let name = Effect.Label.of_string "query" in
+  let op_ask =
+    let argument = Type.Mono.Primitive Type.Primitive.Int in
+    (* TODO: this should be forall a. a, once polymorphic effects are added *)
+    let answer = Type.Mono.Primitive Type.Primitive.Bool in
+    { M.Effect_decl.Operation.argument; answer }
+  in
+  let operations =
+    M.Variable.Map.singleton (M.Variable.of_string "test") op_ask
+  in
+  { M.Effect_decl.name; operations }
+;;
+
+let read_handler (value : int) =
+  (* handler { ask(unit) { resume(value) } }*)
+  let read_clause =
+    let op_argument = M.Variable.of_string "unit" in
+    let op_body =
+      E.Application
+        (E.Variable M.Keyword.resume, E.Literal (M.Literal.Int value))
+    in
+    { E.op_argument; op_body }
+  in
+  let operations =
+    M.Variable.Map.singleton (M.Variable.of_string "ask") read_clause
+  in
+  { E.operations; return_clause = None }
+;;
+
+(* handler { throw(unit) { default } } *)
+let exn_handler default =
+  let throw_clause =
+    let op_argument = M.Variable.of_string "unit" in
+    let op_body = default in
+    { E.op_argument; op_body }
+  in
+  let operations =
+    M.Variable.Map.singleton (M.Variable.of_string "throw") throw_clause
+  in
+  { E.operations; return_clause = None }
+;;
+
+let%expect_test "handled effects reflected in subject's effect" =
+  let effect_declarations = [ decl_read; decl_exn ] in
+  let body =
+    (* \f. handle h_exn (handle h_read (handle h_read f)) *)
+    (* (() -> <exn,read,read|e> a) -> e a *)
+    E.Lambda
+      ( M.Variable.of_string "f"
+      , E.Handle
+          ( exn_handler (E.Literal M.Literal.Unit)
+          , E.Handle
+              ( read_handler 1
+              , E.Handle
+                  ( read_handler 1
+                  , E.Application
+                      ( E.Variable (M.Variable.of_string "f")
+                      , E.Literal M.Literal.Unit ) ) ) ) )
+  in
+  let program = { M.Program.effect_declarations; body } in
+  Util.print_inference_result program;
+  [%expect {|
+    (Ok
+     ((Arrow
+       (Arrow (Primitive Unit)
+        (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable @m16)))))
+        (Primitive Unit))
+       (Metavariable @m16) (Primitive Unit))
+      (Metavariable @m20))) |}]
+;;
+
+let%expect_test "return clause is typed correctly" = ()

@@ -166,7 +166,8 @@ let rec infer
     let t_handler_result = Type.Mono.Metavariable t_handler_result in
     let%bind () =
       match return_clause with
-      | None -> return ()
+      (* no `return` clause - handler result is just subject *)
+      | None -> Inference.unify t_subject t_handler_result
       | Some return_clause ->
         (* `return` clause has type `t_subject -> t_handler_result` *)
         infer_operation_clause
@@ -179,15 +180,15 @@ let rec infer
     in
     (* check each op body has the right type *)
     let%map () =
-      Map.mapi operations ~f:(fun ~key:name ~data:handler ->
+      Map.mapi operations ~f:(fun ~key:name ~data:op_handler ->
           infer_operation
             ~lab_handled
             ~eff_rest
             ~env
             ~effect_env
-            ~t_handler_result
+            ~t_handler_result (* TODO: t_subject? *)
             ~name
-            handler)
+            op_handler)
       |> Inference.sequence_map_units
     in
     t_handler_result, eff_rest
@@ -199,19 +200,19 @@ and infer_operation
     -> name:Variable.t -> Expr.op_handler -> unit Inference.t
   =
  fun ~lab_handled ~eff_rest ~env ~effect_env ~t_handler_result ~name op_handler ->
-  let t_argument, t_result =
+  let t_argument, t_answer =
     (* TODO: rather than checking for an exact type here, use a different
        context containing the declarations *)
     match Context.find env name with
     (* operations must be delcared to have a single effect (the one they belong
        to) *)
-    | Some (Type.Mono (Type.Mono.Arrow (t_argument, eff, t_result))) ->
+    | Some (Type.Mono (Type.Mono.Arrow (t_argument, eff, t_answer))) ->
       (match eff with
       | Effect.Row { Effect.Row.labels; tail = None } ->
         (match Effect.Label.Multiset.to_list labels with
         | [ label ] ->
           if Effect.Label.(lab_handled = label)
-          then t_argument, t_result
+          then t_argument, t_answer
           else raise_s [%message "operation's label should be its effect"]
         | [] | _ :: _ :: _ ->
           raise_s [%message "operation's declared effect should be a singleton"])
@@ -222,12 +223,12 @@ and infer_operation
       -> raise_s [%message "operation should have arrow type"]
   in
   let t_resume =
-    Type.Mono (Type.Mono.Arrow (t_result, eff_rest, t_handler_result))
+    Type.Mono (Type.Mono.Arrow (t_answer, eff_rest, t_handler_result))
   in
   let env_with_resume =
     (* TODO: need to prevent escape of non first-class resume *)
     match Context.extend env ~var:Keyword.resume ~type_:t_resume with
-    | `Ok env -> env
+    | `Ok env_with_resume -> env_with_resume
     | `Cannot_shadow ->
       raise_s [%message "`resume` must be shadowable - can nest handlers"]
   in
@@ -256,6 +257,9 @@ and infer_operation_clause
     add_binding ~env ~var:op_argument ~type_:(Type.Mono t_argument)
   in
   let%bind t_result, eff_result = infer ~env:env' ~effect_env op_body in
+  (* unifying with [t_handler_result] rather than e.g. [t_answer] because
+     [resume] is explicit - so the result of op_body is what is returned from
+     the handler (perhaps via some more returns from [resume]) *)
   let%bind () = Inference.unify t_result t_handler_result in
   Inference.unify_effects eff_result eff_rest
 ;;
