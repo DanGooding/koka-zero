@@ -16,7 +16,7 @@ end
 module Label = struct
   module T : Identifiable.S = String
   include T
-  include Multiset.Make (T)
+  module Multiset = Multiset.Make (T)
 end
 
 module Row = struct
