@@ -63,7 +63,7 @@ module Expr : sig
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
-    | Handle of handler * t
+    | Handle of handler * t (** evaluates its suject under the handler *)
   [@@deriving sexp]
 
   (** an effect handler *)
