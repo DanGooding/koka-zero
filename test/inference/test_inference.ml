@@ -140,20 +140,24 @@ let decl_query =
   { M.Effect_decl.name; operations }
 ;;
 
-let read_handler (value : int) =
-  (* handler { ask(unit) { resume(value) } }*)
-  let read_clause =
-    let op_argument = M.Variable.of_string "unit" in
-    let op_body =
-      E.Application
-        (E.Variable M.Keyword.resume, E.Literal (M.Literal.Int value))
-    in
-    { E.op_argument; op_body }
-  in
-  let operations =
-    M.Variable.Map.singleton (M.Variable.of_string "ask") read_clause
-  in
+let singleton_handler
+    ~(op_name : M.Variable.t)
+    ~(op_argument : M.Variable.t)
+    ~(op_body : E.t)
+  =
+  let clause = { E.op_argument; op_body } in
+  let operations = M.Variable.Map.singleton op_name clause in
   { E.operations; return_clause = None }
+;;
+
+let read_handler (value : int) =
+  (* handler { ask(unit) { resume(value) } } *)
+  let op_name = M.Variable.of_string "ask" in
+  let op_argument = M.Variable.of_string "unit" in
+  let op_body =
+    E.Application (E.Variable M.Keyword.resume, E.Literal (M.Literal.Int value))
+  in
+  singleton_handler ~op_name ~op_argument ~op_body
 ;;
 
 (* handler { throw(unit) { default } } *)
@@ -242,4 +246,35 @@ let%expect_test "return clause is typed correctly" =
   let program = { M.Program.effect_declarations; body } in
   Util.print_inference_result program;
   [%expect {| (Ok ((Primitive Unit) (Metavariable @m22))) |}]
+;;
+
+let%expect_test "handlers can delegate to outer handlers" =
+  let effect_declarations = [ decl_read ] in
+  let outer_handler = read_handler 1 in
+  (* { ask(unit) { ask(()) + 1 } } *)
+  let inner_handler =
+    let op_name = M.Variable.of_string "ask" in
+    let op_argument = M.Variable.of_string "unit" in
+    let op_body =
+      E.Operator
+        ( E.Application
+            (E.Variable (M.Variable.of_string "ask"), E.Literal M.Literal.Unit)
+        , M.Operator.Int M.Operator.Int.Plus
+        , E.Literal (M.Literal.Int 1) )
+    in
+    singleton_handler ~op_name ~op_argument ~op_body
+  in
+  (* handle outer (handle inner (ask(()) )) *)
+  let body =
+    E.Handle
+      ( outer_handler
+      , E.Handle
+          ( inner_handler
+          , E.Application
+              (E.Variable (M.Variable.of_string "ask"), E.Literal M.Literal.Unit)
+          ) )
+  in
+  let program = { M.Program.effect_declarations; body } in
+  Util.print_inference_result program;
+  [%expect {| (Ok ((Primitive Int) (Metavariable @m28))) |}]
 ;;

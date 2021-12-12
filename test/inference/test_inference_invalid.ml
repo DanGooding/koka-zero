@@ -44,3 +44,46 @@ let%expect_test "if statement's branches must have the same type" =
                                  \n")
       (location ()))) |}]
 ;;
+
+let decl_state =
+  let name = Effect.Label.of_string "state" in
+  let op_get =
+    let argument = Type.Mono.Primitive Type.Primitive.Unit in
+    let answer = Type.Mono.Primitive Type.Primitive.Int in
+    { M.Effect_decl.Operation.argument; answer }
+  in
+  let op_set =
+    let argument = Type.Mono.Primitive Type.Primitive.Int in
+    let answer = Type.Mono.Primitive Type.Primitive.Unit in
+    { M.Effect_decl.Operation.argument; answer }
+  in
+  let operations =
+    M.Variable.Map.of_alist_exn
+      [ M.Variable.of_string "get", op_get; M.Variable.of_string "set", op_set ]
+  in
+  { M.Effect_decl.name; operations }
+;;
+
+let%expect_test "handler must include all operations" =
+  let effect_declarations = [ decl_state ] in
+  let state_handler_set_only =
+    (* handler { set(x) { () } } *)
+    let set_clause =
+      let op_argument = M.Variable.of_string "x" in
+      let op_body = E.Literal M.Literal.Unit in
+      { E.op_argument; op_body }
+    in
+    let operations =
+      M.Variable.Map.singleton (M.Variable.of_string "set") set_clause
+    in
+    { E.operations; return_clause = None }
+  in
+  let body = E.Handle (state_handler_set_only, E.Literal M.Literal.Unit) in
+  let program = { M.Program.effect_declarations; body } in
+  Util.print_inference_result program;
+  [%expect
+    {|
+    (Error
+     ((kind Type_error) (message "handler does not match any effect: (set)")
+      (location ()))) |}]
+;;
