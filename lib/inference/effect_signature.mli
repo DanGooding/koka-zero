@@ -3,7 +3,7 @@ open Core
 module Operation : sig
   type t =
     { argument_type : Type.Mono.t
-    ; result_type : Type.Mono.t
+    ; answer_type : Type.Mono.t
     }
   [@@deriving sexp]
   (* TODO: include number of arguments when this becomes varaiable *)

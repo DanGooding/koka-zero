@@ -111,7 +111,7 @@ module Effect_decl = struct
   module Operation = struct
     type t =
       { argument : Type.Mono.t
-      ; result : Type.Mono.t
+      ; answer : Type.Mono.t
       }
     [@@deriving sexp]
   end

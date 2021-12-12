@@ -269,9 +269,9 @@ let bind_operations
   let { Effect_decl.name = label; operations } = declaration in
   Map.fold operations ~init:(return env) ~f:(fun ~key:op_name ~data:op env ->
       let%bind env = env in
-      let { Effect_decl.Operation.argument; result } = op in
+      let { Effect_decl.Operation.argument; answer } = op in
       let eff = Effect.Row (Effect.Row.closed_singleton label) in
-      let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, result)) in
+      let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, answer)) in
       match Context.extend_unshadowable env ~var:op_name ~type_ with
       | `Ok env' -> return env'
       | `Cannot_shadow ->
