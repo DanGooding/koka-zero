@@ -6,13 +6,15 @@ module Name : sig
 
   val t_of_string : string -> t
 
-  include Multiset.S with type Multiset.Element.t := t
+  module Multiset : sig
+    include Multiset.S with type Element.t := t
+  end
 end = struct
   include String
 
   let t_of_string x = x
 
-  include Multiset.Make (String)
+  module Multiset = Multiset.Make (String)
 end
 
 let of_strings xs = List.map xs ~f:Name.t_of_string |> Name.Multiset.of_list

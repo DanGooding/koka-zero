@@ -24,7 +24,10 @@ module Label : sig
   type t
 
   include Identifiable.S with type t := t
-  include Multiset.S with type Multiset.Element.t := t
+
+  module Multiset : sig
+    include Multiset.S with type Element.t := t
+  end
 end
 
 module Row : sig
