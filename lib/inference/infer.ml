@@ -186,7 +186,7 @@ let rec infer
             ~eff_rest
             ~env
             ~effect_env
-            ~t_handler_result (* TODO: t_subject? *)
+            ~t_handler_result
             ~name
             op_handler)
       |> Inference.sequence_map_units
@@ -200,28 +200,22 @@ and infer_operation
     -> name:Variable.t -> Expr.op_handler -> unit Inference.t
   =
  fun ~lab_handled ~eff_rest ~env ~effect_env ~t_handler_result ~name op_handler ->
-  let t_argument, t_answer =
-    (* TODO: rather than checking for an exact type here, use a different
-       context containing the declarations *)
-    match Context.find env name with
-    (* operations must be delcared to have a single effect (the one they belong
-       to) *)
-    | Some (Type.Mono (Type.Mono.Arrow (t_argument, eff, t_answer))) ->
-      (match eff with
-      | Effect.Row { Effect.Row.labels; tail = None } ->
-        (match Effect.Label.Multiset.to_list labels with
-        | [ label ] ->
-          if Effect.Label.(lab_handled = label)
-          then t_argument, t_answer
-          else raise_s [%message "operation's label should be its effect"]
-        | [] | _ :: _ :: _ ->
-          raise_s [%message "operation's declared effect should be a singleton"])
-      | Effect.(Variable _ | Metavariable _ | Row { Row.tail = Some _; _ }) ->
-        raise_s [%message "operation's declared effect should be a closed row"])
-    | None
-    | Some Type.(Poly _ | Mono Mono.(Variable _ | Metavariable _ | Primitive _))
-      -> raise_s [%message "operation should have arrow type"]
-  in
+  (* TODO: rather than unifying to check the type here, use a different context
+     containing the declarations *)
+  (* TODO: using inference here is not ideal - since failure is not a type
+     error, but a programmer one *)
+  let open Inference.Let_syntax in
+  (* lookup operation's [name] and unify with `t_argument -> <lab_handled>
+     t_answer` *)
+  let%bind t_op, eff_op = infer ~env ~effect_env (Expr.Variable name) in
+  let%bind t_argument = Inference.fresh_metavariable in
+  let t_argument = Type.Mono.Metavariable t_argument in
+  let%bind t_answer = Inference.fresh_metavariable in
+  let t_answer = Type.Mono.Metavariable t_answer in
+  let eff_lab_handled = Effect.Row (Effect.Row.closed_singleton lab_handled) in
+  let t_op_expected = Type.Mono.Arrow (t_argument, eff_lab_handled, t_answer) in
+  let%bind () = Inference.unify t_op t_op_expected in
+  let%bind () = Inference.unify_effects eff_op Effect.total in
   let t_resume =
     Type.Mono (Type.Mono.Arrow (t_answer, eff_rest, t_handler_result))
   in
@@ -274,8 +268,17 @@ let bind_operations
   Map.fold operations ~init:(return env) ~f:(fun ~key:op_name ~data:op env ->
       let%bind env = env in
       let { Effect_decl.Operation.argument; answer } = op in
-      let eff = Effect.Row (Effect.Row.closed_singleton label) in
-      let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, answer)) in
+      (* `forall eff_rest. argument -> <label|eff_rest> answer` *)
+      let%bind eff_rest = Inference.fresh_effect_variable in
+      let tail = Some (Effect.Row.Tail.Variable eff_rest) in
+      let labels = Effect.Label.Multiset.of_list [ label ] in
+      let eff = Effect.Row { Effect.Row.labels; tail } in
+      let monotype = Type.Mono.Arrow (argument, eff, answer) in
+      let forall_bound = Type.Variable.Set.empty in
+      let forall_bound_effects = Effect.Variable.Set.singleton eff_rest in
+      let type_ =
+        Type.Poly { Type.Poly.forall_bound; forall_bound_effects; monotype }
+      in
       match Context.extend_unshadowable env ~var:op_name ~type_ with
       | `Ok env' -> return env'
       | `Cannot_shadow ->

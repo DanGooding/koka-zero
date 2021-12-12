@@ -188,14 +188,58 @@ let%expect_test "handled effects reflected in subject's effect" =
   in
   let program = { M.Program.effect_declarations; body } in
   Util.print_inference_result program;
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((Arrow
        (Arrow (Primitive Unit)
-        (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable @m16)))))
+        (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable @m24)))))
         (Primitive Unit))
-       (Metavariable @m16) (Primitive Unit))
-      (Metavariable @m20))) |}]
+       (Metavariable @m24) (Primitive Unit))
+      (Metavariable @m32))) |}]
 ;;
 
-let%expect_test "return clause is typed correctly" = ()
+let%expect_test "return clause is typed correctly" =
+  let effect_declarations = [ decl_query ] in
+  let query_handler =
+    (* {[ handler { test(x){ resume( x == 3 ) }; return(b) { if b then () else
+       () } } ]} *)
+    let test_clause =
+      let op_argument = M.Variable.of_string "x" in
+      let op_body =
+        E.Application
+          ( E.Variable M.Keyword.resume
+          , E.Operator
+              ( E.Variable op_argument
+              , M.Operator.Int M.Operator.Int.Equals
+              , E.Literal (M.Literal.Int 3) ) )
+      in
+      { E.op_argument; op_body }
+    in
+    let return_clause =
+      let op_argument = M.Variable.of_string "b" in
+      let op_body =
+        E.If_then_else
+          ( E.Variable op_argument
+          , E.Literal M.Literal.Unit
+          , E.Literal M.Literal.Unit )
+      in
+      Some { E.op_argument; op_body }
+    in
+    let operations =
+      M.Variable.Map.singleton (M.Variable.of_string "test") test_clause
+    in
+    { E.operations; return_clause }
+  in
+  let body =
+    (* handle h_query (test(5)) *)
+    E.Handle
+      ( query_handler
+      , E.Application
+          (E.Variable (M.Variable.of_string "test"), E.Literal (M.Literal.Int 5))
+      )
+  in
+  let program = { M.Program.effect_declarations; body } in
+  Util.print_inference_result program;
+  [%expect {| (Ok ((Primitive Unit) (Metavariable @m22))) |}]
+;;
