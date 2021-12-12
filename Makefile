@@ -55,7 +55,7 @@ doc: ## Generate odoc documentation
 
 .PHONY: servedoc
 servedoc: doc ## Open odoc documentation with default web browser
-	open _build/default/_doc/_html/index.html
+	xdg-open _build/default/_doc/_html/index.html
 
 .PHONY: fmt
 fmt: ## Format the codebase with ocamlformat
