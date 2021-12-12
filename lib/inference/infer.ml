@@ -56,8 +56,8 @@ let add_binding
  fun ~env ~var ~type_ ->
   let open Inference.Let_syntax in
   match Context.extend env ~var ~type_ with
-  | Some env' -> return env'
-  | None ->
+  | `Ok env' -> return env'
+  | `Cannot_shadow ->
     let message = sprintf "cannot shadow '%s'" (Variable.to_string var) in
     Inference.type_error message
 ;;
@@ -227,8 +227,8 @@ and infer_operation
   let env_with_resume =
     (* TODO: need to prevent escape of non first-class resume *)
     match Context.extend env ~var:Keyword.resume ~type_:t_resume with
-    | Some env -> env
-    | None ->
+    | `Ok env -> env
+    | `Cannot_shadow ->
       raise_s [%message "`resume` must be shadowable - can nest handlers"]
   in
   infer_operation_clause
@@ -260,6 +260,46 @@ and infer_operation_clause
   Inference.unify_effects eff_result eff_rest
 ;;
 
+(** add an effect's operations to the context *)
+let bind_operations
+    : Context.t -> declaration:Effect_decl.t -> Context.t Inference.t
+  =
+ fun env ~declaration ->
+  let open Inference.Let_syntax in
+  let { Effect_decl.name = label; operations } = declaration in
+  Map.fold operations ~init:(return env) ~f:(fun ~key:op_name ~data:op env ->
+      let%bind env = env in
+      let { Effect_decl.Operation.argument; result } = op in
+      let eff = Effect.Row (Effect.Row.closed_singleton label) in
+      let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, result)) in
+      match Context.extend_unshadowable env ~var:op_name ~type_ with
+      | `Ok env' -> return env'
+      | `Cannot_shadow ->
+        let message =
+          sprintf
+            "operation names must be unique: '%s' is reused"
+            (Variable.to_string op_name)
+        in
+        Inference.type_error message)
+;;
+
+(** add an effect's signature to the effect environment *)
+let bind_effect_signature
+    :  Effect_signature.Context.t -> declaration:Effect_decl.t
+    -> Effect_signature.Context.t Inference.t
+  =
+ fun effect_env ~declaration ->
+  let open Inference.Let_syntax in
+  match Effect_signature.Context.extend_decl effect_env declaration with
+  | `Ok effect_env -> return effect_env
+  | `Duplicate ->
+    let { Effect_decl.name; _ } = declaration in
+    let message =
+      sprintf "effect '%s' is already defined" (Effect.Label.to_string name)
+    in
+    Inference.type_error message
+;;
+
 let infer_program : Program.t -> (Type.Mono.t * Effect.t) Inference.t =
  fun { Program.effect_declarations; body } ->
   let open Inference.Let_syntax in
@@ -269,21 +309,8 @@ let infer_program : Program.t -> (Type.Mono.t * Effect.t) Inference.t =
       effect_declarations
       ~init:(return Context.empty)
       ~f:(fun env declaration ->
-        let { Effect_decl.name = label; operations } = declaration in
-        Map.fold operations ~init:env ~f:(fun ~key:op_name ~data:op env ->
-            let%bind env = env in
-            let { Effect_decl.Operation.argument; result } = op in
-            let eff = Effect.Row (Effect.Row.closed_singleton label) in
-            let type_ = Type.Mono (Type.Mono.Arrow (argument, eff, result)) in
-            match Context.extend_unshadowable env ~var:op_name ~type_ with
-            | Some env' -> return env'
-            | None ->
-              let message =
-                sprintf
-                  "operation names must be unique: '%s' is reused"
-                  (Variable.to_string op_name)
-              in
-              Inference.type_error message))
+        let%bind env = env in
+        bind_operations env ~declaration)
   in
   let%bind effect_env =
     List.fold
@@ -291,16 +318,7 @@ let infer_program : Program.t -> (Type.Mono.t * Effect.t) Inference.t =
       ~init:(return Effect_signature.Context.empty)
       ~f:(fun effect_env declaration ->
         let%bind effect_env = effect_env in
-        match Effect_signature.Context.extend_decl effect_env declaration with
-        | `Duplicate ->
-          let { Effect_decl.name; _ } = declaration in
-          let message =
-            sprintf
-              "effect '%s' is already defined"
-              (Effect.Label.to_string name)
-          in
-          Inference.type_error message
-        | `Ok effect_env -> return effect_env)
+        bind_effect_signature effect_env ~declaration)
   in
   infer ~env ~effect_env body
 ;;

@@ -8,6 +8,14 @@ module Entry = struct
   [@@deriving sexp]
 end
 
+module Or_cannot_shadow = struct
+  type 'a t =
+    [ `Ok of 'a
+    | `Cannot_shadow
+    ]
+  [@@deriving sexp]
+end
+
 type t = Entry.t Minimal_syntax.Variable.Map.t [@@deriving sexp]
 
 let can_bind t var =
@@ -21,16 +29,16 @@ let extend t ~var ~type_ =
   if can_bind t var
   then (
     let entry = { Entry.shadowable = true; type_ } in
-    Some (Map.set t ~key:var ~data:entry))
-  else None
+    `Ok (Map.set t ~key:var ~data:entry))
+  else `Cannot_shadow
 ;;
 
 let extend_unshadowable t ~var ~type_ =
   if Map.mem t var
-  then None
+  then `Cannot_shadow
   else (
     let entry = { Entry.shadowable = false; type_ } in
-    Some (Map.set t ~key:var ~data:entry))
+    `Ok (Map.set t ~key:var ~data:entry))
 ;;
 
 let find t var =
