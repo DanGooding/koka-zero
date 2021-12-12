@@ -90,7 +90,7 @@ module Effect_decl : sig
         argument : Type.Mono.t
             (* TODO: should annotations be separate, then converted into
                types? *)
-      ; result : Type.Mono.t
+      ; answer : Type.Mono.t
       }
     [@@deriving sexp]
   end
