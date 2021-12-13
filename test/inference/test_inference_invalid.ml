@@ -18,9 +18,9 @@ let%expect_test "occurs check rejects omega combinator" =
      ((kind Type_error)
       (message
         "cannot unify\
-       \n(Metavariable $m0)\
+       \n(Metavariable a0)\
        \nwith\
-       \n(Arrow (Metavariable $m0) (Metavariable @m0) (Metavariable $m2))\
+       \n(Arrow (Metavariable a0) (Metavariable e0) (Metavariable a2))\
        \n")
       (location ()))) |}]
 ;;
@@ -62,7 +62,7 @@ let%expect_test "cannot take fixed point of non function" =
      ((kind Type_error)
       (message
         "cannot unify\
-       \n(Arrow (Metavariable $m0) (Metavariable @m0) (Metavariable $m2))\
+       \n(Arrow (Metavariable a0) (Metavariable e0) (Metavariable a2))\
        \nwith\
        \n(Primitive Int)\
        \n")

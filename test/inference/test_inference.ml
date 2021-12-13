@@ -17,7 +17,7 @@ let%expect_test "identity gets polymorphic type" =
       , E.Application (E.Application (id, id), E.Literal M.Literal.Unit) )
   in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Unit) (Metavariable @m14))) |}]
+  [%expect {| (Ok ((Primitive Unit) (Metavariable e14))) |}]
 ;;
 
 (* TODO: tests to add: static scoping, not generalising free varaibles, not
@@ -38,26 +38,26 @@ let%expect_test "fix combinator allows recursion" =
   [%expect
     {|
     (Ok
-     ((Arrow (Metavariable $m2) (Metavariable @m2) (Metavariable $m4))
-      (Metavariable @m4))) |}]
+     ((Arrow (Metavariable a4) (Metavariable e4) (Metavariable a6))
+      (Metavariable e8))) |}]
 ;;
 
 let%expect_test "literal unit" =
   let expr = E.Literal M.Literal.Unit in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Unit) (Metavariable @m0))) |}]
+  [%expect {| (Ok ((Primitive Unit) (Metavariable e0))) |}]
 ;;
 
 let%expect_test "literal bool" =
   let expr = E.Literal (M.Literal.Bool true) in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Bool) (Metavariable @m0))) |}]
+  [%expect {| (Ok ((Primitive Bool) (Metavariable e0))) |}]
 ;;
 
 let%expect_test "literal int" =
   let expr = E.Literal (M.Literal.Int 1) in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Int) (Metavariable @m0))) |}]
+  [%expect {| (Ok ((Primitive Int) (Metavariable e0))) |}]
 ;;
 
 let%expect_test "int operators" =
@@ -79,7 +79,7 @@ let%expect_test "int operators" =
                   , E.Operator (i 5, oi M.Operator.Int.Modulo, i 7) ) ) ) )
   in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Int) (Metavariable @m10))) |}]
+  [%expect {| (Ok ((Primitive Int) (Metavariable e10))) |}]
 ;;
 
 let%expect_test "comparsion operators" =
@@ -96,7 +96,7 @@ let%expect_test "comparsion operators" =
       , E.Operator (i 3, oi M.Operator.Int.Equals, i 5) )
   in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Bool) (Metavariable @m10))) |}]
+  [%expect {| (Ok ((Primitive Bool) (Metavariable e10))) |}]
 ;;
 
 let decl_read =
@@ -197,10 +197,10 @@ let%expect_test "handled effects reflected in subject's effect" =
     (Ok
      ((Arrow
        (Arrow (Primitive Unit)
-        (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable @m24)))))
+        (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable e24)))))
         (Primitive Unit))
-       (Metavariable @m24) (Primitive Unit))
-      (Metavariable @m32))) |}]
+       (Metavariable e24) (Primitive Unit))
+      (Metavariable e32))) |}]
 ;;
 
 let%expect_test "return clause is typed correctly" =
@@ -245,7 +245,7 @@ let%expect_test "return clause is typed correctly" =
   in
   let program = { M.Program.effect_declarations; body } in
   Util.print_inference_result program;
-  [%expect {| (Ok ((Primitive Unit) (Metavariable @m22))) |}]
+  [%expect {| (Ok ((Primitive Unit) (Metavariable e22))) |}]
 ;;
 
 let%expect_test "handlers can delegate to outer handlers" =
@@ -276,5 +276,5 @@ let%expect_test "handlers can delegate to outer handlers" =
   in
   let program = { M.Program.effect_declarations; body } in
   Util.print_inference_result program;
-  [%expect {| (Ok ((Primitive Int) (Metavariable @m28))) |}]
+  [%expect {| (Ok ((Primitive Int) (Metavariable e28))) |}]
 ;;

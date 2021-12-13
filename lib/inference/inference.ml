@@ -16,10 +16,10 @@ module State = struct
   let initial : t =
     { substitution = Substitution.identity
     ; variable_source = Type.Variable.Name_source.fresh ~prefix:"$a" ()
-    ; metavariable_source = Type.Metavariable.Name_source.fresh ~prefix:"$m" ()
-    ; effect_variable_source = Effect.Variable.Name_source.fresh ~prefix:"@e" ()
+    ; metavariable_source = Type.Metavariable.Name_source.fresh ~prefix:"a" ()
+    ; effect_variable_source = Effect.Variable.Name_source.fresh ~prefix:"$e" ()
     ; effect_metavariable_source =
-        Effect.Metavariable.Name_source.fresh ~prefix:"@m" ()
+        Effect.Metavariable.Name_source.fresh ~prefix:"e" ()
     }
   ;;
 end
