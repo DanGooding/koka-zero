@@ -113,14 +113,15 @@ let rec infer
     let t = Type.Mono.Arrow (t_x, eff_body, t_body) in
     Inference.with_any_effect t
   | Expr.Fix (f, e) ->
+    (* expect `e` (which can refer to itself as `f`) to have type: *)
+    (* `t_f_arg -> eff_f t_f_result | <>` *)
     let%bind t_f_arg = Inference.fresh_metavariable in
     let%bind eff_f = Inference.fresh_effect_metavariable in
     let%bind t_f_result = Inference.fresh_metavariable in
     let t_f_arg = Type.Mono.Metavariable t_f_arg in
     let eff_f = Effect.Metavariable eff_f in
     let t_f_result = Type.Mono.Metavariable t_f_result in
-    (* expect `e` (which can refer to itself as `f`) to have type `t_f_arg ->
-       eff_f t_f_result | <>` *)
+    (* TODO: once track divergence, arrow's effect should be <div|eff_f> *)
     let t_f = Type.Mono.Arrow (t_f_arg, eff_f, t_f_result) in
     let%bind env' = add_binding ~env ~var:f ~type_:(Type.Mono t_f) in
     let%bind t_e, eff_e = infer ~env:env' ~effect_env e in
