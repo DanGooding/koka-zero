@@ -112,14 +112,21 @@ let rec infer
     let%bind t_body, eff_body = infer ~env:env' ~effect_env expr_body in
     let t = Type.Mono.Arrow (t_x, eff_body, t_body) in
     Inference.with_any_effect t
-  | Expr.Fix (x, e) ->
-    let%bind t_x = Inference.fresh_metavariable in
-    let t_x = Type.Mono.Metavariable t_x in
-    let%bind env' = add_binding ~env ~var:x ~type_:(Type.Mono t_x) in
+  | Expr.Fix (f, e) ->
+    let%bind t_f_arg = Inference.fresh_metavariable in
+    let%bind eff_f = Inference.fresh_effect_metavariable in
+    let%bind t_f_result = Inference.fresh_metavariable in
+    let t_f_arg = Type.Mono.Metavariable t_f_arg in
+    let eff_f = Effect.Metavariable eff_f in
+    let t_f_result = Type.Mono.Metavariable t_f_result in
+    (* expect `e` (which can refer to itself as `f`) to have type `t_f_arg ->
+       eff_f t_f_result | <>` *)
+    let t_f = Type.Mono.Arrow (t_f_arg, eff_f, t_f_result) in
+    let%bind env' = add_binding ~env ~var:f ~type_:(Type.Mono t_f) in
     let%bind t_e, eff_e = infer ~env:env' ~effect_env e in
-    let%map () = Inference.unify t_x t_e in
-    (* TODO: if tracking divergence: unify eff_e with <div|fresh> *)
-    t_x, eff_e
+    let%bind () = Inference.unify t_f t_e in
+    let%bind () = Inference.unify_effects eff_e Effect.total in
+    Inference.with_any_effect t_f
   | Expr.Let (x, expr_subject, expr_body) ->
     let%bind t_subject, eff_subject = infer ~env ~effect_env expr_subject in
     (* generalise, or don't if not pure TODO: is this the right thing? *)
