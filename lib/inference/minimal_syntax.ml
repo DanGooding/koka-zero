@@ -77,17 +77,17 @@ module Expr = struct
     type t =
       | Variable of Variable.t
       | Let of Variable.t * t * t
-      | Lambda of Variable.t * t
-      | Fix of Variable.t * t
-      (* TODO: syntactically, `fix` can only wrap a lambda - perhaps enforce
-         this? *)
-      | Application of t * t
+      | Lambda of lambda
+      | Fix_lambda of Variable.t * lambda
+      | Application of t * t list
       | Literal of Literal.t
       | If_then_else of t * t * t
       | Operator of t * Operator.t * t
       | Unary_operator of Operator.Unary.t * t
       | Handle of handler * t
     [@@deriving sexp]
+
+    and lambda = Variable.t list * t [@@deriving sexp]
 
     and handler =
       { operations : op_handler Variable.Map.t

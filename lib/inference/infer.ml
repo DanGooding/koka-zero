@@ -82,15 +82,27 @@ let rec infer
       | Type.Poly s ->
         let%bind t = Inference.instantiate s in
         Inference.with_any_effect t))
-  | Expr.Application (expr_f, expr_arg) ->
+  | Expr.Application (expr_f, expr_args) ->
     let%bind t_f, eff_f = infer ~env ~effect_env expr_f in
-    let%bind t_argument, eff_arg = infer ~env ~effect_env expr_arg in
+    let%bind (arg_ts_effs : (Type.Mono.t * Effect.t) list) =
+      List.map expr_args ~f:(fun expr_arg -> infer ~env ~effect_env expr_arg)
+      |> Inference.sequence
+    in
+    let t_args, eff_args = List.unzip arg_ts_effs in
     let%bind t_result = Inference.fresh_metavariable in
     let t_result = Type.Mono.Metavariable t_result in
     let%bind () =
-      Inference.unify t_f (Type.Mono.Arrow (t_argument, eff_f, t_result))
+      Inference.unify t_f (Type.Mono.Arrow (t_args, eff_f, t_result))
     in
-    let%map () = Inference.unify_effects eff_f eff_arg in
+    (* unify all effects *)
+    let%bind eff_args_combined = Inference.fresh_effect_metavariable in
+    let eff_args_combined = Effect.Metavariable eff_args_combined in
+    let%bind () =
+      List.map eff_args ~f:(fun eff_arg ->
+          Inference.unify_effects eff_arg eff_args_combined)
+      |> Inference.sequence_units
+    in
+    let%map () = Inference.unify_effects eff_f eff_args_combined in
     t_result, eff_f
   | Expr.If_then_else (expr_cond, expr_yes, expr_no) ->
     let%bind t_cond, eff_cond = infer ~env ~effect_env expr_cond in
@@ -105,24 +117,50 @@ let rec infer
     let%bind () = Inference.unify_effects eff_cond eff_yes in
     let%map () = Inference.unify_effects eff_yes eff_no in
     t_yes, eff_yes
-  | Expr.Lambda (x, expr_body) ->
-    let%bind t_x = Inference.fresh_metavariable in
-    let t_x = Type.Mono.Metavariable t_x in
-    let%bind env' = add_binding ~env ~var:x ~type_:(Type.Mono t_x) in
+  | Expr.Lambda (xs, expr_body) ->
+    let%bind (xs_to_ts : (Variable.t * Type.Mono.t) list) =
+      List.map xs ~f:(fun x ->
+          let%map t_x = Inference.fresh_metavariable in
+          let t_x = Type.Mono.Metavariable t_x in
+          x, t_x)
+      |> Inference.sequence
+    in
+    let%bind () =
+      match Variable.Map.of_alist xs_to_ts with
+      | `Ok _ -> return ()
+      | `Duplicate_key v ->
+        let message =
+          sprintf "duplicate parameter: %s" (Variable.to_string v)
+        in
+        Inference.type_error message
+    in
+    (* add each parameter to the environment *)
+    let%bind env' =
+      List.fold xs_to_ts ~init:(return env) ~f:(fun env (x, t_x) ->
+          let%bind env = env in
+          add_binding ~env ~var:x ~type_:(Type.Mono t_x))
+    in
     let%bind t_body, eff_body = infer ~env:env' ~effect_env expr_body in
-    let t = Type.Mono.Arrow (t_x, eff_body, t_body) in
+    let t_xs = List.map xs_to_ts ~f:(fun (_x, t_x) -> t_x) in
+    let t = Type.Mono.Arrow (t_xs, eff_body, t_body) in
     Inference.with_any_effect t
-  | Expr.Fix (f, e) ->
+  | Expr.Fix_lambda (f, lambda) ->
+    let e = Expr.Lambda lambda in
+    let xs, _e_body = lambda in
     (* expect `e` (which can refer to itself as `f`) to have type: *)
-    (* `t_f_arg -> eff_f t_f_result | <>` *)
-    let%bind t_f_arg = Inference.fresh_metavariable in
+    (* `t_f_args -> eff_f t_f_result | <>` *)
+    let%bind (t_f_args : Type.Mono.t list) =
+      List.map xs ~f:(fun _x ->
+          let%map t_x = Inference.fresh_metavariable in
+          Type.Mono.Metavariable t_x)
+      |> Inference.sequence
+    in
     let%bind eff_f = Inference.fresh_effect_metavariable in
     let%bind t_f_result = Inference.fresh_metavariable in
-    let t_f_arg = Type.Mono.Metavariable t_f_arg in
     let eff_f = Effect.Metavariable eff_f in
     let t_f_result = Type.Mono.Metavariable t_f_result in
     (* TODO: once track divergence, arrow's effect should be <div|eff_f> *)
-    let t_f = Type.Mono.Arrow (t_f_arg, eff_f, t_f_result) in
+    let t_f = Type.Mono.Arrow (t_f_args, eff_f, t_f_result) in
     let%bind env' = add_binding ~env ~var:f ~type_:(Type.Mono t_f) in
     let%bind t_e, eff_e = infer ~env:env' ~effect_env e in
     let%bind () = Inference.unify t_f t_e in
@@ -221,11 +259,13 @@ and infer_operation
   let%bind t_answer = Inference.fresh_metavariable in
   let t_answer = Type.Mono.Metavariable t_answer in
   let eff_lab_handled = Effect.Row (Effect.Row.closed_singleton lab_handled) in
-  let t_op_expected = Type.Mono.Arrow (t_argument, eff_lab_handled, t_answer) in
+  let t_op_expected =
+    Type.Mono.Arrow ([ t_argument ], eff_lab_handled, t_answer)
+  in
   let%bind () = Inference.unify t_op t_op_expected in
   let%bind () = Inference.unify_effects eff_op Effect.total in
   let t_resume =
-    Type.Mono (Type.Mono.Arrow (t_answer, eff_rest, t_handler_result))
+    Type.Mono (Type.Mono.Arrow ([ t_answer ], eff_rest, t_handler_result))
   in
   let env_with_resume =
     (* TODO: need to prevent escape of non first-class resume *)
@@ -281,7 +321,7 @@ let bind_operations
       let tail = Some (Effect.Row.Tail.Variable eff_rest) in
       let labels = Effect.Label.Multiset.of_list [ label ] in
       let eff = Effect.Row { Effect.Row.labels; tail } in
-      let monotype = Type.Mono.Arrow (argument, eff, answer) in
+      let monotype = Type.Mono.Arrow ([ argument ], eff, answer) in
       let forall_bound = Type.Variable.Set.empty in
       let forall_bound_effects = Effect.Variable.Set.singleton eff_rest in
       let type_ =

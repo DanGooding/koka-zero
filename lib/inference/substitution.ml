@@ -153,9 +153,11 @@ and apply_to_mono t = function
   | Type.Mono.Metavariable v ->
     lookup t v |> Option.value ~default:(Type.Mono.Metavariable v)
   | Type.Mono.Primitive p -> Type.Mono.Primitive (apply_to_primitive t p)
-  | Type.Mono.Arrow (t_arg, e, t_result) ->
+  | Type.Mono.Arrow (t_args, e, t_result) ->
     Type.Mono.Arrow
-      (apply_to_mono t t_arg, apply_to_effect t e, apply_to_mono t t_result)
+      ( List.map ~f:(apply_to_mono t) t_args
+      , apply_to_effect t e
+      , apply_to_mono t t_result )
   | Type.Mono.Variable v -> Type.Mono.Variable v
 
 and apply_to_primitive _t = function

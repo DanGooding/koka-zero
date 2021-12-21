@@ -295,11 +295,18 @@ let rec unify t1 t2 =
     raise_for_unexpected_variable a
   | Type.Mono.Metavariable a, _ -> unify_with_meta a t2
   | _, Type.Mono.Metavariable b -> unify_with_meta b t1
-  | ( Type.Mono.Arrow (t1_arg, eff1, t1_result)
-    , Type.Mono.Arrow (t2_arg, eff2, t2_result) ) ->
-    let%bind () = unify t1_arg t2_arg in
-    let%bind () = unify_effects eff1 eff2 in
-    unify t1_result t2_result
+  | ( Type.Mono.Arrow (t1_args, eff1, t1_result)
+    , Type.Mono.Arrow (t2_args, eff2, t2_result) ) ->
+    (match List.zip t1_args t2_args with
+    | List.Or_unequal_lengths.Unequal_lengths ->
+      unification_error_of [%sexp_of: Type.Mono.t list] t1_args t2_args
+    | List.Or_unequal_lengths.Ok zipped_args ->
+      let%bind () =
+        List.map zipped_args ~f:(fun (t1_arg, t2_arg) -> unify t1_arg t2_arg)
+        |> sequence_units
+      in
+      let%bind () = unify_effects eff1 eff2 in
+      unify t1_result t2_result)
   | Type.Mono.Primitive p1, Type.Mono.Primitive p2 -> unify_primitives p1 p2
   | Type.Mono.(Arrow (_, _, _) | Primitive _), _ -> unification_error_mono t1 t2
 

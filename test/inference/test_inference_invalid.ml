@@ -6,10 +6,10 @@ module E = M.Expr
 let%expect_test "occurs check rejects omega combinator" =
   let expr =
     E.Lambda
-      ( M.Variable.of_string "x"
+      ( [ M.Variable.of_string "x" ]
       , E.Application
           ( E.Variable (M.Variable.of_string "x")
-          , E.Variable (M.Variable.of_string "x") ) )
+          , [ E.Variable (M.Variable.of_string "x") ] ) )
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -20,7 +20,7 @@ let%expect_test "occurs check rejects omega combinator" =
         "cannot unify\
        \n(Metavariable a0)\
        \nwith\
-       \n(Arrow (Metavariable a0) (Metavariable e0) (Metavariable a2))\
+       \n(Arrow ((Metavariable a0)) (Metavariable e0) (Metavariable a2))\
        \n")
       (location ()))) |}]
 ;;
@@ -42,30 +42,6 @@ let%expect_test "if statement's branches must have the same type" =
                                  \nwith\
                                  \nUnit\
                                  \n")
-      (location ()))) |}]
-;;
-
-let%expect_test "cannot take fixed point of non function" =
-  let expr =
-    (* `fix x. x + 1` *)
-    let x = M.Variable.of_string "x" in
-    E.Fix
-      ( x
-      , E.Operator
-          ( E.Variable x
-          , M.Operator.Int M.Operator.Int.Plus
-          , E.Literal (M.Literal.Int 1) ) )
-  in
-  Util.print_expr_inference_result expr;
-  [%expect {|
-    (Error
-     ((kind Type_error)
-      (message
-        "cannot unify\
-       \n(Arrow (Metavariable a0) (Metavariable e0) (Metavariable a2))\
-       \nwith\
-       \n(Primitive Int)\
-       \n")
       (location ()))) |}]
 ;;
 

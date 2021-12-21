@@ -39,7 +39,7 @@ end
 module Mono = struct
   module T = struct
     type t =
-      | Arrow of t * Effect.t * t
+      | Arrow of t list * Effect.t * t
       | Variable of Variable.t
       | Metavariable of Metavariable.t
       | Primitive of Primitive.t
@@ -53,13 +53,15 @@ module Mono = struct
       Metavariable.Set.singleton v, Effect.Metavariable.Set.empty
     | Variable _ -> Metavariable.Set.empty, Effect.Metavariable.Set.empty
     | Primitive p -> Primitive.metavariables p
-    | Arrow (t_arg, effect, t_result) ->
-      let arg_meta, arg_effect_meta = metavariables t_arg in
+    | Arrow (t_args, effect, t_result) ->
+      let arg_metas, arg_effect_metas =
+        List.map t_args ~f:metavariables |> List.unzip
+      in
       let result_meta, result_effect_meta = metavariables t_result in
       let effect_meta = Effect.metavariables effect in
-      ( Set.union arg_meta result_meta
+      ( Metavariable.Set.union_list (result_meta :: arg_metas)
       , Effect.Metavariable.Set.union_list
-          [ arg_effect_meta; effect_meta; result_effect_meta ] )
+          (effect_meta :: result_effect_meta :: arg_effect_metas) )
   ;;
 
   let rec instantiate_as t ~var_to_meta ~effect_var_to_meta =
@@ -69,9 +71,9 @@ module Mono = struct
       | Some m -> Metavariable m
       | None -> Variable v)
     | Metavariable m -> Metavariable m
-    | Arrow (t_arg, eff, t_result) ->
+    | Arrow (t_args, eff, t_result) ->
       Arrow
-        ( instantiate_as t_arg ~var_to_meta ~effect_var_to_meta
+        ( List.map t_args ~f:(instantiate_as ~var_to_meta ~effect_var_to_meta)
         , Effect.instantiate_as eff ~var_to_meta:effect_var_to_meta
         , instantiate_as t_result ~var_to_meta ~effect_var_to_meta )
     | Primitive p ->
