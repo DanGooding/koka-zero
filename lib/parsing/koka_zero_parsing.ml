@@ -2,7 +2,6 @@ open Core
 open Lexing
 open Koka_zero_util
 module LexerUtil = MenhirLib.LexerUtil
-module Syntax = Syntax
 
 let parse lexbuf =
   try Parser.program Lexer.read lexbuf |> Result.Ok with
@@ -16,6 +15,12 @@ let parse lexbuf =
     Result.Error error
 ;;
 
+let parse_to_minimal lexbuf =
+  let open Result.Let_syntax in
+  let%bind program = parse lexbuf in
+  Restriction.program_to_minimal_syntax program
+;;
+
 let set_filename ?filename lexbuf =
   match filename with
   | Some filename -> LexerUtil.init filename lexbuf
@@ -24,7 +29,7 @@ let set_filename ?filename lexbuf =
 
 let parse_with_filename ?filename lexbuf =
   let lexbuf = set_filename ?filename lexbuf in
-  parse lexbuf
+  parse_to_minimal lexbuf
 ;;
 
 let parse_channel ?filename ch =
