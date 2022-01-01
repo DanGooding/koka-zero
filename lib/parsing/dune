@@ -1,7 +1,8 @@
 (library
  (name koka_zero_parsing)
  (public_name koka-zero.parsing)
- (libraries core menhirLib str koka-zero.util)
+ ;; note the forward dependency on the next pipeline stage (inference)
+ (libraries core menhirLib str koka_zero_util koka_zero_inference)
  (preprocess
   (pps ppx_jane)))
 

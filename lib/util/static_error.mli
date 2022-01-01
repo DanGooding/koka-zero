@@ -2,6 +2,7 @@
 type t [@@deriving sexp]
 
 val syntax_error : ?at:Source_location.t -> string -> t
+val unsupported_syntax : ?at:Source_location.t -> string -> t
 val type_error : ?at:Source_location.t -> string -> t
 val string_of_t : t -> string
 
