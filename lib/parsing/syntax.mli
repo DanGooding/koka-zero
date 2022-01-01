@@ -4,8 +4,6 @@ open Core
 
 module Var_id : Identifiable.S
 module Wildcard_id : Identifiable.S
-module Operator_id : Identifiable.S
-module Constructor_id : Identifiable.S
 
 module Identifier : sig
   type t = Var of Var_id.t [@@deriving compare, hash, sexp]
@@ -182,6 +180,7 @@ type operation_parameter =
 (* expressions: *)
 
 type literal =
+  | Unit
   | Int of int
   | Bool of bool
 [@@deriving sexp]
