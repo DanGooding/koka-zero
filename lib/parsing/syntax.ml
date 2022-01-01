@@ -6,8 +6,6 @@ open Core
 
 module Var_id : Identifiable.S = String
 module Wildcard_id : Identifiable.S = String
-module Operator_id : Identifiable.S = String
-module Constructor_id : Identifiable.S = String
 
 module Identifier = struct
   module T = struct
@@ -186,6 +184,7 @@ type operation_parameter =
 (* expressions: *)
 
 type literal =
+  | Unit
   | Int of int
   | Bool of bool
 [@@deriving sexp]
