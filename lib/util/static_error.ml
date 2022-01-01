@@ -27,6 +27,10 @@ type t =
   }
 [@@deriving sexp]
 
+module Or_static_error = struct
+  type nonrec 'a t = ('a, t) Result.t
+end
+
 let error_of_kind kind ?at message = { kind; message; location = at }
 let syntax_error = error_of_kind Kind.Syntax_error
 let unsupported_syntax = error_of_kind Kind.Unsupported_syntax
