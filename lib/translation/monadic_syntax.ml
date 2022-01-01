@@ -16,10 +16,10 @@ module Expr = struct
   type t =
     | Variable of Variable.t
     (* | Let, or convert to lamdas somehow? *)
-    | Lambda of Variable.t * t
+    | Lambda of Variable.t list * t
     (* TODO: no translation is given for fix - look at what the real compiler does *)
     (* | Fix of Variable.t * t *)
-    | Application of t * t
+    | Application of t list * t
     | Literal of Literal.t
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
@@ -77,25 +77,24 @@ module Expr = struct
   (* TODO: these names mustn't clash with operations (?) *)
   let v = Variable.of_string
 
+  (* TODO: keeping track of which arguments are curried is now hugely error
+     prone and GADTs would be massively helpful! *)
   let handler v_prompt =
     let v_label = v "l" in
     let v_handler = v "h" in
     let v_action = v "f" in
     Lambda
-      ( v_label
+      ( [ v_label; v_handler ]
       , Lambda
-          ( v_handler
-          , Lambda
-              ( v_action
-              , Application
-                  ( Application (Variable v_prompt, Variable v_label)
-                  , Fresh_marker ) ) ) )
+          ( v_action
+          , Application (Variable v_prompt, [ Variable v_label; Fresh_marker ])
+          ) )
   ;;
 
   let composed g f =
     (* TODO: definitely need unique names *)
     let v_arg = v "x" in
-    Lambda (v_arg, Application (g, Application (f, Variable v_arg)))
+    Lambda ([ v_arg ], Application (g, Application (f, Variable v_arg)))
   ;;
 
   (* technically these could be primitives and be implemented in C *)
@@ -114,10 +113,12 @@ module Expr = struct
         ; vector_tail = Variable v_vector
         }
     in
-    let run_in_extended_context = Application (Variable v_e, extended_vector) in
+    let run_in_extended_context =
+      Application (Variable v_e, [ extended_vector ])
+    in
     let pure_branch =
       let v_x = v "x" in
-      Lambda (v_x, Construct_pure (Variable v_x))
+      Lambda ([ v_x ], Construct_pure (Variable v_x))
     in
     let yield_branch =
       let v_marker' = v "m2" in
@@ -145,30 +146,22 @@ module Expr = struct
           (Variable v_resumption)
       in
       Lambda
-        ( v_marker'
-        , Lambda
-            ( v_handler_clause
-            , Lambda
-                ( v_resumption
-                , If_then_else
-                    ( Equal_markers (Variable v_marker, Variable v_marker')
-                    , handle_here
-                    , bubble_further ) ) ) )
+        ( [ v_marker'; v_handler_clause; v_resumption ]
+        , If_then_else
+            ( Equal_markers (Variable v_marker, Variable v_marker')
+            , handle_here
+            , bubble_further ) )
     in
     Lambda
-      ( v_label
+      ( [ v_label; v_marker; v_handler ]
       , Lambda
-          ( v_marker
+          ( v_e
           , Lambda
-              ( v_handler
-              , Lambda
-                  ( v_e
-                  , Lambda
-                      ( v_vector
-                      , Match_ctl
-                          { subject = run_in_extended_context
-                          ; pure_branch
-                          ; yield_branch
-                          } ) ) ) ) )
+              ( v_vector
+              , Match_ctl
+                  { subject = run_in_extended_context
+                  ; pure_branch
+                  ; yield_branch
+                  } ) ) )
   ;;
 end
