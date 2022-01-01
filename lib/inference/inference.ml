@@ -27,7 +27,7 @@ end
 module T = struct
   (** a state monad to store the global substitution and the name source, plus
       an exception monad for type errors *)
-  type 'a t = State.t -> ('a * State.t, Static_error.t) Result.t
+  type 'a t = State.t -> ('a * State.t) Or_static_error.t
 
   let bind m ~f s =
     let%bind.Result x, s' = m s in
