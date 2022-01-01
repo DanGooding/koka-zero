@@ -22,7 +22,11 @@ module Operator = struct
         | Divide
         | Modulo
         | Equals
+        | Not_equal
         | Less_than
+        | Less_equal
+        | Greater_than
+        | Greater_equal
       [@@deriving sexp]
     end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
@@ -84,7 +88,7 @@ module Expr = struct
       | If_then_else of t * t * t
       | Operator of t * Operator.t * t
       | Unary_operator of Operator.Unary.t * t
-      | Handle of handler * t
+      | Handler of handler
     [@@deriving sexp]
 
     and lambda = Variable.t list * t [@@deriving sexp]

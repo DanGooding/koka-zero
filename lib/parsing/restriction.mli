@@ -7,6 +7,7 @@ val program_to_minimal_syntax
   :  Syntax.program
   -> Koka_zero_inference.Minimal_syntax.Program.t Or_static_error.t
 
+(* TODO: rename to [_of_] rather than [_to_] *)
 val expr_to_minimal_syntax
   :  Syntax.expr
   -> Koka_zero_inference.Minimal_syntax.Expr.t Or_static_error.t

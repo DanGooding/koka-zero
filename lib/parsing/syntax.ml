@@ -199,8 +199,6 @@ type binary_operator =
   | Modulo
   | And
   | Or
-  | Not
-  (* TODO: equals will require overloading? *)
   | Equals
   | Not_equal
   | Less_than

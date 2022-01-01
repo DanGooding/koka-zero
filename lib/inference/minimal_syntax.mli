@@ -17,7 +17,11 @@ module Operator : sig
       | Divide
       | Modulo
       | Equals
+      | Not_equal
       | Less_than
+      | Less_equal
+      | Greater_than
+      | Greater_equal
     [@@deriving sexp]
   end
 
@@ -61,7 +65,8 @@ module Expr : sig
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
-    | Handle of handler * t (** evaluates its suject under the handler *)
+    | Handler of handler
+        (** takes a nullary funciton to be called under this handler *)
   [@@deriving sexp]
 
   and lambda = Variable.t list * t [@@deriving sexp]
