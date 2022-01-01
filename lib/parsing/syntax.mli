@@ -195,7 +195,6 @@ type binary_operator =
   | Modulo
   | And
   | Or
-  | Not
   | Equals
   | Not_equal
   | Less_than

@@ -16,7 +16,14 @@ let operator_result_type : Operator.t -> Type.Primitive.t = function
   | Operator.Bool Operator.Bool.(And | Or) -> Type.Primitive.Bool
   | Operator.Int Operator.Int.(Plus | Minus | Times | Divide | Modulo) ->
     Type.Primitive.Int
-  | Operator.Int Operator.Int.(Equals | Less_than) -> Type.Primitive.Bool
+  | Operator.Int
+      Operator.Int.(
+        ( Equals
+        | Not_equal
+        | Less_than
+        | Less_equal
+        | Greater_than
+        | Greater_equal )) -> Type.Primitive.Bool
 ;;
 
 let unary_operand_type : Operator.Unary.t -> Type.Primitive.t = function
