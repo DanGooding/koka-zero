@@ -121,3 +121,17 @@ let is_total = function
   | Variable _ | Metavariable _ -> None
   | Row r -> Row.is_total r
 ;;
+
+let cons_row ~labels ~effect =
+  match effect with
+  | Metavariable v ->
+    let tail = Some (Row.Tail.Metavariable v) in
+    { Row.labels; tail }
+  | Variable v ->
+    let tail = Some (Row.Tail.Variable v) in
+    { Row.labels; tail }
+  (* if the tail itself is a row, flatten into a single row *)
+  | Row { Row.labels = labels'; tail } ->
+    let labels = Label.Multiset.union labels labels' in
+    { Row.labels; tail }
+;;

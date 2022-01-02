@@ -57,9 +57,9 @@ end
 module Expr : sig
   type t =
     | Variable of Variable.t
-    | Let of Variable.t * t * t
-    | Lambda of lambda
-    | Fix_lambda of Variable.t * lambda
+    | Let of Variable.t * t * t (** [Let] provides polymorphic binding *)
+    | Lambda of lambda (** monomorphic binding *)
+    | Fix_lambda of Variable.t * lambda (** lambda which knows its own name *)
     | Application of t * t list
     | Literal of Literal.t
     | If_then_else of t * t * t
@@ -93,16 +93,13 @@ module Effect_decl : sig
     type t =
       { (* TODO: different shapes (fun/var/ctl/except) *)
         argument : Type.Mono.t
-            (* TODO: should annotations be separate, then converted into
-               types? *)
       ; answer : Type.Mono.t
       }
     [@@deriving sexp]
   end
 
   type t =
-    { (* TODO: should be defined here / or should just use [Variable]? *)
-      name : Effect.Label.t
+    { name : Effect.Label.t
     ; operations : Operation.t Variable.Map.t
     }
   [@@deriving sexp]

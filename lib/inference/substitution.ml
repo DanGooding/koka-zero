@@ -123,18 +123,7 @@ and apply_to_effect_row t row =
   | Some (Effect.Row.Tail.Metavariable v) ->
     (match lookup_effect t v with
     | None -> row
-    | Some tail_effect ->
-      (match tail_effect with
-      | Effect.Metavariable v ->
-        let tail = Some (Effect.Row.Tail.Metavariable v) in
-        { Effect.Row.labels; tail }
-      | Effect.Variable v ->
-        let tail = Some (Effect.Row.Tail.Variable v) in
-        { Effect.Row.labels; tail }
-      (* if the tail itself is a row, flatten into a single row *)
-      | Effect.Row { Effect.Row.labels = labels'; tail } ->
-        let labels = Effect.Label.Multiset.union labels labels' in
-        { Effect.Row.labels; tail }))
+    | Some tail_effect -> Effect.cons_row ~labels ~effect:tail_effect)
 ;;
 
 let rec lookup t (var : Type.Metavariable.t) =
