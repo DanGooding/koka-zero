@@ -18,7 +18,7 @@ let parse lexbuf =
 let parse_to_minimal lexbuf =
   let open Result.Let_syntax in
   let%bind program = parse lexbuf in
-  Restriction.program_to_minimal_syntax program
+  Simplification.simplify_program program
 ;;
 
 let set_filename ?filename lexbuf =
