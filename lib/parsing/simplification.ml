@@ -22,11 +22,11 @@ let restrict_to_singleton ~description = function
   | [] | _ :: _ -> Static_error.unsupported_syntax description |> Result.Error
 ;;
 
-(* TODO: make sure actual syntax errors aren't reported as unsupported syntax *)
-
-let simplify_type (_t : Syntax.type_) : Type.Mono.t Or_static_error.t =
-  failwith "not implemented"
+let restrict_to_all_none ~description xs =
+  restrict_to_empty (List.filter_opt xs) ~description
 ;;
+
+(* TODO: make sure actual syntax errors aren't reported as unsupported syntax *)
 
 let simplify_var_id (_x : Syntax.Var_id.t) : Min.Variable.t =
   (* TODO: do I need to send this to a variant to allow safe generation of fresh
@@ -41,6 +41,159 @@ let simplify_var_id_to_effect_label (_x : Syntax.Var_id.t) : Effect.Label.t =
 let simplify_identifier (x : Syntax.Identifier.t) : Min.Variable.t =
   match x with
   | Syntax.Identifier.Var x -> simplify_var_id x
+;;
+
+let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
+ fun t ->
+  let open Result.Let_syntax in
+  match t with
+  | Syntax.Arrow (Syntax.Parameters_or_tuple ps, result) ->
+    let%bind ps = List.map ps ~f:simplify_parameter_type |> Result.all in
+    let%map effect, t_result = simplify_type_result result in
+    let parameter_names, t_args = List.unzip ps in
+    ignore (parameter_names : Min.Variable.t option list);
+    Type.Mono.Arrow (t_args, effect, t_result)
+  | Syntax.Arrow (t_arg, result) ->
+    let%bind t_arg = simplify_type_as_type t_arg in
+    let%map effect, t_result = simplify_type_result result in
+    Type.Mono.Arrow ([ t_arg ], effect, t_result)
+  | Syntax.Parameters_or_tuple ps ->
+    let%bind ps = List.map ps ~f:simplify_parameter_type |> Result.all in
+    let parameter_names, ts = List.unzip ps in
+    if List.exists parameter_names ~f:Option.is_some
+    then
+      Static_error.syntax_error "tuple type cannot have parameter labels"
+      |> Result.Error
+    else (
+      match ts with
+      | [] -> Type.Mono.Primitive Type.Primitive.Unit |> Result.Ok
+      (* brackets for precedence only *)
+      | [ t ] -> Result.Ok t
+      | _ts ->
+        Static_error.unsupported_syntax "tuples other than unit" |> Result.Error)
+  | Syntax.Effect_row r ->
+    let message =
+      sprintf
+        "expected type, found effect row %s"
+        (Syntax.sexp_of_effect_row r |> Sexp.to_string_hum)
+    in
+    Static_error.syntax_error message |> Result.Error
+  | Syntax.Scheme _ ->
+    Static_error.unsupported_syntax "type scheme" |> Result.Error
+  | Syntax.Type_atom { constructor; arguments } ->
+    let%bind () =
+      restrict_to_empty arguments ~description:"parameterised types"
+    in
+    (match constructor with
+    (* variables / wildcards require closing over in a Type.Poly *)
+    | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
+      Static_error.unsupported_syntax "wildcards/names/variables in types"
+      |> Result.Error
+    | Syntax.Type_int -> Type.Mono.Primitive Type.Primitive.Int |> Result.Ok
+    | Syntax.Type_bool -> Type.Mono.Primitive Type.Primitive.Bool |> Result.Ok)
+  | Syntax.Annotated { type_ = _; kind = _ } ->
+    Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
+
+(** convert a [Syntax.type_], to an [Effect.t] failing if it is actually a
+    [Type.t]*)
+and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
+ fun t ->
+  let open Result.Let_syntax in
+  match t with
+  | Syntax.Effect_row r ->
+    let labels, tail =
+      match r with
+      | Syntax.Closed labels -> labels, None
+      | Syntax.Open (labels, tail) -> labels, Some tail
+    in
+    let%bind labels =
+      List.map labels ~f:simplify_type_as_effect_label |> Result.all
+    in
+    let labels = Effect.Label.Multiset.of_list labels in
+    let%map tail =
+      Option.map tail ~f:simplify_type_as_effect
+      |> Static_error.interchange_option
+    in
+    (match tail with
+    | None -> Effect.Row { Effect.Row.labels; tail = None }
+    | Some tail_effect ->
+      Effect.cons_row ~labels ~effect:tail_effect |> Effect.Row)
+  | Syntax.Type_atom { constructor; arguments } ->
+    let%bind () =
+      restrict_to_empty arguments ~description:"parameterised types"
+    in
+    (match constructor with
+    (* variables / wildcards require closing over in a Type.Poly *)
+    | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
+      (* TODO: this will need to be supported *)
+      Static_error.unsupported_syntax "wildcards/names/variables in effects"
+      |> Result.Error
+    | Syntax.Type_int | Syntax.Type_bool ->
+      let message =
+        sprintf
+          "expected effect, found type %s"
+          (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
+      in
+      Static_error.syntax_error message |> Result.Error)
+  | Syntax.Annotated { type_ = _; kind = _ } ->
+    Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
+  | Syntax.Arrow (_, _) | Syntax.Scheme _ | Syntax.Parameters_or_tuple _ ->
+    let message =
+      sprintf
+        "expected effect, found type %s"
+        (Syntax.sexp_of_type_ t |> Sexp.to_string_hum)
+    in
+    Static_error.syntax_error message |> Result.Error
+
+and simplify_type_as_effect_label
+    : Syntax.type_ -> Effect.Label.t Or_static_error.t
+  =
+ fun t ->
+  let open Result.Let_syntax in
+  match t with
+  | Syntax.Type_atom { constructor; arguments } ->
+    let%bind () =
+      restrict_to_empty arguments ~description:"parameterised effects"
+    in
+    (match constructor with
+    | Syntax.Variable_or_name l ->
+      (* for now, assume always is a name, real rules are based on binding /
+         whether the name is a single letter *)
+      simplify_var_id_to_effect_label l |> Result.Ok
+    | Syntax.Type_wildcard _ ->
+      Static_error.syntax_error
+        "polymorphism over effect labels is not permitted"
+      |> Result.Error
+    | Syntax.Type_int | Syntax.Type_bool ->
+      let message =
+        sprintf
+          "expected effect label, found type %s"
+          (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
+      in
+      Static_error.syntax_error message |> Result.Error)
+  | Syntax.Annotated { type_ = _; kind = _ } ->
+    Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
+  | Syntax.Arrow (_, _)
+  | Syntax.Effect_row _ | Syntax.Scheme _ | Syntax.Parameters_or_tuple _ ->
+    let message =
+      sprintf
+        "expected effect label, found type %s"
+        (Syntax.sexp_of_type_ t |> Sexp.to_string_hum)
+    in
+    Static_error.syntax_error message |> Result.Error
+
+and simplify_parameter_type { Syntax.parameter_id; type_ }
+    : (Min.Variable.t option * Type.Mono.t) Or_static_error.t
+  =
+  failwith "not implemented"
+
+and simplify_type_result { Syntax.effect; result }
+    : (Effect.t * Type.Mono.t) Or_static_error.t
+  =
+  let open Result.Let_syntax in
+  let%bind effect = simplify_type_as_effect effect in
+  let%map t_result = simplify_type_as_type result in
+  effect, t_result
 ;;
 
 let simplify_literal (lit : Syntax.literal) : Min.Literal.t =
@@ -63,7 +216,7 @@ let simplify_parameter
  fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
   let%bind x = simplify_parameter_id id in
-  let%map t = simplify_type type_ in
+  let%map t = simplify_type_as_type type_ in
   x, t
 ;;
 
@@ -79,7 +232,7 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
   let open Result.Let_syntax in
   let%bind x = simplify_pattern pattern in
   let%map type_' =
-    Option.map type_ ~f:simplify_type |> Static_error.interchange_option
+    Option.map type_ ~f:simplify_type_as_type |> Static_error.interchange_option
   in
   x, type_'
 ;;
@@ -92,7 +245,7 @@ let simplify_operation_parameter
   let open Result.Let_syntax in
   let%bind id' = simplify_parameter_id id in
   let%map type_' =
-    Option.map type_ ~f:simplify_type |> Static_error.interchange_option
+    Option.map type_ ~f:simplify_type_as_type |> Static_error.interchange_option
   in
   id', type_'
 ;;
@@ -190,9 +343,7 @@ and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
   in
   let names, types = List.unzip parameters in
   let%bind () =
-    restrict_to_empty
-      (List.filter_opt types)
-      ~description:"type annotations on parameters"
+    restrict_to_all_none types ~description:"type annotations on parameters"
   in
   let%map body' = simplify_block body in
   Min.Expr.Lambda (names, body')
@@ -221,8 +372,8 @@ and simplify_operation_handler
         ~description:"operation can only have exactly one argument"
     in
     let%bind () =
-      restrict_to_empty
-        (List.filter_opt types)
+      restrict_to_all_none
+        types
         ~description:"type annotations on operation handler parameters"
     in
     let%map op_body = simplify_block body in
@@ -281,7 +432,7 @@ let simplify_operation_declaration { Syntax.id; type_parameters; shape }
         t_parameters
         ~description:"operation can ony have exactly one argument"
     in
-    let%map t_answer' = simplify_type t_answer in
+    let%map t_answer' = simplify_type_as_type t_answer in
     ( id'
     , { Min.Effect_decl.Operation.argument = t_parameter; answer = t_answer' } )
 ;;
