@@ -200,23 +200,17 @@ let rec infer
     let t_result = unary_operator_result_type uop |> Type.Mono.Primitive in
     let%map () = Inference.unify t_operand t_argument in
     t_result, eff_arg
-  | Expr.Handle (handler, e_subject) ->
+  | Expr.Handler handler ->
     let { Expr.operations; return_clause } = handler in
     let%bind lab_handled =
       lookup_effect_label_for_handler ~effect_env handler
     in
-    let%bind t_subject, eff_subject = infer ~env ~effect_env e_subject in
-    (* eff_subject ~ <lab_handled|eff_rest> *)
+    let%bind t_subject_meta = Inference.fresh_metavariable in
+    let t_subject = Type.Mono.Metavariable t_subject_meta in
     let%bind eff_rest_meta = Inference.fresh_effect_metavariable in
-    let effect_pre_handle =
-      let labels = Effect.Label.Multiset.of_list [ lab_handled ] in
-      let tail = Some (Effect.Row.Tail.Metavariable eff_rest_meta) in
-      Effect.Row { Effect.Row.labels; tail }
-    in
     let eff_rest = Effect.Metavariable eff_rest_meta in
-    let%bind () = Inference.unify_effects eff_subject effect_pre_handle in
-    let%bind t_handler_result = Inference.fresh_metavariable in
-    let t_handler_result = Type.Mono.Metavariable t_handler_result in
+    let%bind t_handler_result_meta = Inference.fresh_metavariable in
+    let t_handler_result = Type.Mono.Metavariable t_handler_result_meta in
     let%bind () =
       match return_clause with
       (* no `return` clause - handler result is just subject *)
@@ -232,7 +226,7 @@ let rec infer
           return_clause
     in
     (* check each op body has the right type *)
-    let%map () =
+    let%bind () =
       Map.mapi operations ~f:(fun ~key:name ~data:op_handler ->
           infer_operation
             ~lab_handled
@@ -244,7 +238,20 @@ let rec infer
             op_handler)
       |> Inference.sequence_map_units
     in
-    t_handler_result, eff_rest
+    (* <lab_handled|eff_rest> *)
+    let eff_pre_handle =
+      let labels = Effect.Label.Multiset.of_list [ lab_handled ] in
+      let tail = Some (Effect.Row.Tail.Metavariable eff_rest_meta) in
+      Effect.Row { Effect.Row.labels; tail }
+    in
+    let t_action =
+      (* () -> <lab_handled|eff_rest> t_subject *)
+      Type.Mono.Arrow ([], eff_pre_handle, t_subject)
+    in
+    let t_handler =
+      Type.Mono.Arrow ([ t_action ], eff_rest, t_handler_result)
+    in
+    Inference.with_any_effect t_handler
 
 (** Infer and check an operation handler's type *)
 and infer_operation
