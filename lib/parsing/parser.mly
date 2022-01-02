@@ -846,6 +846,9 @@ literal:
     { Int i }
   | b = BOOL
     { Bool b }
+  (* TODO: better to add tuples with elements to `atom` *)
+  | "("; ")"
+    { Unit }
   (* | FLOAT | CHAR | STRING *)
   ;
 

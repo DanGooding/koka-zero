@@ -11,6 +11,8 @@ module Identifier : sig
   include Identifiable.S_plain with type t := t
 end
 
+val resume_keyword : Identifier.t
+
 (* Kinds: *)
 
 type kind_atom =

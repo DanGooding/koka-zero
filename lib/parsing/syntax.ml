@@ -24,6 +24,8 @@ module Identifier = struct
   include Identifiable.Make_plain (T)
 end
 
+let resume_keyword = Identifier.Var (Var_id.of_string "resume")
+
 (* Kinds: *)
 
 type kind_atom =
