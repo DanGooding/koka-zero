@@ -96,7 +96,7 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
       |> Result.Error
     | Syntax.Type_int -> Type.Mono.Primitive Type.Primitive.Int |> Result.Ok
     | Syntax.Type_bool -> Type.Mono.Primitive Type.Primitive.Bool |> Result.Ok)
-  | Syntax.Annotated { type_ = _; kind = _ } ->
+  | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
 
 (** convert a [Syntax.type_], to an [Effect.t] failing if it is actually a
@@ -140,7 +140,7 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
           (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
       in
       Static_error.syntax_error message |> Result.Error)
-  | Syntax.Annotated { type_ = _; kind = _ } ->
+  | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
   | Syntax.Arrow (_, _) | Syntax.Scheme _ | Syntax.Parameters_or_tuple _ ->
     let message =
@@ -176,7 +176,7 @@ and simplify_type_as_effect_label
           (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
       in
       Static_error.syntax_error message |> Result.Error)
-  | Syntax.Annotated { type_ = _; kind = _ } ->
+  | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
   | Syntax.Arrow (_, _)
   | Syntax.Effect_row _ | Syntax.Scheme _ | Syntax.Parameters_or_tuple _ ->
@@ -329,7 +329,7 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%bind e' = simplify_expr e in
     let%map op' = simplify_unary_operator op in
     Min.Expr.Unary_operator (op', e')
-  | Syntax.Annotated (_e, _scheme) ->
+  | Syntax.Annotated_expr (_e, _scheme) ->
     Static_error.unsupported_syntax "type annotation on expression"
     |> Result.Error
 
@@ -510,5 +510,6 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
 let simplify_program (_program : Syntax.program)
     : Min.Program.t Or_static_error.t
   =
+  ignore simplify_effect_declaration;
   failwith "not implemented"
 ;;

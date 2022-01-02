@@ -22,7 +22,7 @@ type kind_atom =
 [@@deriving sexp]
 
 type kind =
-  | Arrow of kind list * kind
+  | Kind_arrow of kind list * kind
   | Kind_atom of kind_atom
 [@@deriving sexp]
 
@@ -53,7 +53,7 @@ type type_ =
       { constructor : type_constructor
       ; arguments : type_ list
       }
-  | Annotated of
+  | Annotated_type of
       { type_ : type_
       ; kind : kind
       }
@@ -222,7 +222,7 @@ type expr =
   | Application of expr * expr list
   | Identifier of Identifier.t
   | Literal of literal
-  | Annotated of expr * type_scheme
+  | Annotated_expr of expr * type_scheme
 [@@deriving sexp]
 
 and statement =
@@ -292,8 +292,8 @@ and effect_handler = Effect_handler of operation_handler list
 
 (** a declaration of a value/function which can appear at the toplevel *)
 type pure_declaration =
-  | Val of binder * block
-  | Fun of fun_declaration
+  | Top_val of binder * block
+  | Top_fun of fun_declaration
 [@@deriving sexp]
 
 type toplevel_declaration =
