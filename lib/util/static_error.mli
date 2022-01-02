@@ -10,4 +10,8 @@ val unsupported_syntax : ?at:Source_location.t -> string -> t
 val type_error : ?at:Source_location.t -> string -> t
 val string_of_t : t -> string
 
-(* TODO: an ['a Or_static_error.t] would be really useful *)
+(** swap the order of a nested [ Or_static_error option ], preserving the inner
+    value, or the error, if either exists *)
+val interchange_option
+  :  'a Or_static_error.t option
+  -> 'a option Or_static_error.t

@@ -49,3 +49,9 @@ let string_of_t t =
   in
   location_part ^ description_part
 ;;
+
+let interchange_option = function
+  | None -> Result.Ok None
+  | Some (Result.Ok x) -> Result.Ok (Some x)
+  | Some (Result.Error err) -> Result.Error err
+;;
