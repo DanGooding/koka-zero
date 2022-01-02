@@ -26,23 +26,28 @@ let restrict_to_all_none ~description xs =
   restrict_to_empty (List.filter_opt xs) ~description
 ;;
 
-(* TODO: make sure actual syntax errors aren't reported as unsupported syntax *)
-
+(** convert a [Var_id.t] to the [Minimal_syntax] equivalent *)
 let simplify_var_id (_x : Syntax.Var_id.t) : Min.Variable.t =
   (* TODO: do I need to send this to a variant to allow safe generation of fresh
      dummy names *)
   failwith "not implemented"
 ;;
 
+(** convert a [Var_id.t] representing an effect label to the [Minimal_syntax]
+    equivalent *)
 let simplify_var_id_to_effect_label (_x : Syntax.Var_id.t) : Effect.Label.t =
   failwith "not implemented"
 ;;
 
+(** convert an [Identifier.t] to the [Minimal_syntax] equivalent *)
 let simplify_identifier (x : Syntax.Identifier.t) : Min.Variable.t =
   match x with
   | Syntax.Identifier.Var x -> simplify_var_id x
 ;;
 
+(** convert a [Syntax.type_], to a [Type.Mono.t] failing if it is actually an
+    [Effect.t] or [Effect.Label.t], or if it doesn't represent a valid
+    [Type.Mono.t] *)
 let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
  fun t ->
   let open Result.Let_syntax in
@@ -95,7 +100,7 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
     Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
 
 (** convert a [Syntax.type_], to an [Effect.t] failing if it is actually a
-    [Type.t]*)
+    [Type.t] or [Effect.Label.t], or if it doesn't represent a valid [Effect.t] *)
 and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
  fun t ->
   let open Result.Let_syntax in
@@ -185,7 +190,10 @@ and simplify_type_as_effect_label
 and simplify_parameter_type { Syntax.parameter_id; type_ }
     : (Min.Variable.t option * Type.Mono.t) Or_static_error.t
   =
-  failwith "not implemented"
+  let open Result.Let_syntax in
+  let id = Option.map parameter_id ~f:simplify_identifier in
+  let%map t = simplify_type_as_type type_ in
+  id, t
 
 and simplify_type_result { Syntax.effect; result }
     : (Effect.t * Type.Mono.t) Or_static_error.t
@@ -207,7 +215,8 @@ let simplify_parameter_id
     : Syntax.parameter_id -> Min.Variable.t Or_static_error.t
   = function
   | Syntax.Parameter_id x -> simplify_identifier x |> Result.Ok
-  | Syntax.Parameter_wildcard -> failwith "not implemented"
+  | Syntax.Parameter_wildcard ->
+    Static_error.unsupported_syntax "wildcard parameter" |> Result.Error
 ;;
 
 let simplify_parameter
@@ -223,7 +232,8 @@ let simplify_parameter
 let simplify_pattern : Syntax.pattern -> Min.Variable.t Or_static_error.t
   = function
   | Syntax.Pattern_id x -> simplify_identifier x |> Result.Ok
-  | Syntax.Pattern_wildcard -> failwith "not implemented"
+  | Syntax.Pattern_wildcard ->
+    Static_error.unsupported_syntax "wildcard parameter" |> Result.Error
 ;;
 
 let simplify_pattern_parameter { Syntax.pattern; type_ }
@@ -351,7 +361,37 @@ and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
 and simplify_effect_handler (Syntax.Effect_handler op_handlers)
     : Min.Expr.handler Or_static_error.t
   =
-  failwith "not implemented"
+  let open Result.Let_syntax in
+  let%bind named_op_handers =
+    List.map op_handlers ~f:simplify_operation_handler |> Result.all
+  in
+  let named_op_handers, return_handlers =
+    List.partition_map named_op_handers ~f:(fun (name, op_handler) ->
+        match name with
+        | `Op name -> Either.First (name, op_handler)
+        | `Return -> Either.Second op_handler)
+  in
+  let%bind operations =
+    match Min.Variable.Map.of_alist named_op_handers with
+    | `Ok operations -> Result.Ok operations
+    | `Duplicate_key name ->
+      let message =
+        sprintf
+          "multiple handler clauses given for operation %s"
+          (Min.Variable.to_string name)
+      in
+      Static_error.syntax_error message |> Result.Error
+  in
+  let%map return_clause =
+    match return_handlers with
+    | [] -> Result.Ok None
+    | [ return_clause ] -> Result.Ok (Some return_clause)
+    | _ ->
+      Static_error.syntax_error
+        "multiple return clauses given in effect handler"
+      |> Result.Error
+  in
+  { Min.Expr.operations; return_clause }
 
 and simplify_operation_handler
     :  Syntax.operation_handler
