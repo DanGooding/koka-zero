@@ -6,9 +6,12 @@ module Var_id : Identifiable.S
 module Wildcard_id : Identifiable.S
 
 module Identifier : sig
-  type t = Var of Var_id.t [@@deriving compare, hash, sexp]
+  (** augments a [Var_id.t] with information about which kind of name it is.
+      This information is derived from the string (capitalisation etc.), so the
+      variants can be collapsed back together without issues of collision. *)
+  type t = Var of Var_id.t [@@deriving compare, sexp]
 
-  include Identifiable.S_plain with type t := t
+  include Comparable.S with type t := t
 end
 
 val resume_keyword : Identifier.t

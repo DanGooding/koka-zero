@@ -66,7 +66,7 @@ let add_binding
   match Context.extend env ~var ~type_ with
   | `Ok env' -> return env'
   | `Cannot_shadow ->
-    let message = sprintf "cannot shadow '%s'" (Variable.to_string var) in
+    let message = sprintf "cannot shadow '%s'" (Variable.to_string_user var) in
     Inference.type_error message
 ;;
 
@@ -84,7 +84,9 @@ let rec infer
   | Expr.Variable var ->
     (match Context.find env var with
     | None ->
-      let message = sprintf "unbound variable: %s" (Variable.to_string var) in
+      let message =
+        sprintf "unbound variable: %s" (Variable.to_string_user var)
+      in
       Inference.type_error message
     | Some t ->
       (match t with
@@ -234,7 +236,9 @@ and infer_lambda
     match Variable.Map.of_alist xs_to_ts with
     | `Ok _ -> return ()
     | `Duplicate_key v ->
-      let message = sprintf "duplicate parameter: %s" (Variable.to_string v) in
+      let message =
+        sprintf "duplicate parameter: %s" (Variable.to_string_user v)
+      in
       Inference.type_error message
   in
   (* add each parameter to the environment *)
@@ -370,7 +374,7 @@ let bind_operations
         let message =
           sprintf
             "operation names must be unique: '%s' is reused"
-            (Variable.to_string op_name)
+            (Variable.to_string_user op_name)
         in
         Inference.type_error message)
 ;;

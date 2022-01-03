@@ -33,7 +33,7 @@ module Expr = struct
       { M.Decl.Effect.Operation.argument; answer }
     in
     let operations =
-      M.Variable.Map.singleton (M.Variable.of_string "ask") op_ask
+      M.Variable.Map.singleton (M.Variable.of_user "ask") op_ask
     in
     { M.Decl.Effect.name; operations }
   ;;
@@ -47,7 +47,7 @@ module Expr = struct
       { M.Decl.Effect.Operation.argument; answer }
     in
     let operations =
-      M.Variable.Map.singleton (M.Variable.of_string "throw") op_ask
+      M.Variable.Map.singleton (M.Variable.of_user "throw") op_ask
     in
     { M.Decl.Effect.name; operations }
   ;;
@@ -61,7 +61,7 @@ module Expr = struct
       { M.Decl.Effect.Operation.argument; answer }
     in
     let operations =
-      M.Variable.Map.singleton (M.Variable.of_string "test") op_ask
+      M.Variable.Map.singleton (M.Variable.of_user "test") op_ask
     in
     { M.Decl.Effect.name; operations }
   ;;
@@ -80,9 +80,7 @@ module Expr = struct
     in
     let operations =
       M.Variable.Map.of_alist_exn
-        [ M.Variable.of_string "get", op_get
-        ; M.Variable.of_string "set", op_set
-        ]
+        [ M.Variable.of_user "get", op_get; M.Variable.of_user "set", op_set ]
     in
     { M.Decl.Effect.name; operations }
   ;;
@@ -100,8 +98,8 @@ module Expr = struct
 
   let read_handler (value : int) : E.handler =
     (* handler { ask(unit) { resume(value) } } *)
-    let op_name = M.Variable.of_string "ask" in
-    let op_argument = M.Variable.of_string "unit" in
+    let op_name = M.Variable.of_user "ask" in
+    let op_argument = M.Variable.of_user "unit" in
     let op_body =
       E.Application
         (E.Variable M.Keyword.resume, [ E.Literal (M.Literal.Int value) ])
@@ -112,12 +110,12 @@ module Expr = struct
   (* handler { throw(unit) { default } } *)
   let exn_handler (default : E.t) : E.handler =
     let throw_clause =
-      let op_argument = M.Variable.of_string "unit" in
+      let op_argument = M.Variable.of_user "unit" in
       let op_body = default in
       { E.op_argument; op_body }
     in
     let operations =
-      M.Variable.Map.singleton (M.Variable.of_string "throw") throw_clause
+      M.Variable.Map.singleton (M.Variable.of_user "throw") throw_clause
     in
     { E.operations; return_clause = None }
   ;;

@@ -1,5 +1,3 @@
-(* TODO: rewrite to use modules? *)
-
 open Core
 
 (* Names: *)
@@ -13,15 +11,11 @@ module Identifier = struct
     (* | Wildcard of Wildcard_id.t *)
     (* | Operator of Operator_id.t *)
     (* | Constructor of Constructor_id.t *)
-    [@@deriving compare, hash, sexp]
-
-    let module_name = "Identifier"
-    let of_string s = Sexp.of_string s |> t_of_sexp
-    let to_string t = sexp_of_t t |> Sexp.to_string
+    [@@deriving compare, sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
-  include Identifiable.Make_plain (T)
+  include Comparable.Make (T)
 end
 
 let resume_keyword = Identifier.Var (Var_id.of_string "resume")

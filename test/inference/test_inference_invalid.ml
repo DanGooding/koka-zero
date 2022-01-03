@@ -5,10 +5,10 @@ module E = M.Expr
 let%expect_test "occurs check rejects omega combinator" =
   let expr =
     E.Lambda
-      ( [ M.Variable.of_string "x" ]
+      ( [ M.Variable.of_user "x" ]
       , E.Application
-          ( E.Variable (M.Variable.of_string "x")
-          , [ E.Variable (M.Variable.of_string "x") ] ) )
+          ( E.Variable (M.Variable.of_user "x")
+          , [ E.Variable (M.Variable.of_user "x") ] ) )
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -49,12 +49,12 @@ let%expect_test "handler must include all operations" =
   let state_handler_set_only =
     (* handler { set(x) { () } } *)
     let set_clause =
-      let op_argument = M.Variable.of_string "x" in
+      let op_argument = M.Variable.of_user "x" in
       let op_body = E.Literal M.Literal.Unit in
       { E.op_argument; op_body }
     in
     let operations =
-      M.Variable.Map.singleton (M.Variable.of_string "set") set_clause
+      M.Variable.Map.singleton (M.Variable.of_user "set") set_clause
     in
     { E.operations; return_clause = None }
   in
@@ -65,6 +65,6 @@ let%expect_test "handler must include all operations" =
   [%expect
     {|
     (Error
-     ((kind Type_error) (message "handler does not match any effect: (set)")
-      (location ()))) |}]
+     ((kind Type_error)
+      (message "handler does not match any effect: ((User set))") (location ()))) |}]
 ;;
