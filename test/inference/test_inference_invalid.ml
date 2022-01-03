@@ -1,4 +1,3 @@
-open Core
 open Koka_zero_inference
 module M = Minimal_syntax
 module E = M.Expr
@@ -45,27 +44,8 @@ let%expect_test "if statement's branches must have the same type" =
       (location ()))) |}]
 ;;
 
-let decl_state =
-  let name = Effect.Label.of_string "state" in
-  let op_get =
-    let argument = Type.Mono.Primitive Type.Primitive.Unit in
-    let answer = Type.Mono.Primitive Type.Primitive.Int in
-    { M.Decl.Effect.Operation.argument; answer }
-  in
-  let op_set =
-    let argument = Type.Mono.Primitive Type.Primitive.Int in
-    let answer = Type.Mono.Primitive Type.Primitive.Unit in
-    { M.Effect_decl.Operation.argument; answer }
-  in
-  let operations =
-    M.Variable.Map.of_alist_exn
-      [ M.Variable.of_string "get", op_get; M.Variable.of_string "set", op_set ]
-  in
-  { M.Effect_decl.name; operations }
-;;
-
 let%expect_test "handler must include all operations" =
-  let effect_declarations = [ decl_state ] in
+  let declarations = [ M.Decl.Effect Util.Expr.decl_state ] in
   let state_handler_set_only =
     (* handler { set(x) { () } } *)
     let set_clause =
@@ -78,9 +58,10 @@ let%expect_test "handler must include all operations" =
     in
     { E.operations; return_clause = None }
   in
-  let body = E.Handle (state_handler_set_only, E.Literal M.Literal.Unit) in
-  let program = { M.Program.effect_declarations; body } in
-  Util.print_inference_result program;
+  let body =
+    Util.Expr.make_handle_expr state_handler_set_only (E.Literal M.Literal.Unit)
+  in
+  Util.print_expr_inference_result ~declarations body;
   [%expect
     {|
     (Error

@@ -18,11 +18,11 @@ let%expect_test "identity gets polymorphic type" =
       )
   in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Unit) (Metavariable e18))) |}]
+  [%expect {| (Ok ((Primitive Unit) (Metavariable e16))) |}]
 ;;
 
 (* TODO: tests to add: static scoping, not generalising free varaibles, not
-   gemeralising lambdas fix working properly *)
+   generalising lambdas *)
 
 let%expect_test "fix combinator allows recursion" =
   let expr =
@@ -39,7 +39,7 @@ let%expect_test "fix combinator allows recursion" =
     {|
     (Ok
      ((Arrow ((Metavariable a4)) (Metavariable e6) (Metavariable a6))
-      (Metavariable e10))) |}]
+      (Metavariable e8))) |}]
 ;;
 
 let%expect_test "literal unit" =
@@ -121,113 +121,36 @@ let%expect_test "multi argument functions" =
   [%expect {| (Ok ((Primitive Int) (Metavariable e14))) |}]
 ;;
 
-let decl_read =
-  let name = Effect.Label.of_string "read" in
-  let op_ask =
-    let argument = Type.Mono.Primitive Type.Primitive.Unit in
-    let answer = Type.Mono.Primitive Type.Primitive.Int in
-    { M.Decl.Effect.Operation.argument; answer }
-  in
-  let operations =
-    M.Variable.Map.singleton (M.Variable.of_string "ask") op_ask
-  in
-  { M.Decl.Effect.name; operations }
-;;
-
-let decl_exn =
-  let name = Effect.Label.of_string "exn" in
-  let op_ask =
-    let argument = Type.Mono.Primitive Type.Primitive.Unit in
-    (* TODO: this should be forall a. a, once polymorphic effects are added *)
-    let answer = Type.Mono.Primitive Type.Primitive.Unit in
-    { M.Decl.Effect.Operation.argument; answer }
-  in
-  let operations =
-    M.Variable.Map.singleton (M.Variable.of_string "throw") op_ask
-  in
-  { M.Decl.Effect.name; operations }
-;;
-
-let decl_query =
-  let name = Effect.Label.of_string "query" in
-  let op_ask =
-    let argument = Type.Mono.Primitive Type.Primitive.Int in
-    (* TODO: this should be forall a. a, once polymorphic effects are added *)
-    let answer = Type.Mono.Primitive Type.Primitive.Bool in
-    { M.Decl.Effect.Operation.argument; answer }
-  in
-  let operations =
-    M.Variable.Map.singleton (M.Variable.of_string "test") op_ask
-  in
-  { M.Decl.Effect.name; operations }
-;;
-
-let singleton_handler
-    ~(op_name : M.Variable.t)
-    ~(op_argument : M.Variable.t)
-    ~(op_body : E.t)
-  =
-  let clause = { E.op_argument; op_body } in
-  let operations = M.Variable.Map.singleton op_name clause in
-  { E.operations; return_clause = None }
-;;
-
-let read_handler (value : int) =
-  (* handler { ask(unit) { resume(value) } } *)
-  let op_name = M.Variable.of_string "ask" in
-  let op_argument = M.Variable.of_string "unit" in
-  let op_body =
-    E.Application
-      (E.Variable M.Keyword.resume, [ E.Literal (M.Literal.Int value) ])
-  in
-  singleton_handler ~op_name ~op_argument ~op_body
-;;
-
-(* handler { throw(unit) { default } } *)
-let exn_handler default =
-  let throw_clause =
-    let op_argument = M.Variable.of_string "unit" in
-    let op_body = default in
-    { E.op_argument; op_body }
-  in
-  let operations =
-    M.Variable.Map.singleton (M.Variable.of_string "throw") throw_clause
-  in
-  { E.operations; return_clause = None }
-;;
-
 let%expect_test "handled effects reflected in subject's effect" =
-  let Decl.Effectarations = [ decl_read; decl_exn ] in
+  let declarations =
+    [ M.Decl.Effect Util.Expr.decl_read; M.Decl.Effect Util.Expr.decl_exn ]
+  in
   let body =
-    (* \f. handle h_exn (handle h_read (handle h_read (f ()))) *)
+    (* \f. handler h_exn (\_. handler h_read (\_. handler h_read f)) *)
     (* (() -> <exn,read,read|e> a) -> e a *)
     E.Lambda
       ( [ M.Variable.of_string "f" ]
-      , E.Handle
-          ( exn_handler (E.Literal M.Literal.Unit)
-          , E.Handle
-              ( read_handler 1
-              , E.Handle
-                  ( read_handler 1
-                  , E.Application
-                      ( E.Variable (M.Variable.of_string "f")
-                      , [ E.Literal M.Literal.Unit ] ) ) ) ) )
+      , Util.Expr.make_handle_expr
+          (Util.Expr.exn_handler (E.Literal M.Literal.Unit))
+          (Util.Expr.make_handle_expr
+             (Util.Expr.read_handler 1)
+             (Util.Expr.make_handle_expr
+                (Util.Expr.read_handler 1)
+                (E.Application (E.Variable (M.Variable.of_string "f"), [])))) )
   in
-  let program = { M.Program.Decl.Effectarations; body } in
-  Util.print_inference_result program;
+  Util.print_expr_inference_result ~declarations body;
   [%expect
     {|
     (Ok
      ((Arrow
-       ((Arrow ((Primitive Unit))
-         (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable e30)))))
+       ((Arrow () (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable e52)))))
          (Primitive Unit)))
-       (Metavariable e30) (Primitive Unit))
-      (Metavariable e38))) |}]
+       (Metavariable e52) (Primitive Unit))
+      (Metavariable e54))) |}]
 ;;
 
 let%expect_test "return clause is typed correctly" =
-  let Decl.Effectarations = [ decl_query ] in
+  let declarations = [ M.Decl.Effect Util.Expr.decl_query ] in
   let query_handler =
     (* {[ handler { test(x){ resume( x == 3 ) }; return(b) { if b then () else
        () } } ]} *)
@@ -261,20 +184,19 @@ let%expect_test "return clause is typed correctly" =
   in
   let body =
     (* handle h_query (test(5)) *)
-    E.Handle
-      ( query_handler
-      , E.Application
-          ( E.Variable (M.Variable.of_string "test")
-          , [ E.Literal (M.Literal.Int 5) ] ) )
+    Util.Expr.make_handle_expr
+      query_handler
+      (E.Application
+         ( E.Variable (M.Variable.of_string "test")
+         , [ E.Literal (M.Literal.Int 5) ] ))
   in
-  let program = { M.Program.Decl.Effectarations; body } in
-  Util.print_inference_result program;
-  [%expect {| (Ok ((Primitive Unit) (Metavariable e26))) |}]
+  Util.print_expr_inference_result ~declarations body;
+  [%expect {| (Ok ((Primitive Unit) (Metavariable e32))) |}]
 ;;
 
 let%expect_test "handlers can delegate to outer handlers" =
-  let Decl.Effectarations = [ decl_read ] in
-  let outer_handler = read_handler 1 in
+  let declarations = [ M.Decl.Effect Util.Expr.decl_read ] in
+  let outer_handler = Util.Expr.read_handler 1 in
   (* { ask(unit) { ask(()) + 1 } } *)
   let inner_handler =
     let op_name = M.Variable.of_string "ask" in
@@ -287,19 +209,18 @@ let%expect_test "handlers can delegate to outer handlers" =
         , M.Operator.Int M.Operator.Int.Plus
         , E.Literal (M.Literal.Int 1) )
     in
-    singleton_handler ~op_name ~op_argument ~op_body
+    Util.Expr.singleton_handler ~op_name ~op_argument ~op_body
   in
   (* handle outer (handle inner (ask(()) )) *)
   let body =
-    E.Handle
-      ( outer_handler
-      , E.Handle
-          ( inner_handler
-          , E.Application
-              ( E.Variable (M.Variable.of_string "ask")
-              , [ E.Literal M.Literal.Unit ] ) ) )
+    Util.Expr.make_handle_expr
+      outer_handler
+      (Util.Expr.make_handle_expr
+         inner_handler
+         (E.Application
+            ( E.Variable (M.Variable.of_string "ask")
+            , [ E.Literal M.Literal.Unit ] )))
   in
-  let program = { M.Program.Decl.Effectarations; body } in
-  Util.print_inference_result program;
-  [%expect {| (Ok ((Primitive Int) (Metavariable e34))) |}]
+  Util.print_expr_inference_result ~declarations body;
+  [%expect {| (Ok ((Primitive Int) (Metavariable e46))) |}]
 ;;
