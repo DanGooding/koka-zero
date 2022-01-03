@@ -448,7 +448,7 @@ and simplify_operation_handler
 ;;
 
 let simplify_operation_declaration { Syntax.id; type_parameters; shape }
-    : (Min.Variable.t * Min.Effect_decl.Operation.t) Or_static_error.t
+    : (Min.Variable.t * Min.Decl.Effect.Operation.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match shape with
@@ -474,11 +474,11 @@ let simplify_operation_declaration { Syntax.id; type_parameters; shape }
     in
     let%map t_answer' = simplify_type_as_type t_answer in
     ( id'
-    , { Min.Effect_decl.Operation.argument = t_parameter; answer = t_answer' } )
+    , { Min.Decl.Effect.Operation.argument = t_parameter; answer = t_answer' } )
 ;;
 
 let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
-    : Min.Effect_decl.t Or_static_error.t
+    : Min.Decl.Effect.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let name = simplify_var_id_to_effect_label id in
@@ -504,7 +504,7 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
       Static_error.syntax_error message |> Result.Error
     | `Ok operations' -> Result.Ok operations'
   in
-  { Min.Effect_decl.name; operations = operations' }
+  { Min.Decl.Effect.name; operations = operations' }
 ;;
 
 let simplify_program (_program : Syntax.program)

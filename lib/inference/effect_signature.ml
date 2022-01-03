@@ -32,7 +32,7 @@ module Context = struct
   let empty = Signature.Map.empty
   let extend t ~label ~signature = Map.add t ~key:signature ~data:label
 
-  let extend_decl t { Effect_decl.name; operations } =
+  let extend_decl t { Decl.Effect.name; operations } =
     let signature = signature_of_map operations in
     extend t ~label:name ~signature
   ;;

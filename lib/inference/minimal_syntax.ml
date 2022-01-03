@@ -74,6 +74,10 @@ module Variable : Identifiable.S = String
 
 module Keyword = struct
   let resume = Variable.of_string "resume"
+  let main = Variable.of_string "main"
+
+  (* TODO: namespace separately since this is an internal name *)
+  let entry_point = Variable.of_string "_main"
 end
 
 module Expr = struct
@@ -82,7 +86,7 @@ module Expr = struct
       | Variable of Variable.t
       | Let of Variable.t * t * t
       | Lambda of lambda
-      | Fix_lambda of Variable.t * lambda
+      | Fix_lambda of fix_lambda
       | Application of t * t list
       | Literal of Literal.t
       | If_then_else of t * t * t
@@ -93,6 +97,8 @@ module Expr = struct
 
     and lambda = Variable.t list * t [@@deriving sexp]
 
+    and fix_lambda = Variable.t * lambda [@@deriving sexp]
+
     and handler =
       { operations : op_handler Variable.Map.t
       ; return_clause : op_handler option
@@ -101,8 +107,6 @@ module Expr = struct
 
     and op_handler =
       { op_argument : Variable.t
-            (* TODO: extend to multiple args (requires checking against
-               declaration) *)
       ; op_body : t
       }
     [@@deriving sexp]
@@ -111,26 +115,52 @@ module Expr = struct
   include T
 end
 
-module Effect_decl = struct
-  module Operation = struct
+module Decl = struct
+  module Effect = struct
+    module Operation = struct
+      type t =
+        { argument : Type.Mono.t
+        ; answer : Type.Mono.t
+        }
+      [@@deriving sexp]
+    end
+
     type t =
-      { argument : Type.Mono.t
-      ; answer : Type.Mono.t
+      { name : Effect.Label.t
+      ; operations : Operation.t Variable.Map.t
       }
     [@@deriving sexp]
   end
 
-  type t =
-    { name : Effect.Label.t
-    ; operations : Operation.t Variable.Map.t
-    }
-  [@@deriving sexp]
+  module Fun = struct
+    type t = Expr.fix_lambda [@@deriving sexp]
+  end
+
+  module T = struct
+    type t =
+      | Fun of Fun.t
+      | Effect of Effect.t
+    [@@deriving sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+  include T
 end
 
 module Program = struct
   type t =
-    { effect_declarations : Effect_decl.t list
-    ; body : Expr.t
+    { declarations : Decl.t list
+    ; has_main : bool
     }
   [@@deriving sexp]
+
+  let entry_point =
+    (* {[ fun _main() { (fn(_result) { () }) (main()) } ]} *)
+    let call_user_main = Expr.Application (Expr.Variable Keyword.main, []) in
+    ( Keyword.entry_point
+    , ( []
+      , Expr.Application
+          ( Expr.Lambda
+              ([ Variable.of_string "_result" ], Expr.Literal Literal.Unit)
+          , [ call_user_main ] ) ) )
+  ;;
 end
