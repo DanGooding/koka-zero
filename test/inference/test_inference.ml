@@ -121,6 +121,33 @@ let%expect_test "multi argument functions" =
   [%expect {| (Ok ((Primitive Int) (Metavariable e14))) |}]
 ;;
 
+let%expect_test "declared functions are generalised" =
+  let identity =
+    ( M.Variable.of_string "id"
+    , ([ M.Variable.of_string "x" ], E.Variable (M.Variable.of_string "x")) )
+  in
+  let const_true =
+    ( M.Variable.of_string "const_true"
+    , ( []
+      , E.Application
+          ( E.Variable (M.Variable.of_string "id")
+          , [ E.Literal (M.Literal.Bool true) ] ) ) )
+  in
+  let const_three =
+    ( M.Variable.of_string "const_three"
+    , ( []
+      , E.Application
+          ( E.Variable (M.Variable.of_string "id")
+          , [ E.Literal (M.Literal.Int 3) ] ) ) )
+  in
+  let declarations =
+    [ M.Decl.Fun identity; M.Decl.Fun const_true; M.Decl.Fun const_three ]
+  in
+  let program = { M.Program.declarations; has_main = false } in
+  Util.print_check_program_result program;
+  [%expect {| (Ok ()) |}]
+;;
+
 let%expect_test "handled effects reflected in subject's effect" =
   let declarations =
     [ M.Decl.Effect Util.Expr.decl_read; M.Decl.Effect Util.Expr.decl_exn ]
