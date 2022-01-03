@@ -148,6 +148,14 @@ let%expect_test "declared functions are generalised" =
   [%expect {| (Ok ()) |}]
 ;;
 
+let%expect_test "sequence doesn't require first to be unit" =
+  let e =
+    E.Seq (E.Literal (M.Literal.Int 0), E.Literal (M.Literal.Bool true))
+  in
+  Util.print_expr_inference_result e;
+  [%expect {| (Ok ((Primitive Bool) (Metavariable e2))) |}]
+;;
+
 let%expect_test "handled effects reflected in subject's effect" =
   let declarations =
     [ M.Decl.Effect Util.Expr.decl_read; M.Decl.Effect Util.Expr.decl_exn ]

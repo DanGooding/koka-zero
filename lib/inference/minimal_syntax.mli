@@ -64,6 +64,8 @@ module Expr : sig
     | Lambda of lambda
     | Fix_lambda of fix_lambda
     | Application of t * t list
+    | Seq of t * t
+        (** evaluates first expression, then second. both may be of any type *)
     | Literal of Literal.t
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
