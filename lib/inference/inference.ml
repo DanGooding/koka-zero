@@ -345,66 +345,53 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
   Type.Mono.instantiate_as monotype ~var_to_meta ~effect_var_to_meta
 ;;
 
-(* TODO: should this be in infer instead (doesn't need internal access)? *)
-let generalise
-    : Type.Mono.t * Effect.t -> in_:Context.t -> (Type.t * Effect.t) t
-  =
- fun (t, e) ~in_:env ->
+let generalise : Type.Mono.t -> Effect.t -> in_:Context.t -> Type.Poly.t t =
+ fun t e ~in_:env ->
   let open Let_syntax in
-  let%bind e =
-    use_substitution (fun substitution ->
-        Substitution.apply_to_effect substitution e)
+  (* TODO: can technically generalise a 'pure' term (<exn,div>), but then need
+     to keep those effects in the final effect [e']
+
+     actually - koka forbids this at toplevel, so shouldn't *)
+  let%bind () = unify_effects e Effect.total in
+  let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
+  let%bind env = use_substitution (Context.apply_substitution env) in
+  (* [e] was unified with total - has no metavariables *)
+  let t_meta, t_effect_meta = Type.Mono.metavariables t in
+  let env_meta, env_effect_meta = Context.metavariables env in
+  (* entirely free metavariables *)
+  let meta = Set.diff t_meta env_meta in
+  let effect_meta = Set.diff t_effect_meta env_effect_meta in
+  (* replace each of these metavariables with a fresh variable, and universally
+     quanitfy over all those *)
+  (* TODO: factor out the similarity here? *)
+  let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
+    Set.to_map meta ~f:(fun _m -> fresh_variable) |> sequence_map
   in
-  (* can only generalise a pure term - here we restrict to total for
-     simplicity. *)
-  match Effect.is_total e with
-  | Some false ->
-    (* TODO: can technically generalise a 'pure' term (<exn,div>), but then need
-       to keep those effects in the final effect [e'] *)
-    return (Type.Mono t, e)
-  | Some true | None ->
-    (* [e] will unify with total *)
-    let%bind () = unify_effects e Effect.total in
-    let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
-    let%bind env = use_substitution (Context.apply_substitution env) in
-    (* [e] was unified with total - has no metavariables *)
-    let t_meta, t_effect_meta = Type.Mono.metavariables t in
-    let env_meta, env_effect_meta = Context.metavariables env in
-    (* entirely free metavariables *)
-    let meta = Set.diff t_meta env_meta in
-    let effect_meta = Set.diff t_effect_meta env_effect_meta in
-    (* replace each of these metavariables with a fresh variable, and
-       universally quanitfy over all those *)
-    (* TODO: factor out the similarity here? *)
-    let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
-      Set.to_map meta ~f:(fun _m -> fresh_variable) |> sequence_map
-    in
-    let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
-    let%bind (effect_meta_to_var : Effect.Variable.t Effect.Metavariable.Map.t) =
-      Set.to_map effect_meta ~f:(fun _m -> fresh_effect_variable)
-      |> sequence_map
-    in
-    let effect_meta_to_effect =
-      Map.map effect_meta_to_var ~f:(fun v -> Effect.Variable v)
-    in
-    let%bind () =
-      map_substitution (fun substitution ->
-          (* TODO: labelled parameters would make this much nicer *)
-          let substitution =
-            Substitution.extend_many_exn substitution meta_to_mono
-          in
-          Substitution.extend_many_effect_exn substitution effect_meta_to_effect)
-    in
-    (* actually replace the free metavariables with variables *)
-    let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
-    let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
-    let forall_bound_effects =
-      Map.data effect_meta_to_var |> Effect.Variable.Set.of_list
-    in
-    let p =
-      Type.Poly { Type.Poly.forall_bound; forall_bound_effects; monotype = t }
-    in
-    with_any_effect p
+  let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
+  let%bind (effect_meta_to_var : Effect.Variable.t Effect.Metavariable.Map.t) =
+    Set.to_map effect_meta ~f:(fun _m -> fresh_effect_variable) |> sequence_map
+  in
+  let effect_meta_to_effect =
+    Map.map effect_meta_to_var ~f:(fun v -> Effect.Variable v)
+  in
+  let%bind () =
+    map_substitution (fun substitution ->
+        (* TODO: labelled parameters would make this much nicer *)
+        let substitution =
+          Substitution.extend_many_exn substitution meta_to_mono
+        in
+        Substitution.extend_many_effect_exn substitution effect_meta_to_effect)
+  in
+  (* actually replace the free metavariables with variables *)
+  let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
+  let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
+  let forall_bound_effects =
+    Map.data effect_meta_to_var |> Effect.Variable.Set.of_list
+  in
+  let p =
+    Type.Poly { Type.Poly.forall_bound; forall_bound_effects; monotype = t }
+  in
+  with_any_effect p
 ;;
 
 let run (f : 'a t) =
