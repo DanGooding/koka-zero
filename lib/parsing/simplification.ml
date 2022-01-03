@@ -83,8 +83,9 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
         (Syntax.sexp_of_effect_row r |> Sexp.to_string_hum)
     in
     Static_error.syntax_error message |> Result.Error
-  | Syntax.Scheme _ ->
-    Static_error.unsupported_syntax "type scheme" |> Result.Error
+  | Syntax.Scheme s ->
+    let%bind _t = simplify_type_scheme s in
+    Static_error.unsupported_syntax "higher rank types" |> Result.Error
   | Syntax.Type_atom { constructor; arguments } ->
     let%bind () =
       restrict_to_empty arguments ~description:"parameterised types"
@@ -187,6 +188,11 @@ and simplify_type_as_effect_label
     in
     Static_error.syntax_error message |> Result.Error
 
+and simplify_type_scheme { Syntax.forall_quantified = _; body = _ }
+    : Type.Poly.t Or_static_error.t
+  =
+  Static_error.unsupported_syntax "type scheme" |> Result.Error
+
 and simplify_parameter_type { Syntax.parameter_id; type_ }
     : (Min.Variable.t option * Type.Mono.t) Or_static_error.t
   =
@@ -234,6 +240,18 @@ let simplify_pattern : Syntax.pattern -> Min.Variable.t Or_static_error.t
   | Syntax.Pattern_id x -> simplify_identifier x |> Result.Ok
   | Syntax.Pattern_wildcard ->
     Static_error.unsupported_syntax "wildcard parameter" |> Result.Error
+;;
+
+let simplify_annotated_pattern { Syntax.pattern; scheme }
+    : Min.Variable.t Or_static_error.t
+  =
+  let open Result.Let_syntax in
+  let%bind x = simplify_pattern pattern in
+  let%bind t =
+    Option.map scheme ~f:simplify_type_scheme |> Static_error.interchange_option
+  in
+  let%map () = restrict_to_none t ~description:"type annotation on pattern" in
+  x
 ;;
 
 let simplify_pattern_parameter { Syntax.pattern; type_ }
@@ -298,18 +316,18 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%map block_no' = simplify_block block_no in
     Min.Expr.If_then_else (e_cond', block_yes', block_no')
   | Syntax.If_then (e_cond, block_yes) ->
-    (* TODO: this is desugaring mixed in *)
     let block_no = Syntax.singleton_block (Syntax.Literal Syntax.Unit) in
     Syntax.If_then_else (e_cond, block_yes, block_no) |> simplify_expr
   | Syntax.Handler handler ->
     let%map handler' = simplify_effect_handler handler in
     Min.Expr.Handler handler'
   | Syntax.Handle { subject; handler } ->
-    (* TODO: more desugaring here... *)
     let%bind handler' = simplify_expr (Syntax.Handler handler) in
     let%map subject' = simplify_expr subject in
     Min.Expr.Application (handler', [ subject' ])
-  | Syntax.Fn f -> simplify_fn f
+  | Syntax.Fn f ->
+    let%map lambda = simplify_fn f in
+    Min.Expr.Lambda lambda
   | Syntax.Application (e_f, e_args) ->
     let%bind e_f' = simplify_expr e_f in
     let%map e_args' = List.map e_args ~f:simplify_expr |> Result.all in
@@ -333,13 +351,50 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     Static_error.unsupported_syntax "type annotation on expression"
     |> Result.Error
 
-and simplify_block { Syntax.statements = _; last = _ }
-    : Min.Expr.t Or_static_error.t
+and simplify_fun_declaration { Syntax.id; fn }
+    : Min.Decl.Fun.t Or_static_error.t
   =
-  failwith "not implemented"
+  let open Result.Let_syntax in
+  let%map lambda = simplify_fn fn in
+  let f_name = simplify_identifier id in
+  f_name, lambda
+
+and simplify_declaration_preceding
+    : Syntax.declaration -> Min.Expr.t -> Min.Expr.t Or_static_error.t
+  =
+ fun declaration e ->
+  let open Result.Let_syntax in
+  match declaration with
+  | Syntax.Fun f ->
+    let%map (f_fix_lambda : Min.Expr.fix_lambda) = simplify_fun_declaration f in
+    let f_name, _ = f_fix_lambda in
+    Min.Expr.Let (f_name, Min.Expr.Fix_lambda f_fix_lambda, e)
+  (* local `val` is monomorphic binding *)
+  | Syntax.Val (pattern, block) ->
+    let%bind x = simplify_annotated_pattern pattern in
+    let%map e_x = simplify_block block in
+    (* (\x. e) e_x *)
+    Min.Expr.Application (Min.Expr.Lambda ([ x ], e), [ e_x ])
+
+(** given the simplification of the tail of a block, and a statement (its head)
+    produce the resulting expression *)
+and simplify_statement_preceding
+    : Syntax.statement -> Min.Expr.t -> Min.Expr.t Or_static_error.t
+  =
+ fun statement e ->
+  match statement with
+  | Syntax.Declaration d -> simplify_declaration_preceding d e
+  | Syntax.Expr e0 -> Min.Expr.Seq (e0, e) |> Result.Ok
+
+and simplify_block { Syntax.statements; last } : Min.Expr.t Or_static_error.t =
+  let open Result.Let_syntax in
+  let last = simplify_expr last in
+  List.fold_right statements ~init:last ~f:(fun statement e ->
+      let%bind e = e in
+      simplify_statement_preceding statement e)
 
 and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
-    : Min.Expr.t Or_static_error.t
+    : Min.Expr.lambda Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind () =
@@ -356,7 +411,7 @@ and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
     restrict_to_all_none types ~description:"type annotations on parameters"
   in
   let%map body' = simplify_block body in
-  Min.Expr.Lambda (names, body')
+  names, body'
 
 and simplify_effect_handler (Syntax.Effect_handler op_handlers)
     : Min.Expr.handler Or_static_error.t
@@ -507,9 +562,37 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
   { Min.Decl.Effect.name; operations = operations' }
 ;;
 
-let simplify_program (_program : Syntax.program)
+let simplify_pure_declaration
+    : Syntax.pure_declaration -> Min.Decl.t Or_static_error.t
+  = function
+  | Syntax.Top_val _ ->
+    Static_error.unsupported_syntax "toplevel val binding" |> Result.Error
+  | Syntax.Top_fun declaration ->
+    let%map.Result declaration = simplify_fun_declaration declaration in
+    Min.Decl.Fun declaration
+;;
+
+let simplify_type_declaration
+    : Syntax.type_declaration -> Min.Decl.t Or_static_error.t
+  = function
+  | Syntax.Effect_declaration declaration ->
+    let%map.Result declaration = simplify_effect_declaration declaration in
+    Min.Decl.Effect declaration
+;;
+
+let simplify_toplevel_declaration
+    : Syntax.toplevel_declaration -> Min.Decl.t Or_static_error.t
+  = function
+  | Syntax.Pure_declaration declaration -> simplify_pure_declaration declaration
+  | Syntax.Type_declaration declaration -> simplify_type_declaration declaration
+;;
+
+let simplify_program (Syntax.Program declarations)
     : Min.Program.t Or_static_error.t
   =
-  ignore simplify_effect_declaration;
-  failwith "not implemented"
+  let open Result.Let_syntax in
+  let%map declarations =
+    List.map declarations ~f:simplify_toplevel_declaration |> Result.all
+  in
+  { Min.Program.declarations; has_main = true }
 ;;
