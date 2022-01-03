@@ -2,7 +2,7 @@ let%expect_test "toplevel value declaration" =
   let code = {|
   val number : int = 1729;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -11,7 +11,9 @@ let%expect_test "toplevel value declaration" =
         (Val
          ((id (Var number))
           (type_ ((Type_atom (constructor Type_int) (arguments ())))))
-         ((statements ()) (last (Literal (Int 1729))))))))) |}]
+         ((statements ()) (last (Literal (Int 1729))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "single expression function" =
@@ -20,7 +22,7 @@ fun main() {
   0;
 };
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -30,7 +32,9 @@ fun main() {
          ((id (Var main))
           (fn
            ((type_parameters ()) (parameters ()) (result_type ())
-            (body ((statements ()) (last (Literal (Int 0))))))))))))) |}]
+            (body ((statements ()) (last (Literal (Int 0))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "multi statement function" =
@@ -44,7 +48,7 @@ fun main() {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -66,7 +70,9 @@ fun main() {
                   ((statements ())
                    (last
                     (Application (Identifier (Var foo)) ((Identifier (Var x))))))))))
-              (last (Binary_op (Identifier (Var y)) Times (Literal (Int 2)))))))))))))) |}]
+              (last (Binary_op (Identifier (Var y)) Times (Literal (Int 2)))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "dashes in identifiers" =
@@ -75,7 +81,7 @@ val kebab-case = 0;
 val x-y-z = 1;
 val number3-letter = 2;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -88,21 +94,25 @@ val number3-letter = 2;
          ((statements ()) (last (Literal (Int 1))))))
        (Pure_declaration
         (Val ((id (Var number3-letter)) (type_ ()))
-         ((statements ()) (last (Literal (Int 2))))))))) |}]
+         ((statements ()) (last (Literal (Int 2))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "hex literals" =
   let code = {|
 val abcd = 0x1234ABCD;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
      (Program
       ((Pure_declaration
         (Val ((id (Var abcd)) (type_ ()))
-         ((statements ()) (last (Literal (Int 305441741))))))))) |}]
+         ((statements ()) (last (Literal (Int 305441741))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "prime at end of identifier" =
@@ -110,7 +120,7 @@ let%expect_test "prime at end of identifier" =
 val f' = diff(f);
 val f'' = diff(f');
   |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -122,7 +132,9 @@ val f'' = diff(f');
        (Pure_declaration
         (Val ((id (Var f'')) (type_ ()))
          ((statements ())
-          (last (Application (Identifier (Var diff)) ((Identifier (Var f'))))))))))) |}]
+          (last (Application (Identifier (Var diff)) ((Identifier (Var f'))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "operators" =
@@ -137,7 +149,7 @@ val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11;
 val inside = 0 <= x && x < 7 || 100 < x && x >= 9000;
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -194,21 +206,25 @@ val inside = 0 <= x && x < 7 || 100 < x && x >= 9000;
             (Binary_op
              (Binary_op (Literal (Int 100)) Less_than (Identifier (Var x))) And
              (Binary_op (Identifier (Var x)) Greater_equal (Literal (Int 9000))))))))))))
-|}]
+|}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "negative integer literals" =
   let code = {|
 val minus-fourty = -40;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
      (Program
       ((Pure_declaration
         (Val ((id (Var minus-fourty)) (type_ ()))
-         ((statements ()) (last (Literal (Int -40))))))))) |}]
+         ((statements ()) (last (Literal (Int -40))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "boolean literals" =
@@ -216,7 +232,7 @@ let%expect_test "boolean literals" =
 val t = True;
 val f = False;
   |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -226,7 +242,9 @@ val f = False;
          ((statements ()) (last (Literal (Bool true))))))
        (Pure_declaration
         (Val ((id (Var f)) (type_ ()))
-         ((statements ()) (last (Literal (Bool false))))))))) |}]
+         ((statements ()) (last (Literal (Bool false))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "if statements" =
@@ -244,7 +262,7 @@ fun if-example() {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -279,7 +297,9 @@ fun if-example() {
                       ((statements ()) (last (Literal (Int -1))))
                       ((statements ())
                        (last
-                        (Binary_op (Literal (Int 1)) Plus (Literal (Int 1))))))))))))))))))))))) |}]
+                        (Binary_op (Literal (Int 1)) Plus (Literal (Int 1))))))))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "nested if statements" =
@@ -295,7 +315,7 @@ fun i() {
   else d;
 };
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -313,7 +333,9 @@ fun i() {
                  (last
                   (If_then_else (Identifier (Var b))
                    ((statements ()) (last (Identifier (Var c))))
-                   ((statements ()) (last (Identifier (Var d))))))))))))))))))) |}]
+                   ((statements ()) (last (Identifier (Var d))))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "if statement body" =
@@ -334,7 +356,7 @@ fun i() {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -360,7 +382,9 @@ fun i() {
                 ((statements ((Expr (Application (Identifier (Var aaa)) ()))))
                  (last (Application (Identifier (Var bbb)) ())))
                 ((statements ((Expr (Application (Identifier (Var ccc)) ()))))
-                 (last (Application (Identifier (Var ddd)) ()))))))))))))))) |}]
+                 (last (Application (Identifier (Var ddd)) ()))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "dot application" =
@@ -369,7 +393,7 @@ fun dot-application() {
   x.best.fst.pow(3).print;
 };
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -386,7 +410,9 @@ fun dot-application() {
                 ((Application (Identifier (Var pow))
                   ((Application (Identifier (Var fst))
                     ((Application (Identifier (Var best)) ((Identifier (Var x))))))
-                   (Literal (Int 3))))))))))))))))) |}]
+                   (Literal (Int 3))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "trailing lambda application" =
@@ -399,7 +425,7 @@ fun trailing-lambda() {
 };
   |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -446,7 +472,9 @@ fun trailing-lambda() {
                  (Fn
                   ((type_parameters ()) (parameters ()) (result_type ())
                    (body ((statements ()) (last (Identifier (Var zzz))))))))))))))))))))
-    |}]
+    |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "with syntax" =
@@ -463,7 +491,7 @@ fun one(aa, bb, cc, dd) {
 };
   |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -522,7 +550,9 @@ fun one(aa, bb, cc, dd) {
                                            (Application
                                             (Identifier (Var println))
                                             ((Identifier (Var x)))))))))))))))))))))))))))))))))))))))))))
-|}]
+|}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "single line comments" =
@@ -545,7 +575,7 @@ val not-commented-out = True;
 // // /// ////
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -570,7 +600,9 @@ val not-commented-out = True;
               (last (Binary_op (Identifier (Var x)) Times (Identifier (Var x)))))))))))
        (Pure_declaration
         (Val ((id (Var not-commented-out)) (type_ ()))
-         ((statements ()) (last (Literal (Bool true))))))))) |}]
+         ((statements ()) (last (Literal (Bool true))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "multiline comments" =
@@ -590,7 +622,7 @@ as much as is required */
 val y = x * /* can be within expressions! */ 5;
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -601,7 +633,9 @@ val y = x * /* can be within expressions! */ 5;
        (Pure_declaration
         (Val ((id (Var y)) (type_ ()))
          ((statements ())
-          (last (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))) |}]
+          (last (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "" =
@@ -612,7 +646,7 @@ fun op-trailing-lambda-example() {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -633,7 +667,9 @@ fun op-trailing-lambda-example() {
                      ((statements ())
                       (last
                        (Binary_op (Literal (Int 3)) Plus
-                        (Binary_op (Literal (Int 4)) Times (Literal (Int 5))))))))))))))))))))))) |}]
+                        (Binary_op (Literal (Int 4)) Times (Literal (Int 5))))))))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "trailing and single line lambda" =
@@ -642,7 +678,7 @@ fun trailing-lambdas() {
   fn(a) a fn(b) b fn(c) c;
 };
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -679,7 +715,9 @@ fun trailing-lambdas() {
                                (result_type ())
                                (body
                                 ((statements ()) (last (Identifier (Var c))))))))))))))))))))))))))))))))
-    |}]
+    |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "application after trailing lambda" =
@@ -692,7 +730,7 @@ fun app-after-trailing-lambda() {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -714,7 +752,9 @@ fun app-after-trailing-lambda() {
                       (parameters (((pattern (Pattern_id (Var x))) (type_ ()))))
                       (result_type ())
                       (body ((statements ()) (last (Identifier (Var x)))))))))
-                  ((Identifier (Var y)) (Identifier (Var z))))))))))))))))) |}]
+                  ((Identifier (Var y)) (Identifier (Var z))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "effect declaration" =
@@ -729,7 +769,7 @@ effect my-effect<a :: V> {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -769,14 +809,16 @@ effect my-effect<a :: V> {
                (((id (Parameter_id (Var x)))
                  (type_
                   (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
-               (Type_atom (constructor (Variable_or_name b)) (arguments ()))))))))))))) |}]
+               (Type_atom (constructor (Variable_or_name b)) (arguments ()))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "shorthand effect declaration" =
   let code = {|
 effect control yield(x : a) : bool;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -791,7 +833,9 @@ effect control yield(x : a) : bool;
                (((id (Parameter_id (Var x)))
                  (type_
                   (Type_atom (constructor (Variable_or_name a)) (arguments ())))))
-               (Type_atom (constructor Type_bool) (arguments ()))))))))))))) |}]
+               (Type_atom (constructor Type_bool) (arguments ()))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "handler" =
@@ -825,7 +869,7 @@ fun one-operation() {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -924,7 +968,9 @@ fun one-operation() {
                   ((type_parameters ()) (parameters ()) (result_type ())
                    (body
                     ((statements ())
-                     (last (Application (Identifier (Var subject)) ()))))))))))))))))))) |}]
+                     (last (Application (Identifier (Var subject)) ()))))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "handle" =
@@ -937,7 +983,7 @@ fun handle-example(action) {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -963,7 +1009,9 @@ fun handle-example(action) {
                        (Binary_op
                         (Binary_op (Identifier (Var x)) Times
                          (Identifier (Var x)))
-                        Plus (Identifier (Var x)))))))))))))))))))))) |}]
+                        Plus (Identifier (Var x)))))))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "type annotations" =
@@ -977,7 +1025,7 @@ fun square(x : int) : <> int {
 };
   |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -1009,7 +1057,9 @@ fun square(x : int) : <> int {
                (result (Type_atom (constructor Type_int) (arguments ()))))))
             (body
              ((statements ())
-              (last (Binary_op (Identifier (Var x)) Times (Identifier (Var x)))))))))))))) |}]
+              (last (Binary_op (Identifier (Var x)) Times (Identifier (Var x)))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "effect annotations" =
@@ -1026,7 +1076,7 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -1118,7 +1168,9 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                   ((type_parameters ()) (parameters ()) (result_type ())
                    (body
                     ((statements ())
-                     (last (Application (Identifier (Var action)) ()))))))))))))))))))) |}]
+                     (last (Application (Identifier (Var action)) ()))))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "unnecessary brackets in arrow types" =
@@ -1126,7 +1178,7 @@ let%expect_test "unnecessary brackets in arrow types" =
   let code = {|
 val f : ((x : int, y : int)) -> (() -> (int)) = f_;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -1156,7 +1208,9 @@ val f : ((x : int, y : int)) -> (() -> (int)) = f_;
                        (((parameter_id ())
                          (type_
                           (Type_atom (constructor Type_int) (arguments ())))))))))))))))))))
-         ((statements ()) (last (Identifier (Var f_))))))))) |}]
+         ((statements ()) (last (Identifier (Var f_))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "kind annotations" =
@@ -1167,7 +1221,7 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
 };
 |}
   in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Ok
@@ -1201,5 +1255,7 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
                          (Type_atom (constructor (Variable_or_name b))
                           (arguments ())))
                         (Type_atom (constructor (Variable_or_name c))
-                         (arguments ())))))))))))))))))))))) |}]
+                         (arguments ())))))))))))))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;

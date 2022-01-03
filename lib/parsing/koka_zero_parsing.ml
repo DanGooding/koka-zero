@@ -3,6 +3,12 @@ open Lexing
 open Koka_zero_util
 module LexerUtil = MenhirLib.LexerUtil
 
+let set_filename ?filename lexbuf =
+  match filename with
+  | Some filename -> LexerUtil.init filename lexbuf
+  | None -> lexbuf
+;;
+
 let parse lexbuf =
   try Parser.program Lexer.read lexbuf |> Result.Ok with
   | Lexer.Syntax_error message ->
@@ -15,27 +21,31 @@ let parse lexbuf =
     Result.Error error
 ;;
 
-let parse_to_minimal lexbuf =
-  let open Result.Let_syntax in
-  let%bind program = parse lexbuf in
-  Simplification.simplify_program program
-;;
+module Private = struct
+  module Syntax = Syntax
 
-let set_filename ?filename lexbuf =
-  match filename with
-  | Some filename -> LexerUtil.init filename lexbuf
-  | None -> lexbuf
-;;
+  let parse_to_syntax ?filename lexbuf =
+    let lexbuf = set_filename ?filename lexbuf in
+    parse lexbuf
+  ;;
 
-let parse_with_filename ?filename lexbuf =
-  let lexbuf = set_filename ?filename lexbuf in
-  parse_to_minimal lexbuf
-;;
+  let parse_channel_to_syntax ?filename ch =
+    parse_to_syntax ?filename (Lexing.from_channel ch)
+  ;;
+
+  let parse_string_to_syntax ?filename s =
+    parse_to_syntax ?filename (Lexing.from_string s)
+  ;;
+
+  let simplify = Simplification.simplify_program
+end
 
 let parse_channel ?filename ch =
-  parse_with_filename ?filename (Lexing.from_channel ch)
+  let%bind.Result program = Private.parse_channel_to_syntax ?filename ch in
+  Private.simplify program
 ;;
 
 let parse_string ?filename s =
-  parse_with_filename ?filename (Lexing.from_string s)
+  let%bind.Result program = Private.parse_string_to_syntax ?filename s in
+  Private.simplify program
 ;;
