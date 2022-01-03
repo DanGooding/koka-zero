@@ -114,19 +114,6 @@ let rec infer
     in
     let%map () = Inference.unify_effects eff_f eff_args_combined in
     t_result, eff_f
-  | Expr.If_then_else (expr_cond, expr_yes, expr_no) ->
-    let%bind t_cond, eff_cond = infer ~env ~effect_env expr_cond in
-    let%bind () =
-      Inference.unify t_cond (Type.Mono.Primitive Type.Primitive.Bool)
-    in
-    let%bind t_yes, eff_yes = infer ~env ~effect_env expr_yes in
-    let%bind t_no, eff_no = infer ~env ~effect_env expr_no in
-    let%bind () = Inference.unify t_yes t_no in
-    (* TODO: just unifying all the effects and only touching the types must be a
-       common pattern - extract it? *)
-    let%bind () = Inference.unify_effects eff_cond eff_yes in
-    let%map () = Inference.unify_effects eff_yes eff_no in
-    t_yes, eff_yes
   | Expr.Lambda lambda ->
     let%bind t = infer_lambda ~env ~effect_env lambda in
     Inference.with_any_effect t
@@ -142,6 +129,24 @@ let rec infer
     let%bind env' = add_binding ~env ~var:x ~type_:(Type.Poly t_subject) in
     let%map t_body, eff_body = infer ~env:env' ~effect_env expr_body in
     t_body, eff_body
+  | Expr.Seq (e1, e2) ->
+    let%bind _t1, eff1 = infer ~env ~effect_env e1 in
+    let%bind t2, eff2 = infer ~env ~effect_env e2 in
+    let%map () = Inference.unify_effects eff1 eff2 in
+    t2, eff1
+  | Expr.If_then_else (expr_cond, expr_yes, expr_no) ->
+    let%bind t_cond, eff_cond = infer ~env ~effect_env expr_cond in
+    let%bind () =
+      Inference.unify t_cond (Type.Mono.Primitive Type.Primitive.Bool)
+    in
+    let%bind t_yes, eff_yes = infer ~env ~effect_env expr_yes in
+    let%bind t_no, eff_no = infer ~env ~effect_env expr_no in
+    let%bind () = Inference.unify t_yes t_no in
+    (* TODO: just unifying all the effects and only touching the types must be a
+       common pattern - extract it? *)
+    let%bind () = Inference.unify_effects eff_cond eff_yes in
+    let%map () = Inference.unify_effects eff_yes eff_no in
+    t_yes, eff_yes
   | Expr.Operator (expr_l, op, expr_r) ->
     let%bind t_l, eff_l = infer ~env ~effect_env expr_l in
     let%bind t_r, eff_r = infer ~env ~effect_env expr_r in

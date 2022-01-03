@@ -382,9 +382,12 @@ and simplify_statement_preceding
     : Syntax.statement -> Min.Expr.t -> Min.Expr.t Or_static_error.t
   =
  fun statement e ->
+  let open Result.Let_syntax in
   match statement with
   | Syntax.Declaration d -> simplify_declaration_preceding d e
-  | Syntax.Expr e0 -> Min.Expr.Seq (e0, e) |> Result.Ok
+  | Syntax.Expr e0 ->
+    let%map e0 = simplify_expr e0 in
+    Min.Expr.Seq (e0, e)
 
 and simplify_block { Syntax.statements; last } : Min.Expr.t Or_static_error.t =
   let open Result.Let_syntax in
