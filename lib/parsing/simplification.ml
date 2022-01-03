@@ -27,16 +27,14 @@ let restrict_to_all_none ~description xs =
 ;;
 
 (** convert a [Var_id.t] to the [Minimal_syntax] equivalent *)
-let simplify_var_id (_x : Syntax.Var_id.t) : Min.Variable.t =
-  (* TODO: do I need to send this to a variant to allow safe generation of fresh
-     dummy names *)
-  failwith "not implemented"
+let simplify_var_id (x : Syntax.Var_id.t) : Min.Variable.t =
+  Min.Variable.of_user (Syntax.Var_id.to_string x)
 ;;
 
 (** convert a [Var_id.t] representing an effect label to the [Minimal_syntax]
     equivalent *)
-let simplify_var_id_to_effect_label (_x : Syntax.Var_id.t) : Effect.Label.t =
-  failwith "not implemented"
+let simplify_var_id_to_effect_label (x : Syntax.Var_id.t) : Effect.Label.t =
+  Effect.Label.of_string (Syntax.Var_id.to_string x)
 ;;
 
 (** convert an [Identifier.t] to the [Minimal_syntax] equivalent *)
@@ -436,7 +434,7 @@ and simplify_effect_handler (Syntax.Effect_handler op_handlers)
       let message =
         sprintf
           "multiple handler clauses given for operation %s"
-          (Min.Variable.to_string name)
+          (Min.Variable.to_string_user name)
       in
       Static_error.syntax_error message |> Result.Error
   in
@@ -556,7 +554,7 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
       let message =
         sprintf
           "duplicate operation name %s in effect %s"
-          (Min.Variable.to_string op_name)
+          (Min.Variable.to_string_user op_name)
           (Effect.Label.to_string name)
       in
       Static_error.syntax_error message |> Result.Error
