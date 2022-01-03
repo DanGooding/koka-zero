@@ -126,12 +126,12 @@ let decl_read =
   let op_ask =
     let argument = Type.Mono.Primitive Type.Primitive.Unit in
     let answer = Type.Mono.Primitive Type.Primitive.Int in
-    { M.Effect_decl.Operation.argument; answer }
+    { M.Decl.Effect.Operation.argument; answer }
   in
   let operations =
     M.Variable.Map.singleton (M.Variable.of_string "ask") op_ask
   in
-  { M.Effect_decl.name; operations }
+  { M.Decl.Effect.name; operations }
 ;;
 
 let decl_exn =
@@ -140,12 +140,12 @@ let decl_exn =
     let argument = Type.Mono.Primitive Type.Primitive.Unit in
     (* TODO: this should be forall a. a, once polymorphic effects are added *)
     let answer = Type.Mono.Primitive Type.Primitive.Unit in
-    { M.Effect_decl.Operation.argument; answer }
+    { M.Decl.Effect.Operation.argument; answer }
   in
   let operations =
     M.Variable.Map.singleton (M.Variable.of_string "throw") op_ask
   in
-  { M.Effect_decl.name; operations }
+  { M.Decl.Effect.name; operations }
 ;;
 
 let decl_query =
@@ -154,12 +154,12 @@ let decl_query =
     let argument = Type.Mono.Primitive Type.Primitive.Int in
     (* TODO: this should be forall a. a, once polymorphic effects are added *)
     let answer = Type.Mono.Primitive Type.Primitive.Bool in
-    { M.Effect_decl.Operation.argument; answer }
+    { M.Decl.Effect.Operation.argument; answer }
   in
   let operations =
     M.Variable.Map.singleton (M.Variable.of_string "test") op_ask
   in
-  { M.Effect_decl.name; operations }
+  { M.Decl.Effect.name; operations }
 ;;
 
 let singleton_handler
@@ -197,7 +197,7 @@ let exn_handler default =
 ;;
 
 let%expect_test "handled effects reflected in subject's effect" =
-  let effect_declarations = [ decl_read; decl_exn ] in
+  let Decl.Effectarations = [ decl_read; decl_exn ] in
   let body =
     (* \f. handle h_exn (handle h_read (handle h_read (f ()))) *)
     (* (() -> <exn,read,read|e> a) -> e a *)
@@ -213,7 +213,7 @@ let%expect_test "handled effects reflected in subject's effect" =
                       ( E.Variable (M.Variable.of_string "f")
                       , [ E.Literal M.Literal.Unit ] ) ) ) ) )
   in
-  let program = { M.Program.effect_declarations; body } in
+  let program = { M.Program.Decl.Effectarations; body } in
   Util.print_inference_result program;
   [%expect
     {|
@@ -227,7 +227,7 @@ let%expect_test "handled effects reflected in subject's effect" =
 ;;
 
 let%expect_test "return clause is typed correctly" =
-  let effect_declarations = [ decl_query ] in
+  let Decl.Effectarations = [ decl_query ] in
   let query_handler =
     (* {[ handler { test(x){ resume( x == 3 ) }; return(b) { if b then () else
        () } } ]} *)
@@ -267,13 +267,13 @@ let%expect_test "return clause is typed correctly" =
           ( E.Variable (M.Variable.of_string "test")
           , [ E.Literal (M.Literal.Int 5) ] ) )
   in
-  let program = { M.Program.effect_declarations; body } in
+  let program = { M.Program.Decl.Effectarations; body } in
   Util.print_inference_result program;
   [%expect {| (Ok ((Primitive Unit) (Metavariable e26))) |}]
 ;;
 
 let%expect_test "handlers can delegate to outer handlers" =
-  let effect_declarations = [ decl_read ] in
+  let Decl.Effectarations = [ decl_read ] in
   let outer_handler = read_handler 1 in
   (* { ask(unit) { ask(()) + 1 } } *)
   let inner_handler =
@@ -299,7 +299,7 @@ let%expect_test "handlers can delegate to outer handlers" =
               ( E.Variable (M.Variable.of_string "ask")
               , [ E.Literal M.Literal.Unit ] ) ) )
   in
-  let program = { M.Program.effect_declarations; body } in
+  let program = { M.Program.Decl.Effectarations; body } in
   Util.print_inference_result program;
   [%expect {| (Ok ((Primitive Int) (Metavariable e34))) |}]
 ;;

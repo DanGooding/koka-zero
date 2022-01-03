@@ -50,7 +50,7 @@ let decl_state =
   let op_get =
     let argument = Type.Mono.Primitive Type.Primitive.Unit in
     let answer = Type.Mono.Primitive Type.Primitive.Int in
-    { M.Effect_decl.Operation.argument; answer }
+    { M.Decl.Effect.Operation.argument; answer }
   in
   let op_set =
     let argument = Type.Mono.Primitive Type.Primitive.Int in
