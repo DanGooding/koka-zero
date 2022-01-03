@@ -49,17 +49,20 @@ end
 (* TODO: work out identifier/var_id/wildcard etc.*)
 module Variable : Identifiable.S
 
+(** names which aren't reserved, but have significance *)
 module Keyword : sig
   (* TODO: ensure resume is not used in a first-class way *)
   val resume : Variable.t
+  val main : Variable.t
+  val entry_point : Variable.t
 end
 
 module Expr : sig
   type t =
     | Variable of Variable.t
     | Let of Variable.t * t * t (** [Let] provides polymorphic binding *)
-    | Lambda of lambda (** monomorphic binding *)
-    | Fix_lambda of Variable.t * lambda (** lambda which knows its own name *)
+    | Lambda of lambda
+    | Fix_lambda of fix_lambda
     | Application of t * t list
     | Literal of Literal.t
     | If_then_else of t * t * t
@@ -69,7 +72,11 @@ module Expr : sig
         (** takes a nullary funciton to be called under this handler *)
   [@@deriving sexp]
 
+  (** monomorphic binding *)
   and lambda = Variable.t list * t [@@deriving sexp]
+
+  (** lambda which knows its own name *)
+  and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
   (** an effect handler *)
   and handler =
@@ -82,34 +89,52 @@ module Expr : sig
   and op_handler =
     { op_argument : Variable.t
           (* TODO: extend to multiple args (requires checking against
-             declaration) *)
+             declaration, and makes translation harder - each operation in an
+             effect needs to pass a differnt amount of arguments through
+             yield) *)
     ; op_body : t
     }
   [@@deriving sexp]
 end
 
-module Effect_decl : sig
-  module Operation : sig
+module Decl : sig
+  module Effect : sig
+    module Operation : sig
+      type t =
+        { (* TODO: different shapes (fun/var/ctl/except) *)
+          argument : Type.Mono.t
+        ; answer : Type.Mono.t
+        }
+      [@@deriving sexp]
+    end
+
     type t =
-      { (* TODO: different shapes (fun/var/ctl/except) *)
-        argument : Type.Mono.t
-      ; answer : Type.Mono.t
+      { name : Effect.Label.t
+      ; operations : Operation.t Variable.Map.t
       }
     [@@deriving sexp]
   end
 
+  module Fun : sig
+    (** toplevel function - implicitly generalised *)
+    type t = Expr.fix_lambda [@@deriving sexp]
+  end
+
   type t =
-    { name : Effect.Label.t
-    ; operations : Operation.t Variable.Map.t
-    }
+    | Fun of Fun.t
+    | Effect of Effect.t
   [@@deriving sexp]
 end
 
 module Program : sig
   type t =
-    { effect_declarations : Effect_decl.t list
-    ; body : Expr.t
+    { declarations : Decl.t list
+    ; has_main : bool
     }
   [@@deriving sexp]
-  (* TODO: add toplevel functions, main as entry point *)
+
+  (** wrapper funciton which calls the user's main function, which is appended
+      to programs with [has_main = true]. It may provide toplevel handers for
+      e.g. io/exn/div effects. *)
+  val entry_point : Decl.Fun.t
 end

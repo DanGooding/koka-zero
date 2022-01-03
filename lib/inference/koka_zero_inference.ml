@@ -2,4 +2,5 @@ module Type = Type
 module Effect = Effect
 module Minimal_syntax = Minimal_syntax
 
-let infer_type = Infer.infer_type
+let check_program = Infer.check_program
+let infer_expr_toplevel = Infer.infer_expr_toplevel

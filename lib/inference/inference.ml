@@ -383,15 +383,13 @@ let generalise : Type.Mono.t -> Effect.t -> in_:Context.t -> Type.Poly.t t =
         Substitution.extend_many_effect_exn substitution effect_meta_to_effect)
   in
   (* actually replace the free metavariables with variables *)
-  let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
+  let%map t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
   let forall_bound = Map.data meta_to_var |> Type.Variable.Set.of_list in
   let forall_bound_effects =
     Map.data effect_meta_to_var |> Effect.Variable.Set.of_list
   in
-  let p =
-    Type.Poly { Type.Poly.forall_bound; forall_bound_effects; monotype = t }
-  in
-  with_any_effect p
+  let p = { Type.Poly.forall_bound; forall_bound_effects; monotype = t } in
+  p
 ;;
 
 let run (f : 'a t) =

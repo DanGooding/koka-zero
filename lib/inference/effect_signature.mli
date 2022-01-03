@@ -33,7 +33,7 @@ module Context : sig
 
   val extend_decl
     :  t
-    -> Minimal_syntax.Effect_decl.t
+    -> Minimal_syntax.Decl.Effect.t
     -> [ `Ok of t | `Duplicate ]
 
   val find : t -> signature -> Effect.Label.t option
