@@ -42,7 +42,7 @@ end
 (** a monotype contains no forall quantifiers *)
 module Mono : sig
   type t =
-    | Arrow of t * Effect.t * t
+    | Arrow of t list * Effect.t * t
     | Variable of Variable.t
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t

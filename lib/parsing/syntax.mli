@@ -4,14 +4,17 @@ open Core
 
 module Var_id : Identifiable.S
 module Wildcard_id : Identifiable.S
-module Operator_id : Identifiable.S
-module Constructor_id : Identifiable.S
 
 module Identifier : sig
-  type t = Var of Var_id.t [@@deriving compare, hash, sexp]
+  (** augments a [Var_id.t] with information about which kind of name it is.
+      This information is derived from the string (capitalisation etc.), so the
+      variants can be collapsed back together without issues of collision. *)
+  type t = Var of Var_id.t [@@deriving compare, sexp]
 
-  include Identifiable.S_plain with type t := t
+  include Comparable.S with type t := t
 end
+
+val resume_keyword : Identifier.t
 
 (* Kinds: *)
 
@@ -22,7 +25,7 @@ type kind_atom =
 [@@deriving sexp]
 
 type kind =
-  | Arrow of kind list * kind
+  | Kind_arrow of kind list * kind
   | Kind_atom of kind_atom
 [@@deriving sexp]
 
@@ -53,7 +56,7 @@ type type_ =
       { constructor : type_constructor
       ; arguments : type_ list
       }
-  | Annotated of
+  | Annotated_type of
       { type_ : type_
       ; kind : kind
       }
@@ -182,6 +185,7 @@ type operation_parameter =
 (* expressions: *)
 
 type literal =
+  | Unit
   | Int of int
   | Bool of bool
 [@@deriving sexp]
@@ -196,7 +200,6 @@ type binary_operator =
   | Modulo
   | And
   | Or
-  | Not
   | Equals
   | Not_equal
   | Less_than
@@ -222,7 +225,7 @@ type expr =
   | Application of expr * expr list
   | Identifier of Identifier.t
   | Literal of literal
-  | Annotated of expr * type_scheme
+  | Annotated_expr of expr * type_scheme
 [@@deriving sexp]
 
 and statement =
@@ -292,8 +295,8 @@ and effect_handler = Effect_handler of operation_handler list
 
 (** a declaration of a value/function which can appear at the toplevel *)
 type pure_declaration =
-  | Val of binder * block
-  | Fun of fun_declaration
+  | Top_val of binder * block
+  | Top_fun of fun_declaration
 [@@deriving sexp]
 
 type toplevel_declaration =

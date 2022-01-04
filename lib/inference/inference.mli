@@ -57,9 +57,7 @@ val unify : Type.Mono.t -> Type.Mono.t -> unit t
 val unify_effects : Effect.t -> Effect.t -> unit t
 val instantiate : Type.Poly.t -> Type.Mono.t t
 
-val generalise
-  :  Type.Mono.t * Effect.t
-  -> in_:Context.t
-  -> (Type.t * Effect.t) t
+(** generalise a type, or fail if the effect is not total *)
+val generalise : Type.Mono.t -> Effect.t -> in_:Context.t -> Type.Poly.t t
 
 val run : 'a t -> ('a * Substitution.t, Static_error.t) Result.t

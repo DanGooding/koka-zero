@@ -4,52 +4,60 @@ fun compute-the-answer {
   42;
 };
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Error
      ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 2) (char 25)))))) |}]
+      (location (((filename ()) (line 2) (char 25)))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "dash before number in identifier" =
   let code = {|
 val n-3 = n - 3;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Error
      ((kind Syntax_error)
       (message
        "malformed identifier: a dash must be preceded by a letter or number, and followed by a letter")
-      (location (((filename ()) (line 2) (char 8)))))) |}]
+      (location (((filename ()) (line 2) (char 8)))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "dash at end of identifier" =
   let code = {|
 val n- = n;
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Error
      ((kind Syntax_error)
       (message
        "malformed identifier: a dash must be preceded by a letter or number, and followed by a letter")
-      (location (((filename ()) (line 2) (char 7)))))) |}]
+      (location (((filename ()) (line 2) (char 7)))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "dash at start of identifier" =
   let code = {|
   val -n = 0 - n;
   |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Error
      ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 2) (char 8)))))) |}]
+      (location (((filename ()) (line 2) (char 8)))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;
 
 let%expect_test "lambda as operand" =
@@ -60,10 +68,12 @@ fun op-trailing-lambda-example() {
   5 * fn() 3 + 4;
 };
 |} in
-  Util.print_parse_result code;
+  let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
     (Error
      ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 3) (char 9)))))) |}]
+      (location (((filename ()) (line 3) (char 9)))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
 ;;

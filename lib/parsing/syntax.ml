@@ -1,13 +1,9 @@
-(* TODO: rewrite to use modules? *)
-
 open Core
 
 (* Names: *)
 
 module Var_id : Identifiable.S = String
 module Wildcard_id : Identifiable.S = String
-module Operator_id : Identifiable.S = String
-module Constructor_id : Identifiable.S = String
 
 module Identifier = struct
   module T = struct
@@ -15,16 +11,14 @@ module Identifier = struct
     (* | Wildcard of Wildcard_id.t *)
     (* | Operator of Operator_id.t *)
     (* | Constructor of Constructor_id.t *)
-    [@@deriving compare, hash, sexp]
-
-    let module_name = "Identifier"
-    let of_string s = Sexp.of_string s |> t_of_sexp
-    let to_string t = sexp_of_t t |> Sexp.to_string
+    [@@deriving compare, sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
-  include Identifiable.Make_plain (T)
+  include Comparable.Make (T)
 end
+
+let resume_keyword = Identifier.Var (Var_id.of_string "resume")
 
 (* Kinds: *)
 
@@ -35,7 +29,7 @@ type kind_atom =
 [@@deriving sexp]
 
 type kind =
-  | Arrow of kind list * kind
+  | Kind_arrow of kind list * kind
   | Kind_atom of kind_atom
 [@@deriving sexp]
 
@@ -61,7 +55,7 @@ type type_ =
       { constructor : type_constructor
       ; arguments : type_ list
       }
-  | Annotated of
+  | Annotated_type of
       { type_ : type_
       ; kind : kind
       }
@@ -186,6 +180,7 @@ type operation_parameter =
 (* expressions: *)
 
 type literal =
+  | Unit
   | Int of int
   | Bool of bool
 [@@deriving sexp]
@@ -200,8 +195,6 @@ type binary_operator =
   | Modulo
   | And
   | Or
-  | Not
-  (* TODO: equals will require overloading? *)
   | Equals
   | Not_equal
   | Less_than
@@ -229,7 +222,7 @@ type expr =
   | Literal of literal
   (* | Tuple of expr list *)
   (* | List of expr list *)
-  | Annotated of expr * type_scheme
+  | Annotated_expr of expr * type_scheme
 [@@deriving sexp]
 
 and statement =
@@ -295,8 +288,8 @@ and effect_handler = Effect_handler of operation_handler list
 [@@deriving sexp]
 
 type pure_declaration =
-  | Val of binder * block
-  | Fun of fun_declaration
+  | Top_val of binder * block
+  | Top_fun of fun_declaration
 [@@deriving sexp]
 
 type toplevel_declaration =
@@ -335,7 +328,7 @@ let insert_with_callback : callback:fn -> expr -> expr =
   (* note: technically, [Annotated(e, scheme)] should be possible if [e] is an
      application, but real koka also forbids this. (There may be some
      difficulies with capture of type variables) *)
-  | Annotated (_, _)
+  | Annotated_expr (_, _)
   | Return _
   | If_then_else (_, _, _)
   | If_then (_, _)

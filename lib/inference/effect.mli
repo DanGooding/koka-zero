@@ -78,3 +78,6 @@ val total : t
     exactly zero effects - i.e. the empty closed row. Note that this assumes any
     metavariables are unknown. *)
 val is_total : t -> bool option
+
+(** build a row by adding [labels] to either an existing effect, or just a tail *)
+val cons_row : labels:Label.Multiset.t -> effect:t -> Row.t

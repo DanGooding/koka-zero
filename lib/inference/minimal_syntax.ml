@@ -22,7 +22,11 @@ module Operator = struct
         | Divide
         | Modulo
         | Equals
+        | Not_equal
         | Less_than
+        | Less_equal
+        | Greater_than
+        | Greater_equal
       [@@deriving sexp]
     end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
@@ -66,10 +70,40 @@ module Operator = struct
   include T
 end
 
-module Variable : Identifiable.S = String
+module Variable = struct
+  module T = struct
+    type t =
+      | User of string
+          (** user code can contain all possible names (except keywords), so we
+              namespace them separately from internally used names *)
+      | Language of string
+          (** meaningful names internal to the language implementation *)
+      | Generated of string
+          (** sequentially generated names. Each generator is excepted to use a
+              unique prefix *)
+    [@@deriving compare, sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+  include T
+  include Comparable.Make (T)
+
+  let of_user x = User x
+  let of_language_internal x = Language x
+  let of_generated x = Generated x
+
+  (* deprecated - use [of_user] instead *)
+  let of_string x = User x
+
+  let to_string_user = function
+    | User x -> x
+    | (Language _ | Generated _) as t -> sexp_of_t t |> Sexp.to_string_hum
+  ;;
+end
 
 module Keyword = struct
-  let resume = Variable.of_string "resume"
+  let resume = Variable.of_user "resume"
+  let main = Variable.of_user "main"
+  let entry_point = Variable.of_language_internal "main"
 end
 
 module Expr = struct
@@ -77,17 +111,20 @@ module Expr = struct
     type t =
       | Variable of Variable.t
       | Let of Variable.t * t * t
-      | Lambda of Variable.t * t
-      | Fix of Variable.t * t
-      (* TODO: syntactically, `fix` can only wrap a lambda - perhaps enforce
-         this? *)
-      | Application of t * t
+      | Lambda of lambda
+      | Fix_lambda of fix_lambda
+      | Application of t * t list
+      | Seq of t * t
       | Literal of Literal.t
       | If_then_else of t * t * t
       | Operator of t * Operator.t * t
       | Unary_operator of Operator.Unary.t * t
-      | Handle of handler * t
+      | Handler of handler
     [@@deriving sexp]
+
+    and lambda = Variable.t list * t [@@deriving sexp]
+
+    and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
     and handler =
       { operations : op_handler Variable.Map.t
@@ -97,8 +134,6 @@ module Expr = struct
 
     and op_handler =
       { op_argument : Variable.t
-            (* TODO: extend to multiple args (requires checking against
-               declaration) *)
       ; op_body : t
       }
     [@@deriving sexp]
@@ -107,26 +142,52 @@ module Expr = struct
   include T
 end
 
-module Effect_decl = struct
-  module Operation = struct
+module Decl = struct
+  module Effect = struct
+    module Operation = struct
+      type t =
+        { argument : Type.Mono.t
+        ; answer : Type.Mono.t
+        }
+      [@@deriving sexp]
+    end
+
     type t =
-      { argument : Type.Mono.t
-      ; answer : Type.Mono.t
+      { name : Effect.Label.t
+      ; operations : Operation.t Variable.Map.t
       }
     [@@deriving sexp]
   end
 
-  type t =
-    { name : Effect.Label.t
-    ; operations : Operation.t Variable.Map.t
-    }
-  [@@deriving sexp]
+  module Fun = struct
+    type t = Expr.fix_lambda [@@deriving sexp]
+  end
+
+  module T = struct
+    type t =
+      | Fun of Fun.t
+      | Effect of Effect.t
+    [@@deriving sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+  include T
 end
 
 module Program = struct
   type t =
-    { effect_declarations : Effect_decl.t list
-    ; body : Expr.t
+    { declarations : Decl.t list
+    ; has_main : bool
     }
   [@@deriving sexp]
+
+  let entry_point =
+    (* {[ fun _main() { (fn(_result) { () }) (main()) } ]} *)
+    let call_user_main = Expr.Application (Expr.Variable Keyword.main, []) in
+    ( Keyword.entry_point
+    , ( []
+      , Expr.Application
+          ( Expr.Lambda
+              ([ Variable.of_string "_result" ], Expr.Literal Literal.Unit)
+          , [ call_user_main ] ) ) )
+  ;;
 end

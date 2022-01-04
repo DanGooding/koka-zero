@@ -94,6 +94,7 @@
 (* %prec "?" *)
 
 %{
+
 open Syntax
 
 (** an intermediate type for desugaring function application *)
@@ -322,7 +323,8 @@ effectdecl:
     type_parameters = typeparams;
     kind = kannot;
     operation = operation
-    { let id = operation.id in
+    {
+      let { id; _ } : operation_declaration = operation in
       let operations = [operation] in
       { id; type_parameters; kind; operations }
     }
@@ -426,9 +428,9 @@ operation:
 (* %type <pure_declaration> puredecl *)
 puredecl:
   | VAL; binder = binder; "="; body = blockexpr
-    { Val(binder, body) }
+    { Top_val(binder, body) }
   | FUN; f = fundecl
-    { Fun f }
+    { Top_fun f }
   ;
 
 (* TODO: update puredecl to include this? *)
@@ -441,9 +443,9 @@ fundecl:
 (* %type <binder> binder *)
 binder:
   | id = identifier
-    { { id; type_ = None } }
+    { { id; type_ = None } : binder }
   | id = identifier; ":"; type_ = type_
-    { { id; type_ = Some type_ } }
+    { { id; type_ = Some type_ } : binder }
   ;
 
 (* %type <Identifier.t> funid *)
@@ -846,6 +848,9 @@ literal:
     { Int i }
   | b = BOOL
     { Bool b }
+  (* TODO: better to add tuples with elements to `atom` *)
+  | "("; ")"
+    { Unit }
   (* | FLOAT | CHAR | STRING *)
   ;
 
@@ -896,7 +901,7 @@ parameters1:
 (* %type <parameter> parameter *)
 parameter:
   | id = paramid; ":"; type_ = paramtype
-    { { id; type_ } }
+    { { id; type_ } : parameter }
   (* | paramid ":" paramtype "=" expr *)
   ;
 
@@ -953,7 +958,7 @@ aexpr:
   (* TODO: annot is nullable - this may cause a conflict? *)
   | e = expr; scheme = annot
     { match scheme with
-      | Some scheme -> Annotated(e, scheme)
+      | Some scheme -> Annotated_expr(e, scheme)
       | None -> e
     }
   ;
@@ -1151,9 +1156,9 @@ opparams:
 (* %type <operation_parameter> opparam *)
 opparam:
   | id = paramid
-    { { id; type_ = None } }
+    { { id; type_ = None } : operation_parameter }
   | id = paramid; ":"; type_ = type_
-    { { id; type_ = Some type_ } }
+    { { id; type_ = Some type_ } : operation_parameter }
   ;
 
 
@@ -1316,7 +1321,7 @@ targuments1:
 anntype:
   | type_ = type_; kind = kannot
     { match kind with
-      | Some kind -> Annotated { type_; kind }
+      | Some kind -> Annotated_type { type_; kind }
       | None      -> type_
     }
   ;
@@ -1336,9 +1341,9 @@ kannot:
 (* %type <kind> kind *)
 kind:
   | "("; ks = kinds1; ")"; "->"; a = katom
-    { Arrow(ks, (Kind_atom a)) }
+    { Kind_arrow(ks, (Kind_atom a)) }
   | a = katom; "->"; k = kind
-    { Arrow([Kind_atom a], k) }
+    { Kind_arrow([Kind_atom a], k) }
   | a = katom
     { Kind_atom a }
   ;
