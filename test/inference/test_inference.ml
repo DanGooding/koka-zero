@@ -1,5 +1,6 @@
 open Core
 open Koka_zero_inference
+open Koka_zero_util
 module M = Minimal_syntax
 module E = M.Expr
 
@@ -19,6 +20,32 @@ let%expect_test "identity gets polymorphic type" =
   in
   Util.print_expr_inference_result expr;
   [%expect {| (Ok ((Primitive Unit) (Metavariable e16))) |}]
+;;
+
+let%expect_test "functions' effects are closed" =
+  let id : E.lambda =
+    [ M.Variable.of_user "x" ], E.Variable (M.Variable.of_user "x")
+  in
+  let id_name = M.Variable.of_user "id" in
+  let id_decl = M.Decl.Fun (id_name, id) in
+  (* typecheck this decl, then look at the environment *)
+  let id_t =
+    let%map.Result env, _effect_env = Private.infer_decl id_decl in
+    Private.Context.find env id_name
+  in
+  [%sexp (id_t : (Type.t option, Static_error.t) Result.t)]
+  |> Sexp.to_string_hum
+  |> print_endline;
+  [%expect
+    {|
+    (Ok
+     ((Poly
+       ((forall_bound ($a0)) (forall_bound_effects ())
+        (monotype
+         (Arrow
+          ((Variable $a0))
+          (Row ((labels ()) (tail ())))
+          (Variable $a0))))))) |}]
 ;;
 
 (* TODO: tests to add: static scoping, not generalising free varaibles, not
