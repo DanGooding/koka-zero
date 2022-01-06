@@ -1,18 +1,9 @@
-open Core
+open Name_source_intf
 
-(** augments an [Identifiable] adding a submodule [Name_source] which allows the
-    generation of unique values of type [t] in a pure way (wihout mutable state) *)
+(** A [Name_source.t] allows generating unique names, from sequential (prefixed)
+    strings. The source is pure, suitable for wrapping in a state monad *)
+module type S = S
 
-module type S = sig
-  type t
-
-  module Name_source : sig
-    type name = t
-    type t [@@deriving sexp]
-
-    val fresh : ?prefix:string -> unit -> t
-    val next_name : t -> name * t
-  end
-end
-
-module Make (N : Identifiable.S) : S with type t := N.t
+(** functor building a [Name_source] from a type with an [of_generated_name]
+    construction function. See [Multiset] for usage documentation *)
+module Make (Name : Name_S) : S with type Name.t := Name.t

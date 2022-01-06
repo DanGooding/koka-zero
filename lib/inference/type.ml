@@ -1,15 +1,25 @@
 open Core
 
 module Variable = struct
-  module T = String
+  module T = struct
+    include String
+
+    let of_generated_name s = s
+  end
+
   include T
-  include Name_source.Make (T)
+  module Name_source = Name_source.Make (T)
 end
 
 module Metavariable = struct
-  module T = String
+  module T = struct
+    include String
+
+    let of_generated_name s = s
+  end
+
   include T
-  include Name_source.Make (T)
+  module Name_source = Name_source.Make (T)
 end
 
 module Primitive = struct

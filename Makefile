@@ -14,7 +14,7 @@ deps: ## Install development dependencies
 
 .PHONY: create_switch
 create_switch: ## Create an opam switch without any dependency
-	opam switch create . ocaml-base-compiler.4.13.1 --no-install -y
+	opam switch create . ocaml-base-compiler.4.11.1 --no-install -y
 
 .PHONY: lock
 lock: ## Generate a lock file

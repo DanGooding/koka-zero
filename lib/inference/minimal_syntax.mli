@@ -54,7 +54,7 @@ module Variable : sig
     | Language of string
         (** meaningful names internal to the language implementation *)
     | Generated of string
-        (** sequentially generated names. Each generator is excepted to use a
+        (** sequentially generated names. Each generator is expected to use a
             unique prefix *)
   [@@deriving compare, sexp]
 
@@ -70,6 +70,10 @@ module Variable : sig
   (** convert back to a string, retuning `User` strings unchanged, and the rest
       in sexp form *)
   val to_string_user : t -> string
+
+  module Name_source : sig
+    include Name_source.S with type Name.t := t
+  end
 end
 
 (** names which aren't reserved, but have significance *)
