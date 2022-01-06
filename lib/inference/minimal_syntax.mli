@@ -54,7 +54,7 @@ module Variable : sig
     | Language of string
         (** meaningful names internal to the language implementation *)
     | Generated of string
-        (** sequentially generated names. Each generator is excepted to use a
+        (** sequentially generated names. Each generator is expected to use a
             unique prefix *)
   [@@deriving compare, sexp]
 
