@@ -1,14 +1,12 @@
 open Core
+open Koka_zero_util
 module M = Monadic_syntax
 module E = M.Expr
 
 module State = struct
   type t = M.Variable.Name_source.t [@@deriving sexp]
 
-  let initial : t =
-    (* TODO: make sure [Variable.of_generated] is used *)
-    M.Variable.Name_source.fresh ~prefix:"mon_"
-  ;;
+  let initial : t = M.Variable.Name_source.fresh ~prefix:"mon_" ()
 end
 
 module T = struct

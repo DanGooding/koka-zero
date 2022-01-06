@@ -15,7 +15,9 @@ module Names = struct
   let perform = Variable.of_language_internal "perform"
 end
 
-let map_name_lambda ~(name : Variable.t) (lambda : E.lambda t) : E.fix_lambda t =
+let map_name_lambda ~(name : Variable.t) (lambda : E.lambda Generation.t)
+    : E.fix_lambda Generation.t
+  =
   let open Generation.Let_syntax in
   let%map lambda = lambda in
   name, lambda
