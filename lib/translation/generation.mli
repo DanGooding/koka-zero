@@ -5,7 +5,7 @@ module E = M.Expr
 (** monad encapsulating a name source's state for fresh variables *)
 type 'a t
 
-include Monad.S with type 'a t = 'a t
+include Monad.S with type 'a t := 'a t
 
 (** create a globally unique variable *)
 val fresh_name : M.Variable.t t
@@ -35,7 +35,7 @@ val make_lambda_4 : (E.t -> E.t -> E.t -> E.t -> E.t t) -> E.lambda t
 (** [make_lambda_n_expr] wraps the result of [make_lambda_n] in an [E.Lambda] *)
 val make_lambda_expr_0 : E.t t -> E.t t
 
-val make_lambda_expr_1 : (E.t -> E.t t) -> E.t
+val make_lambda_expr_1 : (E.t -> E.t t) -> E.t t
 val make_lambda_expr_2 : (E.t -> E.t -> E.t t) -> E.t t
 val make_lambda_expr_3 : (E.t -> E.t -> E.t -> E.t t) -> E.t t
 val make_lambda_expr_4 : (E.t -> E.t -> E.t -> E.t -> E.t t) -> E.t t
