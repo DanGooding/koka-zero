@@ -31,7 +31,7 @@ module Make (N : Identifiable.S) = struct
       let name = sprintf "%s%d" prefix next in
       let name = N.of_string name in
       let next = next + 1 in
-      let t = { t with next = next + 1 } in
+      let t = { t with next } in
       name, t
     ;;
   end
