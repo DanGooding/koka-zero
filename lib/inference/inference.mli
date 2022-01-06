@@ -10,23 +10,7 @@ open Koka_zero_util
 type 'a t
 
 include Monad.S with type 'a t := 'a t
-
-(** sequence a list of computations into one, which returns a list of all their
-    results if they all succeed, or the first error otherwise *)
-val sequence : 'a t list -> 'a list t
-
-(** a convenience form of [sequence] for when the computations only have side
-    effects and don't produce values *)
-val sequence_units : unit t list -> unit t
-
-(** sequence computations given as a map's data into one computation, which
-    returns a map of their pure results if they all succeed, or the first
-    (according to the order of [Map.fold]) error otherwise *)
-val sequence_map : ('a, 'b t, 'cmp) Map.t -> ('a, 'b, 'cmp) Map.t t
-
-(** a more efficient form of [sequence_map] for when the computations only have
-    side effects and don't produce values *)
-val sequence_map_units : ('a, unit t, 'cmp) Map.t -> unit t
+include Monad_utils.S with type 'a t := 'a t
 
 val fresh_variable : Type.Variable.t t
 val fresh_metavariable : Type.Metavariable.t t

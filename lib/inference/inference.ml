@@ -45,37 +45,13 @@ module T = struct
   ;;
 end
 
-include T
-include Monad.Make (T)
+module T' = struct
+  include T
+  include Monad.Make (T)
+end
 
-let sequence ts =
-  let open Let_syntax in
-  List.fold ts ~init:(return []) ~f:(fun acc t ->
-      (* TODO: un + re wrapping acc every time is inefficient *)
-      let%bind xs = acc in
-      let%map x = t in
-      x :: xs)
-;;
-
-let sequence_units ts =
-  let open Let_syntax in
-  let%map (_ : unit list) = sequence ts in
-  ()
-;;
-
-let sequence_map ts =
-  let open Let_syntax in
-  let cmp = Map.comparator_s ts in
-  Map.fold
-    ts
-    ~init:(return (Map.empty cmp))
-    ~f:(fun ~key ~data acc ->
-      let%bind m = acc in
-      let%map data = data in
-      Map.add_exn m ~key ~data)
-;;
-
-let sequence_map_units ts = Map.data ts |> sequence_units
+include T'
+include Monad_utils.Make (T')
 
 let fresh_variable s =
   let { State.variable_source; _ } = s in
@@ -303,7 +279,7 @@ let rec unify t1 t2 =
     | List.Or_unequal_lengths.Ok zipped_args ->
       let%bind () =
         List.map zipped_args ~f:(fun (t1_arg, t2_arg) -> unify t1_arg t2_arg)
-        |> sequence_units
+        |> all_unit
       in
       let%bind () = unify_effects eff1 eff2 in
       unify t1_result t2_result)
@@ -336,11 +312,11 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
   let open Let_syntax in
   let { Type.Poly.forall_bound; forall_bound_effects; monotype } = poly in
   let%bind (var_to_meta : Type.Metavariable.t Type.Variable.Map.t) =
-    Set.to_map forall_bound ~f:(fun _v -> fresh_metavariable) |> sequence_map
+    Set.to_map forall_bound ~f:(fun _v -> fresh_metavariable) |> all_map
   in
   let%map (effect_var_to_meta : Effect.Metavariable.t Effect.Variable.Map.t) =
     Set.to_map forall_bound_effects ~f:(fun _v -> fresh_effect_metavariable)
-    |> sequence_map
+    |> all_map
   in
   Type.Mono.instantiate_as monotype ~var_to_meta ~effect_var_to_meta
 ;;
@@ -365,11 +341,11 @@ let generalise : Type.Mono.t -> Effect.t -> in_:Context.t -> Type.Poly.t t =
      quanitfy over all those *)
   (* TODO: factor out the similarity here? *)
   let%bind (meta_to_var : Type.Variable.t Type.Metavariable.Map.t) =
-    Set.to_map meta ~f:(fun _m -> fresh_variable) |> sequence_map
+    Set.to_map meta ~f:(fun _m -> fresh_variable) |> all_map
   in
   let meta_to_mono = Map.map meta_to_var ~f:(fun v -> Type.Mono.Variable v) in
   let%bind (effect_meta_to_var : Effect.Variable.t Effect.Metavariable.Map.t) =
-    Set.to_map effect_meta ~f:(fun _m -> fresh_effect_variable) |> sequence_map
+    Set.to_map effect_meta ~f:(fun _m -> fresh_effect_variable) |> all_map
   in
   let effect_meta_to_effect =
     Map.map effect_meta_to_var ~f:(fun v -> Effect.Variable v)
