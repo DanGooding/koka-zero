@@ -3,21 +3,27 @@ open Core
 (* TODO: [Variable] currently have no annotations, but will need to use a
    variant to namespace user names from generated names *)
 
-(** a variable standing for a type, either free, or quantified in a [Poly.t]*)
 module Variable : sig
-  type t
+  (** a variable standing for a type, either free, or quantified in a [Poly.t]*)
+  type t [@@deriving sexp]
 
-  include Identifiable.S with type t := t
-  include Name_source.S with type t := t
+  include Comparable.S with type t := t
+
+  module Name_source : sig
+    include Name_source.S with type Name.t := t
+  end
 end
 
-(** a placeholder variable introduced during unification, a type will be
-    substituted for this *)
 module Metavariable : sig
-  type t
+  (** a placeholder variable introduced during unification, a type will be
+      substituted for this *)
+  type t [@@deriving sexp]
 
-  include Identifiable.S with type t := t
-  include Name_source.S with type t := t
+  include Comparable.S with type t := t
+
+  module Name_source : sig
+    include Name_source.S with type Name.t := t
+  end
 end
 
 module Primitive : sig

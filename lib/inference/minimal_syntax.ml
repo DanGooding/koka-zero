@@ -82,6 +82,8 @@ module Variable = struct
           (** sequentially generated names. Each generator is excepted to use a
               unique prefix *)
     [@@deriving compare, sexp]
+
+    let of_generated_name s = Generated s
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
@@ -98,6 +100,8 @@ module Variable = struct
     | User x -> x
     | (Language _ | Generated _) as t -> sexp_of_t t |> Sexp.to_string_hum
   ;;
+
+  module Name_source = Name_source.Make (T)
 end
 
 module Keyword = struct

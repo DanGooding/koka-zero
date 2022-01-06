@@ -4,19 +4,25 @@ open Koka_zero_util
 module Variable : sig
   (** a variable standing for an effect, either free, or quantified in a
       [Type.Poly.t] *)
-  type t
+  type t [@@deriving sexp]
 
-  include Identifiable.S with type t := t
-  include Name_source.S with type t := t
+  include Comparable.S with type t := t
+
+  module Name_source : sig
+    include Name_source.S with type Name.t := t
+  end
 end
 
 module Metavariable : sig
   (** a placeholder variable introduced during unification, an effect will be
       substituted for this *)
-  type t
+  type t [@@deriving sexp]
 
-  include Identifiable.S with type t := t
-  include Name_source.S with type t := t
+  include Comparable.S with type t := t
+
+  module Name_source : sig
+    include Name_source.S with type Name.t := t
+  end
 end
 
 module Label : sig

@@ -70,6 +70,10 @@ module Variable : sig
   (** convert back to a string, retuning `User` strings unchanged, and the rest
       in sexp form *)
   val to_string_user : t -> string
+
+  module Name_source : sig
+    include Name_source.S with type Name.t := t
+  end
 end
 
 (** names which aren't reserved, but have significance *)
