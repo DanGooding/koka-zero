@@ -98,7 +98,7 @@ let rec infer
     let%bind t_f, eff_f = infer ~env ~effect_env expr_f in
     let%bind (arg_ts_effs : (Type.Mono.t * Effect.t) list) =
       List.map expr_args ~f:(fun expr_arg -> infer ~env ~effect_env expr_arg)
-      |> Inference.sequence
+      |> Inference.all
     in
     let t_args, eff_args = List.unzip arg_ts_effs in
     let%bind t_result = Inference.fresh_metavariable in
@@ -112,7 +112,7 @@ let rec infer
     let%bind () =
       List.map eff_args ~f:(fun eff_arg ->
           Inference.unify_effects eff_arg eff_args_combined)
-      |> Inference.sequence_units
+      |> Inference.all_unit
     in
     let%map () = Inference.unify_effects eff_f eff_args_combined in
     t_result, eff_f
@@ -200,7 +200,7 @@ let rec infer
             ~t_handler_result
             ~name
             op_handler)
-      |> Inference.sequence_map_units
+      |> Inference.all_map_unit
     in
     (* <lab_handled|eff_rest> *)
     let eff_pre_handle =
@@ -230,7 +230,7 @@ and infer_lambda
         let%map t_x = Inference.fresh_metavariable in
         let t_x = Type.Mono.Metavariable t_x in
         x, t_x)
-    |> Inference.sequence
+    |> Inference.all
   in
   let%bind () =
     match Variable.Map.of_alist xs_to_ts with
@@ -267,7 +267,7 @@ and infer_fix_lambda
     List.map xs ~f:(fun _x ->
         let%map t_x = Inference.fresh_metavariable in
         Type.Mono.Metavariable t_x)
-    |> Inference.sequence
+    |> Inference.all
   in
   let%bind eff_f = Inference.fresh_effect_metavariable in
   let%bind t_f_result = Inference.fresh_metavariable in
