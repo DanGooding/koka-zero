@@ -1,6 +1,5 @@
 open Core
-open Monadic_syntax
-module E = Expr
+open Evidence_passing_syntax
 
 module Names = struct
   let compose_unary = Variable.of_language_internal "compose_unary"
@@ -12,8 +11,8 @@ module Names = struct
   let perform = Variable.of_language_internal "perform"
 end
 
-let map_name_lambda ~(name : Variable.t) (lambda : E.lambda Generation.t)
-    : E.fix_lambda Generation.t
+let map_name_lambda ~(name : Variable.t) (lambda : Expr.lambda Generation.t)
+    : Expr.fix_lambda Generation.t
   =
   let open Generation.Let_syntax in
   let%map lambda = lambda in
@@ -26,7 +25,7 @@ let compose_unary =
     ~name:Names.compose_unary
     (Generation.make_lambda_2 (fun f g ->
          Generation.make_lambda_expr_1 (fun x ->
-             E.Application (g, [ E.Application (f, [ x ]) ])
+             Expr.Application (g, [ Expr.Application (f, [ x ]) ])
              |> Generation.return)))
 ;;
 
@@ -36,18 +35,19 @@ let bind =
     ~name:Names.bind
     (Generation.make_lambda_2 (fun e g ->
          Generation.make_lambda_expr_1 (fun vector ->
-             let run_e = E.Application (e, [ vector ]) in
+             let run_e = Expr.Application (e, [ vector ]) in
              Generation.make_match_ctl
                run_e
                ~pure:(fun x ->
-                 E.Application (E.Application (g, [ x ]), [ vector ])
+                 Expr.Application (Expr.Application (g, [ x ]), [ vector ])
                  |> Generation.return)
                ~yield:(fun ~marker ~op_clause ~resumption ->
                  let resumption =
-                   E.Application
-                     (E.Variable Names.kleisli_compose_unary, [ g; resumption ])
+                   Expr.Application
+                     ( Expr.Variable Names.kleisli_compose_unary
+                     , [ g; resumption ] )
                  in
-                 E.Construct_yield { marker; op_clause; resumption }
+                 Expr.Construct_yield { marker; op_clause; resumption }
                  |> Generation.return))))
 ;;
 
@@ -57,8 +57,8 @@ let kelisli_compose_unary =
     ~name:Names.kleisli_compose_unary
     (Generation.make_lambda_2 (fun g f ->
          Generation.make_lambda_expr_1 (fun x ->
-             E.Application
-               (E.Variable Names.bind, [ E.Application (f, [ x ]); g ])
+             Expr.Application
+               (Expr.Variable Names.bind, [ Expr.Application (f, [ x ]); g ])
              |> Generation.return)))
 ;;
 
@@ -68,7 +68,7 @@ let pure =
     ~name:Names.pure
     (Generation.make_lambda_1 (fun v ->
          Generation.make_lambda_expr_1 (fun _vector ->
-             E.Construct_pure v |> Generation.return)))
+             Expr.Construct_pure v |> Generation.return)))
 ;;
 
 (** prompt : (label, marker, hnd<label,e,a>) -> (mon<label|e> a) -> mon<e> a *)
@@ -79,38 +79,38 @@ let prompt =
          Generation.make_lambda_expr_1 (fun e ->
              Generation.make_lambda_expr_1 (fun vector ->
                  let vector' =
-                   E.Cons_evidence_vector
+                   Expr.Cons_evidence_vector
                      { label; marker; handler; vector_tail = vector }
                  in
-                 let run_e_under = E.Application (e, [ vector' ]) in
+                 let run_e_under = Expr.Application (e, [ vector' ]) in
                  Generation.make_match_ctl
                    run_e_under
-                   ~pure:(fun x -> E.Construct_pure x |> Generation.return)
+                   ~pure:(fun x -> Expr.Construct_pure x |> Generation.return)
                    ~yield:(fun ~marker:marker' ~op_clause ~resumption ->
                      let same_prompt =
-                       E.Application
-                         (E.Variable Names.prompt, [ label; marker; handler ])
+                       Expr.Application
+                         (Expr.Variable Names.prompt, [ label; marker; handler ])
                      in
                      let resume_under =
                        (* resumption run under this exact prompt *)
-                       E.Application
-                         ( E.Variable Names.compose_unary
+                       Expr.Application
+                         ( Expr.Variable Names.compose_unary
                          , [ same_prompt; resumption ] )
                      in
                      let bubble_further =
-                       E.Construct_yield
+                       Expr.Construct_yield
                          { marker = marker'
                          ; op_clause
                          ; resumption = resume_under
                          }
                      in
                      let handle_here =
-                       E.Application
-                         ( E.Application (op_clause, [ resume_under ])
+                       Expr.Application
+                         ( Expr.Application (op_clause, [ resume_under ])
                          , [ vector ] )
                      in
-                     E.If_then_else
-                       ( E.Markers_equal (marker, marker')
+                     Expr.If_then_else
+                       ( Expr.Markers_equal (marker, marker')
                        , handle_here
                        , bubble_further )
                      |> Generation.return)))))
@@ -123,10 +123,11 @@ let handler =
     ~name:Names.handler
     (Generation.make_lambda_2 (fun label handler ->
          Generation.make_lambda_expr_1 (fun action ->
-             E.Application
-               ( E.Application
-                   (E.Variable Names.prompt, [ label; E.Fresh_marker; handler ])
-               , [ E.Application (action, []) ] )
+             Expr.Application
+               ( Expr.Application
+                   ( Expr.Variable Names.prompt
+                   , [ label; Expr.Fresh_marker; handler ] )
+               , [ Expr.Application (action, []) ] )
              |> Generation.return)))
 ;;
 
@@ -137,17 +138,17 @@ let perform =
     ~name:Names.perform
     (Generation.make_lambda_3 (fun label select arg ->
          Generation.make_lambda_expr_1 (fun vector ->
-             let evidence = E.Lookup_evidence { label; vector } in
-             let handler = E.Get_evidence_handler evidence in
-             let marker = E.Get_evidence_marker evidence in
-             let op_clause = E.Application (select, [ handler ]) in
+             let evidence = Expr.Lookup_evidence { label; vector } in
+             let handler = Expr.Get_evidence_handler evidence in
+             let marker = Expr.Get_evidence_marker evidence in
+             let op_clause = Expr.Application (select, [ handler ]) in
              (* monadic form of identity is: `\x -> pure x` *)
-             let identity_resumption = E.Variable Names.pure in
+             let identity_resumption = Expr.Variable Names.pure in
              let%map op_clause =
                Generation.make_lambda_expr_1 (fun resume ->
-                   E.Application (op_clause, [ arg; resume ])
+                   Expr.Application (op_clause, [ arg; resume ])
                    |> Generation.return)
              in
-             E.Construct_yield
+             Expr.Construct_yield
                { marker; op_clause; resumption = identity_resumption })))
 ;;

@@ -1,6 +1,6 @@
 open Core
-module M = Monadic_syntax
-module E = M.Expr
+module EPS = Evidence_passing_syntax
+module E = EPS.Expr
 
 (** monad encapsulating a name source's state for fresh variables *)
 type 'a t
@@ -10,7 +10,7 @@ include Monad.S with type 'a t := 'a t
 val run : 'a t -> 'a
 
 (** create a globally unique variable *)
-val fresh_name : M.Variable.t t
+val fresh_name : EPS.Variable.t t
 
 (* note passing parameters as expressions rather than variables is less
    descriptive, but generally allows more concise usage *)
