@@ -64,7 +64,8 @@ module Variable : sig
 
   include Comparable.S with type t := t
 
-  val of_string : string -> t
+  (* type changed to prevent accidental usage *)
+  val of_string : string -> unit
     [@@deprecated "use one of the descriptive [of_...] constructor functions"]
 
   (** convert back to a string, retuning `User` strings unchanged, and the rest
