@@ -39,7 +39,10 @@ module Expr = struct
           }
       | Get_evidence_marker of t
       | Get_evidence_handler of t
-      | Select_operation of int * t
+      | Select_operation of Koka_zero_inference.Effect.Label.t * Variable.t * t
+    (* TODO: perhaps this should be a function? (otherwise it needs to be
+       wrapped at every usage) - TODO: or should this already be changed to an
+       index into a record? *)
     [@@deriving sexp]
 
     and lambda = Variable.t list * t [@@deriving sexp]
@@ -64,9 +67,9 @@ module Program = struct
   end
 
   type t =
-    { effect_declarations : Effect_decl.t list (**  *)
+    { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
-    ; has_main : bool (* TODO: do NOT attempt a module system! *)
+    ; has_main : bool
     }
   [@@deriving sexp]
 end

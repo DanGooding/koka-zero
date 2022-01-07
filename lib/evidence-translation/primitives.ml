@@ -52,7 +52,7 @@ let bind =
 ;;
 
 (** kleisli_compose_unary(g, f) = \x. f x >>= g *)
-let kelisli_compose_unary =
+let kleisli_compose_unary =
   map_name_lambda
     ~name:Names.kleisli_compose_unary
     (Generation.make_lambda_2 (fun g f ->

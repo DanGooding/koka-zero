@@ -40,10 +40,10 @@ module Expr : sig
         ; vector : t
         }
     | Get_evidence_marker of t (* evidence entry -> marker *)
-    | Get_evidence_handler of t (* evidence entry -> handler*)
+    | Get_evidence_handler of t (* evidence entry -> handler *)
     (* TODO: constructor for Hnd (handler = record of operations) even though
        this is never done at runtime *)
-    | Select_operation of int (* TODO: should this be a name instead? *) * t
+    | Select_operation of Koka_zero_inference.Effect.Label.t * Variable.t * t
         (** primitive to get an operation from a handler's runtime
             representation **)
   [@@deriving sexp]
@@ -67,7 +67,7 @@ module Program : sig
   end
 
   type t =
-    { effect_declarations : Effect_decl.t list (**  *)
+    { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
     ; has_main : bool (* TODO: do NOT attempt a module system! *)
     }
