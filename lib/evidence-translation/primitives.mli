@@ -1,4 +1,4 @@
-open Monadic_syntax
+open Evidence_passing_syntax
 
 module Names : sig
   val compose_unary : Variable.t
