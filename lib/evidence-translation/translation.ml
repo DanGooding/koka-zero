@@ -1,13 +1,13 @@
 open Core
+
+(** source syntax *)
 module Min = Koka_zero_inference.Minimal_syntax
+
+(** target syntax *)
 module EPS = Evidence_passing_syntax
 
-(* TODO: Generation functions don't add the `Value|`Redex markers... *)
-(* TODO: name `Redex is inaccurate, switch to `Monadic *)
-
-(* TODO: remember: `Value|`Redex describe Minimal_syntax in an ad-hoc way.
-   `Pure|`Monadic|`NA describe Evidence_passing_syntax in a more complex (type
-   system based) way *)
+(* [`Value e] indicates that expression [e] represents a pure term, which must
+   be lifted into the effect monad via [monadic_of_value] *)
 
 (** convert a value (an expression which cannot step, so is total) into a
     monadic value (via `return`), in this case one with zero effects. *)
