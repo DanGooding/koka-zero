@@ -93,8 +93,9 @@ module Variable = struct
   let of_language_internal x = Language x
   let of_generated x = Generated x
 
-  (* deprecated - use [of_user] instead *)
-  let of_string x = User x
+  (* deprecated - use [of_user] instead - type changed to prevent accidental
+     usage *)
+  let of_string _x = ()
 
   let to_string_user = function
     | User x -> x
@@ -185,13 +186,14 @@ module Program = struct
   [@@deriving sexp]
 
   let entry_point =
-    (* {[ fun _main() { (fn(_result) { () }) (main()) } ]} *)
+    (* {[ fun entry-point() { (fn(_result) { () }) (main()) } ]} *)
     let call_user_main = Expr.Application (Expr.Variable Keyword.main, []) in
     ( Keyword.entry_point
     , ( []
       , Expr.Application
           ( Expr.Lambda
-              ([ Variable.of_string "_result" ], Expr.Literal Literal.Unit)
+              ( [ Variable.of_language_internal "_result" ]
+              , Expr.Literal Literal.Unit )
           , [ call_user_main ] ) ) )
   ;;
 end
