@@ -7,11 +7,10 @@ type 'a t
 
 include Monad.S with type 'a t := 'a t
 
+val run : 'a t -> 'a
+
 (** create a globally unique variable *)
 val fresh_name : M.Variable.t t
-
-(** given a body, build a zero argument lambda *)
-val make_lambda_0 : E.t t -> E.lambda t
 
 (* note passing parameters as expressions rather than variables is less
    descriptive, but generally allows more concise usage *)
@@ -32,9 +31,7 @@ val make_lambda_3 : (E.t -> E.t -> E.t -> E.t t) -> E.lambda t
 
 val make_lambda_4 : (E.t -> E.t -> E.t -> E.t -> E.t t) -> E.lambda t
 
-(** [make_lambda_n_expr] wraps the result of [make_lambda_n] in an [E.Lambda] *)
-val make_lambda_expr_0 : E.t t -> E.t t
-
+(* analogues of [make_lambda_n] which wrap the result into an expression *)
 val make_lambda_expr_1 : (E.t -> E.t t) -> E.t t
 val make_lambda_expr_2 : (E.t -> E.t -> E.t t) -> E.t t
 val make_lambda_expr_3 : (E.t -> E.t -> E.t -> E.t t) -> E.t t
