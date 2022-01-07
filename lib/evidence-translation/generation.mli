@@ -7,6 +7,7 @@ type 'a t
 
 include Monad.S with type 'a t := 'a t
 
+(** perform a generation computation using the default internal name source *)
 val run : 'a t -> 'a
 
 (** create a globally unique variable *)
