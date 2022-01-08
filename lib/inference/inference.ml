@@ -321,14 +321,9 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
   Type.Mono.instantiate_as monotype ~var_to_meta ~effect_var_to_meta
 ;;
 
-let generalise : Type.Mono.t -> Effect.t -> in_:Context.t -> Type.Poly.t t =
- fun t e ~in_:env ->
+let generalise_total : Type.Mono.t -> env:Context.t -> Type.Poly.t t =
+ fun t ~env ->
   let open Let_syntax in
-  (* TODO: can technically generalise a 'pure' term (<exn,div>), but then need
-     to keep those effects in the final effect [e']
-
-     actually - koka forbids this at toplevel, so shouldn't *)
-  let%bind () = unify_effects e Effect.total in
   let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
   let%bind env = use_substitution (Context.apply_substitution env) in
   (* [e] was unified with total - has no metavariables *)
@@ -366,6 +361,13 @@ let generalise : Type.Mono.t -> Effect.t -> in_:Context.t -> Type.Poly.t t =
   in
   let p = { Type.Poly.forall_bound; forall_bound_effects; monotype = t } in
   p
+;;
+
+let generalise : Type.Mono.t -> Effect.t -> env:Context.t -> Type.Poly.t t =
+ fun t e ~env ->
+  let open Let_syntax in
+  let%bind () = unify_effects e Effect.total in
+  generalise_total t ~env
 ;;
 
 let run (f : 'a t) =

@@ -79,21 +79,9 @@ let rec infer
  fun ~env ~effect_env expr ->
   let open Inference.Let_syntax in
   match expr with
-  | Expr.Literal lit ->
-    Type.Mono.Primitive (infer_literal lit) |> Inference.with_any_effect
-  | Expr.Variable var ->
-    (match Context.find env var with
-    | None ->
-      let message =
-        sprintf "unbound variable: %s" (Variable.to_string_user var)
-      in
-      Inference.type_error message
-    | Some t ->
-      (match t with
-      | Type.Mono t -> Inference.with_any_effect t
-      | Type.Poly s ->
-        let%bind t = Inference.instantiate s in
-        Inference.with_any_effect t))
+  | Expr.Value v ->
+    let%bind t = infer_value ~env ~effect_env v in
+    Inference.with_any_effect t
   | Expr.Application (expr_f, expr_args) ->
     let%bind t_f, eff_f = infer ~env ~effect_env expr_f in
     let%bind (arg_ts_effs : (Type.Mono.t * Effect.t) list) =
@@ -116,17 +104,10 @@ let rec infer
     in
     let%map () = Inference.unify_effects eff_f eff_args_combined in
     t_result, eff_f
-  | Expr.Lambda lambda ->
-    let%bind t = infer_lambda ~env ~effect_env lambda in
-    Inference.with_any_effect t
-  | Expr.Fix_lambda fix_lambda ->
-    let%bind t = infer_fix_lambda ~env ~effect_env fix_lambda in
-    Inference.with_any_effect t
-  | Expr.Let (x, expr_subject, expr_body) ->
-    let%bind t_subject, eff_subject = infer ~env ~effect_env expr_subject in
+  | Expr.Let (x, val_subject, expr_body) ->
+    let%bind t_subject = infer_value ~env ~effect_env val_subject in
     let%bind (t_subject : Type.Poly.t) =
-      (* forces eff_subject to be total *)
-      Inference.generalise t_subject eff_subject ~in_:env
+      Inference.generalise_total t_subject ~env
     in
     let%bind env' = add_binding ~env ~var:x ~type_:(Type.Poly t_subject) in
     let%map t_body, eff_body = infer ~env:env' ~effect_env expr_body in
@@ -144,8 +125,6 @@ let rec infer
     let%bind t_yes, eff_yes = infer ~env ~effect_env expr_yes in
     let%bind t_no, eff_no = infer ~env ~effect_env expr_no in
     let%bind () = Inference.unify t_yes t_no in
-    (* TODO: just unifying all the effects and only touching the types must be a
-       common pattern - extract it? *)
     let%bind () = Inference.unify_effects eff_cond eff_yes in
     let%map () = Inference.unify_effects eff_yes eff_no in
     t_yes, eff_yes
@@ -164,6 +143,29 @@ let rec infer
     let t_result = unary_operator_result_type uop |> Type.Mono.Primitive in
     let%map () = Inference.unify t_operand t_argument in
     t_result, eff_arg
+
+(** infer the type of a value - values don't reduce, so can't have any effects *)
+and infer_value
+    :  Expr.value -> env:Context.t -> effect_env:Effect_signature.Context.t
+    -> Type.Mono.t Inference.t
+  =
+ fun v ~env ~effect_env ->
+  let open Inference.Let_syntax in
+  match v with
+  | Expr.Literal lit -> Type.Mono.Primitive (infer_literal lit) |> return
+  | Expr.Variable var ->
+    (match Context.find env var with
+    | None ->
+      let message =
+        sprintf "unbound variable: %s" (Variable.to_string_user var)
+      in
+      Inference.type_error message
+    | Some t ->
+      (match t with
+      | Type.Mono t -> return t
+      | Type.Poly s -> Inference.instantiate s))
+  | Expr.Lambda lambda -> infer_lambda ~env ~effect_env lambda
+  | Expr.Fix_lambda fix_lambda -> infer_fix_lambda ~env ~effect_env fix_lambda
   | Expr.Handler handler ->
     let { Expr.operations; return_clause } = handler in
     let%bind lab_handled =
@@ -190,7 +192,7 @@ let rec infer
           return_clause
     in
     (* check each op body has the right type *)
-    let%bind () =
+    let%map () =
       Map.mapi operations ~f:(fun ~key:name ~data:op_handler ->
           infer_operation
             ~lab_handled
@@ -215,7 +217,7 @@ let rec infer
     let t_handler =
       Type.Mono.Arrow ([ t_action ], eff_rest, t_handler_result)
     in
-    Inference.with_any_effect t_handler
+    t_handler
 
 (** infer the type of a lambda. Since lambdas are values, they are inherently
     total (have no effect) *)
@@ -294,7 +296,9 @@ and infer_operation
   let open Inference.Let_syntax in
   (* lookup operation's [name] and unify with `t_argument -> <lab_handled>
      t_answer` *)
-  let%bind t_op, eff_op = infer ~env ~effect_env (Expr.Variable name) in
+  let%bind t_op, eff_op =
+    infer ~env ~effect_env (Expr.Value (Expr.Variable name))
+  in
   let%bind t_argument = Inference.fresh_metavariable in
   let t_argument = Type.Mono.Metavariable t_argument in
   let%bind t_answer = Inference.fresh_metavariable in
@@ -406,9 +410,7 @@ let infer_fun_decl
   let open Inference.Let_syntax in
   let f_name, _lambda = f in
   let%bind t_f = infer_fix_lambda ~env ~effect_env f in
-  let%bind (t_f : Type.Poly.t) =
-    Inference.generalise t_f Effect.total ~in_:env
-  in
+  let%bind (t_f : Type.Poly.t) = Inference.generalise_total t_f ~env in
   add_binding ~env ~var:f_name ~type_:(Type.Poly t_f)
 ;;
 

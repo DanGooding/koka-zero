@@ -10,6 +10,10 @@ val print_expr_inference_result
   -> unit
 
 module Expr : sig
+  val var : string -> E.t
+  val lit_bool : bool -> E.t
+  val lit_int : int -> E.t
+  val lit_unit : E.t
   val make_handle_expr : E.handler -> E.t -> E.t
   val decl_read : M.Decl.Effect.t
   val decl_exn : M.Decl.Effect.t

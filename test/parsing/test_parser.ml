@@ -40,7 +40,7 @@ fun main() {
   [%expect
     {|
     (Ok
-     ((declarations ((Fun ((User main) (() (Literal (Int 0)))))))
+     ((declarations ((Fun ((User main) (() (Value (Literal (Int 0))))))))
       (has_main true))) |}]
 ;;
 
@@ -87,15 +87,21 @@ fun main() {
          ((User main)
           (()
            (Application
-            (Lambda
-             (((User x))
-              (Seq (Application (Variable (User print)) ((Variable (User x))))
-               (Application
-                (Lambda
-                 (((User y))
-                  (Operator (Variable (User y)) (Int Times) (Literal (Int 2)))))
-                ((Application (Variable (User foo)) ((Variable (User x)))))))))
-            ((Literal (Int 1)))))))))
+            (Value
+             (Lambda
+              (((User x))
+               (Seq
+                (Application (Value (Variable (User print)))
+                 ((Value (Variable (User x)))))
+                (Application
+                 (Value
+                  (Lambda
+                   (((User y))
+                    (Operator (Value (Variable (User y))) (Int Times)
+                     (Value (Literal (Int 2)))))))
+                 ((Application (Value (Variable (User foo)))
+                   ((Value (Variable (User x)))))))))))
+            ((Value (Literal (Int 1))))))))))
       (has_main true))) |}]
 ;;
 
@@ -141,15 +147,19 @@ fun wrapper() {
          ((User wrapper)
           (()
            (Application
-            (Lambda
-             (((User kebab-case))
-              (Application
-               (Lambda
-                (((User x-y-z))
-                 (Application (Lambda (((User number3-letter)) (Literal Unit)))
-                  ((Literal (Int 2))))))
-               ((Literal (Int 1))))))
-            ((Literal (Int 0)))))))))
+            (Value
+             (Lambda
+              (((User kebab-case))
+               (Application
+                (Value
+                 (Lambda
+                  (((User x-y-z))
+                   (Application
+                    (Value
+                     (Lambda (((User number3-letter)) (Value (Literal Unit)))))
+                    ((Value (Literal (Int 2))))))))
+                ((Value (Literal (Int 1))))))))
+            ((Value (Literal (Int 0))))))))))
       (has_main true))) |}]
 ;;
 
@@ -174,7 +184,8 @@ fun wrapper() {
   [%expect
     {|
     (Ok
-     ((declarations ((Fun ((User wrapper) (() (Literal (Int 305441741)))))))
+     ((declarations
+       ((Fun ((User wrapper) (() (Value (Literal (Int 305441741))))))))
       (has_main true))) |}]
 ;;
 
@@ -220,11 +231,15 @@ fun wrapper() {
          ((User wrapper)
           (()
            (Application
-            (Lambda
-             (((User f'))
-              (Application (Lambda (((User f'')) (Literal Unit)))
-               ((Application (Variable (User diff)) ((Variable (User f'))))))))
-            ((Application (Variable (User diff)) ((Variable (User f)))))))))))
+            (Value
+             (Lambda
+              (((User f'))
+               (Application
+                (Value (Lambda (((User f'')) (Value (Literal Unit)))))
+                ((Application (Value (Variable (User diff)))
+                  ((Value (Variable (User f'))))))))))
+            ((Application (Value (Variable (User diff)))
+              ((Value (Variable (User f))))))))))))
       (has_main true))) |}]
 ;;
 
@@ -325,46 +340,55 @@ fun main() {
          ((User hypotenuse)
           (((User a) (User b))
            (Application
-            (Lambda
-             (((User c-squared))
-              (Application (Lambda (((User c)) (Variable (User c))))
-               ((Application (Variable (User isqrt))
-                 ((Variable (User c-squared))))))))
+            (Value
+             (Lambda
+              (((User c-squared))
+               (Application
+                (Value (Lambda (((User c)) (Value (Variable (User c))))))
+                ((Application (Value (Variable (User isqrt)))
+                  ((Value (Variable (User c-squared))))))))))
             ((Operator
-              (Operator (Variable (User a)) (Int Times) (Variable (User a)))
+              (Operator (Value (Variable (User a))) (Int Times)
+               (Value (Variable (User a))))
               (Int Plus)
-              (Operator (Variable (User b)) (Int Times) (Variable (User b)))))))))
+              (Operator (Value (Variable (User b))) (Int Times)
+               (Value (Variable (User b))))))))))
         (Fun
          ((User main)
           (()
            (Application
-            (Lambda
-             (((User all))
-              (Application (Lambda (((User inside)) (Literal Unit)))
-               ((Operator
-                 (Operator
-                  (Operator (Literal (Int 0)) (Int Less_equal)
-                   (Variable (User x)))
-                  (Bool And)
-                  (Operator (Variable (User x)) (Int Less_than)
-                   (Literal (Int 7))))
-                 (Bool Or)
-                 (Operator
-                  (Operator (Literal (Int 100)) (Int Less_than)
-                   (Variable (User x)))
-                  (Bool And)
-                  (Operator (Variable (User x)) (Int Greater_equal)
-                   (Literal (Int 9000)))))))))
+            (Value
+             (Lambda
+              (((User all))
+               (Application
+                (Value (Lambda (((User inside)) (Value (Literal Unit)))))
+                ((Operator
+                  (Operator
+                   (Operator (Value (Literal (Int 0))) (Int Less_equal)
+                    (Value (Variable (User x))))
+                   (Bool And)
+                   (Operator (Value (Variable (User x))) (Int Less_than)
+                    (Value (Literal (Int 7)))))
+                  (Bool Or)
+                  (Operator
+                   (Operator (Value (Literal (Int 100))) (Int Less_than)
+                    (Value (Variable (User x))))
+                   (Bool And)
+                   (Operator (Value (Variable (User x))) (Int Greater_equal)
+                    (Value (Literal (Int 9000)))))))))))
             ((Operator
               (Operator
                (Operator
-                (Operator (Literal (Int 12)) (Int Plus)
-                 (Operator (Literal (Int 33)) (Int Times) (Literal (Int 44))))
+                (Operator (Value (Literal (Int 12))) (Int Plus)
+                 (Operator (Value (Literal (Int 33))) (Int Times)
+                  (Value (Literal (Int 44)))))
                 (Int Minus)
-                (Operator (Literal (Int 36)) (Int Divide) (Literal (Int 4))))
+                (Operator (Value (Literal (Int 36))) (Int Divide)
+                 (Value (Literal (Int 4)))))
                (Int Plus)
-               (Operator (Literal (Int 91)) (Int Modulo) (Literal (Int 7))))
-              (Int Plus) (Literal (Int 11))))))))))
+               (Operator (Value (Literal (Int 91))) (Int Modulo)
+                (Value (Literal (Int 7)))))
+              (Int Plus) (Value (Literal (Int 11)))))))))))
       (has_main true))) |}]
 ;;
 
@@ -462,18 +486,23 @@ fun if-example() {
           (()
            (If_then_else
             (Operator
-             (Operator (Variable (User x)) (Int Modulo) (Literal (Int 2)))
-             (Int Equals) (Literal (Int 0)))
-            (Literal (Int 123))
+             (Operator (Value (Variable (User x))) (Int Modulo)
+              (Value (Literal (Int 2))))
+             (Int Equals) (Value (Literal (Int 0))))
+            (Value (Literal (Int 123)))
             (If_then_else
              (Operator
-              (Operator (Variable (User y)) (Int Modulo) (Literal (Int 2)))
-              (Int Equals) (Literal (Int 0)))
+              (Operator (Value (Variable (User y))) (Int Modulo)
+               (Value (Literal (Int 2))))
+              (Int Equals) (Value (Literal (Int 0))))
              (Operator
-              (Operator (Literal (Int 400)) (Int Plus) (Literal (Int 50)))
-              (Int Plus) (Literal (Int 6)))
-             (If_then_else (Literal (Bool false)) (Literal (Int -1))
-              (Operator (Literal (Int 1)) (Int Plus) (Literal (Int 1)))))))))))
+              (Operator (Value (Literal (Int 400))) (Int Plus)
+               (Value (Literal (Int 50))))
+              (Int Plus) (Value (Literal (Int 6))))
+             (If_then_else (Value (Literal (Bool false)))
+              (Value (Literal (Int -1)))
+              (Operator (Value (Literal (Int 1))) (Int Plus)
+               (Value (Literal (Int 1))))))))))))
       (has_main true))) |}]
 ;;
 
@@ -517,10 +546,10 @@ fun i() {
        ((Fun
          ((User i)
           (()
-           (If_then_else (Variable (User a))
-            (If_then_else (Variable (User b)) (Variable (User c))
-             (Variable (User d)))
-            (Literal Unit)))))))
+           (If_then_else (Value (Variable (User a)))
+            (If_then_else (Value (Variable (User b))) (Value (Variable (User c)))
+             (Value (Variable (User d))))
+            (Value (Literal Unit))))))))
       (has_main true))) |}]
 ;;
 
@@ -578,19 +607,21 @@ fun i() {
          ((User i)
           (()
            (Seq
-            (If_then_else (Variable (User condition))
+            (If_then_else (Value (Variable (User condition)))
              (Application
-              (Lambda
-               (((User x))
-                (Application (Variable (User print))
-                 ((Operator (Variable (User x)) (Int Modulo) (Literal (Int 7)))))))
-              ((Literal (Int 101))))
-             (Literal Unit))
-            (If_then_else (Variable (User b))
-             (Seq (Application (Variable (User aaa)) ())
-              (Application (Variable (User bbb)) ()))
-             (Seq (Application (Variable (User ccc)) ())
-              (Application (Variable (User ddd)) ())))))))))
+              (Value
+               (Lambda
+                (((User x))
+                 (Application (Value (Variable (User print)))
+                  ((Operator (Value (Variable (User x))) (Int Modulo)
+                    (Value (Literal (Int 7)))))))))
+              ((Value (Literal (Int 101)))))
+             (Value (Literal Unit)))
+            (If_then_else (Value (Variable (User b)))
+             (Seq (Application (Value (Variable (User aaa))) ())
+              (Application (Value (Variable (User bbb))) ()))
+             (Seq (Application (Value (Variable (User ccc))) ())
+              (Application (Value (Variable (User ddd))) ())))))))))
       (has_main true))) |}]
 ;;
 
@@ -626,11 +657,12 @@ fun dot-application() {
        ((Fun
          ((User dot-application)
           (()
-           (Application (Variable (User print))
-            ((Application (Variable (User pow))
-              ((Application (Variable (User fst))
-                ((Application (Variable (User best)) ((Variable (User x))))))
-               (Literal (Int 3)))))))))))
+           (Application (Value (Variable (User print)))
+            ((Application (Value (Variable (User pow)))
+              ((Application (Value (Variable (User fst)))
+                ((Application (Value (Variable (User best)))
+                  ((Value (Variable (User x)))))))
+               (Value (Literal (Int 3))))))))))))
       (has_main true))) |}]
 ;;
 
@@ -701,22 +733,26 @@ fun trailing-lambda() {
          ((User trailing-lambda)
           (()
            (Seq
-            (Application (Variable (User for))
-             ((Literal (Int 1)) (Literal (Int 10))
-              (Lambda
-               (((User i))
-                (Application (Variable (User println))
-                 ((Operator (Variable (User i)) (Int Times) (Variable (User i)))))))))
+            (Application (Value (Variable (User for)))
+             ((Value (Literal (Int 1))) (Value (Literal (Int 10)))
+              (Value
+               (Lambda
+                (((User i))
+                 (Application (Value (Variable (User println)))
+                  ((Operator (Value (Variable (User i))) (Int Times)
+                    (Value (Variable (User i)))))))))))
             (Seq
-             (Application (Variable (User f))
-              ((Variable (User x)) (Variable (User y)) (Variable (User z))
-               (Lambda (() (Variable (User alpha))))
-               (Lambda (((User b)) (Variable (User beta))))
-               (Lambda (() (Variable (User gamma))))))
-             (Application (Variable (User h))
-              ((Application (Variable (User g))
-                ((Variable (User a)) (Literal (Int 1))))
-               (Literal (Int 2)) (Lambda (() (Variable (User zzz)))))))))))))
+             (Application (Value (Variable (User f)))
+              ((Value (Variable (User x))) (Value (Variable (User y)))
+               (Value (Variable (User z)))
+               (Value (Lambda (() (Value (Variable (User alpha))))))
+               (Value (Lambda (((User b)) (Value (Variable (User beta))))))
+               (Value (Lambda (() (Value (Variable (User gamma))))))))
+             (Application (Value (Variable (User h)))
+              ((Application (Value (Variable (User g)))
+                ((Value (Variable (User a))) (Value (Literal (Int 1)))))
+               (Value (Literal (Int 2)))
+               (Value (Lambda (() (Value (Variable (User zzz)))))))))))))))
       (has_main true))) |}]
 ;;
 
@@ -803,27 +839,34 @@ fun one(aa, bb, cc, dd) {
          ((User one)
           (((User aa) (User bb) (User cc) (User dd))
            (Application
-            (Lambda
-             (((User z))
-              (Application (Variable (User aa))
-               ((Lambda
-                 (()
-                  (Seq
-                   (Application (Variable (User println)) ((Variable (User zz))))
-                   (Application (Variable (User bb))
-                    ((Lambda
-                      (()
-                       (Application (Variable (User cc))
-                        ((Literal (Int 3))
-                         (Lambda
-                          (()
-                           (Application (Variable (User dd))
-                            ((Literal (Int 5))
+            (Value
+             (Lambda
+              (((User z))
+               (Application (Value (Variable (User aa)))
+                ((Value
+                  (Lambda
+                   (()
+                    (Seq
+                     (Application (Value (Variable (User println)))
+                      ((Value (Variable (User zz)))))
+                     (Application (Value (Variable (User bb)))
+                      ((Value
+                        (Lambda
+                         (()
+                          (Application (Value (Variable (User cc)))
+                           ((Value (Literal (Int 3)))
+                            (Value
                              (Lambda
-                              (((User x))
-                               (Application (Variable (User println))
-                                ((Variable (User x)))))))))))))))))))))))
-            ((Literal (Int 1)))))))))
+                              (()
+                               (Application (Value (Variable (User dd)))
+                                ((Value (Literal (Int 5)))
+                                 (Value
+                                  (Lambda
+                                   (((User x))
+                                    (Application
+                                     (Value (Variable (User println)))
+                                     ((Value (Variable (User x)))))))))))))))))))))))))))))
+            ((Value (Literal (Int 1))))))))))
       (has_main true))) |}]
 ;;
 
@@ -886,17 +929,21 @@ fun not-commented-out() { True; };
     {|
     (Ok
      ((declarations
-       ((Fun ((User get-speed) (() (Literal (Int 100)))))
+       ((Fun ((User get-speed) (() (Value (Literal (Int 100))))))
         (Fun
          ((User documented)
           (()
            (Application
-            (Lambda
-             (((User x))
-              (Operator (Variable (User x)) (Int Times) (Variable (User x)))))
-            ((Operator (Operator (Literal (Int 1)) (Int Plus) (Literal (Int 2)))
-              (Int Plus) (Literal (Int 3))))))))
-        (Fun ((User not-commented-out) (() (Literal (Bool true)))))))
+            (Value
+             (Lambda
+              (((User x))
+               (Operator (Value (Variable (User x))) (Int Times)
+                (Value (Variable (User x)))))))
+            ((Operator
+              (Operator (Value (Literal (Int 1))) (Int Plus)
+               (Value (Literal (Int 2))))
+              (Int Plus) (Value (Literal (Int 3)))))))))
+        (Fun ((User not-commented-out) (() (Value (Literal (Bool true))))))))
       (has_main true))) |}]
 ;;
 
@@ -951,11 +998,13 @@ fun main() {
          ((User main)
           (()
            (Application
-            (Lambda
-             (((User x))
-              (Application (Lambda (((User y)) (Literal Unit)))
-               ((Operator (Variable (User x)) (Int Times) (Literal (Int 5)))))))
-            ((Literal (Int 1)))))))))
+            (Value
+             (Lambda
+              (((User x))
+               (Application (Value (Lambda (((User y)) (Value (Literal Unit)))))
+                ((Operator (Value (Variable (User x))) (Int Times)
+                  (Value (Literal (Int 5)))))))))
+            ((Value (Literal (Int 1))))))))))
       (has_main true))) |}]
 ;;
 
@@ -997,12 +1046,14 @@ fun op-trailing-lambda-example() {
        ((Fun
          ((User op-trailing-lambda-example)
           (()
-           (Operator (Literal (Int 5)) (Int Times)
-            (Application (Variable (User a))
-             ((Lambda
-               (()
-                (Operator (Literal (Int 3)) (Int Plus)
-                 (Operator (Literal (Int 4)) (Int Times) (Literal (Int 5))))))))))))))
+           (Operator (Value (Literal (Int 5))) (Int Times)
+            (Application (Value (Variable (User a)))
+             ((Value
+               (Lambda
+                (()
+                 (Operator (Value (Literal (Int 3))) (Int Plus)
+                  (Operator (Value (Literal (Int 4))) (Int Times)
+                   (Value (Literal (Int 5))))))))))))))))
       (has_main true))) |}]
 ;;
 
@@ -1058,13 +1109,15 @@ fun trailing-lambdas() {
        ((Fun
          ((User trailing-lambdas)
           (()
-           (Lambda
-            (((User a))
-             (Application (Variable (User a))
-              ((Lambda
-                (((User b))
-                 (Application (Variable (User b))
-                  ((Lambda (((User c)) (Variable (User c)))))))))))))))))
+           (Value
+            (Lambda
+             (((User a))
+              (Application (Value (Variable (User a)))
+               ((Value
+                 (Lambda
+                  (((User b))
+                   (Application (Value (Variable (User b)))
+                    ((Value (Lambda (((User c)) (Value (Variable (User c)))))))))))))))))))))
       (has_main true))) |}]
 ;;
 
@@ -1109,11 +1162,12 @@ fun app-after-trailing-lambda() {
        ((Fun
          ((User app-after-trailing-lambda)
           (()
-           (Application (Variable (User bar))
+           (Application (Value (Variable (User bar)))
             ((Application
-              (Application (Variable (User foo))
-               ((Variable (User xs)) (Lambda (((User x)) (Variable (User x))))))
-              ((Variable (User y)) (Variable (User z)))))))))))
+              (Application (Value (Variable (User foo)))
+               ((Value (Variable (User xs)))
+                (Value (Lambda (((User x)) (Value (Variable (User x))))))))
+              ((Value (Variable (User y))) (Value (Variable (User z))))))))))))
       (has_main true))) |}]
 ;;
 
@@ -1516,18 +1570,19 @@ fun handle-example(action) {
          ((User handle-example)
           (((User action))
            (Application
-            (Handler
-             ((operations
-               (((User scramble)
-                 ((op_argument (User x))
-                  (op_body
-                   (Application (Variable (User resume))
-                    ((Operator
-                      (Operator (Variable (User x)) (Int Times)
-                       (Variable (User x)))
-                      (Int Plus) (Variable (User x))))))))))
-              (return_clause ())))
-            ((Variable (User action)))))))))
+            (Value
+             (Handler
+              ((operations
+                (((User scramble)
+                  ((op_argument (User x))
+                   (op_body
+                    (Application (Value (Variable (User resume)))
+                     ((Operator
+                       (Operator (Value (Variable (User x))) (Int Times)
+                        (Value (Variable (User x))))
+                       (Int Plus) (Value (Variable (User x)))))))))))
+               (return_clause ()))))
+            ((Value (Variable (User action))))))))))
       (has_main true))) |}]
 ;;
 
