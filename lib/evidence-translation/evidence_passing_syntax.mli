@@ -74,7 +74,7 @@ module Program : sig
   type t =
     { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
-    ; has_main : bool (* TODO: do NOT attempt a module system! *)
+    ; has_entry_point : bool (* TODO: do NOT attempt a module system! *)
     }
   [@@deriving sexp]
 end

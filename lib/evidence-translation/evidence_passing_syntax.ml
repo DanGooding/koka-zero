@@ -75,7 +75,7 @@ module Program = struct
   type t =
     { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
-    ; has_main : bool
+    ; has_entry_point : bool
     }
   [@@deriving sexp]
 end

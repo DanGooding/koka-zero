@@ -226,6 +226,39 @@ and translate_op_handler : Expl.Expr.op_handler -> EPS.Expr.t Generation.t =
   EPS.Expr.Lambda ([ argument; resume ], m_body)
 ;;
 
+let translate_fun_decl : Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t =
+ fun fix_lambda -> translate_fix_lambda fix_lambda
+;;
+
+let translate_effect_decl : Expl.Decl.Effect.t -> EPS.Program.Effect_decl.t =
+ fun { Expl.Decl.Effect.name; operations } ->
+  let operations =
+    (* TODO: not actually necessary (can just use [Map.key_set]) but while we
+       have translate_variable we should be consistent *)
+    Map.keys operations
+    |> List.map ~f:translate_variable
+    |> EPS.Variable.Set.of_list
+  in
+  { EPS.Program.Effect_decl.name; operations }
+;;
+
 let translate { Expl.Program.declarations; has_entry_point } =
-  failwith "not implemented"
+  let open Generation.Let_syntax in
+  let%map effect_declarations_rev, fun_declarations_rev =
+    List.fold
+      declarations
+      ~init:(return ([], []))
+      ~f:(fun decls_rev decl ->
+        let%bind effect_decls_rev, fun_decls_rev = decls_rev in
+        match decl with
+        | Expl.Decl.Fun decl ->
+          let%map decl' = translate_fun_decl decl in
+          effect_decls_rev, decl' :: fun_decls_rev
+        | Expl.Decl.Effect decl ->
+          let decl' = translate_effect_decl decl in
+          return (decl' :: effect_decls_rev, fun_decls_rev))
+  in
+  let effect_declarations = List.rev effect_declarations_rev in
+  let fun_declarations = List.rev fun_declarations_rev in
+  { EPS.Program.effect_declarations; fun_declarations; has_entry_point }
 ;;
