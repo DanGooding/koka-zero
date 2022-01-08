@@ -22,4 +22,13 @@ module Make (M : Monad.S) = struct
         let%bind () = acc in
         data)
   ;;
+
+  let all_option =
+    let open M.Let_syntax in
+    function
+    | None -> return None
+    | Some m ->
+      let%map x = m in
+      Some x
+  ;;
 end

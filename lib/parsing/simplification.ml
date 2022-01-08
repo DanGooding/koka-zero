@@ -115,8 +115,7 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
     in
     let labels = Effect.Label.Multiset.of_list labels in
     let%map tail =
-      Option.map tail ~f:simplify_type_as_effect
-      |> Static_error.interchange_option
+      Option.map tail ~f:simplify_type_as_effect |> Static_error.all_option
     in
     (match tail with
     | None -> Effect.Row { Effect.Row.labels; tail = None }
@@ -246,7 +245,7 @@ let simplify_annotated_pattern { Syntax.pattern; scheme }
   let open Result.Let_syntax in
   let%bind x = simplify_pattern pattern in
   let%bind t =
-    Option.map scheme ~f:simplify_type_scheme |> Static_error.interchange_option
+    Option.map scheme ~f:simplify_type_scheme |> Static_error.all_option
   in
   let%map () = restrict_to_none t ~description:"type annotation on pattern" in
   x
@@ -258,7 +257,7 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
   let open Result.Let_syntax in
   let%bind x = simplify_pattern pattern in
   let%map type_' =
-    Option.map type_ ~f:simplify_type_as_type |> Static_error.interchange_option
+    Option.map type_ ~f:simplify_type_as_type |> Static_error.all_option
   in
   x, type_'
 ;;
@@ -271,7 +270,7 @@ let simplify_operation_parameter
   let open Result.Let_syntax in
   let%bind id' = simplify_parameter_id id in
   let%map type_' =
-    Option.map type_ ~f:simplify_type_as_type |> Static_error.interchange_option
+    Option.map type_ ~f:simplify_type_as_type |> Static_error.all_option
   in
   id', type_'
 ;;

@@ -30,7 +30,7 @@ module Expr = struct
       | Construct_handler of
           { handled_effect : Koka_zero_inference.Effect.Label.t
           ; operation_clauses : t Variable.Map.t
-          ; return_clause : t
+          ; return_clause : t option
           }
       | Effect_label of Koka_zero_inference.Effect.Label.t
       | Cons_evidence_vector of

@@ -65,7 +65,6 @@ let make_bind_many_into
     :  EPS.Expr.t list -> f:(EPS.Expr.t list -> EPS.Expr.t Generation.t)
     -> EPS.Expr.t Generation.t
   =
-  let open Generation.Let_syntax in
   let rec make_bind_many_into es ~xs_rev ~f =
     match es with
     | [] ->
@@ -96,16 +95,18 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
         make_bind_many_into m_args ~f:(fun xs ->
             EPS.Expr.Application (f, xs) |> return))
   | Expl.Expr.Unary_operator (op, e) ->
+    let op' = translate_unary_operator op in
     let%bind m_e = translate_expr e in
     make_map_into m_e ~f:(fun x ->
-        `Value (EPS.Expr.Unary_operator (op, x)) |> return)
+        `Value (EPS.Expr.Unary_operator (op', x)) |> return)
   | Expl.Expr.Operator (e_left, op, e_right) ->
     (* TODO: note this has no short-circuiting for boolean operators *)
+    let op' = translate_operator op in
     let%bind m_left = translate_expr e_left in
     make_bind_into m_left ~f:(fun x_left ->
         let%bind m_right = translate_expr e_right in
         make_map_into m_right ~f:(fun x_right ->
-            `Value (EPS.Expr.Operator (x_left, op, x_right)) |> return))
+            `Value (EPS.Expr.Operator (x_left, op', x_right)) |> return))
   | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind e_cond' = translate_expr e_cond in
     make_bind_into e_cond' ~f:(fun cond ->
@@ -201,9 +202,28 @@ and translate_fix_lambda
 and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
   =
  fun handler ->
+  let open Generation.Let_syntax in
   let { Expl.Expr.handled_effect; operations; return_clause } = handler in
-  (* TODO: build a [Construct_handler]*)
-  failwith "not implemented"
+  let%bind operation_clauses =
+    Map.map operations ~f:translate_op_handler |> Generation.all_map
+  in
+  let%map return_clause =
+    Option.map return_clause ~f:translate_op_handler |> Generation.all_option
+  in
+  `Hnd
+    (EPS.Expr.Construct_handler
+       { handled_effect; operation_clauses; return_clause })
+
+and translate_op_handler : Expl.Expr.op_handler -> EPS.Expr.t Generation.t =
+ fun { Expl.Expr.op_argument; op_body } ->
+  let open Generation.Let_syntax in
+  let argument = translate_operation_name op_argument in
+  let resume =
+    (* TODO: don't depend on Minimal_syntax like this? *)
+    translate_variable Koka_zero_inference.Minimal_syntax.Keyword.resume
+  in
+  let%map m_body = translate_expr op_body in
+  EPS.Expr.Lambda ([ argument; resume ], m_body)
 ;;
 
 let translate { Expl.Program.declarations; has_entry_point } =

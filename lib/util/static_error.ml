@@ -50,7 +50,8 @@ let string_of_t t =
   location_part ^ description_part
 ;;
 
-let interchange_option = function
+(* TODO move into [Monad_utils.S2] *)
+let all_option = function
   | None -> Result.Ok None
   | Some (Result.Ok x) -> Result.Ok (Some x)
   | Some (Result.Error err) -> Result.Error err
