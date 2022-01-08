@@ -20,5 +20,4 @@ val handler : Expr.fix_lambda Generation.t
 (* val Hnd : ? *)
 
 (* TODO: or a label-indexed family? *)
-val select : Expr.fix_lambda Generation.t
 val perform : Expr.fix_lambda Generation.t

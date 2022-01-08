@@ -27,6 +27,12 @@ module Expr = struct
           }
       | Fresh_marker
       | Markers_equal of t * t
+      | Construct_handler of
+          { handled_effect : Koka_zero_inference.Effect.Label.t
+          ; operation_clauses : t Variable.Map.t
+          ; return_clause : t
+          }
+      | Effect_label of Koka_zero_inference.Effect.Label.t
       | Cons_evidence_vector of
           { label : t
           ; marker : t

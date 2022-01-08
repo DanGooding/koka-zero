@@ -114,16 +114,20 @@ end
 module Expr = struct
   module T = struct
     type t =
-      | Variable of Variable.t
-      | Let of Variable.t * t * t
-      | Lambda of lambda
-      | Fix_lambda of fix_lambda
+      | Value of value
+      | Let of Variable.t * value * t
       | Application of t * t list
       | Seq of t * t
-      | Literal of Literal.t
       | If_then_else of t * t * t
       | Operator of t * Operator.t * t
       | Unary_operator of Operator.Unary.t * t
+    [@@deriving sexp]
+
+    and value =
+      | Variable of Variable.t
+      | Lambda of lambda
+      | Fix_lambda of fix_lambda
+      | Literal of Literal.t
       | Handler of handler
     [@@deriving sexp]
 
@@ -187,13 +191,16 @@ module Program = struct
 
   let entry_point =
     (* {[ fun entry-point() { (fn(_result) { () }) (main()) } ]} *)
-    let call_user_main = Expr.Application (Expr.Variable Keyword.main, []) in
+    let call_user_main =
+      Expr.Application (Expr.Value (Expr.Variable Keyword.main), [])
+    in
     ( Keyword.entry_point
     , ( []
       , Expr.Application
-          ( Expr.Lambda
-              ( [ Variable.of_language_internal "_result" ]
-              , Expr.Literal Literal.Unit )
+          ( Expr.Value
+              (Expr.Lambda
+                 ( [ Variable.of_language_internal "_result" ]
+                 , Expr.Value (Expr.Literal Literal.Unit) ))
           , [ call_user_main ] ) ) )
   ;;
 end
