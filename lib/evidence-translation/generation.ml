@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 module EPS = Evidence_passing_syntax
 module E = EPS.Expr
 
@@ -28,8 +29,13 @@ module T = struct
   ;;
 end
 
-include T
-include Monad.Make (T)
+module T' = struct
+  include T
+  include Monad.Make (T)
+end
+
+include T'
+include Monad_utils.Make (T')
 
 let run (t : 'a t) : 'a =
   let x, _final = t State.initial in

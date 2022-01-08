@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 module EPS = Evidence_passing_syntax
 module E = EPS.Expr
 
@@ -6,6 +7,7 @@ module E = EPS.Expr
 type 'a t
 
 include Monad.S with type 'a t := 'a t
+include Monad_utils.S with type 'a t := 'a t
 
 (** perform a generation computation using the default internal name source *)
 val run : 'a t -> 'a

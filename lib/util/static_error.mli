@@ -11,7 +11,6 @@ val type_error : ?at:Source_location.t -> string -> t
 val string_of_t : t -> string
 
 (** swap the order of a nested [ Or_static_error option ], preserving the inner
-    value, or the error, if either exists *)
-val interchange_option
-  :  'a Or_static_error.t option
-  -> 'a option Or_static_error.t
+    value, or the error, if either exists. The equivalent of [Result.all] which
+    operates on option values rather than list items *)
+val all_option : 'a Or_static_error.t option -> 'a option Or_static_error.t

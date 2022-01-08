@@ -28,7 +28,7 @@ module Expr : sig
     | Construct_handler of
         { handled_effect : Koka_zero_inference.Effect.Label.t
         ; operation_clauses : t Variable.Map.t
-        ; return_clause : t
+        ; return_clause : t option
         } (** constructor for a `Hnd`, passed to [handler] *)
     | Effect_label of Koka_zero_inference.Effect.Label.t
         (** literal effect label - passed to [handler]/[perform] *)
