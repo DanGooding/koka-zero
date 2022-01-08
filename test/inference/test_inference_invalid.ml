@@ -1,14 +1,13 @@
 open Koka_zero_inference
 module M = Minimal_syntax
 module E = M.Expr
+module UE = Util.Expr
 
 let%expect_test "occurs check rejects omega combinator" =
   let expr =
-    E.Lambda
-      ( [ M.Variable.of_user "x" ]
-      , E.Application
-          ( E.Variable (M.Variable.of_user "x")
-          , [ E.Variable (M.Variable.of_user "x") ] ) )
+    E.Value
+      (E.Lambda
+         ([ M.Variable.of_user "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -26,12 +25,7 @@ let%expect_test "occurs check rejects omega combinator" =
 
 let%expect_test "if statement's branches must have the same type" =
   (* if true then 1 else () *)
-  let expr =
-    E.If_then_else
-      ( E.Literal (M.Literal.Bool true)
-      , E.Literal (M.Literal.Int 1)
-      , E.Literal M.Literal.Unit )
-  in
+  let expr = E.If_then_else (UE.lit_bool true, UE.lit_int 1, UE.lit_unit) in
   Util.print_expr_inference_result expr;
   [%expect
     {|
@@ -50,7 +44,7 @@ let%expect_test "handler must include all operations" =
     (* handler { set(x) { () } } *)
     let set_clause =
       let op_argument = M.Variable.of_user "x" in
-      let op_body = E.Literal M.Literal.Unit in
+      let op_body = UE.lit_unit in
       { E.op_argument; op_body }
     in
     let operations =
@@ -58,9 +52,7 @@ let%expect_test "handler must include all operations" =
     in
     { E.operations; return_clause = None }
   in
-  let body =
-    Util.Expr.make_handle_expr state_handler_set_only (E.Literal M.Literal.Unit)
-  in
+  let body = Util.Expr.make_handle_expr state_handler_set_only UE.lit_unit in
   Util.print_expr_inference_result ~declarations body;
   [%expect
     {|

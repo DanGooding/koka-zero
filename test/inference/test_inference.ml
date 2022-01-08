@@ -2,6 +2,7 @@ open Core
 open Koka_zero_inference
 module M = Minimal_syntax
 module E = M.Expr
+module UE = Util.Expr
 
 let%expect_test "identity gets polymorphic type" =
   (* TODO: once introduce declarations, add a better test than this (expressions
@@ -9,16 +10,14 @@ let%expect_test "identity gets polymorphic type" =
   let expr =
     (* let id = \x. x in id id () *)
     (* tests id can be applied to functions, and units *)
-    let id = E.Variable (M.Variable.of_user "id") in
+    let id = UE.var "id" in
     E.Let
       ( M.Variable.of_user "id"
-      , E.Lambda
-          ([ M.Variable.of_user "z" ], E.Variable (M.Variable.of_user "z"))
-      , E.Application (E.Application (id, [ id ]), [ E.Literal M.Literal.Unit ])
-      )
+      , E.Lambda ([ M.Variable.of_user "z" ], UE.var "z")
+      , E.Application (E.Application (id, [ id ]), [ UE.lit_unit ]) )
   in
   Util.print_expr_inference_result expr;
-  [%expect {| (Ok ((Primitive Unit) (Metavariable e8))) |}]
+  [%expect {| (Ok ((Primitive Unit) (Metavariable e7))) |}]
 ;;
 
 (* TODO: tests to add: static scoping, not generalising free varaibles, not
@@ -27,12 +26,11 @@ let%expect_test "identity gets polymorphic type" =
 let%expect_test "fix combinator allows recursion" =
   let expr =
     (* fix f. \x. f x *)
-    E.Fix_lambda
-      ( M.Variable.of_user "f"
-      , ( [ M.Variable.of_user "x" ]
-        , E.Application
-            ( E.Variable (M.Variable.of_user "f")
-            , [ E.Variable (M.Variable.of_user "x") ] ) ) )
+    E.Value
+      (E.Fix_lambda
+         ( M.Variable.of_user "f"
+         , ( [ M.Variable.of_user "x" ]
+           , E.Application (UE.var "f", [ UE.var "x" ]) ) ))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -43,25 +41,25 @@ let%expect_test "fix combinator allows recursion" =
 ;;
 
 let%expect_test "literal unit" =
-  let expr = E.Literal M.Literal.Unit in
+  let expr = UE.lit_unit in
   Util.print_expr_inference_result expr;
   [%expect {| (Ok ((Primitive Unit) (Metavariable e0))) |}]
 ;;
 
 let%expect_test "literal bool" =
-  let expr = E.Literal (M.Literal.Bool true) in
+  let expr = UE.lit_bool true in
   Util.print_expr_inference_result expr;
   [%expect {| (Ok ((Primitive Bool) (Metavariable e0))) |}]
 ;;
 
 let%expect_test "literal int" =
-  let expr = E.Literal (M.Literal.Int 1) in
+  let expr = UE.lit_int 1 in
   Util.print_expr_inference_result expr;
   [%expect {| (Ok ((Primitive Int) (Metavariable e0))) |}]
 ;;
 
 let%expect_test "int operators" =
-  let i n = E.Literal (M.Literal.Int n) in
+  let i n = UE.lit_int n in
   let oi o = M.Operator.Int o in
   let expr =
     E.Operator
@@ -83,7 +81,7 @@ let%expect_test "int operators" =
 ;;
 
 let%expect_test "comparsion operators" =
-  let i n = E.Literal (M.Literal.Int n) in
+  let i n = UE.lit_int n in
   let oi o = M.Operator.Int o in
   let ob o = M.Operator.Bool o in
   let expr =
@@ -103,19 +101,14 @@ let%expect_test "multi argument functions" =
   (* ( \b x y. if b then x else y )(true, 1, 0) *)
   let expr =
     E.Application
-      ( E.Lambda
-          ( [ M.Variable.of_user "b"
-            ; M.Variable.of_user "x"
-            ; M.Variable.of_user "y"
-            ]
-          , E.If_then_else
-              ( E.Variable (M.Variable.of_user "b")
-              , E.Variable (M.Variable.of_user "x")
-              , E.Variable (M.Variable.of_user "y") ) )
-      , [ E.Literal (M.Literal.Bool true)
-        ; E.Literal (M.Literal.Int 1)
-        ; E.Literal (M.Literal.Int 0)
-        ] )
+      ( E.Value
+          (E.Lambda
+             ( [ M.Variable.of_user "b"
+               ; M.Variable.of_user "x"
+               ; M.Variable.of_user "y"
+               ]
+             , E.If_then_else (UE.var "b", UE.var "x", UE.var "y") ))
+      , [ UE.lit_bool true; UE.lit_int 1; UE.lit_int 0 ] )
   in
   Util.print_expr_inference_result expr;
   [%expect {| (Ok ((Primitive Int) (Metavariable e7))) |}]
@@ -123,22 +116,15 @@ let%expect_test "multi argument functions" =
 
 let%expect_test "declared functions are generalised" =
   let identity =
-    ( M.Variable.of_user "id"
-    , ([ M.Variable.of_user "x" ], E.Variable (M.Variable.of_user "x")) )
+    M.Variable.of_user "id", ([ M.Variable.of_user "x" ], UE.var "x")
   in
   let const_true =
     ( M.Variable.of_user "const_true"
-    , ( []
-      , E.Application
-          ( E.Variable (M.Variable.of_user "id")
-          , [ E.Literal (M.Literal.Bool true) ] ) ) )
+    , ([], E.Application (UE.var "id", [ UE.lit_bool true ])) )
   in
   let const_three =
     ( M.Variable.of_user "const_three"
-    , ( []
-      , E.Application
-          (E.Variable (M.Variable.of_user "id"), [ E.Literal (M.Literal.Int 3) ])
-      ) )
+    , ([], E.Application (UE.var "id", [ UE.lit_int 3 ])) )
   in
   let declarations =
     [ M.Decl.Fun identity; M.Decl.Fun const_true; M.Decl.Fun const_three ]
@@ -149,9 +135,7 @@ let%expect_test "declared functions are generalised" =
 ;;
 
 let%expect_test "sequence doesn't require first to be unit" =
-  let e =
-    E.Seq (E.Literal (M.Literal.Int 0), E.Literal (M.Literal.Bool true))
-  in
+  let e = E.Seq (UE.lit_int 0, UE.lit_bool true) in
   Util.print_expr_inference_result e;
   [%expect {| (Ok ((Primitive Bool) (Metavariable e1))) |}]
 ;;
@@ -163,15 +147,16 @@ let%expect_test "handled effects reflected in subject's effect" =
   let body =
     (* \f. handler h_exn (\_. handler h_read (\_. handler h_read f)) *)
     (* (() -> <exn,read,read|e> a) -> e a *)
-    E.Lambda
-      ( [ M.Variable.of_user "f" ]
-      , Util.Expr.make_handle_expr
-          (Util.Expr.exn_handler (E.Literal M.Literal.Unit))
-          (Util.Expr.make_handle_expr
-             (Util.Expr.read_handler 1)
+    E.Value
+      (E.Lambda
+         ( [ M.Variable.of_user "f" ]
+         , Util.Expr.make_handle_expr
+             (Util.Expr.exn_handler UE.lit_unit)
              (Util.Expr.make_handle_expr
                 (Util.Expr.read_handler 1)
-                (E.Application (E.Variable (M.Variable.of_user "f"), [])))) )
+                (Util.Expr.make_handle_expr
+                   (Util.Expr.read_handler 1)
+                   (E.Application (UE.var "f", [])))) ))
   in
   Util.print_expr_inference_result ~declarations body;
   [%expect
@@ -193,11 +178,11 @@ let%expect_test "return clause is typed correctly" =
       let op_argument = M.Variable.of_user "x" in
       let op_body =
         E.Application
-          ( E.Variable M.Keyword.resume
+          ( E.Value (E.Variable M.Keyword.resume)
           , [ E.Operator
-                ( E.Variable op_argument
+                ( E.Value (E.Variable op_argument)
                 , M.Operator.Int M.Operator.Int.Equals
-                , E.Literal (M.Literal.Int 3) )
+                , UE.lit_int 3 )
             ] )
       in
       { E.op_argument; op_body }
@@ -206,9 +191,7 @@ let%expect_test "return clause is typed correctly" =
       let op_argument = M.Variable.of_user "b" in
       let op_body =
         E.If_then_else
-          ( E.Variable op_argument
-          , E.Literal M.Literal.Unit
-          , E.Literal M.Literal.Unit )
+          (E.Value (E.Variable op_argument), UE.lit_unit, UE.lit_unit)
       in
       Some { E.op_argument; op_body }
     in
@@ -221,9 +204,7 @@ let%expect_test "return clause is typed correctly" =
     (* handle h_query (test(5)) *)
     Util.Expr.make_handle_expr
       query_handler
-      (E.Application
-         ( E.Variable (M.Variable.of_user "test")
-         , [ E.Literal (M.Literal.Int 5) ] ))
+      (E.Application (UE.var "test", [ UE.lit_int 5 ]))
   in
   Util.print_expr_inference_result ~declarations body;
   [%expect {| (Ok ((Primitive Unit) (Metavariable e16))) |}]
@@ -238,10 +219,9 @@ let%expect_test "handlers can delegate to outer handlers" =
     let op_argument = M.Variable.of_user "unit" in
     let op_body =
       E.Operator
-        ( E.Application
-            (E.Variable (M.Variable.of_user "ask"), [ E.Literal M.Literal.Unit ])
+        ( E.Application (UE.var "ask", [ UE.lit_unit ])
         , M.Operator.Int M.Operator.Int.Plus
-        , E.Literal (M.Literal.Int 1) )
+        , UE.lit_int 1 )
     in
     Util.Expr.singleton_handler ~op_name ~op_argument ~op_body
   in
@@ -251,8 +231,7 @@ let%expect_test "handlers can delegate to outer handlers" =
       outer_handler
       (Util.Expr.make_handle_expr
          inner_handler
-         (E.Application
-            (E.Variable (M.Variable.of_user "ask"), [ E.Literal M.Literal.Unit ])))
+         (E.Application (UE.var "ask", [ UE.lit_unit ])))
   in
   Util.print_expr_inference_result ~declarations body;
   [%expect {| (Ok ((Primitive Int) (Metavariable e23))) |}]

@@ -42,6 +42,9 @@ val unify_effects : Effect.t -> Effect.t -> unit t
 val instantiate : Type.Poly.t -> Type.Mono.t t
 
 (** generalise a type, or fail if the effect is not total *)
-val generalise : Type.Mono.t -> Effect.t -> in_:Context.t -> Type.Poly.t t
+val generalise : Type.Mono.t -> Effect.t -> env:Context.t -> Type.Poly.t t
+
+(** generalise a type (assuming the corresponding effect is total) *)
+val generalise_total : Type.Mono.t -> env:Context.t -> Type.Poly.t t
 
 val run : 'a t -> ('a * Substitution.t, Static_error.t) Result.t

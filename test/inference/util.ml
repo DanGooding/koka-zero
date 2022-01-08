@@ -19,10 +19,15 @@ let print_expr_inference_result ?(declarations = []) expr =
 ;;
 
 module Expr = struct
+  let var x = E.Value (E.Variable (M.Variable.of_user x))
+  let lit_unit = E.Value (E.Literal M.Literal.Unit)
+  let lit_bool b = E.Value (E.Literal (M.Literal.Bool b))
+  let lit_int i = E.Value (E.Literal (M.Literal.Int i))
+
   (** construct the desugared equiavlent of the `handle h (subject ())`
       construct *)
   let make_handle_expr (h : E.handler) (subject : E.t) : E.t =
-    E.Application (E.Handler h, [ E.Lambda ([], subject) ])
+    E.Application (E.Value (E.Handler h), [ E.Value (E.Lambda ([], subject)) ])
   ;;
 
   let decl_read =
@@ -101,8 +106,7 @@ module Expr = struct
     let op_name = M.Variable.of_user "ask" in
     let op_argument = M.Variable.of_user "unit" in
     let op_body =
-      E.Application
-        (E.Variable M.Keyword.resume, [ E.Literal (M.Literal.Int value) ])
+      E.Application (E.Value (E.Variable M.Keyword.resume), [ lit_int value ])
     in
     singleton_handler ~op_name ~op_argument ~op_body
   ;;
