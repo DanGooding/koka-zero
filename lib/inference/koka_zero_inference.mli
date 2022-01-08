@@ -2,6 +2,7 @@ open Koka_zero_util
 module Type = Type
 module Effect = Effect
 module Minimal_syntax = Minimal_syntax
+module Explicit_syntax = Explicit_syntax
 
 (** typecheck a program, returning unit if well typed *)
 val check_program : Minimal_syntax.Program.t -> unit Or_static_error.t

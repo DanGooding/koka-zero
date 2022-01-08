@@ -1,4 +1,3 @@
-open Core
 open Evidence_passing_syntax
 
 module Names = struct

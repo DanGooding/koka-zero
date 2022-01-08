@@ -86,17 +86,25 @@ end
 
 module Expr : sig
   type t =
-    | Variable of Variable.t
-    | Let of Variable.t * t * t (** [Let] provides polymorphic binding *)
-    | Lambda of lambda
-    | Fix_lambda of fix_lambda
+    | Value of value
+    | Let of Variable.t * value * t
+        (** [Let] provides polymorphic binding over total terms, although I
+            currently restrict this to values for the evidence translation step
+            (this may be unnecessary) *)
     | Application of t * t list
     | Seq of t * t
         (** evaluates first expression, then second. both may be of any type *)
-    | Literal of Literal.t
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
+  [@@deriving sexp]
+
+  (** expressions which can't reduce/evaluate *)
+  and value =
+    | Variable of Variable.t
+    | Lambda of lambda
+    | Fix_lambda of fix_lambda
+    | Literal of Literal.t
     | Handler of handler
         (** takes a nullary funciton to be called under this handler *)
   [@@deriving sexp]

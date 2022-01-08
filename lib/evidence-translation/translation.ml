@@ -1,7 +1,8 @@
 open Core
+module Effect = Koka_zero_inference.Effect
 
 (** source syntax *)
-module Min = Koka_zero_inference.Minimal_syntax
+module Expl = Koka_zero_inference.Explicit_syntax
 
 (** target syntax *)
 module EPS = Evidence_passing_syntax
@@ -15,18 +16,19 @@ let monadic_of_value : EPS.Expr.t -> EPS.Expr.t =
  fun v -> EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.pure, [ v ])
 ;;
 
-let translate_variable (v : Min.Variable.t) : [ `Value of EPS.Variable.t ] =
-  `Value v
-;;
+let translate_variable (v : Expl.Variable.t) : EPS.Variable.t = v
+let translate_literal (l : Expl.Literal.t) : EPS.Literal.t = l
+let translate_operator (op : Expl.Operator.t) : EPS.Operator.t = op
 
-let translate_literal (l : Min.Literal.t) : [ `Value of EPS.Literal.t ] =
-  `Value l
-;;
-
-let translate_operator (op : Min.Operator.t) : EPS.Operator.t = op
-
-let translate_unary_operator (op : Min.Operator.Unary.t) : EPS.Operator.Unary.t =
+let translate_unary_operator (op : Expl.Operator.Unary.t) : EPS.Operator.Unary.t
+  =
   op
+;;
+
+let translate_operation_name (x : EPS.Variable.t) : EPS.Variable.t = x
+
+let translate_effect_label (label : Effect.Label.t) : EPS.Expr.t =
+  EPS.Expr.Effect_label label
 ;;
 
 (** [make_bind_into e ~f:(fun x -> e')] builds the expression
@@ -76,25 +78,13 @@ let make_bind_many_into
   fun es ~f -> make_bind_many_into es ~xs_rev:[] ~f
 ;;
 
-let rec translate_expr : Min.Expr.t -> EPS.Expr.t Generation.t =
+let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
   let open Generation.Let_syntax in
   function
-  | Min.Expr.Variable v ->
-    (* TODO: translate from a form where we already know what the operations
-       are *)
-    assert (not (is_operation v));
-    let (`Value v') = translate_variable v in
-    monadic_of_value (EPS.Expr.Variable v') |> return
-  | Min.Expr.Literal lit ->
-    let (`Value lit') = translate_literal lit in
-    monadic_of_value (EPS.Expr.Literal lit') |> return
-  | Min.Expr.Lambda lambda ->
-    let%map (`Value m_lambda) = translate_lambda lambda in
-    monadic_of_value (EPS.Expr.Lambda m_lambda)
-  | Min.Expr.Fix_lambda fix_lambda ->
-    let%map (`Value m_fix_lambda) = translate_fix_lambda fix_lambda in
-    monadic_of_value (EPS.Expr.Fix_lambda m_fix_lambda)
-  | Min.Expr.Application (e_f, e_args) ->
+  | Expl.Expr.Value v ->
+    let%map (`Value v') = translate_value v in
+    monadic_of_value v'
+  | Expl.Expr.Application (e_f, e_args) ->
     (* `e_f(e_1, e_2, ..., e_n)` translates to: *)
     (* `e_f >>= (\f. e_1 >>= (\x1. e_2 >>= (\x2. ... e_n >>= (\xn. f(x1, x2,
        ..., xn) ))))` *)
@@ -105,18 +95,18 @@ let rec translate_expr : Min.Expr.t -> EPS.Expr.t Generation.t =
     make_bind_into m_f ~f:(fun f ->
         make_bind_many_into m_args ~f:(fun xs ->
             EPS.Expr.Application (f, xs) |> return))
-  | Min.Expr.Unary_operator (op, e) ->
+  | Expl.Expr.Unary_operator (op, e) ->
     let%bind m_e = translate_expr e in
     make_map_into m_e ~f:(fun x ->
         `Value (EPS.Expr.Unary_operator (op, x)) |> return)
-  | Min.Expr.Operator (e_left, op, e_right) ->
+  | Expl.Expr.Operator (e_left, op, e_right) ->
     (* TODO: note this has no short-circuiting for boolean operators *)
     let%bind m_left = translate_expr e_left in
     make_bind_into m_left ~f:(fun x_left ->
         let%bind m_right = translate_expr e_right in
         make_map_into m_right ~f:(fun x_right ->
             `Value (EPS.Expr.Operator (x_left, op, x_right)) |> return))
-  | Min.Expr.If_then_else (e_cond, e_yes, e_no) ->
+  | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind e_cond' = translate_expr e_cond in
     make_bind_into e_cond' ~f:(fun cond ->
         Generation.make_lambda_expr_1 (fun vector ->
@@ -126,56 +116,96 @@ let rec translate_expr : Min.Expr.t -> EPS.Expr.t Generation.t =
               ( cond
               , EPS.Expr.Application (e_yes', [ vector ])
               , EPS.Expr.Application (e_no', [ vector ]) )))
-  | Min.Expr.Handler h ->
+  | Expl.Expr.Let (x, v_subject, e_body) ->
+    let x' = translate_variable x in
+    let%bind (`Value subject') = translate_value v_subject in
+    let%map m_body = translate_expr e_body in
+    EPS.Expr.Application (EPS.Expr.Lambda ([ x' ], m_body), [ subject' ])
+  | Expl.Expr.Seq (e1, e2) ->
+    let%bind e1' = translate_expr e1 in
+    make_bind_into e1' ~f:(fun _x1 -> translate_expr e2)
+
+and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
+  let open Generation.Let_syntax in
+  function
+  | Expl.Expr.Variable v ->
+    let v' = translate_variable v in
+    `Value (EPS.Expr.Variable v') |> return
+  | Expl.Expr.Literal lit ->
+    let lit' = translate_literal lit in
+    `Value (EPS.Expr.Literal lit') |> return
+  | Expl.Expr.Lambda lambda ->
+    let%map lambda' = translate_lambda lambda in
+    `Value (EPS.Expr.Lambda lambda')
+  | Expl.Expr.Fix_lambda fix_lambda ->
+    let%map fix_lambda' = translate_fix_lambda fix_lambda in
+    `Value (EPS.Expr.Fix_lambda fix_lambda')
+  | Expl.Expr.Handler h ->
     (* TODO: `Hnd perhaps isn't useful? indicates it is not a first class object
        to the user *)
-    let%map (`Hnd h') = translate_handler h in
-    let (label : Effect.Label.t) =
-      ()
-      (* TODO: determined in inference stage *)
-    in
+    let%bind (`Hnd h') = translate_handler h in
+    let { Expl.Expr.handled_effect = label; _ } = h in
     let (label' : EPS.Expr.t) = translate_effect_label label in
-    EPS.Expr.Application (EPS.Expr.Variable Primitives.handler, [ label'; h' ])
-  | Min.Expr.Perform (op_name, label) ->
-    let (`Value op_name') = translate_variable op_name in
-    let%map selector =
-      Generation.make_lambda_1 (fun h ->
+    (* [handler'] is not a value, although it steps to one without any effects,
+       therefore it must be wrapped in a lambda. The alternative is to
+       essentially inline the call to [Primitives.handler], or to lie and
+       pretend it is already value. *)
+    let handler' =
+      EPS.Expr.Application
+        (EPS.Expr.Variable Primitives.Names.handler, [ label'; h' ])
+    in
+    let%map wrapped_handler =
+      Generation.make_lambda_expr_1 (fun action ->
+          EPS.Expr.Application (handler', [ action ]) |> return)
+    in
+    `Value wrapped_handler
+  | Expl.Expr.Perform
+      { Expl.Expr.operation = op_name; performed_effect = label } ->
+    let op_name' = translate_operation_name op_name in
+    let%bind selector =
+      Generation.make_lambda_expr_1 (fun h ->
           (* TODO: think more about how to implement `select` *)
           EPS.Expr.Select_operation (label, op_name', h) |> return)
     in
     let label' : EPS.Expr.t = translate_effect_label label in
-    EPS.Expr.Application
-      (EPS.Expr.Variable Primitives.Names.perform, [ label'; selector ])
-  | _ -> failwith "not implemented"
+    let perform' =
+      EPS.Expr.Application
+        (EPS.Expr.Variable Primitives.Names.perform, [ label'; selector ])
+    in
+    let%map wrapped_perform =
+      Generation.make_lambda_expr_1 (fun argument ->
+          EPS.Expr.Application (perform', [ argument ]) |> return)
+    in
+    `Value wrapped_perform
 
-and translate_lambda
-    : Min.Expr.lambda -> [ `Value of EPS.Expr.lambda ] Generation.t
-  =
+and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
  fun (xs, e_body) ->
   let open Generation.Let_syntax in
   let%map m_body = translate_expr e_body in
   let xs' =
     List.map xs ~f:(fun v ->
-        let (`Value v') = translate_variable v in
+        let v' = translate_variable v in
         v')
   in
-  `Value (xs', m_body)
+  xs', m_body
 
 and translate_fix_lambda
-    : Min.Expr.fix_lambda -> [ `Value of EPS.Expr.fix_lambda ] Generation.t
+    : Expl.Expr.fix_lambda -> EPS.Expr.fix_lambda Generation.t
   =
  fun (f, lambda) ->
   let open Generation.Let_syntax in
-  let%map (`Value m_lambda) = translate_lambda lambda in
-  let (`Value f') = translate_variable f in
-  `Value (f', m_lambda)
+  let%map m_lambda = translate_lambda lambda in
+  let f' = translate_variable f in
+  f', m_lambda
 
-and translate_handler : Min.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t =
+and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
+  =
  fun handler ->
-  let { Min.Expr.operations; return_clause } = handler in
+  let { Expl.Expr.handled_effect; operations; return_clause } = handler in
+  (* TODO: build a [Construct_handler]*)
   failwith "not implemented"
 ;;
 
-let translate { Min.Program.declarations; has_main } =
+let translate { Expl.Program.declarations; has_entry_point } =
   failwith "not implemented"
 ;;

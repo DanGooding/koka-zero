@@ -318,24 +318,24 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     Syntax.If_then_else (e_cond, block_yes, block_no) |> simplify_expr
   | Syntax.Handler handler ->
     let%map handler' = simplify_effect_handler handler in
-    Min.Expr.Handler handler'
+    Min.Expr.Handler handler' |> Min.Expr.Value
   | Syntax.Handle { subject; handler } ->
     let%bind handler' = simplify_expr (Syntax.Handler handler) in
     let%map subject' = simplify_expr subject in
     Min.Expr.Application (handler', [ subject' ])
   | Syntax.Fn f ->
     let%map lambda = simplify_fn f in
-    Min.Expr.Lambda lambda
+    Min.Expr.Lambda lambda |> Min.Expr.Value
   | Syntax.Application (e_f, e_args) ->
     let%bind e_f' = simplify_expr e_f in
     let%map e_args' = List.map e_args ~f:simplify_expr |> Result.all in
     Min.Expr.Application (e_f', e_args')
   | Syntax.Identifier x ->
     let x' = simplify_identifier x in
-    Min.Expr.Variable x' |> Result.Ok
+    Min.Expr.Variable x' |> Min.Expr.Value |> Result.Ok
   | Syntax.Literal lit ->
     let lit' = simplify_literal lit in
-    Min.Expr.Literal lit' |> Result.Ok
+    Min.Expr.Literal lit' |> Min.Expr.Value |> Result.Ok
   | Syntax.Binary_op (e_left, op, e_right) ->
     let%bind e_left' = simplify_expr e_left in
     let%bind e_right' = simplify_expr e_right in
@@ -372,7 +372,7 @@ and simplify_declaration_preceding
     let%bind x = simplify_annotated_pattern pattern in
     let%map e_x = simplify_block block in
     (* (\x. e) e_x *)
-    Min.Expr.Application (Min.Expr.Lambda ([ x ], e), [ e_x ])
+    Min.Expr.Application (Min.Expr.Value (Min.Expr.Lambda ([ x ], e)), [ e_x ])
 
 (** given the simplification of the tail of a block, and a statement (its head)
     produce the resulting expression *)

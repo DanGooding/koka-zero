@@ -25,6 +25,13 @@ module Expr : sig
         }
     | Fresh_marker (** evaluates to a new unique marker *)
     | Markers_equal of t * t
+    | Construct_handler of
+        { handled_effect : Koka_zero_inference.Effect.Label.t
+        ; operation_clauses : t Variable.Map.t
+        ; return_clause : t
+        } (** constructor for a `Hnd`, passed to [handler] *)
+    | Effect_label of Koka_zero_inference.Effect.Label.t
+        (** literal effect label - passed to [handler]/[perform] *)
     (* TODO: note evidence vectors are not first class - can have more sensible
        primitives if desired *)
     | Cons_evidence_vector of
@@ -41,8 +48,6 @@ module Expr : sig
         }
     | Get_evidence_marker of t (* evidence entry -> marker *)
     | Get_evidence_handler of t (* evidence entry -> handler *)
-    (* TODO: constructor for Hnd (handler = record of operations) even though
-       this is never done at runtime *)
     | Select_operation of Koka_zero_inference.Effect.Label.t * Variable.t * t
         (** primitive to get an operation from a handler's runtime
             representation **)
