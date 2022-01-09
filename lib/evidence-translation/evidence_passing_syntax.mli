@@ -21,7 +21,10 @@ module Expr : sig
     | Match_ctl of
         { subject : t
         ; pure_branch : lambda (* gets one argument *)
-        ; yield_branch : lambda (* gets one argument per field in Yield *)
+        ; yield_branch : lambda
+              (* gets one argument per field in Yield *)
+              (* TODO: making the arguments explicit here would make more sense,
+                 even if we later compile as a lambda *)
         }
     | Fresh_marker (** evaluates to a new unique marker *)
     | Markers_equal of t * t

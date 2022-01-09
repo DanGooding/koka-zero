@@ -10,17 +10,21 @@ module T = struct
   type t =
     | Primitive of primitive
     | Closure of closure
+    | Ctl of ctl
+    | Effect_label of Effect_label.t
+    | Marker of Marker.t
+    | Hnd of hnd
+    | Evidence of evidence
+    | Evidence_vector of evidence_vector
+  [@@deriving sexp]
+
+  and ctl =
     | Pure of t
     | Yield of
         { marker : Marker.t
         ; op_clause : t (* TODO: is this at least a closure? *)
         ; resumption : t
         }
-    | Effect_label of Effect_label.t
-    | Marker of Marker.t
-    | Hnd of hnd
-    | Evidence of evidence
-    | Evidence_vector of evidence_vector
   [@@deriving sexp]
 
   and primitive =

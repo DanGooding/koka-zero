@@ -81,18 +81,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         lambda, Map.set f_env ~key:f_name ~data:(Value.Closure closure)
     in
     let xs, e_body = lambda in
-    let%bind xs_to_args =
-      match List.zip xs v_args with
-      | List.Or_unequal_lengths.Ok xs_to_args -> return xs_to_args
-      | List.Or_unequal_lengths.Unequal_lengths ->
-        let message =
-          sprintf
-            "wrong number of arguments for function: got %d, expecting %d"
-            (List.length v_args)
-            (List.length xs)
-        in
-        Interpreter.impossible_error message
-    in
+    let%bind xs_to_args = Typecast.zip_arguments ~params:xs ~args:v_args in
     let f_body_env =
       List.fold xs_to_args ~init:f_env ~f:(fun f_body_env (x, v) ->
           Map.set f_body_env ~key:x ~data:v)
@@ -117,14 +106,28 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     Value.Primitive v_result
   | Expr.Construct_pure e ->
     let%map v = eval_expr e ~env in
-    Value.Pure v
+    Value.Pure v |> Value.Ctl
   | Expr.Construct_yield { marker; op_clause; resumption } ->
     let%bind marker = eval_expr marker ~env in
     let%bind op_clause = eval_expr op_clause ~env in
     let%bind resumption = eval_expr resumption ~env in
     let%map marker = Typecast.marker_of_value marker in
-    Value.Yield { marker; op_clause; resumption }
-  | Expr.Match_ctl _ -> failwith "not implemented"
+    Value.Yield { marker; op_clause; resumption } |> Value.Ctl
+  | Expr.Match_ctl { subject; pure_branch; yield_branch } ->
+    let%bind v_subject = eval_expr subject ~env in
+    let%bind branch, args =
+      match%map Typecast.ctl_of_value v_subject with
+      | Value.Pure v -> pure_branch, [ v ]
+      | Value.Yield { marker; op_clause; resumption } ->
+        yield_branch, [ Value.Marker marker; op_clause; resumption ]
+    in
+    let params, e_body = branch in
+    let%bind bindings = Typecast.zip_arguments ~params ~args in
+    let env' =
+      List.fold bindings ~init:env ~f:(fun env (x, v) ->
+          Map.set env ~key:x ~data:v)
+    in
+    eval_expr e_body ~env:env'
   | Expr.Fresh_marker ->
     let%map m = Interpreter.fresh_marker in
     Value.Marker m

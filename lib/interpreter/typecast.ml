@@ -1,3 +1,13 @@
+open Core
+
+let ctl_of_value =
+  let open Interpreter.Let_syntax in
+  function
+  | Value.Ctl c -> return c
+  | v -> Interpreter.type_error ~expected:"ctl" Value.sexp_of_t v
+  (* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
 let closure_of_value =
   let open Interpreter.Let_syntax in
   function
@@ -28,4 +38,18 @@ let int_of_value =
   | Value.Primitive (Value.Int i) -> return i
   | v -> Interpreter.type_error ~expected:"int" Value.sexp_of_t v
   (* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
+let zip_arguments ~params ~args =
+  let open Interpreter.Let_syntax in
+  match List.zip params args with
+  | List.Or_unequal_lengths.Ok zipped -> return zipped
+  | List.Or_unequal_lengths.Unequal_lengths ->
+    let message =
+      sprintf
+        "wrong number of arguments: got %d, expecting %d"
+        (List.length args)
+        (List.length params)
+    in
+    Interpreter.impossible_error message
 ;;
