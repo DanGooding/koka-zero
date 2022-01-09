@@ -1,0 +1,6 @@
+(library
+ (name koka_zero_interpreter)
+ (public_name koka-zero.interpreter)
+ (libraries core koka_zero_util koka_zero_inference koka_zero_evidence_translation)
+ (preprocess
+  (pps ppx_jane)))
