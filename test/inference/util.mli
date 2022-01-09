@@ -21,8 +21,8 @@ module Expr : sig
   val decl_state : M.Decl.Effect.t
 
   val singleton_handler
-    :  op_name:M.Variable.t
-    -> op_argument:M.Variable.t
+    :  op_name:Variable.t
+    -> op_argument:Variable.t
     -> op_body:E.t
     -> E.handler
 
