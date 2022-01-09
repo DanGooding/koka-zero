@@ -17,6 +17,7 @@ module T = struct
         ; resumption : t
         }
     | Effect_label of Effect_label.t
+    | Marker of Marker.t
     | Hnd of hnd
     | Evidence of evidence
     | Evidence_vector of evidence_vector
