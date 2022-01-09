@@ -24,6 +24,30 @@ let marker_of_value =
   (* disable "fragile match" warning *) [@@warning "-4"]
 ;;
 
+let effect_label_of_value =
+  let open Interpreter.Let_syntax in
+  function
+  | Value.Effect_label l -> return l
+  | v -> Interpreter.type_error ~expected:"effect label" Value.sexp_of_t v
+  (* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
+let hnd_of_value =
+  let open Interpreter.Let_syntax in
+  function
+  | Value.Hnd h -> return h
+  | v -> Interpreter.type_error ~expected:"hnd" Value.sexp_of_t v
+  (* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
+let evidence_vector_of_value =
+  let open Interpreter.Let_syntax in
+  function
+  | Value.Evidence_vector vector -> return vector
+  | v -> Interpreter.type_error ~expected:"vector" Value.sexp_of_t v
+  (* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
 let bool_of_value =
   let open Interpreter.Let_syntax in
   function

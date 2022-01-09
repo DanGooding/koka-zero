@@ -51,6 +51,18 @@ let eval_unary_op_expr
     (not v) |> Value.Bool
 ;;
 
+let rec lookup_evidence
+    : Value.evidence_vector -> Effect_label.t -> Value.evidence option
+  =
+ fun vector label ->
+  match vector with
+  | Value.Evv_nil -> None
+  | Value.Evv_cons { label = label'; evidence; tail } ->
+    if Effect_label.(label = label')
+    then Some evidence
+    else lookup_evidence tail label
+;;
+
 let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
  fun expr ~env ->
   let open Interpreter.Let_syntax in
@@ -139,6 +151,48 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     (* note this isn't polymorphic equals, but [Int.( = )] as markers are
        transparently [int]s *)
     m1 = m2 |> Value.Bool |> Value.Primitive
+  | Expr.Construct_handler { handled_effect; operation_clauses; return_clause }
+    ->
+    let%bind () =
+      match return_clause with
+      | None -> return ()
+      | Some _return_clause ->
+        Interpreter.unsupported_feature_error "return clause in handler"
+    in
+    let%map operation_clauses =
+      Map.map operation_clauses ~f:(fun op_clause ->
+          let%bind v_op_clause = eval_expr op_clause ~env in
+          Typecast.closure_of_value v_op_clause)
+      |> Interpreter.all_map
+    in
+    Value.Hnd { Value.handled_effect; operation_clauses }
+  | Expr.Effect_label label -> Value.Effect_label label |> return
+  | Expr.Cons_evidence_vector { label; marker; handler; vector_tail } ->
+    let%bind label = eval_expr label ~env in
+    let%bind marker = eval_expr marker ~env in
+    let%bind handler = eval_expr handler ~env in
+    let%bind vector_tail = eval_expr vector_tail ~env in
+    let%bind label = Typecast.effect_label_of_value label in
+    let%bind marker = Typecast.marker_of_value marker in
+    let%bind handler = Typecast.hnd_of_value handler in
+    let%map vector_tail = Typecast.evidence_vector_of_value vector_tail in
+    let evidence = { Value.marker; handler } in
+    Value.Evv_cons { label; evidence; tail = vector_tail }
+    |> Value.Evidence_vector
+  | Expr.Lookup_evidence { label; vector } ->
+    let%bind label = eval_expr label ~env in
+    let%bind label = Typecast.effect_label_of_value label in
+    let%bind vector = eval_expr vector ~env in
+    let%bind vector = Typecast.evidence_vector_of_value vector in
+    (match lookup_evidence vector label with
+    | None ->
+      let message =
+        sprintf
+          "effect label `%s` not found in vector"
+          (Effect_label.to_string label)
+      in
+      Interpreter.impossible_error message
+    | Some evidence -> Value.Evidence evidence |> return)
   | _ -> failwith "not implemented"
  [@@warning "-4"]
 
