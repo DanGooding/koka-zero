@@ -1,12 +1,13 @@
 open Core
 open Koka_zero_util
+open Import
 module EPS = Evidence_passing_syntax
 module E = EPS.Expr
 
 module State = struct
-  type t = EPS.Variable.Name_source.t [@@deriving sexp]
+  type t = Variable.Name_source.t [@@deriving sexp]
 
-  let initial : t = EPS.Variable.Name_source.fresh ~prefix:"mon_" ()
+  let initial : t = Variable.Name_source.fresh ~prefix:"mon_" ()
 end
 
 module T = struct
@@ -42,7 +43,7 @@ let run (t : 'a t) : 'a =
   x
 ;;
 
-let fresh_name = EPS.Variable.Name_source.next_name
+let fresh_name = Variable.Name_source.next_name
 
 let make_lambda_1 make_body =
   let open Let_syntax in

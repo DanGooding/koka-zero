@@ -1,4 +1,5 @@
 open Evidence_passing_syntax
+open Import
 
 module Names = struct
   let compose_unary = Variable.of_language_internal "compose_unary"

@@ -1,5 +1,5 @@
 open Core
-module Effect = Koka_zero_inference.Effect
+open Import
 
 (** source syntax *)
 module Expl = Koka_zero_inference.Explicit_syntax
@@ -16,7 +16,6 @@ let monadic_of_value : EPS.Expr.t -> EPS.Expr.t =
  fun v -> EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.pure, [ v ])
 ;;
 
-let translate_variable (v : Expl.Variable.t) : EPS.Variable.t = v
 let translate_literal (l : Expl.Literal.t) : EPS.Literal.t = l
 let translate_operator (op : Expl.Operator.t) : EPS.Operator.t = op
 
@@ -24,8 +23,6 @@ let translate_unary_operator (op : Expl.Operator.Unary.t) : EPS.Operator.Unary.t
   =
   op
 ;;
-
-let translate_operation_name (x : EPS.Variable.t) : EPS.Variable.t = x
 
 let translate_effect_label (label : Effect.Label.t) : EPS.Expr.t =
   EPS.Expr.Effect_label label
@@ -118,10 +115,9 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
               , EPS.Expr.Application (e_yes', [ vector ])
               , EPS.Expr.Application (e_no', [ vector ]) )))
   | Expl.Expr.Let (x, v_subject, e_body) ->
-    let x' = translate_variable x in
     let%bind (`Value subject') = translate_value v_subject in
     let%map m_body = translate_expr e_body in
-    EPS.Expr.Application (EPS.Expr.Lambda ([ x' ], m_body), [ subject' ])
+    EPS.Expr.Application (EPS.Expr.Lambda ([ x ], m_body), [ subject' ])
   | Expl.Expr.Seq (e1, e2) ->
     let%bind e1' = translate_expr e1 in
     make_bind_into e1' ~f:(fun _x1 -> translate_expr e2)
@@ -129,9 +125,7 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
 and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
   let open Generation.Let_syntax in
   function
-  | Expl.Expr.Variable v ->
-    let v' = translate_variable v in
-    `Value (EPS.Expr.Variable v') |> return
+  | Expl.Expr.Variable v -> `Value (EPS.Expr.Variable v) |> return
   | Expl.Expr.Literal lit ->
     let lit' = translate_literal lit in
     `Value (EPS.Expr.Literal lit') |> return
@@ -162,11 +156,10 @@ and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
     `Value wrapped_handler
   | Expl.Expr.Perform
       { Expl.Expr.operation = op_name; performed_effect = label } ->
-    let op_name' = translate_operation_name op_name in
     let%bind selector =
       Generation.make_lambda_expr_1 (fun h ->
           (* TODO: think more about how to implement `select` *)
-          EPS.Expr.Select_operation (label, op_name', h) |> return)
+          EPS.Expr.Select_operation (label, op_name, h) |> return)
     in
     let label' : EPS.Expr.t = translate_effect_label label in
     let perform' =
@@ -183,12 +176,7 @@ and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
  fun (xs, e_body) ->
   let open Generation.Let_syntax in
   let%map m_body = translate_expr e_body in
-  let xs' =
-    List.map xs ~f:(fun v ->
-        let v' = translate_variable v in
-        v')
-  in
-  xs', m_body
+  xs, m_body
 
 and translate_fix_lambda
     : Expl.Expr.fix_lambda -> EPS.Expr.fix_lambda Generation.t
@@ -196,8 +184,7 @@ and translate_fix_lambda
  fun (f, lambda) ->
   let open Generation.Let_syntax in
   let%map m_lambda = translate_lambda lambda in
-  let f' = translate_variable f in
-  f', m_lambda
+  f, m_lambda
 
 and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
   =
@@ -217,13 +204,9 @@ and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
 and translate_op_handler : Expl.Expr.op_handler -> EPS.Expr.t Generation.t =
  fun { Expl.Expr.op_argument; op_body } ->
   let open Generation.Let_syntax in
-  let argument = translate_operation_name op_argument in
-  let resume =
-    (* TODO: don't depend on Minimal_syntax like this? *)
-    translate_variable Koka_zero_inference.Minimal_syntax.Keyword.resume
-  in
+  let resume = Expl.Keyword.resume in
   let%map m_body = translate_expr op_body in
-  EPS.Expr.Lambda ([ argument; resume ], m_body)
+  EPS.Expr.Lambda ([ op_argument; resume ], m_body)
 ;;
 
 let translate_fun_decl : Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t =
@@ -232,13 +215,7 @@ let translate_fun_decl : Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t 
 
 let translate_effect_decl : Expl.Decl.Effect.t -> EPS.Program.Effect_decl.t =
  fun { Expl.Decl.Effect.name; operations } ->
-  let operations =
-    (* TODO: not actually necessary (can just use [Map.key_set]) but while we
-       have translate_variable we should be consistent *)
-    Map.keys operations
-    |> List.map ~f:translate_variable
-    |> EPS.Variable.Set.of_list
-  in
+  let operations = Map.key_set operations in
   { EPS.Program.Effect_decl.name; operations }
 ;;
 

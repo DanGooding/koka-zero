@@ -27,8 +27,8 @@ let restrict_to_all_none ~description xs =
 ;;
 
 (** convert a [Var_id.t] to the [Minimal_syntax] equivalent *)
-let simplify_var_id (x : Syntax.Var_id.t) : Min.Variable.t =
-  Min.Variable.of_user (Syntax.Var_id.to_string x)
+let simplify_var_id (x : Syntax.Var_id.t) : Variable.t =
+  Variable.of_user (Syntax.Var_id.to_string x)
 ;;
 
 (** convert a [Var_id.t] representing an effect label to the [Minimal_syntax]
@@ -38,7 +38,7 @@ let simplify_var_id_to_effect_label (x : Syntax.Var_id.t) : Effect.Label.t =
 ;;
 
 (** convert an [Identifier.t] to the [Minimal_syntax] equivalent *)
-let simplify_identifier (x : Syntax.Identifier.t) : Min.Variable.t =
+let simplify_identifier (x : Syntax.Identifier.t) : Variable.t =
   match x with
   | Syntax.Identifier.Var x -> simplify_var_id x
 ;;
@@ -54,7 +54,7 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
     let%bind ps = List.map ps ~f:simplify_parameter_type |> Result.all in
     let%map effect, t_result = simplify_type_result result in
     let parameter_names, t_args = List.unzip ps in
-    ignore (parameter_names : Min.Variable.t option list);
+    ignore (parameter_names : Variable.t option list);
     Type.Mono.Arrow (t_args, effect, t_result)
   | Syntax.Arrow (t_arg, result) ->
     let%bind t_arg = simplify_type_as_type t_arg in
@@ -191,7 +191,7 @@ and simplify_type_scheme { Syntax.forall_quantified = _; body = _ }
   Static_error.unsupported_syntax "type scheme" |> Result.Error
 
 and simplify_parameter_type { Syntax.parameter_id; type_ }
-    : (Min.Variable.t option * Type.Mono.t) Or_static_error.t
+    : (Variable.t option * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let id = Option.map parameter_id ~f:simplify_identifier in
@@ -214,8 +214,7 @@ let simplify_literal (lit : Syntax.literal) : Min.Literal.t =
   | Syntax.Bool b -> Min.Literal.Bool b
 ;;
 
-let simplify_parameter_id
-    : Syntax.parameter_id -> Min.Variable.t Or_static_error.t
+let simplify_parameter_id : Syntax.parameter_id -> Variable.t Or_static_error.t
   = function
   | Syntax.Parameter_id x -> simplify_identifier x |> Result.Ok
   | Syntax.Parameter_wildcard ->
@@ -223,7 +222,7 @@ let simplify_parameter_id
 ;;
 
 let simplify_parameter
-    : Syntax.parameter -> (Min.Variable.t * Type.Mono.t) Or_static_error.t
+    : Syntax.parameter -> (Variable.t * Type.Mono.t) Or_static_error.t
   =
  fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
@@ -232,15 +231,14 @@ let simplify_parameter
   x, t
 ;;
 
-let simplify_pattern : Syntax.pattern -> Min.Variable.t Or_static_error.t
-  = function
+let simplify_pattern : Syntax.pattern -> Variable.t Or_static_error.t = function
   | Syntax.Pattern_id x -> simplify_identifier x |> Result.Ok
   | Syntax.Pattern_wildcard ->
     Static_error.unsupported_syntax "wildcard parameter" |> Result.Error
 ;;
 
 let simplify_annotated_pattern { Syntax.pattern; scheme }
-    : Min.Variable.t Or_static_error.t
+    : Variable.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind x = simplify_pattern pattern in
@@ -252,7 +250,7 @@ let simplify_annotated_pattern { Syntax.pattern; scheme }
 ;;
 
 let simplify_pattern_parameter { Syntax.pattern; type_ }
-    : (Min.Variable.t * Type.Mono.t option) Or_static_error.t
+    : (Variable.t * Type.Mono.t option) Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind x = simplify_pattern pattern in
@@ -264,7 +262,7 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
 
 let simplify_operation_parameter
     :  Syntax.operation_parameter
-    -> (Min.Variable.t * Type.Mono.t option) Or_static_error.t
+    -> (Variable.t * Type.Mono.t option) Or_static_error.t
   =
  fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
@@ -427,13 +425,13 @@ and simplify_effect_handler (Syntax.Effect_handler op_handlers)
         | `Return -> Either.Second op_handler)
   in
   let%bind operations =
-    match Min.Variable.Map.of_alist named_op_handers with
+    match Variable.Map.of_alist named_op_handers with
     | `Ok operations -> Result.Ok operations
     | `Duplicate_key name ->
       let message =
         sprintf
           "multiple handler clauses given for operation %s"
-          (Min.Variable.to_string_user name)
+          (Variable.to_string_user name)
       in
       Static_error.syntax_error message |> Result.Error
   in
@@ -450,8 +448,7 @@ and simplify_effect_handler (Syntax.Effect_handler op_handlers)
 
 and simplify_operation_handler
     :  Syntax.operation_handler
-    -> ([ `Op of Min.Variable.t | `Return ] * Min.Expr.op_handler)
-       Or_static_error.t
+    -> ([ `Op of Variable.t | `Return ] * Min.Expr.op_handler) Or_static_error.t
   =
   let open Result.Let_syntax in
   function
@@ -503,7 +500,7 @@ and simplify_operation_handler
 ;;
 
 let simplify_operation_declaration { Syntax.id; type_parameters; shape }
-    : (Min.Variable.t * Min.Decl.Effect.Operation.t) Or_static_error.t
+    : (Variable.t * Min.Decl.Effect.Operation.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match shape with
@@ -548,12 +545,12 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
     List.map operations ~f:simplify_operation_declaration |> Result.all
   in
   let%map operations' =
-    match Min.Variable.Map.of_alist operations' with
+    match Variable.Map.of_alist operations' with
     | `Duplicate_key op_name ->
       let message =
         sprintf
           "duplicate operation name %s in effect %s"
-          (Min.Variable.to_string_user op_name)
+          (Variable.to_string_user op_name)
           (Effect.Label.to_string name)
       in
       Static_error.syntax_error message |> Result.Error

@@ -1,4 +1,5 @@
 open Evidence_passing_syntax
+open Import
 
 module Names : sig
   val compose_unary : Variable.t

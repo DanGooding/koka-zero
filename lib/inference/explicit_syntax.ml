@@ -1,7 +1,7 @@
 open Core
 module Literal = Minimal_syntax.Literal
 module Operator = Minimal_syntax.Operator
-module Variable = Minimal_syntax.Variable
+module Keyword = Minimal_syntax.Keyword
 
 module Expr = struct
   module T = struct
@@ -52,21 +52,7 @@ module Expr = struct
 end
 
 module Decl = struct
-  module Effect = struct
-    module Operation = struct
-      type t =
-        { argument : Type.Mono.t
-        ; answer : Type.Mono.t
-        }
-      [@@deriving sexp]
-    end
-
-    type t =
-      { name : Effect.Label.t
-      ; operations : Operation.t Variable.Map.t
-      }
-    [@@deriving sexp]
-  end
+  module Effect = Minimal_syntax.Decl.Effect
 
   module Fun = struct
     type t = Expr.fix_lambda [@@deriving sexp]
