@@ -44,9 +44,7 @@ and closure = function_ * context
 (** handler (not the function, just the clauses) *)
 and hnd =
   { handled_effect : Effect_label.t
-  ; operation_clauses : t Variable.Map.t
-        (* TODO: are these at least closures? *)
-  ; return_clause : t option
+  ; operation_clauses : closure Variable.Map.t
   }
 [@@deriving sexp]
 
@@ -58,8 +56,8 @@ and evidence =
 [@@deriving sexp]
 
 and evidence_vector =
-  | Nil
-  | Cons of
+  | Evv_nil
+  | Evv_cons of
       { label : Effect_label.t
       ; evidence : evidence
       ; tail : evidence_vector

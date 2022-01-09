@@ -62,3 +62,7 @@ let type_error
 let impossible_error message _state =
   Result.Error (Runtime_error.impossible_error message)
 ;;
+
+let unsupported_feature_error message _state =
+  Result.Error (Runtime_error.unsupported_feature_error message)
+;;

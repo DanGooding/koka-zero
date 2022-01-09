@@ -4,6 +4,9 @@ type t [@@deriving sexp]
     compile time *)
 val impossible_error : string -> t
 
+(** reports an error due to trying to evaluate an unimplmeneted construct *)
+val unsupported_feature_error : string -> t
+
 val string_of_t : t -> string
 
 module Or_runtime_error : sig

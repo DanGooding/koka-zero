@@ -42,9 +42,8 @@ module T = struct
 
   and hnd =
     { handled_effect : Effect_label.t
-    ; operation_clauses : t Variable.Map.t
-          (* TODO: are these at least closures? *)
-    ; return_clause : t option
+    ; operation_clauses : closure Variable.Map.t
+          (* TODO: return_clause omitted for now *)
     }
   [@@deriving sexp]
 
@@ -55,8 +54,8 @@ module T = struct
   [@@deriving sexp]
 
   and evidence_vector =
-    | Nil
-    | Cons of
+    | Evv_nil
+    | Evv_cons of
         { label : Effect_label.t
         ; evidence : evidence
         ; tail : evidence_vector
