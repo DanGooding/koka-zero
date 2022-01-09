@@ -7,7 +7,7 @@ let%expect_test "occurs check rejects omega combinator" =
   let expr =
     E.Value
       (E.Lambda
-         ([ M.Variable.of_user "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
+         ([ Variable.of_user "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -43,12 +43,12 @@ let%expect_test "handler must include all operations" =
   let state_handler_set_only =
     (* handler { set(x) { () } } *)
     let set_clause =
-      let op_argument = M.Variable.of_user "x" in
+      let op_argument = Variable.of_user "x" in
       let op_body = UE.lit_unit in
       { E.op_argument; op_body }
     in
     let operations =
-      M.Variable.Map.singleton (M.Variable.of_user "set") set_clause
+      Variable.Map.singleton (Variable.of_user "set") set_clause
     in
     { E.operations; return_clause = None }
   in
