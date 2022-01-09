@@ -1,5 +1,5 @@
 open Core
-module Variable = Koka_zero_inference.Minimal_syntax.Variable
+open Import
 module Literal = Koka_zero_inference.Minimal_syntax.Literal
 module Operator = Koka_zero_inference.Minimal_syntax.Operator
 
@@ -28,11 +28,11 @@ module Expr = struct
       | Fresh_marker
       | Markers_equal of t * t
       | Construct_handler of
-          { handled_effect : Koka_zero_inference.Effect.Label.t
+          { handled_effect : Effect.Label.t
           ; operation_clauses : t Variable.Map.t
           ; return_clause : t option
           }
-      | Effect_label of Koka_zero_inference.Effect.Label.t
+      | Effect_label of Effect.Label.t
       | Cons_evidence_vector of
           { label : t
           ; marker : t
@@ -45,7 +45,7 @@ module Expr = struct
           }
       | Get_evidence_marker of t
       | Get_evidence_handler of t
-      | Select_operation of Koka_zero_inference.Effect.Label.t * Variable.t * t
+      | Select_operation of Effect.Label.t * Variable.t * t
     (* TODO: perhaps this should be a function? (otherwise it needs to be
        wrapped at every usage) - TODO: or should this already be changed to an
        index into a record? *)
@@ -62,7 +62,7 @@ end
 module Program = struct
   module Effect_decl = struct
     type t =
-      { name : Koka_zero_inference.Effect.Label.t
+      { name : Effect.Label.t
       ; operations : Variable.Set.t
       }
     [@@deriving sexp]

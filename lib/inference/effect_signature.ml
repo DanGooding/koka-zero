@@ -1,5 +1,4 @@
 open Core
-open Minimal_syntax
 
 module Operation = struct
   type t =
@@ -22,7 +21,7 @@ end
 include Signature
 
 let t_of_map m = Variable.Map.key_set m
-let t_of_handler { Expr.operations; _ } = t_of_map operations
+let t_of_handler { Minimal_syntax.Expr.operations; _ } = t_of_map operations
 
 module Context = struct
   let signature_of_map = t_of_map
@@ -32,7 +31,7 @@ module Context = struct
   let empty = Signature.Map.empty
   let extend t ~label ~signature = Map.add t ~key:signature ~data:label
 
-  let extend_decl t { Decl.Effect.name; operations } =
+  let extend_decl t { Minimal_syntax.Decl.Effect.name; operations } =
     let signature = signature_of_map operations in
     extend t ~label:name ~signature
   ;;

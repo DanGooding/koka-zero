@@ -39,7 +39,12 @@ val unification_error_effect_row : Effect.Row.t -> Effect.Row.t -> 'a t
 val unify : Type.Mono.t -> Type.Mono.t -> unit t
 
 val unify_effects : Effect.t -> Effect.t -> unit t
+
+(** replace all forall bound variables with fresh metavariables *)
 val instantiate : Type.Poly.t -> Type.Mono.t t
+
+(** instantiate a [Poly], leave a [Mono] unchanged *)
+val instantiate_type : Type.t -> Type.Mono.t t
 
 (** generalise a type, or fail if the effect is not total *)
 val generalise : Type.Mono.t -> Effect.t -> env:Context.t -> Type.Poly.t t

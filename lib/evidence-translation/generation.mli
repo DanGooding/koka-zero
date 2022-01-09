@@ -1,5 +1,6 @@
 open Core
 open Koka_zero_util
+open Import
 module EPS = Evidence_passing_syntax
 module E = EPS.Expr
 
@@ -13,7 +14,7 @@ include Monad_utils.S with type 'a t := 'a t
 val run : 'a t -> 'a
 
 (** create a globally unique variable *)
-val fresh_name : EPS.Variable.t t
+val fresh_name : Variable.t t
 
 (* note passing parameters as expressions rather than variables is less
    descriptive, but generally allows more concise usage *)

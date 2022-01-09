@@ -321,6 +321,13 @@ let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
   Type.Mono.instantiate_as monotype ~var_to_meta ~effect_var_to_meta
 ;;
 
+let instantiate_type : Type.t -> Type.Mono.t t =
+  let open Let_syntax in
+  function
+  | Type.Mono t -> return t
+  | Type.Poly t -> instantiate t
+;;
+
 let generalise_total : Type.Mono.t -> env:Context.t -> Type.Poly.t t =
  fun t ~env ->
   let open Let_syntax in

@@ -1,6 +1,6 @@
 module Literal = Minimal_syntax.Literal
 module Operator = Minimal_syntax.Operator
-module Variable = Minimal_syntax.Variable
+module Keyword = Minimal_syntax.Keyword
 
 module Expr : sig
   type t =
@@ -55,22 +55,7 @@ module Expr : sig
 end
 
 module Decl : sig
-  module Effect : sig
-    module Operation : sig
-      type t =
-        { (* TODO: different shapes (fun/var/ctl/except) *)
-          argument : Type.Mono.t
-        ; answer : Type.Mono.t
-        }
-      [@@deriving sexp]
-    end
-
-    type t =
-      { name : Effect.Label.t
-      ; operations : Operation.t Variable.Map.t
-      }
-    [@@deriving sexp]
-  end
+  module Effect = Minimal_syntax.Decl.Effect
 
   module Fun : sig
     (** toplevel function - implicitly generalised *)
