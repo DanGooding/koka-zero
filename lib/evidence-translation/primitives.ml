@@ -4,7 +4,6 @@ open Import
 
 module Names = struct
   let compose_unary = Variable.of_language_internal "compose_unary"
-  let kleisli_compose_unary = Variable.of_language_internal "compose_unary"
   let bind = Variable.of_language_internal "bind"
   let pure = Variable.of_language_internal "pure"
   let prompt = Variable.of_language_internal "prompt"
@@ -20,18 +19,20 @@ let map_name_lambda ~(name : Variable.t) (lambda : Expr.lambda Generation.t)
   name, lambda
 ;;
 
-(** [compose_unary] is the function `\f g -> \x -> g(f(x))` *)
+(** [compose_unary] is the function `\g f -> \x -> g(f(x))` *)
 let compose_unary =
   map_name_lambda
     ~name:Names.compose_unary
-    (Generation.make_lambda_2 (fun f g ->
+    (Generation.make_lambda_2 (fun g f ->
          Generation.make_lambda_expr_1 (fun x ->
              Expr.Application (g, [ Expr.Application (f, [ x ]) ])
              |> Generation.return)))
 ;;
 
+(* TODO: note [bind], [kleisli_compose_unary] are mutually recursive *)
 (** bind : ( mon<e,a>, a -> mon<e,b> ) -> mon<e, b> *)
 let bind =
+  let open Generation.Let_syntax in
   map_name_lambda
     ~name:Names.bind
     (Generation.make_lambda_2 (fun e g ->
@@ -43,24 +44,16 @@ let bind =
                  Expr.Application (Expr.Application (g, [ x ]), [ vector ])
                  |> Generation.return)
                ~yield:(fun ~marker ~op_clause ~resumption ->
-                 let resumption =
-                   Expr.Application
-                     ( Expr.Variable Names.kleisli_compose_unary
-                     , [ g; resumption ] )
+                 (* this should just be [kleisli_compose_unary g resumption] but
+                    that would be mutual recursion, so we inline it *)
+                 let%map resumption =
+                   Generation.make_lambda_expr_1 (fun x ->
+                       Expr.Application
+                         ( Expr.Variable Names.bind
+                         , [ Expr.Application (resumption, [ x ]); g ] )
+                       |> Generation.return)
                  in
-                 Expr.Construct_yield { marker; op_clause; resumption }
-                 |> Generation.return))))
-;;
-
-(** kleisli_compose_unary(g, f) = \x. f x >>= g *)
-let kleisli_compose_unary =
-  map_name_lambda
-    ~name:Names.kleisli_compose_unary
-    (Generation.make_lambda_2 (fun g f ->
-         Generation.make_lambda_expr_1 (fun x ->
-             Expr.Application
-               (Expr.Variable Names.bind, [ Expr.Application (f, [ x ]); g ])
-             |> Generation.return)))
+                 Expr.Construct_yield { marker; op_clause; resumption }))))
 ;;
 
 (** pure : a -> mon<e,a> *)
@@ -127,7 +120,11 @@ let handler =
              Expr.Application
                ( Expr.Application
                    ( Expr.Variable Names.prompt
-                   , [ label; Expr.Fresh_marker; handler ] )
+                   , [ label
+                     ; Expr.Fresh_marker
+                       (* TODO: this has a side effect - is it safe? *)
+                     ; handler
+                     ] )
                , [ Expr.Application (action, []) ] )
              |> Generation.return)))
 ;;
@@ -158,16 +155,7 @@ let perform =
 
 let prelude =
   let open Generation.Let_syntax in
-  let decls =
-    [ compose_unary
-    ; kleisli_compose_unary
-    ; bind
-    ; pure
-    ; prompt
-    ; handler
-    ; perform
-    ]
-  in
+  let decls = [ compose_unary; bind; pure; prompt; handler; perform ] in
   let%map decls_rev =
     List.fold decls ~init:(return []) ~f:(fun decls_rev decl ->
         let%bind decls_rev = decls_rev in

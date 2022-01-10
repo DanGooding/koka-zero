@@ -155,13 +155,16 @@ module Program = struct
     let call_user_main =
       Expr.Application (Expr.Value (Expr.Variable Keyword.main), [])
     in
-    ( Keyword.entry_point
-    , ( []
-      , Expr.Application
-          ( Expr.Value
-              (Expr.Lambda
-                 ( [ Variable.of_language_internal "_result" ]
-                 , Expr.Value (Expr.Literal Literal.Unit) ))
-          , [ call_user_main ] ) ) )
+    Keyword.entry_point, ([], call_user_main)
   ;;
+  (* ( Keyword.entry_point *)
+  (* , ( [] *)
+  (*   , Expr.Application *)
+  (*       ( Expr.Value *)
+  (*           (Expr.Lambda *)
+  (*              ( [ Variable.of_language_internal "_result" ] *)
+  (*              , Expr.Value *)
+  (*                  (Expr.Literal Literal.Unit) *)
+  (*              )) *)
+  (*       , [ call_user_main ] ) ) ) *)
 end
