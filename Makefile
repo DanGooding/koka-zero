@@ -1,5 +1,7 @@
 .DEFAULT_GOAL := all
 
+# pass arguments as:
+# $ make start -- arg1 arg2 arg3
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(eval $(ARGS):;@:)
 

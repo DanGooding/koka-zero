@@ -15,7 +15,7 @@ open Runtime_error
 
 val parse_channel
   :  ?filename:string
-  -> in_channel
+  -> In_channel.t
   -> Minimal_syntax.Program.t Or_static_error.t
 
 val parse_string
