@@ -3,7 +3,6 @@ open Import
 
 module Names : sig
   val compose_unary : Variable.t
-  val kleisli_compose_unary : Variable.t
   val bind : Variable.t
   val pure : Variable.t
   val prompt : Variable.t
