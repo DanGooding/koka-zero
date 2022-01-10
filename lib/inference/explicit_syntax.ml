@@ -69,9 +69,5 @@ module Decl = struct
 end
 
 module Program = struct
-  type t =
-    { declarations : Decl.t list
-    ; has_entry_point : bool
-    }
-  [@@deriving sexp]
+  type t = { declarations : Decl.t list } [@@deriving sexp]
 end

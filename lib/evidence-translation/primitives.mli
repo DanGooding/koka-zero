@@ -11,14 +11,5 @@ module Names : sig
   val perform : Variable.t
 end
 
-val compose_unary : Expr.fix_lambda Generation.t
-val bind : Expr.fix_lambda Generation.t
-val kleisli_compose_unary : Expr.fix_lambda Generation.t
-val pure : Expr.fix_lambda Generation.t
-val prompt : Expr.fix_lambda Generation.t
-val handler : Expr.fix_lambda Generation.t
-
-(* val Hnd : ? *)
-
-(* TODO: or a label-indexed family? *)
-val perform : Expr.fix_lambda Generation.t
+(** declarations of the 'primitive' functions *)
+val prelude : Program.Fun_decl.t list Generation.t

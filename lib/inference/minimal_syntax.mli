@@ -131,14 +131,9 @@ module Decl : sig
 end
 
 module Program : sig
-  type t =
-    { declarations : Decl.t list
-    ; has_main : bool
-    }
-  [@@deriving sexp]
+  type t = { declarations : Decl.t list } [@@deriving sexp]
 
   (** wrapper funciton which calls the user's main function, which is appended
-      to programs with [has_main = true]. It may provide toplevel handers for
-      e.g. io/exn/div effects. *)
+      to programs. It may provide toplevel handers for e.g. io/exn/div effects. *)
   val entry_point : Decl.Fun.t
 end

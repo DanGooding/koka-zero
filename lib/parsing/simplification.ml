@@ -591,5 +591,5 @@ let simplify_program (Syntax.Program declarations)
   let%map declarations =
     List.map declarations ~f:simplify_toplevel_declaration |> Result.all
   in
-  { Min.Program.declarations; has_main = true }
+  { Min.Program.declarations }
 ;;

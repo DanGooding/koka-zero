@@ -6,5 +6,6 @@
      koka-zero.util
      koka-zero.parsing
      koka-zero.inference
-     koka-zero.evidence-translation)
+     koka-zero.evidence-translation
+     koka-zero.interpreter)
   (preprocess (pps ppx_jane)))

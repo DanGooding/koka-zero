@@ -219,8 +219,11 @@ let translate_effect_decl : Expl.Decl.Effect.t -> EPS.Program.Effect_decl.t =
   { EPS.Program.Effect_decl.name; operations }
 ;;
 
-let translate { Expl.Program.declarations; has_entry_point } =
+let translate_program { Expl.Program.declarations } ~include_prelude =
   let open Generation.Let_syntax in
+  let%bind prelude_declarations =
+    if include_prelude then Primitives.prelude else return []
+  in
   let%map effect_declarations_rev, fun_declarations_rev =
     List.fold
       declarations
@@ -237,5 +240,12 @@ let translate { Expl.Program.declarations; has_entry_point } =
   in
   let effect_declarations = List.rev effect_declarations_rev in
   let fun_declarations = List.rev fun_declarations_rev in
-  { EPS.Program.effect_declarations; fun_declarations; has_entry_point }
+  let fun_declarations = prelude_declarations @ fun_declarations in
+  { EPS.Program.effect_declarations; fun_declarations }
+;;
+
+let translate program = translate_program program ~include_prelude:true
+
+let translate_no_prelude program =
+  translate_program program ~include_prelude:false
 ;;
