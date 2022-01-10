@@ -69,9 +69,5 @@ module Decl : sig
 end
 
 module Program : sig
-  type t =
-    { declarations : Decl.t list
-    ; has_entry_point : bool
-    }
-  [@@deriving sexp]
+  type t = { declarations : Decl.t list } [@@deriving sexp]
 end

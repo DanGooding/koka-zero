@@ -4,4 +4,8 @@ let translate program = Generation.run (Translation.translate program)
 
 module Private = struct
   let translate_expr expr = Generation.run (Translation.translate_expr expr)
+
+  let translate_no_prelude program =
+    Generation.run (Translation.translate_no_prelude program)
+  ;;
 end

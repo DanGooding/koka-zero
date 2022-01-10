@@ -545,16 +545,12 @@ let infer_expr_toplevel
 
 let infer_program : Min.Program.t -> Explicit_syntax.Program.t Or_static_error.t
   =
- fun { Min.Program.declarations; has_main } ->
+ fun { Min.Program.declarations } ->
   let env = Context.empty in
   let effect_env = Effect_signature.Context.empty in
-  let declarations =
-    if has_main
-    then declarations @ [ Min.Decl.Fun Min.Program.entry_point ]
-    else declarations
-  in
+  let declarations = declarations @ [ Min.Decl.Fun Min.Program.entry_point ] in
   let%map.Result (_env, _effect_env, declarations'), _substitution =
     Inference.run (infer_decls declarations ~env ~effect_env)
   in
-  { Expl.Program.declarations = declarations'; has_entry_point = has_main }
+  { Expl.Program.declarations = declarations' }
 ;;

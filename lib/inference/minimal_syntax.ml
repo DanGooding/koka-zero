@@ -148,11 +148,7 @@ module Decl = struct
 end
 
 module Program = struct
-  type t =
-    { declarations : Decl.t list
-    ; has_main : bool
-    }
-  [@@deriving sexp]
+  type t = { declarations : Decl.t list } [@@deriving sexp]
 
   let entry_point =
     (* {[ fun entry-point() { (fn(_result) { () }) (main()) } ]} *)

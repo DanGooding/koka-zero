@@ -44,7 +44,15 @@ let evidence_vector_of_value =
   let open Interpreter.Let_syntax in
   function
   | Value.Evidence_vector vector -> return vector
-  | v -> Interpreter.type_error ~expected:"vector" Value.sexp_of_t v
+  | v -> Interpreter.type_error ~expected:"evidence vector" Value.sexp_of_t v
+  (* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
+let evidence_of_value =
+  let open Interpreter.Let_syntax in
+  function
+  | Value.Evidence ev -> return ev
+  | v -> Interpreter.type_error ~expected:"evidence" Value.sexp_of_t v
   (* disable "fragile match" warning *) [@@warning "-4"]
 ;;
 

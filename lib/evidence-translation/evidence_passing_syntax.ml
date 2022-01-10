@@ -2,6 +2,7 @@ open Core
 open Import
 module Literal = Koka_zero_inference.Minimal_syntax.Literal
 module Operator = Koka_zero_inference.Minimal_syntax.Operator
+module Keyword = Koka_zero_inference.Minimal_syntax.Keyword
 
 module Expr = struct
   module T = struct
@@ -33,6 +34,7 @@ module Expr = struct
           ; return_clause : t option
           }
       | Effect_label of Effect.Label.t
+      | Nil_evidence_vector
       | Cons_evidence_vector of
           { label : t
           ; marker : t
@@ -75,7 +77,6 @@ module Program = struct
   type t =
     { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
-    ; has_entry_point : bool
     }
   [@@deriving sexp]
 end

@@ -8,4 +8,10 @@ module Private : sig
   (** apply the evidence passing translation on an expression. Note generated
       names will not be unique across invocations *)
   val translate_expr : Explicit_syntax.Expr.t -> Evidence_passing_syntax.Expr.t
+
+  (** apply the evidence-passing translation to a program, but don't prepend the
+      prelude functions. *)
+  val translate_no_prelude
+    :  Explicit_syntax.Program.t
+    -> Evidence_passing_syntax.Program.t
 end

@@ -1,6 +1,7 @@
 open Import
 module Literal = Koka_zero_inference.Minimal_syntax.Literal
 module Operator = Koka_zero_inference.Minimal_syntax.Operator
+module Keyword = Koka_zero_inference.Minimal_syntax.Keyword
 
 module Expr : sig
   type t =
@@ -37,6 +38,7 @@ module Expr : sig
         (** literal effect label - passed to [handler]/[perform] *)
     (* TODO: note evidence vectors are not first class - can have more sensible
        primitives if desired *)
+    | Nil_evidence_vector
     | Cons_evidence_vector of
         { label : t
         ; marker : t
@@ -77,7 +79,6 @@ module Program : sig
   type t =
     { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
-    ; has_entry_point : bool (* TODO: do NOT attempt a module system! *)
     }
   [@@deriving sexp]
 end

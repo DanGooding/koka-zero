@@ -7,3 +7,9 @@ val translate_expr
 val translate
   :  Explicit_syntax.Program.t
   -> Evidence_passing_syntax.Program.t Generation.t
+
+(** translate a program, but do not prepend the prelude function definitions.
+    Exists for testing purposes. *)
+val translate_no_prelude
+  :  Explicit_syntax.Program.t
+  -> Evidence_passing_syntax.Program.t Generation.t

@@ -167,6 +167,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     in
     Value.Hnd { Value.handled_effect; operation_clauses }
   | Expr.Effect_label label -> Value.Effect_label label |> return
+  | Expr.Nil_evidence_vector -> Value.Evidence_vector Value.Evv_nil |> return
   | Expr.Cons_evidence_vector { label; marker; handler; vector_tail } ->
     let%bind label = eval_expr label ~env in
     let%bind marker = eval_expr marker ~env in
@@ -193,14 +194,51 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
       in
       Interpreter.impossible_error message
     | Some evidence -> Value.Evidence evidence |> return)
-  | _ -> failwith "not implemented"
- [@@warning "-4"]
+  | Expr.Get_evidence_marker e ->
+    let%bind v = eval_expr e ~env in
+    let%map { Value.marker; _ } = Typecast.evidence_of_value v in
+    Value.Marker marker
+  | Expr.Get_evidence_handler e ->
+    let%bind v = eval_expr e ~env in
+    let%map { Value.handler; _ } = Typecast.evidence_of_value v in
+    Value.Hnd handler
+  | Expr.Select_operation (label, op_name, e_handler) ->
+    let%bind v_handler = eval_expr e_handler ~env in
+    let%bind { Value.handled_effect; operation_clauses } =
+      Typecast.hnd_of_value v_handler
+    in
+    let%bind () =
+      if Effect_label.(label = handled_effect)
+      then return ()
+      else (
+        let message =
+          sprintf
+            "mismatching effect labels: select `%s` from hnd `%s`"
+            (Effect_label.to_string label)
+            (Effect_label.to_string handled_effect)
+        in
+        Interpreter.impossible_error message)
+    in
+    let%map (op_clause : Value.closure) =
+      match Map.find operation_clauses op_name with
+      | Some op_clause -> return op_clause
+      | None ->
+        let message =
+          sprintf
+            "operation `%s` missing from effect"
+            (Variable.to_string_user op_name)
+        in
+        Interpreter.impossible_error message
+    in
+    op_clause |> Value.Closure
 
 and eval_lambda
     : Expr.lambda -> env:Value.context -> Value.closure Interpreter.t
   =
  fun lambda ~env ->
   let open Interpreter.Let_syntax in
+  (* TODO: capturing the entire environment like this, and creating a new map
+     upon every binding (rather than sharing tails) is hideously inefficient *)
   (Value.Lambda lambda, env) |> return
 
 and eval_fix_lambda
@@ -209,4 +247,31 @@ and eval_fix_lambda
  fun fix_lambda ~env ->
   let open Interpreter.Let_syntax in
   (Value.Fix_lambda fix_lambda, env) |> return
+;;
+
+(** evaluate a function declaration, adding it to the context *)
+let eval_fun_decl
+    : Program.Fun_decl.t -> env:Value.context -> Value.context Interpreter.t
+  =
+ fun f ~env ->
+  let open Interpreter.Let_syntax in
+  let%map v_f = eval_fix_lambda f ~env in
+  let f_name, _ = f in
+  Map.set env ~key:f_name ~data:(Value.Closure v_f)
+;;
+
+let eval_program : Program.t -> Value.t Interpreter.t =
+ fun { Program.effect_declarations = _; fun_declarations } ->
+  let open Interpreter.Let_syntax in
+  let env = Value.empty_context in
+  let%bind env =
+    List.fold fun_declarations ~init:(return env) ~f:(fun env decl ->
+        let%bind env = env in
+        eval_fun_decl decl ~env)
+  in
+  eval_expr
+    (Expr.Application
+       ( Expr.Application (Expr.Variable Keyword.entry_point, [])
+       , [ Expr.Nil_evidence_vector ] ))
+    ~env
 ;;

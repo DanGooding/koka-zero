@@ -1,3 +1,4 @@
+open Core
 open Evidence_passing_syntax
 open Import
 
@@ -131,6 +132,7 @@ let handler =
              |> Generation.return)))
 ;;
 
+(* TODO: or a label-indexed family? *)
 (** perform : (label, select : hnd<e,r> -> op<a,b,e,r>) -> a -> mon<label|e> r *)
 let perform =
   let open Generation.Let_syntax in
@@ -151,4 +153,25 @@ let perform =
              in
              Expr.Construct_yield
                { marker; op_clause; resumption = identity_resumption })))
+;;
+
+let prelude =
+  let open Generation.Let_syntax in
+  let decls =
+    [ compose_unary
+    ; kleisli_compose_unary
+    ; bind
+    ; pure
+    ; prompt
+    ; handler
+    ; perform
+    ]
+  in
+  let%map decls_rev =
+    List.fold decls ~init:(return []) ~f:(fun decls_rev decl ->
+        let%bind decls_rev = decls_rev in
+        let%map decl = decl in
+        decl :: decls_rev)
+  in
+  List.rev decls_rev
 ;;
