@@ -138,21 +138,22 @@ let perform =
   let open Generation.Let_syntax in
   map_name_lambda
     ~name:Names.perform
-    (Generation.make_lambda_3 (fun label select arg ->
-         Generation.make_lambda_expr_1 (fun vector ->
-             let evidence = Expr.Lookup_evidence { label; vector } in
-             let handler = Expr.Get_evidence_handler evidence in
-             let marker = Expr.Get_evidence_marker evidence in
-             let op_clause = Expr.Application (select, [ handler ]) in
-             (* monadic form of identity is: `\x -> pure x` *)
-             let identity_resumption = Expr.Variable Names.pure in
-             let%map op_clause =
-               Generation.make_lambda_expr_1 (fun resume ->
-                   Expr.Application (op_clause, [ arg; resume ])
-                   |> Generation.return)
-             in
-             Expr.Construct_yield
-               { marker; op_clause; resumption = identity_resumption })))
+    (Generation.make_lambda_2 (fun label select ->
+         Generation.make_lambda_expr_1 (fun arg ->
+             Generation.make_lambda_expr_1 (fun vector ->
+                 let evidence = Expr.Lookup_evidence { label; vector } in
+                 let handler = Expr.Get_evidence_handler evidence in
+                 let marker = Expr.Get_evidence_marker evidence in
+                 let op_clause = Expr.Application (select, [ handler ]) in
+                 (* monadic form of identity is: `\x -> pure x` *)
+                 let identity_resumption = Expr.Variable Names.pure in
+                 let%map op_clause =
+                   Generation.make_lambda_expr_1 (fun resume ->
+                       Expr.Application (op_clause, [ arg; resume ])
+                       |> Generation.return)
+                 in
+                 Expr.Construct_yield
+                   { marker; op_clause; resumption = identity_resumption }))))
 ;;
 
 let prelude =
