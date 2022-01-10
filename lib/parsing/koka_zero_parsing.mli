@@ -1,8 +1,9 @@
+open Core
 open Koka_zero_util
 
 val parse_channel
   :  ?filename:string
-  -> in_channel
+  -> In_channel.t
   -> Koka_zero_inference.Minimal_syntax.Program.t Or_static_error.t
 
 val parse_string
@@ -16,7 +17,7 @@ module Private : sig
 
   val parse_channel_to_syntax
     :  ?filename:string
-    -> in_channel
+    -> In_channel.t
     -> Syntax.program Or_static_error.t
 
   val parse_string_to_syntax
