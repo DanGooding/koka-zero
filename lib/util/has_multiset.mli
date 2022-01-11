@@ -1,24 +1,22 @@
 open Core
-open Multiset_intf
+open Has_multiset_intf
 
 (** a multiset is a set which allows duplicates - tracking frequencies of each
     object *)
 module type S = S
 
-(** functor building a multiset implementation on a comparable and sexpable
-    type.
+(** functor building a Multiset + Non_empty_multiset implementation on a
+    comparable and sexpable type.
 
     usage:
 
     {[
       module Thing : sig
-        type t [@@deriving compare, sexp] (* TODO: is bin_io + hashable required too? *)
+        type t [@@deriving compare, sexp]
 
         include Comparable.S with type t := t
 
-        module Multiset : sig
-          include Multiset.S with type Element.t := T.t
-        end
+        include Has_multiset.S with type t := t
       end
     ]}
     {[
@@ -29,11 +27,11 @@ module type S = S
         include T
         include Comparable.Make (T)
 
-        module Multiset = Multiset.Make (T)
+        include Has_multiset.Make (T)
       end
     ]} *)
 module Make (Element : sig
   type t [@@deriving sexp]
 
   include Comparable.S with type t := t
-end) : S with type Element.t := Element.t
+end) : S with type t := Element.t
