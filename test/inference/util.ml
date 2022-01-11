@@ -4,11 +4,20 @@ open Koka_zero_util
 module M = Minimal_syntax
 module E = M.Expr
 
-let print_check_program_result program =
-  let result = infer_program program in
+let print_explicit_program_result result =
   [%sexp (result : (Explicit_syntax.Program.t, Static_error.t) Result.t)]
   |> Sexp.to_string_hum
   |> print_endline
+;;
+
+let print_check_program_result program =
+  let result = infer_program program in
+  print_explicit_program_result result
+;;
+
+let print_check_program_without_main_result program =
+  let result = Private.infer_program_without_main program in
+  print_explicit_program_result result
 ;;
 
 let print_expr_inference_result ?(declarations = []) expr =
@@ -27,6 +36,10 @@ module Expr = struct
   let lit_unit = E.Value (E.Literal M.Literal.Unit)
   let lit_bool b = E.Value (E.Literal (M.Literal.Bool b))
   let lit_int i = E.Value (E.Literal (M.Literal.Int i))
+
+  let decl_main =
+    M.Decl.Fun (M.Keyword.main, ([], E.Value (E.Literal M.Literal.Unit)))
+  ;;
 
   (** construct the desugared equiavlent of the `handle h (subject ())`
       construct *)

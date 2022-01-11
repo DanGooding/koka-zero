@@ -582,3 +582,15 @@ let infer_program : Min.Program.t -> Explicit_syntax.Program.t Or_static_error.t
   in
   { Expl.Program.declarations = declarations' }
 ;;
+
+let infer_program_without_main
+    : Min.Program.t -> Explicit_syntax.Program.t Or_static_error.t
+  =
+ fun { Min.Program.declarations } ->
+  let%map.Result (_env, _effect_env, declarations'), _substitution =
+    let env = Context.empty in
+    let effect_env = Effect_signature.Context.empty in
+    Inference.run (infer_decls declarations ~env ~effect_env)
+  in
+  { Expl.Program.declarations = declarations' }
+;;

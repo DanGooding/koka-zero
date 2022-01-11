@@ -177,8 +177,8 @@ let%expect_test "declared functions are generalised" =
   let declarations =
     [ M.Decl.Fun identity; M.Decl.Fun const_true; M.Decl.Fun const_three ]
   in
-  let program = { M.Program.declarations; has_main = false } in
-  Util.print_check_program_result program;
+  let program = { M.Program.declarations } in
+  Util.print_check_program_without_main_result program;
   [%expect
     {|
     (Ok
@@ -192,8 +192,7 @@ let%expect_test "declared functions are generalised" =
         (Fun
          ((User const_three)
           (()
-           (Application (Value (Variable (User id))) ((Value (Literal (Int 3))))))))))
-      (has_entry_point false))) |}]
+           (Application (Value (Variable (User id))) ((Value (Literal (Int 3)))))))))))) |}]
 ;;
 
 let%expect_test "sequence doesn't require first to be unit" =

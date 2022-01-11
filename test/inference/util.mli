@@ -3,6 +3,7 @@ module M = Minimal_syntax
 module E = M.Expr
 
 val print_check_program_result : M.Program.t -> unit
+val print_check_program_without_main_result : M.Program.t -> unit
 
 val print_expr_inference_result
   :  ?declarations:M.Decl.t list
@@ -14,6 +15,7 @@ module Expr : sig
   val lit_bool : bool -> E.t
   val lit_int : int -> E.t
   val lit_unit : E.t
+  val decl_main : M.Decl.t
   val make_handle_expr : E.handler -> E.t -> E.t
   val decl_read : M.Decl.Effect.t
   val decl_exn : M.Decl.Effect.t

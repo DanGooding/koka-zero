@@ -39,9 +39,7 @@ fun main() {
   Util.print_simplification_result syntax;
   [%expect
     {|
-    (Ok
-     ((declarations ((Fun ((User main) (() (Value (Literal (Int 0))))))))
-      (has_main true))) |}]
+    (Ok ((declarations ((Fun ((User main) (() (Value (Literal (Int 0)))))))))) |}]
 ;;
 
 let%expect_test "multi statement function" =
@@ -101,8 +99,7 @@ fun main() {
                      (Value (Literal (Int 2)))))))
                  ((Application (Value (Variable (User foo)))
                    ((Value (Variable (User x)))))))))))
-            ((Value (Literal (Int 1))))))))))
-      (has_main true))) |}]
+            ((Value (Literal (Int 1)))))))))))) |}]
 ;;
 
 let%expect_test "dashes in identifiers" =
@@ -159,8 +156,7 @@ fun wrapper() {
                      (Lambda (((User number3-letter)) (Value (Literal Unit)))))
                     ((Value (Literal (Int 2))))))))
                 ((Value (Literal (Int 1))))))))
-            ((Value (Literal (Int 0))))))))))
-      (has_main true))) |}]
+            ((Value (Literal (Int 0)))))))))))) |}]
 ;;
 
 let%expect_test "hex literals" =
@@ -185,8 +181,7 @@ fun wrapper() {
     {|
     (Ok
      ((declarations
-       ((Fun ((User wrapper) (() (Value (Literal (Int 305441741))))))))
-      (has_main true))) |}]
+       ((Fun ((User wrapper) (() (Value (Literal (Int 305441741)))))))))) |}]
 ;;
 
 let%expect_test "prime at end of identifier" =
@@ -239,8 +234,7 @@ fun wrapper() {
                 ((Application (Value (Variable (User diff)))
                   ((Value (Variable (User f'))))))))))
             ((Application (Value (Variable (User diff)))
-              ((Value (Variable (User f))))))))))))
-      (has_main true))) |}]
+              ((Value (Variable (User f)))))))))))))) |}]
 ;;
 
 let%expect_test "operators" =
@@ -388,8 +382,7 @@ fun main() {
                (Int Plus)
                (Operator (Value (Literal (Int 91))) (Int Modulo)
                 (Value (Literal (Int 7)))))
-              (Int Plus) (Value (Literal (Int 11)))))))))))
-      (has_main true))) |}]
+              (Int Plus) (Value (Literal (Int 11))))))))))))) |}]
 ;;
 
 let%expect_test "negative integer literals" =
@@ -502,8 +495,7 @@ fun if-example() {
              (If_then_else (Value (Literal (Bool false)))
               (Value (Literal (Int -1)))
               (Operator (Value (Literal (Int 1))) (Int Plus)
-               (Value (Literal (Int 1))))))))))))
-      (has_main true))) |}]
+               (Value (Literal (Int 1)))))))))))))) |}]
 ;;
 
 let%expect_test "nested if statements" =
@@ -549,8 +541,7 @@ fun i() {
            (If_then_else (Value (Variable (User a)))
             (If_then_else (Value (Variable (User b))) (Value (Variable (User c)))
              (Value (Variable (User d))))
-            (Value (Literal Unit))))))))
-      (has_main true))) |}]
+            (Value (Literal Unit)))))))))) |}]
 ;;
 
 let%expect_test "if statement body" =
@@ -621,8 +612,7 @@ fun i() {
              (Seq (Application (Value (Variable (User aaa))) ())
               (Application (Value (Variable (User bbb))) ()))
              (Seq (Application (Value (Variable (User ccc))) ())
-              (Application (Value (Variable (User ddd))) ())))))))))
-      (has_main true))) |}]
+              (Application (Value (Variable (User ddd))) ()))))))))))) |}]
 ;;
 
 let%expect_test "dot application" =
@@ -662,8 +652,7 @@ fun dot-application() {
               ((Application (Value (Variable (User fst)))
                 ((Application (Value (Variable (User best)))
                   ((Value (Variable (User x)))))))
-               (Value (Literal (Int 3))))))))))))
-      (has_main true))) |}]
+               (Value (Literal (Int 3)))))))))))))) |}]
 ;;
 
 let%expect_test "trailing lambda application" =
@@ -752,8 +741,7 @@ fun trailing-lambda() {
               ((Application (Value (Variable (User g)))
                 ((Value (Variable (User a))) (Value (Literal (Int 1)))))
                (Value (Literal (Int 2)))
-               (Value (Lambda (() (Value (Variable (User zzz)))))))))))))))
-      (has_main true))) |}]
+               (Value (Lambda (() (Value (Variable (User zzz))))))))))))))))) |}]
 ;;
 
 let%expect_test "with syntax" =
@@ -866,8 +854,7 @@ fun one(aa, bb, cc, dd) {
                                     (Application
                                      (Value (Variable (User println)))
                                      ((Value (Variable (User x)))))))))))))))))))))))))))))
-            ((Value (Literal (Int 1))))))))))
-      (has_main true))) |}]
+            ((Value (Literal (Int 1)))))))))))) |}]
 ;;
 
 let%expect_test "single line comments" =
@@ -943,8 +930,7 @@ fun not-commented-out() { True; };
               (Operator (Value (Literal (Int 1))) (Int Plus)
                (Value (Literal (Int 2))))
               (Int Plus) (Value (Literal (Int 3)))))))))
-        (Fun ((User not-commented-out) (() (Value (Literal (Bool true))))))))
-      (has_main true))) |}]
+        (Fun ((User not-commented-out) (() (Value (Literal (Bool true)))))))))) |}]
 ;;
 
 let%expect_test "multiline comments" =
@@ -1004,8 +990,7 @@ fun main() {
                (Application (Value (Lambda (((User y)) (Value (Literal Unit)))))
                 ((Operator (Value (Variable (User x))) (Int Times)
                   (Value (Literal (Int 5)))))))))
-            ((Value (Literal (Int 1))))))))))
-      (has_main true))) |}]
+            ((Value (Literal (Int 1)))))))))))) |}]
 ;;
 
 let%expect_test "" =
@@ -1053,8 +1038,7 @@ fun op-trailing-lambda-example() {
                 (()
                  (Operator (Value (Literal (Int 3))) (Int Plus)
                   (Operator (Value (Literal (Int 4))) (Int Times)
-                   (Value (Literal (Int 5))))))))))))))))
-      (has_main true))) |}]
+                   (Value (Literal (Int 5)))))))))))))))))) |}]
 ;;
 
 let%expect_test "trailing and single line lambda" =
@@ -1117,8 +1101,7 @@ fun trailing-lambdas() {
                  (Lambda
                   (((User b))
                    (Application (Value (Variable (User b)))
-                    ((Value (Lambda (((User c)) (Value (Variable (User c)))))))))))))))))))))
-      (has_main true))) |}]
+                    ((Value (Lambda (((User c)) (Value (Variable (User c))))))))))))))))))))))) |}]
 ;;
 
 let%expect_test "application after trailing lambda" =
@@ -1167,8 +1150,7 @@ fun app-after-trailing-lambda() {
               (Application (Value (Variable (User foo)))
                ((Value (Variable (User xs)))
                 (Value (Lambda (((User x)) (Value (Variable (User x))))))))
-              ((Value (Variable (User y))) (Value (Variable (User z))))))))))))
-      (has_main true))) |}]
+              ((Value (Variable (User y))) (Value (Variable (User z)))))))))))))) |}]
 ;;
 
 let%expect_test "effect declaration" =
@@ -1235,8 +1217,7 @@ effect my-effect {
             ((User depth) ((argument (Primitive Unit)) (answer (Primitive Int))))
             ((User get) ((argument (Primitive Unit)) (answer (Primitive Int))))
             ((User raise) ((argument (Primitive Int)) (answer (Primitive Unit))))
-            ((User set) ((argument (Primitive Int)) (answer (Primitive Bool))))))))))
-      (has_main true))) |}]
+            ((User set) ((argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
 ;;
 
 let%expect_test "multi shaped effect declaration" =
@@ -1382,8 +1363,7 @@ effect control yield(x : int) : bool;
        ((Effect
          ((name yield)
           (operations
-           (((User yield) ((argument (Primitive Int)) (answer (Primitive Bool))))))))))
-      (has_main true))) |}]
+           (((User yield) ((argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
 ;;
 
 let%expect_test "handler" =
@@ -1582,8 +1562,7 @@ fun handle-example(action) {
                         (Value (Variable (User x))))
                        (Int Plus) (Value (Variable (User x)))))))))))
                (return_clause ()))))
-            ((Value (Variable (User action))))))))))
-      (has_main true))) |}]
+            ((Value (Variable (User action)))))))))))) |}]
 ;;
 
 let%expect_test "type annotations" =
