@@ -49,6 +49,9 @@ module Keyword : sig
   val resume : Variable.t
   val main : Variable.t
   val entry_point : Variable.t
+  val console_effect : Effect.Label.t
+  val print_int : Variable.t
+  val read_int : Variable.t
 end
 
 module Expr : sig
@@ -64,6 +67,7 @@ module Expr : sig
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
+    | Impure_built_in of impure_built_in
   [@@deriving sexp]
 
   (** expressions which can't reduce/evaluate *)
@@ -99,6 +103,15 @@ module Expr : sig
     ; op_body : t
     }
   [@@deriving sexp]
+
+  (** language builtins which actually perform 'external' side effects. These
+      are not directly exposed to user code, but are called from toplevel
+      operation handlers wrapping `main()`. They notably do not have the side
+      effect of the operation they perform *)
+  and impure_built_in =
+    | Impure_print_int of t
+    | Impure_read_int
+  [@@deriving sexp]
 end
 
 module Decl : sig
@@ -117,6 +130,10 @@ module Decl : sig
       ; operations : Operation.t Variable.Map.t
       }
     [@@deriving sexp]
+
+    (** effect of interacting with stdin/stdout. A single `console` handler is
+        wrapped around the toplevel call to `main()` *)
+    val console : t
   end
 
   module Fun : sig
@@ -134,6 +151,7 @@ module Program : sig
   type t = { declarations : Decl.t list } [@@deriving sexp]
 
   (** wrapper funciton which calls the user's main function, which is appended
-      to programs. It may provide toplevel handers for e.g. io/exn/div effects. *)
+      to programs. It may provide toplevel handers for e.g. console/io/exn/div
+      effects. *)
   val entry_point : Decl.Fun.t
 end

@@ -159,6 +159,9 @@ let rec infer
     let t_result = unary_operator_result_type uop |> Type.Mono.Primitive in
     let%map () = Inference.unify t_operand t_argument in
     t_result, eff_arg, Expl.Expr.Unary_operator (uop', expr_arg')
+  | Min.Expr.Impure_built_in impure ->
+    let%map t, eff, impure' = infer_impure_built_in ~env ~effect_env impure in
+    t, eff, Expl.Expr.Impure_built_in impure'
 
 (** infer the type of a value - values don't reduce, so can't have any effects *)
 and infer_value
@@ -260,6 +263,27 @@ and infer_fix_lambda
   let%bind t_e, lambda' = infer_lambda ~env:env' ~effect_env lambda in
   let%map () = Inference.unify t_f t_e in
   t_f, (f, lambda')
+
+and infer_impure_built_in
+    :  Min.Expr.impure_built_in -> env:Context.t
+    -> effect_env:Effect_signature.Context.t
+    -> (Type.Mono.t * Effect.t * Expl.Expr.impure_built_in) Inference.t
+  =
+ fun impure ~env ~effect_env ->
+  let open Inference.Let_syntax in
+  match impure with
+  | Min.Expr.Impure_print_int expr_arg ->
+    let%bind t_arg, eff_arg, expr_arg' = infer ~env ~effect_env expr_arg in
+    let%map () =
+      Inference.unify t_arg (Type.Mono.Primitive Type.Primitive.Int)
+    in
+    let t_result = Type.Mono.Primitive Type.Primitive.Unit in
+    t_result, eff_arg, Expl.Expr.Impure_print_int expr_arg'
+  | Min.Expr.Impure_read_int ->
+    let t_result = Type.Mono.Primitive Type.Primitive.Int in
+    let%map eff = Inference.fresh_effect_metavariable in
+    let eff = Effect.Metavariable eff in
+    t_result, eff, Expl.Expr.Impure_read_int
 
 and infer_handler
     :  Min.Expr.handler -> env:Context.t
@@ -546,10 +570,14 @@ let infer_expr_toplevel
 let infer_program : Min.Program.t -> Explicit_syntax.Program.t Or_static_error.t
   =
  fun { Min.Program.declarations } ->
-  let env = Context.empty in
-  let effect_env = Effect_signature.Context.empty in
-  let declarations = declarations @ [ Min.Decl.Fun Min.Program.entry_point ] in
+  let declarations =
+    [ Min.Decl.Effect Minimal_syntax.Decl.Effect.console ]
+    @ declarations
+    @ [ Min.Decl.Fun Min.Program.entry_point ]
+  in
   let%map.Result (_env, _effect_env, declarations'), _substitution =
+    let env = Context.empty in
+    let effect_env = Effect_signature.Context.empty in
     Inference.run (infer_decls declarations ~env ~effect_env)
   in
   { Expl.Program.declarations = declarations' }

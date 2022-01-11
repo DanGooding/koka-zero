@@ -6,6 +6,7 @@ module Kind = struct
       | Impossible_error
           (** type errors should be impossible after the type inference phase *)
       | Unsupported_feature_error (** features not yet implemented *)
+      | IO_error (** errors performing built-in io operations *)
     [@@deriving sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
@@ -14,6 +15,7 @@ module Kind = struct
   let string_of_t = function
     | Impossible_error -> "impossible error"
     | Unsupported_feature_error -> "unsupported feature"
+    | IO_error -> "i/o error"
   ;;
 end
 
@@ -28,6 +30,8 @@ let impossible_error message = { kind = Kind.Impossible_error; message }
 let unsupported_feature_error message =
   { kind = Kind.Impossible_error; message }
 ;;
+
+let io_error message = { kind = Kind.IO_error; message }
 
 let string_of_t { kind; message } =
   sprintf "%s: %s" (Kind.string_of_t kind) message

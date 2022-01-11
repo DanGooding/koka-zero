@@ -12,6 +12,7 @@ module Expr : sig
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
+    | Impure_built_in of impure_built_in
   [@@deriving sexp]
 
   and value =
@@ -51,6 +52,12 @@ module Expr : sig
     { op_argument : Variable.t
     ; op_body : t
     }
+  [@@deriving sexp]
+
+  (** interaction with the outside world *)
+  and impure_built_in =
+    | Impure_print_int of t
+    | Impure_read_int
   [@@deriving sexp]
 end
 

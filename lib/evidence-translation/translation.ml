@@ -121,6 +121,7 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
   | Expl.Expr.Seq (e1, e2) ->
     let%bind e1' = translate_expr e1 in
     make_bind_into e1' ~f:(fun _x1 -> translate_expr e2)
+  | Expl.Expr.Impure_built_in impure -> translate_impure_built_in impure
 
 and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
   let open Generation.Let_syntax in
@@ -207,6 +208,24 @@ and translate_op_handler : Expl.Expr.op_handler -> EPS.Expr.t Generation.t =
   let resume = Expl.Keyword.resume in
   let%map m_body = translate_expr op_body in
   EPS.Expr.Lambda ([ op_argument; resume ], m_body)
+
+and translate_impure_built_in
+    : Expl.Expr.impure_built_in -> EPS.Expr.t Generation.t
+  =
+  let open Generation.Let_syntax in
+  function
+  | Expl.Expr.Impure_print_int e ->
+    let%bind e' = translate_expr e in
+    make_bind_into e' ~f:(fun x ->
+        EPS.Expr.Application
+          ( EPS.Expr.Variable Primitives.Names.pure
+          , [ EPS.Expr.Impure_built_in (EPS.Expr.Impure_print_int x) ] )
+        |> return)
+  | Expl.Expr.Impure_read_int ->
+    EPS.Expr.Application
+      ( EPS.Expr.Variable Primitives.Names.pure
+      , [ EPS.Expr.Impure_built_in EPS.Expr.Impure_read_int ] )
+    |> return
 ;;
 
 let translate_fun_decl : Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t =

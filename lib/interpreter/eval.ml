@@ -231,6 +231,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         Interpreter.impossible_error message
     in
     op_clause |> Value.Closure
+  | Expr.Impure_built_in impure -> eval_impure_built_in impure ~env
 
 and eval_lambda
     : Expr.lambda -> env:Value.context -> Value.closure Interpreter.t
@@ -247,6 +248,26 @@ and eval_fix_lambda
  fun fix_lambda ~env ->
   let open Interpreter.Let_syntax in
   (Value.Fix_lambda fix_lambda, env) |> return
+
+and eval_impure_built_in
+    : Expr.impure_built_in -> env:Value.context -> Value.t Interpreter.t
+  =
+ fun impure ~env ->
+  let open Interpreter.Let_syntax in
+  match impure with
+  | Expr.Impure_print_int e ->
+    let%bind v = eval_expr e ~env in
+    let%map i = Typecast.int_of_value v in
+    printf "%d\n" i;
+    Value.Primitive Value.Unit
+  | Expr.Impure_read_int ->
+    let%map i =
+      Interpreter.try_io_with ~message:"failed to read int" (fun () ->
+          Out_channel.flush Out_channel.stdout;
+          let line = In_channel.input_line_exn In_channel.stdin in
+          Int.of_string line)
+    in
+    Value.Primitive (Value.Int i)
 ;;
 
 (** evaluate a function declaration, adding it to the context *)

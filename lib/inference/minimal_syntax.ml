@@ -74,6 +74,9 @@ module Keyword = struct
   let resume = Variable.of_user "resume"
   let main = Variable.of_user "main"
   let entry_point = Variable.of_language_internal "main"
+  let console_effect = Effect.Label.of_string "console"
+  let print_int = Variable.of_user "print-int"
+  let read_int = Variable.of_user "read-int"
 end
 
 module Expr = struct
@@ -86,6 +89,7 @@ module Expr = struct
       | If_then_else of t * t * t
       | Operator of t * Operator.t * t
       | Unary_operator of Operator.Unary.t * t
+      | Impure_built_in of impure_built_in
     [@@deriving sexp]
 
     and value =
@@ -111,6 +115,11 @@ module Expr = struct
       ; op_body : t
       }
     [@@deriving sexp]
+
+    and impure_built_in =
+      | Impure_print_int of t
+      | Impure_read_int
+    [@@deriving sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
@@ -131,6 +140,23 @@ module Decl = struct
       ; operations : Operation.t Variable.Map.t
       }
     [@@deriving sexp]
+
+    let console =
+      let name = Effect.Label.of_string "console" in
+      let operations =
+        [ ( Variable.of_user "print-int"
+          , { Operation.argument = Type.Mono.Primitive Type.Primitive.Int
+            ; answer = Type.Mono.Primitive Type.Primitive.Unit
+            } )
+        ; ( Variable.of_user "read-int"
+          , { Operation.argument = Type.Mono.Primitive Type.Primitive.Unit
+            ; answer = Type.Mono.Primitive Type.Primitive.Int
+            } )
+        ]
+        |> Variable.Map.of_alist_exn
+      in
+      { name; operations }
+    ;;
   end
 
   module Fun = struct
@@ -150,21 +176,58 @@ end
 module Program = struct
   type t = { declarations : Decl.t list } [@@deriving sexp]
 
+  (** {[
+        fun entry_point() {
+          with handler {
+            control print-int(x) {
+              impure_print_int(x);
+              resume(());
+            };
+            control read-int(_) {
+              resume(impure_read_int());
+            };
+          };
+          main();
+          ()
+        }
+      ]} *)
   let entry_point =
-    (* {[ fun entry-point() { (fn(_result) { () }) (main()) } ]} *)
-    let call_user_main =
-      Expr.Application (Expr.Value (Expr.Variable Keyword.main), [])
+    let console_handler =
+      let print_int_clause =
+        (* TODO: use a name source for uniqueness? *)
+        let arg = Variable.of_language_internal "x" in
+        { Expr.op_argument = arg
+        ; op_body =
+            Expr.Application
+              ( Expr.Value (Expr.Variable Keyword.resume)
+              , [ Expr.Impure_built_in
+                    (Expr.Impure_print_int (Expr.Value (Expr.Variable arg)))
+                ] )
+        }
+      in
+      let read_int_clause =
+        let arg = Variable.of_language_internal "_unit" in
+        { Expr.op_argument = arg
+        ; op_body =
+            Expr.Application
+              ( Expr.Value (Expr.Variable Keyword.resume)
+              , [ Expr.Impure_built_in Expr.Impure_read_int ] )
+        }
+      in
+      let operations =
+        [ Keyword.print_int, print_int_clause
+        ; Keyword.read_int, read_int_clause
+        ]
+        |> Variable.Map.of_alist_exn
+      in
+      { Expr.operations; return_clause = None }
     in
-    Keyword.entry_point, ([], call_user_main)
+    ( Keyword.entry_point
+    , ( []
+      , Expr.Seq
+          ( Expr.Application
+              ( Expr.Value (Expr.Handler console_handler)
+              , [ Expr.Value (Expr.Variable Keyword.main) ] )
+          , Expr.Value (Expr.Literal Literal.Unit) ) ) )
   ;;
-  (* ( Keyword.entry_point *)
-  (* , ( [] *)
-  (*   , Expr.Application *)
-  (*       ( Expr.Value *)
-  (*           (Expr.Lambda *)
-  (*              ( [ Variable.of_language_internal "_result" ] *)
-  (*              , Expr.Value *)
-  (*                  (Expr.Literal Literal.Unit) *)
-  (*              )) *)
-  (*       , [ call_user_main ] ) ) ) *)
 end

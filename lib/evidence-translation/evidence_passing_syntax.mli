@@ -56,11 +56,18 @@ module Expr : sig
     | Select_operation of Effect.Label.t * Variable.t * t
         (** primitive to get an operation from a handler's runtime
             representation **)
+    | Impure_built_in of impure_built_in
   [@@deriving sexp]
 
   and lambda = Variable.t list * t [@@deriving sexp]
 
   and fix_lambda = Variable.t * lambda [@@deriving sexp]
+
+  (** interaction with the outside world *)
+  and impure_built_in =
+    | Impure_print_int of t
+    | Impure_read_int
+  [@@deriving sexp]
 end
 
 module Program : sig

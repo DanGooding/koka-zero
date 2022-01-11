@@ -66,3 +66,11 @@ let impossible_error message _state =
 let unsupported_feature_error message _state =
   Result.Error (Runtime_error.unsupported_feature_error message)
 ;;
+
+let try_io_with ~message f state =
+  let%map.Result x =
+    Result.try_with f
+    |> Result.map_error ~f:(fun _err -> Runtime_error.io_error message)
+  in
+  x, state
+;;

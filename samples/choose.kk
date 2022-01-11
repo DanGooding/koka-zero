@@ -15,6 +15,14 @@ fun choice-any(action) {
   action();
 };
 
+fun choice-user(action) {
+  with control choice(x) {
+    val b = read-int(()) != 0;
+    resume(b);
+  };
+  action();
+};
+
 fun pick01() {
   if choice(()) then 1 else 0;
 };
@@ -27,7 +35,7 @@ fun pick-number() {
 };
 
 fun main() {
-  with choice-any();
+  with choice-user();
   pick-number() == 101;
 };
 

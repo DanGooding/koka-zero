@@ -48,14 +48,20 @@ module Expr = struct
       | Get_evidence_marker of t
       | Get_evidence_handler of t
       | Select_operation of Effect.Label.t * Variable.t * t
-    (* TODO: perhaps this should be a function? (otherwise it needs to be
-       wrapped at every usage) - TODO: or should this already be changed to an
-       index into a record? *)
+      (* TODO: perhaps this should be a function? (otherwise it needs to be
+         wrapped at every usage) - TODO: or should this already be changed to an
+         index into a record? *)
+      | Impure_built_in of impure_built_in
     [@@deriving sexp]
 
     and lambda = Variable.t list * t [@@deriving sexp]
 
     and fix_lambda = Variable.t * lambda [@@deriving sexp]
+
+    and impure_built_in =
+      | Impure_print_int of t
+      | Impure_read_int
+    [@@deriving sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
