@@ -1699,8 +1699,10 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                   ((effect
                     (Effect_row
                      (Open
-                      ((Type_atom (constructor (Variable_or_name fail))
-                        (arguments ())))
+                      (Cons
+                       (Type_atom (constructor (Variable_or_name fail))
+                        (arguments ()))
+                       ())
                       (Type_atom (constructor (Variable_or_name e))
                        (arguments ())))))
                    (result
@@ -1824,10 +1826,11 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
                      (result
                       (Effect_row
                        (Open
-                        ((Type_atom (constructor (Variable_or_name a))
+                        (Cons
+                         (Type_atom (constructor (Variable_or_name a))
                           (arguments ()))
-                         (Type_atom (constructor (Variable_or_name b))
-                          (arguments ())))
+                         ((Type_atom (constructor (Variable_or_name b))
+                           (arguments ()))))
                         (Type_atom (constructor (Variable_or_name c))
                          (arguments ())))))))))))))))))))))) |}];
   Util.print_simplification_result syntax;

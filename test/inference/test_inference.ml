@@ -228,7 +228,7 @@ let%expect_test "handled effects reflected in subject's effect" =
     {|
     (Ok
      ((Arrow
-       ((Arrow () (Row ((labels ((exn 1) (read 2))) (tail ((Metavariable e23)))))
+       ((Arrow () (Row (Open (Non_empty ((exn 1) (read 2))) (Metavariable e23)))
          (Primitive Unit)))
        (Metavariable e23) (Primitive Unit))
       (Metavariable e24)
