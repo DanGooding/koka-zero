@@ -2,40 +2,54 @@ open Core
 
 let limit_length ~limit s = String.slice s 0 (min limit (String.length s))
 
-let compile filename =
+let compile_to_eps filename =
   let open Result.Let_syntax in
-  let result_program =
-    let%bind program =
-      In_channel.with_file filename ~f:Koka_zero.parse_channel
-    in
-    let%map program_explicit = Koka_zero.infer_program program in
-    let program_monadic = Koka_zero.translate program_explicit in
-    (* Koka_zero_evidence_translation.Private.translate_no_prelude *)
-    Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_monadic
-    |> print_s;
-    program_monadic
-  in
-  match result_program with
+  let%bind program = In_channel.with_file filename ~f:Koka_zero.parse_channel in
+  let%map program_explicit = Koka_zero.infer_program program in
+  Koka_zero.translate program_explicit
+;;
+
+let print_compiled filename =
+  match compile_to_eps filename with
+  | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
+  | Ok program_eps ->
+    Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
+;;
+
+let interpret_compiled filename =
+  match compile_to_eps filename with
   | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
   | Ok program ->
-    let result_value = Koka_zero.interpret_program program in
-    (match result_value with
+    (match Koka_zero.interpret_program program with
     | Error error ->
       Koka_zero.Runtime_error.string_of_t error
       |> limit_length ~limit:1000
       |> eprintf "runtime error: %s\n"
-    | Ok value ->
-      Koka_zero.Value.sexp_of_t value
-      |> Sexp.to_string_hum
-      |> limit_length ~limit:1000
-      |> printf "result:\n%s\n")
+    | Ok _unit -> ())
+;;
+
+let command_compile =
+  Command.basic
+    ~summary:"compile a program"
+    Command.Param.(
+      map
+        (anon ("filename" %: string))
+        ~f:(fun filename () -> print_compiled filename))
+;;
+
+let command_interpret =
+  Command.basic
+    ~summary:"interpret a program"
+    Command.Param.(
+      map
+        (anon ("filename" %: string))
+        ~f:(fun filename () -> interpret_compiled filename))
 ;;
 
 let command =
-  Command.basic
-    ~summary:"compile a koka program"
-    Command.Param.(
-      map (anon ("filename" %: string)) ~f:(fun filename () -> compile filename))
+  Command.group
+    ~summary:"Koka compiler"
+    [ "compile", command_compile; "interpret", command_interpret ]
 ;;
 
 let () = Command.run command
