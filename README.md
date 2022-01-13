@@ -14,3 +14,14 @@ make
 # which prompts to run
 # $ dune external-lib-deps --missing --root . @install
 ```
+
+## Usage
+Interpret a koka program with:
+```sh
+make start -- interpret samples/fib.kk
+```
+
+Or compile (to a lambda calculus representation - LLVM-IR is work-in-progress):
+```sh
+make start -- compile samples/reader.kk
+```

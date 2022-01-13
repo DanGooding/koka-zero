@@ -13,5 +13,5 @@ fun main() {
       resume(1);
     };
   };
-  foo();
+  print-int(foo());
 };

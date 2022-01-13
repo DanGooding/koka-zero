@@ -7,6 +7,19 @@ fun fib(n) {
   else fib(n - 1) + fib(n - 2);
 };
 
+fun for(start, stop, body) {
+  if start >= stop
+  then ()
+  else {
+    body(start);
+    for(start + 1, stop, body);
+    // currently no tail recursion optimisation!
+  };
+};
+
 fun main() {
-  fib(12);
+  for(0, 20) fn(i) {
+    // this is a very inefficient way to list fibonacci numbers!
+    print-int(fib(i));
+  };
 };
