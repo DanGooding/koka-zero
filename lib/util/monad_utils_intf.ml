@@ -18,4 +18,7 @@ module type S = sig
       constructors, preserving the 'structure' and values of the monadic value
       if it is present. *)
   val all_option : 'a t option -> 'a option t
+
+  (** [all_non_empty] is the equivalent of [all] but over non-empty lists*)
+  val all_non_empty : 'a t Non_empty_list.t -> 'a Non_empty_list.t t
 end

@@ -83,7 +83,9 @@ struct
 
       let of_list xs = Multiset.of_list xs |> of_multiset
       let of_list_exn xs = Multiset.of_list xs |> of_multiset_exn
+      let of_non_empty_list xs = Non_empty_list.to_list xs |> of_list_exn
       let to_list (Non_empty m) = Multiset.to_list m
+      let to_non_empty_list t = to_list t |> Non_empty_list.of_list_exn
       let to_multiset (Non_empty m) = m
       let add (Non_empty m) x = Multiset.add m x |> Non_empty
 
@@ -91,6 +93,7 @@ struct
         Multiset.union m1 m2 |> Non_empty
       ;;
 
+      let union_mixed (Non_empty m1) m2 = Multiset.union m1 m2 |> Non_empty
       let inter_to_multiset (Non_empty m1) (Non_empty m2) = Multiset.inter m1 m2
       let diff_to_multiset (Non_empty m1) (Non_empty m2) = Multiset.diff m1 m2
       let inter t1 t2 = inter_to_multiset t1 t2 |> of_multiset_verbose

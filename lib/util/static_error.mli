@@ -14,3 +14,8 @@ val string_of_t : t -> string
     value, or the error, if either exists. The equivalent of [Result.all] which
     operates on option values rather than list items *)
 val all_option : 'a Or_static_error.t option -> 'a option Or_static_error.t
+
+(** equivalent of [all] for non-empty lists *)
+val all_non_empty
+  :  'a Or_static_error.t Non_empty_list.t
+  -> 'a Non_empty_list.t Or_static_error.t

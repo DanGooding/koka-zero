@@ -96,6 +96,7 @@
 %{
 
 open Syntax
+open Koka_zero_util
 
 (** an intermediate type for desugaring function application *)
 type partial_appexpr =
@@ -219,7 +220,7 @@ let close_after_desugaring app : expr =
 %type <parameter_type list> tparams
 %type <parameter_type> tparam
 %type <type_ list> targuments
-%type <type_ list> targuments1
+%type <type_ Non_empty_list.t> targuments1
 %type <type_> anntype
 %type <kind option> kannot
 %type <kind> kind
@@ -1306,15 +1307,15 @@ tparam:
 (* %type <type_ list> targuments *)
 targuments:
   | anntypes = targuments1
-    { anntypes }
+    { Non_empty_list.to_list anntypes }
   | (* empty *)
     { [] }
   ;
 
-(* %type <type_ list> targuments1 *)
+(* %type <type_ Non_empty_list.t> targuments1 *)
 targuments1:
   | anntypes = separated_nonempty_list(",", anntype)
-    { anntypes }
+    { Non_empty_list.of_list_exn anntypes }
   ;
 
 (* %type <type_> anntype *)

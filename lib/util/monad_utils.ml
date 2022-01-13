@@ -31,4 +31,11 @@ module Make (M : Monad.S) = struct
       let%map x = m in
       Some x
   ;;
+
+  let all_non_empty (Non_empty_list.Cons (t, ts)) =
+    let open M.Let_syntax in
+    let%bind x = t in
+    let%map xs = M.all ts in
+    Non_empty_list.Cons (x, xs)
+  ;;
 end

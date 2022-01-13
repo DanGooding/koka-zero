@@ -56,3 +56,10 @@ let all_option = function
   | Some (Result.Ok x) -> Result.Ok (Some x)
   | Some (Result.Error err) -> Result.Error err
 ;;
+
+let all_non_empty (Non_empty_list.Cons (t, ts)) =
+  let open Result.Let_syntax in
+  let%bind x = t in
+  let%map xs = Result.all ts in
+  Non_empty_list.Cons (x, xs)
+;;
