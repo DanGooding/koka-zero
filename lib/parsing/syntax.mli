@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 
 (* Names: *)
 
@@ -98,8 +99,7 @@ and type_result =
     such as `<x,y,z|e>` *)
 and effect_row =
   | Closed of type_ list
-  (* note: open row is guaranted to be nonempty *)
-  | Open of type_ list * type_
+  | Open of type_ Non_empty_list.t * type_
 [@@deriving sexp]
 
 (** an empty effect row - i.e. the 'total' effect (`<>`) *)

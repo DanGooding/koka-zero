@@ -188,47 +188,45 @@ and unify_effect_rows r1 r2 =
   let%bind r2 =
     use_substitution (fun s -> Substitution.apply_to_effect_row s r2)
   in
-  let { Effect.Row.labels = labels1; tail = tail1 } = r1 in
-  let { Effect.Row.labels = labels2; tail = tail2 } = r2 in
-  let common_labels = Effect.Label.Multiset.inter labels1 labels2 in
-  let labels1 = Effect.Label.Multiset.diff labels1 common_labels in
-  let labels2 = Effect.Label.Multiset.diff labels2 common_labels in
-  (* construct the effects for error output and further unification, but pattern
-     match as tuples for readability *)
-  let r1 = { Effect.Row.labels = labels1; tail = tail1 } in
-  let r2 = { Effect.Row.labels = labels2; tail = tail2 } in
-  (* all univerally quantified variables should be instantiated before
-     unification *)
-  let get_tail_metavariable tail =
-    Option.map tail ~f:(function
-        | Effect.Row.Tail.Metavariable a -> a
-        | Effect.Row.Tail.Variable a -> raise_for_unexpected_effect_variable a)
+  let common_labels =
+    Effect.Label.Multiset.inter (Effect.Row.labels r1) (Effect.Row.labels r2)
   in
-  let tail_meta1 = get_tail_metavariable tail1 in
-  let tail_meta2 = get_tail_metavariable tail2 in
-  match
-    ( (Effect.Label.Multiset.is_empty labels1, tail_meta1)
-    , (Effect.Label.Multiset.is_empty labels2, tail_meta2) )
-  with
-  (* meta ~ _ *)
+  (* after removing intersection - r1,r2 may be rows, or just metavariables! *)
+  let (e1 : Effect.t) = Effect.row_subtract r1 common_labels in
+  let (e2 : Effect.t) = Effect.row_subtract r2 common_labels in
+  match e1, e2 with
+  | Effect.Variable v, _
+  | _, Effect.Variable v
+  | Effect.Row (Effect.Row.Open (_, Effect.Row.Tail.Variable v)), _
+  | _, Effect.Row (Effect.Row.Open (_, Effect.Row.Tail.Variable v)) ->
+    raise_for_unexpected_effect_variable v
+  (* meta ~ _*)
+  | Effect.Metavariable a1, _ -> unify_effect_with_meta a1 e2
+  | _, Effect.Metavariable a2 -> unify_effect_with_meta a2 e1
   (* substitution was previously applied, so [a] is guaranteed to be unknown,
      therefore directly substituting here is safe However we use
      [unify_with_meta] since we do still need the occurs check *)
-  | (true, Some a), _ -> unify_effect_with_meta a (Effect.Row r2)
-  | _, (true, Some b) -> unify_effect_with_meta b (Effect.Row r1)
-  (* <> ~ <> *)
-  | (true, None), (true, None) -> return ()
-  (* <ls> !~ _ (as [labels1] & [labels2] are already disjoint) *)
-  | (_, None), _ | _, (_, None) -> unification_error_effect_row r1 r2
-  (* <ls|meta> ~ <ls'|meta'> *)
-  | (false, Some a1), (false, Some a2) ->
+  (* <ls1|meta1> ~ <ls2|meta2> *)
+  | ( Effect.Row (Effect.Row.Open (labels1, Effect.Row.Tail.Metavariable a1))
+    , Effect.Row (Effect.Row.Open (labels2, Effect.Row.Tail.Metavariable a2)) )
+    ->
     let%bind b = fresh_effect_metavariable in
-    let tail = Some (Effect.Row.Tail.Metavariable b) in
-    let r1' = { Effect.Row.labels = labels2; tail } in
-    let r2' = { Effect.Row.labels = labels1; tail } in
+    let tail = Effect.Row.Tail.Metavariable b in
+    let r1' = Effect.Row.Open (labels2, tail) in
+    let r2' = Effect.Row.Open (labels1, tail) in
     (* their unification is <labels1+labels2|b> *)
     let%bind () = unify_effect_with_meta a1 (Effect.Row r1') in
     unify_effect_with_meta a2 (Effect.Row r2')
+    (* <> ~ <>*)
+    (* <ls> !~ _  as only non-shared labels remain *)
+  | ( Effect.Row (Effect.Row.Closed labels1)
+    , Effect.Row (Effect.Row.Closed labels2) ) ->
+    if Effect.Label.Multiset.is_empty labels1
+       && Effect.Label.Multiset.is_empty labels2
+    then return ()
+    else unification_error_effect e1 e2
+  | Effect.Row (Effect.Row.Closed _), _ | _, Effect.Row (Effect.Row.Closed _) ->
+    unification_error_effect e1 e2
 
 and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t =
   let open Let_syntax in

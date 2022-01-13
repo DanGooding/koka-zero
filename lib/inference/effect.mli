@@ -30,10 +30,7 @@ module Label : sig
   type t
 
   include Identifiable.S with type t := t
-
-  module Multiset : sig
-    include Multiset.S with type Element.t := t
-  end
+  include Has_multiset.S with type t := t
 end
 
 module Row : sig
@@ -49,22 +46,21 @@ module Row : sig
 
   (** An effect row - a multiset of labels, possibly with a variable in the tail *)
   type t =
-    { labels : Label.Multiset.t
-    ; tail : Tail.t option
-    }
+    | Open of Label.Multiset.Non_empty.t * Tail.t
+    | Closed of Label.Multiset.t
   [@@deriving sexp]
 
   val total : t
   val closed_singleton : Label.t -> t
   val extend : t -> Label.t -> t
   val is_open : t -> bool
-
-  (* TODO: start without open/close *)
-  (* val open : t -> varaible_source -> t *)
-
   val metavariables : t -> Metavariable.Set.t
   val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
-  val is_total : t -> bool option
+
+  (** an effect row now must _either_ be total, or have label(s) *)
+  val is_total : t -> bool
+
+  val labels : t -> Label.Multiset.t
 end
 
 type t =
@@ -86,4 +82,12 @@ val total : t
 val is_total : t -> bool option
 
 (** build a row by adding [labels] to either an existing effect, or just a tail *)
-val cons_row : labels:Label.Multiset.t -> effect:t -> Row.t
+val cons_row : labels:Label.Multiset.Non_empty.t -> effect:t -> Row.t
+
+val of_row_tail : Row.Tail.t -> t
+
+(** [row_subtract row ls] remove all labels from [row] which are present in
+    [ls]. Labels in [ls] but not [row] are ignored (we have no 'lacks'
+    constraints). This may remove all labels from an open row, so the result can
+    be any effect, not necessarily a row *)
+val row_subtract : Row.t -> Label.Multiset.t -> t

@@ -117,10 +117,10 @@ and apply_to_effect t = function
   | Effect.Row r -> Effect.Row (apply_to_effect_row t r)
 
 and apply_to_effect_row t row =
-  let { Effect.Row.labels; tail } = row in
-  match tail with
-  | None | Some (Effect.Row.Tail.Variable _) -> row
-  | Some (Effect.Row.Tail.Metavariable v) ->
+  match row with
+  | Effect.Row.Closed _labels -> row
+  | Effect.Row.Open (_labels, Effect.Row.Tail.Variable _v) -> row
+  | Effect.Row.Open (labels, Effect.Row.Tail.Metavariable v) ->
     (match lookup_effect t v with
     | None -> row
     | Some tail_effect -> Effect.cons_row ~labels ~effect:tail_effect)

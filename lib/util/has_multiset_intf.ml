@@ -32,12 +32,16 @@ module type S = sig
 
       val of_multiset : multiset -> t option
       val of_multiset_exn : multiset -> t
+      val of_multiset_verbose : multiset -> [ `Empty | `Non_empty of t ]
       val of_list : element list -> t option
       val of_list_exn : element list -> t
+      val of_non_empty_list : element Non_empty_list.t -> t
       val to_list : t -> element list
+      val to_non_empty_list : t -> element Non_empty_list.t
       val to_multiset : t -> multiset
       val add : t -> element -> t
       val union : t -> t -> t
+      val union_mixed : t -> multiset -> t
       val inter_to_multiset : t -> t -> multiset
       val diff_to_multiset : t -> t -> multiset
       val inter : t -> t -> [ `Empty | `Non_empty of t ]

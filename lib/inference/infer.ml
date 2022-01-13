@@ -334,9 +334,9 @@ and infer_handler
   in
   (* <lab_handled|eff_rest> *)
   let eff_pre_handle =
-    let labels = Effect.Label.Multiset.of_list [ lab_handled ] in
-    let tail = Some (Effect.Row.Tail.Metavariable eff_rest_meta) in
-    Effect.Row { Effect.Row.labels; tail }
+    let labels = Effect.Label.Multiset.Non_empty.of_list_exn [ lab_handled ] in
+    let tail = Effect.Row.Tail.Metavariable eff_rest_meta in
+    Effect.Row (Effect.Row.Open (labels, tail))
   in
   let t_action =
     (* () -> <lab_handled|eff_rest> t_subject *)
@@ -436,9 +436,9 @@ let bind_operations
       let { Min.Decl.Effect.Operation.argument; answer } = op in
       (* `forall eff_rest. argument -> <label|eff_rest> answer` *)
       let%bind eff_rest = Inference.fresh_effect_variable in
-      let tail = Some (Effect.Row.Tail.Variable eff_rest) in
-      let labels = Effect.Label.Multiset.of_list [ label ] in
-      let eff = Effect.Row { Effect.Row.labels; tail } in
+      let tail = Effect.Row.Tail.Variable eff_rest in
+      let labels = Effect.Label.Multiset.Non_empty.of_list_exn [ label ] in
+      let eff = Effect.Row (Effect.Row.Open (labels, tail)) in
       let monotype = Type.Mono.Arrow ([ argument ], eff, answer) in
       let forall_bound = Type.Variable.Set.empty in
       let forall_bound_effects = Effect.Variable.Set.singleton eff_rest in

@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 
 (* Names: *)
 
@@ -90,9 +91,7 @@ and type_result =
 
 and effect_row =
   | Closed of type_ list
-  (* note: open row is guaranted to be nonempty *)
-  (* TODO: current repr has redundancy [e]==[<|e>] *)
-  | Open of type_ list * type_
+  | Open of type_ Non_empty_list.t * type_
 [@@deriving sexp]
 
 let total_effect_row : effect_row = Closed []

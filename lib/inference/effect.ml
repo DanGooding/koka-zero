@@ -26,7 +26,7 @@ end
 module Label = struct
   module T : Identifiable.S = String
   include T
-  module Multiset = Multiset.Make (T)
+  include Has_multiset.Make (T)
 end
 
 module Row = struct
@@ -55,47 +55,59 @@ module Row = struct
     ;;
   end
 
-  (** An effect row - a multiset of labels, possibly with a variable in the tail *)
-  type t =
-    { labels : Label.Multiset.t
-    ; tail : Tail.t option
-    }
-  [@@deriving sexp]
+  module T = struct
+    (** An effect row - a multiset of labels, possibly with a variable in the
+        tail *)
+    type t =
+      | Open of Label.Multiset.Non_empty.t * Tail.t
+      | Closed of Label.Multiset.t
+    [@@deriving sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+  include T
 
   let total =
     let labels = Label.Multiset.empty in
-    let tail = None in
-    { labels; tail }
+    Closed labels
   ;;
 
   let extend t l =
-    let { labels; _ } = t in
-    let labels = Label.Multiset.add labels l in
-    { t with labels }
+    match t with
+    | Open (labels, tail) ->
+      let labels = Label.Multiset.Non_empty.add labels l in
+      Open (labels, tail)
+    | Closed labels -> Label.Multiset.add labels l |> Closed
   ;;
 
-  let closed_singleton l = extend total l
-  let is_open { tail; _ } = Option.is_some tail
+  let closed_singleton l = Closed (Label.Multiset.of_list [ l ])
 
-  let metavariables { tail; _ } =
-    match tail with
-    | Some tail -> Tail.metavariables tail
-    | None -> Metavariable.Set.empty
+  let is_open = function
+    | Open _ -> true
+    | Closed _ -> false
+  ;;
+
+  let metavariables = function
+    | Open (_, tail) -> Tail.metavariables tail
+    | Closed _ -> Metavariable.Set.empty
   ;;
 
   let instantiate_as row ~var_to_meta =
-    let { tail; _ } = row in
-    let tail = Option.map tail ~f:(Tail.instantiate_as ~var_to_meta) in
-    { row with tail }
+    match row with
+    | Open (labels, tail) ->
+      let tail = Tail.instantiate_as ~var_to_meta tail in
+      Open (labels, tail)
+    | Closed labels -> Closed labels
   ;;
 
-  let is_total { labels; tail } =
-    if Label.Multiset.is_empty labels
-    then (
-      match tail with
-      | Some Tail.(Metavariable _ | Variable _) -> None
-      | None -> Some true)
-    else Some false
+  let is_total = function
+    (* open rows must have at least one label *)
+    | Open (_, _) -> false
+    | Closed labels -> Label.Multiset.is_empty labels
+  ;;
+
+  let labels = function
+    | Open (labels, _) -> Label.Multiset.Non_empty.to_multiset labels
+    | Closed labels -> labels
   ;;
 end
 
@@ -129,19 +141,46 @@ let total = Row Row.total
 
 let is_total = function
   | Variable _ | Metavariable _ -> None
-  | Row r -> Row.is_total r
+  | Row r -> Row.is_total r |> Some
 ;;
 
 let cons_row ~labels ~effect =
   match effect with
   | Metavariable v ->
-    let tail = Some (Row.Tail.Metavariable v) in
-    { Row.labels; tail }
+    let tail = Row.Tail.Metavariable v in
+    Row.Open (labels, tail)
   | Variable v ->
-    let tail = Some (Row.Tail.Variable v) in
-    { Row.labels; tail }
+    let tail = Row.Tail.Variable v in
+    Row.Open (labels, tail)
   (* if the tail itself is a row, flatten into a single row *)
-  | Row { Row.labels = labels'; tail } ->
-    let labels = Label.Multiset.union labels labels' in
-    { Row.labels; tail }
+  | Row r ->
+    (match r with
+    | Row.Closed labels' ->
+      let labels'' =
+        Label.Multiset.union
+          (Label.Multiset.Non_empty.to_multiset labels)
+          labels'
+      in
+      Row.Closed labels''
+    | Row.Open (labels', tail) ->
+      let labels'' = Label.Multiset.Non_empty.union labels labels' in
+      Row.Open (labels'', tail))
+;;
+
+let of_row_tail = function
+  | Row.Tail.Metavariable v -> Metavariable v
+  | Row.Tail.Variable v -> Variable v
+;;
+
+let row_subtract row labels =
+  match row with
+  | Row.Open (row_labels, tail) ->
+    let row_labels = Label.Multiset.Non_empty.to_multiset row_labels in
+    let diff = Label.Multiset.diff row_labels labels in
+    (match Label.Multiset.Non_empty.of_multiset_verbose diff with
+    | `Empty -> of_row_tail tail
+    | `Non_empty row_labels' -> Row.Open (row_labels', tail) |> Row)
+  | Row.Closed row_labels ->
+    let row_labels' = Label.Multiset.diff row_labels labels in
+    Row.Closed row_labels' |> Row
 ;;
