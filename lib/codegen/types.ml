@@ -1,5 +1,5 @@
 (** pointer to an arbitrary runtime value *)
-let value_pointer : Llvm.lltype Codegen.t =
+let opaque_pointer : Llvm.lltype Codegen.t =
   let open Codegen.Let_syntax in
   (* byte pointer *)
   let%map i8 = Codegen.use_context Llvm.i8_type in

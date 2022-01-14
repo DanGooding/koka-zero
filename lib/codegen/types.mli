@@ -1,5 +1,6 @@
-(** pointer to an arbitrary runtime value *)
-val value_pointer : Llvm.lltype Codegen.t
+(** pointer to an arbitrary runtime value. Not related to in-development LLVM
+    opaque pointers. *)
+val opaque_pointer : Llvm.lltype Codegen.t
 
 val bool : Llvm.lltype Codegen.t
 val int : Llvm.lltype Codegen.t
