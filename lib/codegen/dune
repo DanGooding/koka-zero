@@ -1,0 +1,6 @@
+(library
+ (name koka_zero_codegen)
+ (public_name koka-zero.codegen)
+ (libraries core llvm llvm.analysis koka_zero_evidence_translation)
+ (preprocess
+  (pps ppx_jane)))
