@@ -143,26 +143,30 @@ let dereference
   Codegen.use_builder (Llvm.build_load t_ptr name)
 ;;
 
-(* TODO: factor out this duplication *)
-let dereference_int : Llvm.llvalue -> Llvm.llvalue Codegen.t =
- fun ptr ->
+(** helper function for building [dereference_t] functions *)
+let dereference_aux
+    : Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> Llvm.llvalue Codegen.t
+  =
+ fun t name ptr ->
   let open Codegen.Let_syntax in
-  let%bind type_int = Types.int in
-  dereference ptr type_int "int"
+  let%bind t = t in
+  dereference ptr t name
+;;
+
+let dereference_int : Llvm.llvalue -> Llvm.llvalue Codegen.t =
+  dereference_aux Types.int "int"
 ;;
 
 let dereference_bool : Llvm.llvalue -> Llvm.llvalue Codegen.t =
- fun ptr ->
-  let open Codegen.Let_syntax in
-  let%bind type_bool = Types.bool in
-  dereference ptr type_bool "bool"
+  dereference_aux Types.bool "bool"
 ;;
 
 let dereference_marker : Llvm.llvalue -> Llvm.llvalue Codegen.t =
- fun ptr ->
-  let open Codegen.Let_syntax in
-  let%bind type_marker = Types.marker in
-  dereference ptr type_marker "marker"
+  dereference_aux Types.marker "marker"
+;;
+
+let dereference_label : Llvm.llvalue -> Llvm.llvalue Codegen.t =
+  dereference_aux Types.label "label"
 ;;
 
 (** compile a literal into code which returns a pointer to a new heap allocation
@@ -351,6 +355,52 @@ let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
            "markers_equal")
     in
     heap_store_bool eq ~runtime
+  | EPS.Expr.Nil_evidence_vector ->
+    let { Runtime.nil_evidence_vector; _ } = runtime in
+    Codegen.use_builder
+      (Llvm.build_call nil_evidence_vector (Array.of_list []) "nil_vector")
+  | EPS.Expr.Cons_evidence_vector
+      { label = e_label
+      ; marker = e_marker
+      ; handler = e_handler
+      ; vector_tail = e_vector_tail
+      } ->
+    let%bind label_ptr = compile_expr e_label ~runtime in
+    let%bind label = dereference_label label_ptr in
+    let%bind marker_ptr = compile_expr e_marker ~runtime in
+    let%bind marker = dereference_marker marker_ptr in
+    let%bind handler = compile_expr e_handler ~runtime in
+    let%bind vector_tail = compile_expr e_vector_tail ~runtime in
+    let { Runtime.cons_evidence_vector; _ } = runtime in
+    let args = Array.of_list [ label; marker; handler; vector_tail ] in
+    Codegen.use_builder
+      (Llvm.build_call cons_evidence_vector args "extended_vector")
+  | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
+    let%bind label_ptr = compile_expr e_label ~runtime in
+    let%bind label = dereference_label label_ptr in
+    let%bind vector = compile_expr e_vector ~runtime in
+    let { Runtime.evidence_vector_lookup; _ } = runtime in
+    let args = Array.of_list [ vector; label ] in
+    Codegen.use_builder (Llvm.build_call evidence_vector_lookup args "evidence")
+  | EPS.Expr.Get_evidence_marker e ->
+    let%bind evidence = compile_expr e ~runtime in
+    let { Runtime.get_evidence_marker; _ } = runtime in
+    let%bind marker =
+      Codegen.use_builder
+        (Llvm.build_call
+           get_evidence_marker
+           (Array.of_list [ evidence ])
+           "marker")
+    in
+    heap_store_marker marker ~runtime
+  | EPS.Expr.Get_evidence_handler e ->
+    let%bind evidence = compile_expr e ~runtime in
+    let { Runtime.get_evidence_handler; _ } = runtime in
+    Codegen.use_builder
+      (Llvm.build_call
+         get_evidence_handler
+         (Array.of_list [ evidence ])
+         "handler")
   | _ -> failwith "not implemented"
  (* disable fragile-match *)
  [@@warning "-4"]
