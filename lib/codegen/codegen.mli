@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 open Import
 
 (** monad encapsulating the mutable state of llvm code generation. It holds
@@ -6,6 +7,9 @@ open Import
 type 'a t
 
 include Monad.S with type 'a t := 'a t
+include Monad_utils.S with type 'a t := 'a t
+
+(* TODO: assert_valid{module,function} *)
 
 val run_then_write_module
   :  module_id:string
