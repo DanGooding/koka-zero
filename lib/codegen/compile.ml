@@ -214,6 +214,22 @@ let compile_unary_operator
     heap_store_bool not_b ~runtime
 ;;
 
+(** [compile_populate_struct p members] generates code to populate the struct
+    pointed to by [p], with the field values (and tmp names) [members] *)
+let compile_populate_struct
+    : Llvm.llvalue -> (Llvm.llvalue * string) list -> unit Codegen.t
+  =
+ fun struct_ptr members ->
+  let open Codegen.Let_syntax in
+  List.mapi members ~f:(fun i (x, name) ->
+      let%bind member_ptr =
+        Codegen.use_builder (Llvm.build_struct_gep struct_ptr i (name ^ "_p"))
+      in
+      let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
+      ())
+  |> Codegen.all_unit
+;;
+
 (** [compile_construct_pure x ~runtime] produces code which heap allocates and
     populates a [Types.ctl_pure] struct, returning a [Types.opaque_pointer] to
     it *)
@@ -225,14 +241,9 @@ let compile_construct_pure
   let%bind ctl_pure_type = Types.ctl_pure in
   let%bind ctl_pure_ptr = heap_allocate ctl_pure_type ~runtime in
   let%bind tag = const_ctl_pure_tag in
-  let%bind tag_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep ctl_pure_ptr 0 "tag_p")
+  let%bind () =
+    compile_populate_struct ctl_pure_ptr [ tag, "tag"; x, "value" ]
   in
-  let%bind _store_tag = Codegen.use_builder (Llvm.build_store tag tag_ptr) in
-  let%bind value_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep ctl_pure_ptr 1 "value_p")
-  in
-  let%bind _store_value = Codegen.use_builder (Llvm.build_store x value_ptr) in
   let%bind opaque_ptr = Types.opaque_pointer in
   Codegen.use_builder (Llvm.build_bitcast ctl_pure_ptr opaque_ptr "ptr")
 ;;
@@ -249,27 +260,14 @@ let compile_construct_yield
   let%bind ctl_yield_type = Types.ctl_yield in
   let%bind ctl_yield_ptr = heap_allocate ctl_yield_type ~runtime in
   let%bind tag = const_ctl_yield_tag in
-  let%bind tag_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep ctl_yield_ptr 0 "tag_p")
-  in
-  let%bind _store_tag = Codegen.use_builder (Llvm.build_store tag tag_ptr) in
-  let%bind marker_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep ctl_yield_ptr 1 "marker_p")
-  in
-  let%bind _store_marker =
-    Codegen.use_builder (Llvm.build_store marker marker_ptr)
-  in
-  let%bind op_clause_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep ctl_yield_ptr 2 "op_clause_p")
-  in
-  let%bind _store_op_clause =
-    Codegen.use_builder (Llvm.build_store op_clause op_clause_ptr)
-  in
-  let%bind resumption_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep ctl_yield_ptr 3 "resumption_p")
-  in
-  let%bind _store_resumption =
-    Codegen.use_builder (Llvm.build_store resumption resumption_ptr)
+  let%bind () =
+    compile_populate_struct
+      ctl_yield_ptr
+      [ tag, "tag"
+      ; marker, "marker"
+      ; op_clause, "op_clause"
+      ; resumption, "resumption"
+      ]
   in
   let%bind opaque_ptr = Types.opaque_pointer in
   Codegen.use_builder (Llvm.build_bitcast ctl_yield_ptr opaque_ptr "ptr")

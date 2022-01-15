@@ -1,4 +1,5 @@
 open Core
+open Koka_zero_util
 open Import
 
 module Mutable_state = struct
@@ -35,8 +36,13 @@ module T = struct
   ;;
 end
 
-include T
-include Monad.Make (T)
+module T' = struct
+  include T
+  include Monad.Make (T)
+end
+
+include T'
+include Monad_utils.Make (T')
 
 let dump_module { Mutable_state.module_; _ } =
   Llvm.dump_module module_;
