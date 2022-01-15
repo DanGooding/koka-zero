@@ -53,3 +53,6 @@ let ctl =
   Codegen.use_context (fun context ->
       Llvm.struct_type context (Array.of_list fields))
 ;;
+
+let marker = Codegen.use_context Llvm.i64_type
+let label = Codegen.use_context Llvm.i64_type
