@@ -19,3 +19,9 @@ val ctl_pure : Llvm.lltype Codegen.t
 (** control monad 'yield' variant:
     [Yield { tag; marker; op_clause; resumption }] *)
 val ctl_yield : Llvm.lltype Codegen.t
+
+(** prompt marker *)
+val marker : Llvm.lltype Codegen.t
+
+(** effect label *)
+val label : Llvm.lltype Codegen.t

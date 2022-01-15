@@ -1,47 +1,118 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include "runtime.h"
 
-// is everything just a void pointer?
-typedef void* object_p;
+void kkr_exit(void) {
+  exit(1);
+}
 
-typedef char * effect_label_p;
+void kkr_exit_with_message(const uint8_t *message) {
+  fprintf(stderr, "runtime error: %s\n", message);
+  kkr_exit();
+}
 
+// statically allocated, since if malloc fails we will probably be
+// unable to allocate this
+#define MALLOC_ERROR_MESSAGE_CAPACITY 100
+char malloc_error_message[MALLOC_ERROR_MESSAGE_CAPACITY];
+
+opaque_ptr kkr_malloc(uint64_t size) {
+  opaque_ptr p = malloc(size);
+  if (p == NULL) {
+    snprintf(malloc_error_message, MALLOC_ERROR_MESSAGE_CAPACITY,
+             "failed to malloc %ld bytes", size);
+    kkr_exit_with_message(malloc_error_message);
+  }
+  return p;
+}
+
+marker_t next_marker = 0;
+marker_t kkr_fresh_marker(void) {
+  return next_marker++;
+}
+
+// C operators can't be trusted to produce exactly these values
+const bool_t const_false = 0;
+const bool_t const_true = 1;
+
+bool_t kkr_markers_equal(marker_t m1, marker_t m2) {
+  return m1 == m2 ? const_true : const_false;
+}
+
+// evidence vectors and entries - these are managed entirely in the C runtime
+// and are essentially abstract outside of it
 typedef struct {
-  object_p marker;
-  object_p handler;
+  opaque_ptr handler;
+  marker_t marker;
 
-} evidence_t; // TODO: want pointer, not value itself!
+} evidence_t;
 
-typedef struct {
-  bool is_nil;
-  union {
-    // nil
-    struct {};  // TODO: can be omitted - don't need the union
-    // cons
-    struct {
-      // TODO: the C part at least can be well typed - then expose untyped wrappers
-      object_p label;
-      object_p evidence;
-      object_p tail;
-      // :(
-    };
+typedef struct vector_t {
+  uint8_t is_nil;
+  label_t label;
+  evidence_t *evidence;
+  struct vector_t *tail;
+} vector_t;
+
+
+opaque_ptr kkr_nil_evidence_vector(void) {
+  vector_t *vector = (vector_t *)kkr_malloc(sizeof(vector_t));
+  // zero other fields for safety (fail fast on bugs)
+  *vector = (vector_t) { .is_nil = 10, .label = 0, .evidence = NULL, .tail = NULL };
+  return (opaque_ptr)vector;
+}
+
+opaque_ptr kkr_cons_evidence_vector(
+  label_t label,
+  marker_t marker,
+  opaque_ptr handler,
+  opaque_ptr vector_tail
+) {
+  evidence_t *evidence = (evidence_t *)kkr_malloc(sizeof(evidence_t));
+  *evidence = (evidence_t) { .handler = handler, .marker = marker };
+
+  vector_t *vector = (vector_t *)kkr_malloc(sizeof(vector_t));
+  *vector = (vector_t) {
+    .is_nil = 0,
+    .label = label,
+    .evidence = evidence,
+    .tail = (vector_t *)vector_tail
   };
-} evidence_vector_t;
+
+  return (opaque_ptr)vector;
+}
+
+opaque_ptr kkr_evidence_vector_lookup(opaque_ptr v, label_t label) {
+  vector_t *current = (vector_t *)v;
+  while (!current->is_nil) {
+    if (current->label == label) {
+      return (opaque_ptr)(current->evidence);
+    }
+    current = current->tail;
+  }
+  kkr_exit_with_message("effect label not found in evidence vector");
+}
 
 
-const evidence_vector_t evv_nil = { .is_nil = true; };
-const object_p evv_nil = &evv_nil;
-
-evidence_vector_t *evv_cons(const evidence_vector_t *vector, const effect_label_p label, const int * /* ?? */ marker, const object_p handler) {
-
-};
-
-evidence_t *evv_lookup(evidence_vector_t *vector, effect_label_p label) {
-
-};
-
-object_p evidence_get_marker(evidence_t *evidence) {
+marker_t kkr_get_evidence_marker(opaque_ptr e) {
+  evidence_t *evidence = (evidence_t *)evidence;
   return evidence->marker;
-};
+}
 
-object_p evidence_get_handler(evidence_t *evidence) {
+opaque_ptr kkr_get_evidence_handler(opaque_ptr e) {
+  evidence_t *evidence = (evidence_t *)evidence;
   return evidence->handler;
-};
+}
+
+void kkr_print_int(int_t i) {
+  printf("%ld\n", i);
+}
+
+int_t read_int(void) {
+  int_t result;
+  if (scanf("%ld", &result)) {
+    kkr_exit_with_message("failed to read int");
+  }
+  return result;
+}
+

@@ -1,5 +1,21 @@
 open Core
+open Import
 module EPS = Koka_zero_evidence_translation.Evidence_passing_syntax
+
+(** convert a [Varaible.t] to a string usable as symbol name (i.e. correctly
+    namespaced) *)
+let symbol_of_variable : Variable.t -> string = function
+  | Variable.User s -> "kku_" ^ s
+  | Variable.Language s -> "kkl_" ^ s
+  | Variable.Generated s -> "kkg_" ^ s
+;;
+
+(** convert a [Variable.t] to a string usable as a register name *)
+let register_name_of_variable : Variable.t -> string = function
+  | Variable.User s -> "u_" ^ s
+  | Variable.Language s -> "l_" ^ s
+  | Variable.Generated s -> "g_" ^ s
+;;
 
 (* TODO: need a type system for telling when llvalues are
    pointers(opaque/typed)/values/*)
@@ -104,6 +120,15 @@ let heap_store_unit : runtime:Runtime.t -> Llvm.llvalue Codegen.t =
   heap_store type_unit u ~runtime
 ;;
 
+let heap_store_marker
+    : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+  =
+ fun m ~runtime ->
+  let open Codegen.Let_syntax in
+  let%bind type_marker = Types.marker in
+  heap_store type_marker m ~runtime
+;;
+
 (** [dereference v t name] dereferences an [opaque_pointer] [v] as a [t]. [name]
     is used as a stem for the intermediate and final value *)
 let dereference
@@ -131,6 +156,13 @@ let dereference_bool : Llvm.llvalue -> Llvm.llvalue Codegen.t =
   let open Codegen.Let_syntax in
   let%bind type_bool = Types.bool in
   dereference ptr type_bool "bool"
+;;
+
+let dereference_marker : Llvm.llvalue -> Llvm.llvalue Codegen.t =
+ fun ptr ->
+  let open Codegen.Let_syntax in
+  let%bind type_marker = Types.marker in
+  dereference ptr type_marker "marker"
 ;;
 
 (** compile a literal into code which returns a pointer to a new heap allocation
@@ -298,6 +330,27 @@ let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
     let%bind op_clause = compile_expr e_op_clause ~runtime in
     let%bind resumption = compile_expr e_resumption ~runtime in
     compile_construct_yield ~marker ~op_clause ~resumption ~runtime
+  | EPS.Expr.Fresh_marker ->
+    let { Runtime.fresh_marker; _ } = runtime in
+    let%bind m =
+      Codegen.use_builder
+        (Llvm.build_call fresh_marker (Array.of_list []) "fresh_marker")
+    in
+    heap_store_marker m ~runtime
+  | EPS.Expr.Markers_equal (e1, e2) ->
+    let%bind v1 = compile_expr e1 ~runtime in
+    let%bind v2 = compile_expr e2 ~runtime in
+    let%bind m1 = dereference_marker v1 in
+    let%bind m2 = dereference_marker v2 in
+    let { Runtime.markers_equal; _ } = runtime in
+    let%bind eq =
+      Codegen.use_builder
+        (Llvm.build_call
+           markers_equal
+           (Array.of_list [ m1; m2 ])
+           "markers_equal")
+    in
+    heap_store_bool eq ~runtime
   | _ -> failwith "not implemented"
  (* disable fragile-match *)
  [@@warning "-4"]
