@@ -5,3 +5,17 @@ val opaque_pointer : Llvm.lltype Codegen.t
 val bool : Llvm.lltype Codegen.t
 val int : Llvm.lltype Codegen.t
 val unit : Llvm.lltype Codegen.t
+
+(** type of the tag used to distinguish variants *)
+val variant_tag : Llvm.lltype Codegen.t
+
+(** control monad variant, with unknown contents. This can be cast to [ctl_pure]
+    or [ctl_yield] depending on tag *)
+val ctl : Llvm.lltype Codegen.t
+
+(** control monad 'pure' variant: [Pure { tag; value }] *)
+val ctl_pure : Llvm.lltype Codegen.t
+
+(** control monad 'yield' variant:
+    [Yield { tag; marker; op_clause; resumption }] *)
+val ctl_yield : Llvm.lltype Codegen.t
