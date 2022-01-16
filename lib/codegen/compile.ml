@@ -86,10 +86,13 @@ let const_label : int -> Llvm.llvalue Codegen.t =
   Llvm.const_int label_type i
 ;;
 
-(** [heap_allocate t ~runtime] generates code which allocates space on the heap
-    for a [t], and returns a typed pointer to it (a [t*]) *)
-let heap_allocate : Llvm.lltype -> runtime:Runtime.t -> Llvm.llvalue Codegen.t =
- fun t ~runtime ->
+(** [heap_allocate t name ~runtime] generates code which allocates space on the
+    heap for a [t], and returns a typed pointer to it (a [t*]). [name] is used
+    as a stem for register names *)
+let heap_allocate
+    : Llvm.lltype -> string -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+  =
+ fun t name ~runtime ->
   let open Codegen.Let_syntax in
   let size = Llvm.size_of t in
   let { Runtime.malloc; _ } = runtime in
@@ -98,17 +101,19 @@ let heap_allocate : Llvm.lltype -> runtime:Runtime.t -> Llvm.llvalue Codegen.t =
       (Llvm.build_call malloc (Array.of_list [ size ]) "heap_ptr")
   in
   let t_ptr_type = Llvm.pointer_type t in
-  Codegen.use_builder (Llvm.build_bitcast heap_ptr t_ptr_type "typed_ptr")
+  Codegen.use_builder (Llvm.build_bitcast heap_ptr t_ptr_type (name ^ "_ptr"))
 ;;
 
-(** [heap_store t v ~runtime] generates code which: allocates heap memory for a
-    [t], stores [v] there, and returns the pointer as a [Types.opaque_pointer] *)
+(** [heap_store t v name ~runtime] generates code which: allocates heap memory
+    for a [t], stores [v] there, and returns the pointer as a
+    [Types.opaque_pointer] *)
 let heap_store
-    : Llvm.lltype -> Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+    :  Llvm.lltype -> Llvm.llvalue -> string -> runtime:Runtime.t
+    -> Llvm.llvalue Codegen.t
   =
- fun t v ~runtime ->
+ fun t v name ~runtime ->
   let open Codegen.Let_syntax in
-  let%bind t_ptr = heap_allocate t ~runtime in
+  let%bind t_ptr = heap_allocate t name ~runtime in
   let%bind _store = Codegen.use_builder (Llvm.build_store v t_ptr) in
   let%bind opaque_pointer = Types.opaque_pointer in
   Codegen.use_builder (Llvm.build_bitcast t_ptr opaque_pointer "heap_ptr")
@@ -116,20 +121,20 @@ let heap_store
 
 (** helper function for building [heap_store_t] functions *)
 let heap_store_aux
-    :  Llvm.lltype Codegen.t -> Llvm.llvalue -> runtime:Runtime.t
+    :  Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> runtime:Runtime.t
     -> Llvm.llvalue Codegen.t
   =
- fun t v ~runtime ->
+ fun t name v ~runtime ->
   let open Codegen.Let_syntax in
   let%bind t = t in
-  heap_store t v ~runtime
+  heap_store t v name ~runtime
 ;;
 
 (** [heap_store_int i ~runtime] allocates memory to hold a [Types.int] and
     stores [i] there. It returns the address as a [Types.opaque_pointer] *)
 let heap_store_int : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
-  heap_store_aux Types.int
+  heap_store_aux Types.int "int"
 ;;
 
 (* TODO: could just allocate [true] and [false] at program start, then reuse
@@ -137,7 +142,7 @@ let heap_store_int : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
 let heap_store_bool
     : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
-  heap_store_aux Types.bool
+  heap_store_aux Types.bool "bool"
 ;;
 
 let heap_store_unit : runtime:Runtime.t -> Llvm.llvalue Codegen.t =
@@ -145,19 +150,19 @@ let heap_store_unit : runtime:Runtime.t -> Llvm.llvalue Codegen.t =
   let open Codegen.Let_syntax in
   let%bind u = const_unit in
   let%bind type_unit = Types.unit in
-  heap_store type_unit u ~runtime
+  heap_store type_unit u "unit" ~runtime
 ;;
 
 let heap_store_marker
     : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
-  heap_store_aux Types.marker
+  heap_store_aux Types.marker "marker"
 ;;
 
 let heap_store_label
     : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
-  heap_store_aux Types.label
+  heap_store_aux Types.label "label"
 ;;
 
 (** [dereference v t name] dereferences an [opaque_pointer] [v] as a [t]. [name]
@@ -306,7 +311,7 @@ let compile_construct_pure
  fun x ~runtime ->
   let open Codegen.Let_syntax in
   let%bind ctl_pure_type = Types.ctl_pure in
-  let%bind ctl_pure_ptr = heap_allocate ctl_pure_type ~runtime in
+  let%bind ctl_pure_ptr = heap_allocate ctl_pure_type "ctl_pure" ~runtime in
   let%bind tag = const_ctl_pure_tag in
   let%bind () =
     compile_populate_struct ctl_pure_ptr [ tag, "tag"; x, "value" ]
@@ -325,7 +330,7 @@ let compile_construct_yield
  fun ~marker ~op_clause ~resumption ~runtime ->
   let open Codegen.Let_syntax in
   let%bind ctl_yield_type = Types.ctl_yield in
-  let%bind ctl_yield_ptr = heap_allocate ctl_yield_type ~runtime in
+  let%bind ctl_yield_ptr = heap_allocate ctl_yield_type "ctl_yield" ~runtime in
   let%bind tag = const_ctl_yield_tag in
   let%bind () =
     compile_populate_struct
@@ -521,9 +526,7 @@ and compile_construct_handler
             Codegen.impossible_error message
         in
         let%map clause = compile_expr e_clause ~runtime ~effect_reprs in
-        (* having spaces, brackets etc is fine *)
-        let register_name = Variable.to_string_user op_name in
-        clause, register_name)
+        clause, register_name_of_variable op_name)
     |> Codegen.all
   in
   let%bind () =
@@ -531,7 +534,7 @@ and compile_construct_handler
     | None -> return ()
     | Some _ -> Codegen.unsupported_feature_error "return clause in handler"
   in
-  let%bind handler_ptr = heap_allocate hnd_type ~runtime in
+  let%bind handler_ptr = heap_allocate hnd_type "hnd" ~runtime in
   let%bind () =
     compile_populate_struct handler_ptr operation_clauses_and_names
   in
