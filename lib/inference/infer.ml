@@ -224,8 +224,7 @@ and infer_lambda
   in
   (* add each parameter to the environment *)
   let%bind env' =
-    List.fold xs_to_ts ~init:(return env) ~f:(fun env (x, t_x) ->
-        let%bind env = env in
+    Inference.list_fold xs_to_ts ~init:env ~f:(fun env (x, t_x) ->
         add_binding ~env ~var:x ~type_:(Type.Mono t_x))
   in
   let%map t_body, eff_body, expr_body' =
@@ -431,8 +430,7 @@ let bind_operations
  fun env ~declaration ->
   let open Inference.Let_syntax in
   let { Min.Decl.Effect.name = label; operations } = declaration in
-  Map.fold operations ~init:(return env) ~f:(fun ~key:op_name ~data:op env ->
-      let%bind env = env in
+  Inference.map_fold operations ~init:env ~f:(fun ~key:op_name ~data:op env ->
       let { Min.Decl.Effect.Operation.argument; answer } = op in
       (* `forall eff_rest. argument -> <label|eff_rest> answer` *)
       let%bind eff_rest = Inference.fresh_effect_variable in
@@ -533,11 +531,10 @@ let infer_decls
   let open Inference.Let_syntax in
   (* importantly this is a left fold *)
   let%map env', effect_env', declarations_rev' =
-    List.fold
+    Inference.list_fold
       declarations
-      ~init:(return (env, effect_env, []))
-      ~f:(fun envs declaration ->
-        let%bind env, effect_env, declarations_rev = envs in
+      ~init:(env, effect_env, [])
+      ~f:(fun (env, effect_env, declarations_rev) declaration ->
         let%map env', effect_env', declaration' =
           infer_decl declaration ~env ~effect_env
         in

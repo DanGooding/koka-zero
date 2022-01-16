@@ -157,8 +157,7 @@ let prelude =
   let open Generation.Let_syntax in
   let decls = [ compose_unary; bind; pure; prompt; handler; perform ] in
   let%map decls_rev =
-    List.fold decls ~init:(return []) ~f:(fun decls_rev decl ->
-        let%bind decls_rev = decls_rev in
+    Generation.list_fold decls ~init:[] ~f:(fun decls_rev decl ->
         let%map decl = decl in
         decl :: decls_rev)
   in

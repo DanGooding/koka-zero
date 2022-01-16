@@ -383,9 +383,8 @@ and simplify_statement_preceding
 
 and simplify_block { Syntax.statements; last } : Min.Expr.t Or_static_error.t =
   let open Result.Let_syntax in
-  let last = simplify_expr last in
-  List.fold_right statements ~init:last ~f:(fun statement e ->
-      let%bind e = e in
+  let%bind last = simplify_expr last in
+  Static_error.list_fold_right statements ~init:last ~f:(fun statement e ->
       simplify_statement_preceding statement e)
 
 and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
