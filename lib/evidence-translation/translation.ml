@@ -244,11 +244,10 @@ let translate_program { Expl.Program.declarations } ~include_prelude =
     if include_prelude then Primitives.prelude else return []
   in
   let%map effect_declarations_rev, fun_declarations_rev =
-    List.fold
+    Generation.list_fold
       declarations
-      ~init:(return ([], []))
-      ~f:(fun decls_rev decl ->
-        let%bind effect_decls_rev, fun_decls_rev = decls_rev in
+      ~init:([], [])
+      ~f:(fun (effect_decls_rev, fun_decls_rev) decl ->
         match decl with
         | Expl.Decl.Fun decl ->
           let%map decl' = translate_fun_decl decl in

@@ -286,8 +286,7 @@ let eval_program : Program.t -> Value.t Interpreter.t =
   let open Interpreter.Let_syntax in
   let env = Value.empty_context in
   let%bind env =
-    List.fold fun_declarations ~init:(return env) ~f:(fun env decl ->
-        let%bind env = env in
+    Interpreter.list_fold fun_declarations ~init:env ~f:(fun env decl ->
         eval_fun_decl decl ~env)
   in
   eval_expr

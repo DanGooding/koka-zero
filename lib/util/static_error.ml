@@ -63,3 +63,10 @@ let all_non_empty (Non_empty_list.Cons (t, ts)) =
   let%map xs = Result.all ts in
   Non_empty_list.Cons (x, xs)
 ;;
+
+let list_fold_right xs ~init ~f =
+  let open Result.Let_syntax in
+  List.fold_right xs ~init:(return init) ~f:(fun x acc ->
+      let%bind acc = acc in
+      f x acc)
+;;
