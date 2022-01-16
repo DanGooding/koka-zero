@@ -92,4 +92,10 @@ let current_block { Mutable_state.builder; _ } =
   Llvm.insertion_block builder |> Result.Ok
 ;;
 
-let codegen_error message _state = Result.Error message
+let impossible_error message _state =
+  Codegen_error.impossible_error message |> Result.Error
+;;
+
+let unsupported_feature_error message _state =
+  Codegen_error.unsupported_feature_error message |> Result.Error
+;;
