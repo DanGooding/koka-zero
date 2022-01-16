@@ -401,7 +401,30 @@ let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
          get_evidence_handler
          (Array.of_list [ evidence ])
          "handler")
+  | EPS.Expr.Impure_built_in impure -> compile_impure_built_in impure ~runtime
   | _ -> failwith "not implemented"
  (* disable fragile-match *)
  [@@warning "-4"]
+
+and compile_impure_built_in
+    : EPS.Expr.impure_built_in -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+  =
+ fun impure ~runtime ->
+  let open Codegen.Let_syntax in
+  match impure with
+  | EPS.Expr.Impure_print_int e ->
+    let%bind v = compile_expr e ~runtime in
+    let%bind i = dereference_int v in
+    let { Runtime.print_int; _ } = runtime in
+    let%bind _void =
+      Codegen.use_builder
+        (Llvm.build_call print_int (Array.of_list [ i ]) "void")
+    in
+    heap_store_unit ~runtime
+  | EPS.Expr.Impure_read_int ->
+    let { Runtime.read_int; _ } = runtime in
+    let%bind i =
+      Codegen.use_builder (Llvm.build_call read_int (Array.of_list []) "i")
+    in
+    heap_store_int i ~runtime
 ;;
