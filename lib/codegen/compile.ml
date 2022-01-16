@@ -348,14 +348,13 @@ let compile_select_operation
     :  Effect_label.t -> op_name:Variable.t -> Llvm.llvalue
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun label ~op_name handler_opaque_pointer ~effect_reprs ->
+ fun label ~op_name handler_ptr ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind repr = lookup_effect_repr effect_reprs label in
   let { Effect_repr.hnd_type; operation_indices; _ } = repr in
   let hnd_ptr_type = Llvm.pointer_type hnd_type in
   let%bind handler =
-    Codegen.use_builder
-      (Llvm.build_bitcast handler_opaque_pointer hnd_ptr_type "hnd_ptr")
+    Codegen.use_builder (Llvm.build_bitcast handler_ptr hnd_ptr_type "hnd_ptr")
   in
   let%bind op_index =
     match Map.find operation_indices op_name with
@@ -370,11 +369,11 @@ let compile_select_operation
       Codegen.impossible_error message
   in
   (* pointer into the struct - of type [op_clause**] *)
-  let%bind op_clause_ptr =
+  let%bind op_clause_field_ptr =
     Codegen.use_builder (Llvm.build_struct_gep handler op_index "op_clause_ptr")
   in
   let%bind opaque_pointer = Types.opaque_pointer in
-  dereference op_clause_ptr opaque_pointer "op_clause"
+  dereference op_clause_field_ptr opaque_pointer "op_clause"
 ;;
 
 (** produces code to evaluate the given expression and store its value to the
@@ -412,16 +411,16 @@ let rec compile_expr
     in
     heap_store_marker m ~runtime
   | EPS.Expr.Markers_equal (e1, e2) ->
-    let%bind v1 = compile_expr e1 ~runtime ~effect_reprs in
-    let%bind v2 = compile_expr e2 ~runtime ~effect_reprs in
-    let%bind m1 = dereference_marker v1 in
-    let%bind m2 = dereference_marker v2 in
+    let%bind marker1_ptr = compile_expr e1 ~runtime ~effect_reprs in
+    let%bind marker2_ptr = compile_expr e2 ~runtime ~effect_reprs in
+    let%bind marker1 = dereference_marker marker1_ptr in
+    let%bind marker2 = dereference_marker marker2_ptr in
     let { Runtime.markers_equal; _ } = runtime in
     let%bind eq =
       Codegen.use_builder
         (Llvm.build_call
            markers_equal
-           (Array.of_list [ m1; m2 ])
+           (Array.of_list [ marker1; marker2 ])
            "markers_equal")
     in
     heap_store_bool eq ~runtime
@@ -431,10 +430,8 @@ let rec compile_expr
     let%bind label = const_label id in
     heap_store_label label ~runtime
   | EPS.Expr.Select_operation (label, op_name, e_handler) ->
-    let%bind handler_opaque_pointer =
-      compile_expr e_handler ~runtime ~effect_reprs
-    in
-    compile_select_operation label ~op_name handler_opaque_pointer ~effect_reprs
+    let%bind handler_ptr = compile_expr e_handler ~runtime ~effect_reprs in
+    compile_select_operation label ~op_name handler_ptr ~effect_reprs
   | EPS.Expr.Nil_evidence_vector ->
     let { Runtime.nil_evidence_vector; _ } = runtime in
     Codegen.use_builder
