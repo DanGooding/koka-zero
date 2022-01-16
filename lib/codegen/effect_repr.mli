@@ -7,6 +7,7 @@ type t =
         (** value used as the rumtime representation of this effect label *)
   ; hnd_type : Llvm.lltype
         (** struct representing a handler - holds one clause per operation *)
-  ; operation_indices : int Variable.Map.t
-        (** field indices of operations in the [hnd_type] struct *)
+  ; operations : Variable.t list
+        (** the operations of this effect, in the order they appear as fields in
+            the [hnd_type] struct *)
   }

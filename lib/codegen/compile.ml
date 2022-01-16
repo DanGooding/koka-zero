@@ -2,6 +2,9 @@ open Core
 open Import
 module EPS = Koka_zero_evidence_translation.Evidence_passing_syntax
 
+(* TODO: need a type system for telling when llvalues are
+   pointers(opaque/typed)/values/*)
+
 (** convert a [Varaible.t] to a string usable as symbol name (i.e. correctly
     namespaced) *)
 let symbol_of_variable : Variable.t -> string = function
@@ -34,10 +37,6 @@ let lookup_effect_repr
     Codegen.impossible_error message
 ;;
 
-(* TODO: need a type system for telling when llvalues are
-   pointers(opaque/typed)/values/*)
-
-(* TODO: these are not heap allocated - make that obvious *)
 let const_int : int -> Llvm.llvalue Codegen.t =
  fun i ->
   let open Codegen.Let_syntax in
@@ -351,14 +350,17 @@ let compile_select_operation
  fun label ~op_name handler_ptr ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind repr = lookup_effect_repr effect_reprs label in
-  let { Effect_repr.hnd_type; operation_indices; _ } = repr in
+  let { Effect_repr.hnd_type; operations; _ } = repr in
   let hnd_ptr_type = Llvm.pointer_type hnd_type in
   let%bind handler =
     Codegen.use_builder (Llvm.build_bitcast handler_ptr hnd_ptr_type "hnd_ptr")
   in
   let%bind op_index =
-    match Map.find operation_indices op_name with
-    | Some op_index -> return op_index
+    match
+      List.findi operations ~f:(fun _i op_name' ->
+          Variable.(op_name = op_name'))
+    with
+    | Some (op_index, _op_name) -> return op_index
     | None ->
       let message =
         sprintf
@@ -429,6 +431,17 @@ let rec compile_expr
     let { Effect_repr.id; _ } = repr in
     let%bind label = const_label id in
     heap_store_label label ~runtime
+  | EPS.Expr.Construct_handler
+      { handled_effect
+      ; operation_clauses = operation_clause_exprs
+      ; return_clause
+      } ->
+    compile_construct_handler
+      handled_effect
+      operation_clause_exprs
+      return_clause
+      ~runtime
+      ~effect_reprs
   | EPS.Expr.Select_operation (label, op_name, e_handler) ->
     let%bind handler_ptr = compile_expr e_handler ~runtime ~effect_reprs in
     compile_select_operation label ~op_name handler_ptr ~effect_reprs
@@ -484,6 +497,47 @@ let rec compile_expr
  (* disable fragile-match *)
  [@@warning "-4"]
 
+and compile_construct_handler
+    :  Effect_label.t -> EPS.Expr.t Variable.Map.t -> EPS.Expr.t option
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> Llvm.llvalue Codegen.t
+  =
+ fun handled_effect operation_clause_exprs return_clause ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  let%bind repr = lookup_effect_repr effect_reprs handled_effect in
+  let { Effect_repr.hnd_type; operations; _ } = repr in
+  let%bind (operation_clauses_and_names : (Llvm.llvalue * string) list) =
+    List.map operations ~f:(fun op_name ->
+        let%bind e_clause =
+          match Map.find operation_clause_exprs op_name with
+          | Some e_clause -> return e_clause
+          | None ->
+            let message =
+              sprintf
+                "missing operation %s in handler for effect %s"
+                (Variable.to_string_user op_name)
+                (Effect_label.to_string handled_effect)
+            in
+            Codegen.impossible_error message
+        in
+        let%map clause = compile_expr e_clause ~runtime ~effect_reprs in
+        (* having spaces, brackets etc is fine *)
+        let register_name = Variable.to_string_user op_name in
+        clause, register_name)
+    |> Codegen.all
+  in
+  let%bind () =
+    match return_clause with
+    | None -> return ()
+    | Some _ -> Codegen.unsupported_feature_error "return clause in handler"
+  in
+  let%bind handler_ptr = heap_allocate hnd_type ~runtime in
+  let%bind () =
+    compile_populate_struct handler_ptr operation_clauses_and_names
+  in
+  let%bind opaque_pointer = Types.opaque_pointer in
+  Codegen.use_builder (Llvm.build_bitcast handler_ptr opaque_pointer "hnd_ptr")
+
 and compile_impure_built_in
     :  EPS.Expr.impure_built_in -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
@@ -515,21 +569,15 @@ let compile_effect_decl
   let open Codegen.Let_syntax in
   (* result may be sorted anyway, but this makes intent obvious and is less
      brittle *)
-  let operation_order =
+  let operations =
     Set.to_list operations |> List.sort ~compare:Variable.compare
   in
   let%bind opaque_pointer = Types.opaque_pointer in
-  let fields =
-    Array.of_list_map operation_order ~f:(fun _op -> opaque_pointer)
-  in
+  let fields = Array.of_list_map operations ~f:(fun _op -> opaque_pointer) in
   let%map hnd_type =
     Codegen.use_context (fun context -> Llvm.struct_type context fields)
   in
-  let operation_indices =
-    List.mapi operation_order ~f:(fun i op -> op, i)
-    |> Variable.Map.of_alist_exn
-  in
-  { Effect_repr.id; hnd_type; operation_indices }
+  { Effect_repr.id; hnd_type; operations }
 ;;
 
 let compile_effect_decls
