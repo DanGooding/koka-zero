@@ -17,7 +17,8 @@ let register_name_of_variable : Variable.t -> string = function
   | Variable.Generated s -> "g_" ^ s
 ;;
 
-(** get an effect's representation, or fail with a codegen error if not found *)
+(** get an effect's representation, or fail with a codegen impossible_error if
+    not found *)
 let lookup_effect_repr
     :  Effect_repr.t Effect_label.Map.t -> Effect_label.t
     -> Effect_repr.t Codegen.t
@@ -30,7 +31,7 @@ let lookup_effect_repr
     let message =
       sprintf "unbound effect label %s" (Effect_label.to_string label)
     in
-    Codegen.codegen_error message
+    Codegen.impossible_error message
 ;;
 
 (* TODO: need a type system for telling when llvalues are
@@ -366,7 +367,7 @@ let compile_select_operation
           (Variable.to_string_user op_name)
           (Effect_label.to_string label)
       in
-      Codegen.codegen_error message
+      Codegen.impossible_error message
   in
   (* pointer into the struct - of type [op_clause**] *)
   let%bind op_clause_ptr =
