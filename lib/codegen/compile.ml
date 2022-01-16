@@ -17,6 +17,22 @@ let register_name_of_variable : Variable.t -> string = function
   | Variable.Generated s -> "g_" ^ s
 ;;
 
+(** get an effect's representation, or fail with a codegen error if not found *)
+let lookup_effect_repr
+    :  Effect_repr.t Effect_label.Map.t -> Effect_label.t
+    -> Effect_repr.t Codegen.t
+  =
+ fun reprs label ->
+  let open Codegen.Let_syntax in
+  match Map.find reprs label with
+  | Some repr -> return repr
+  | None ->
+    let message =
+      sprintf "unbound effect label %s" (Effect_label.to_string label)
+    in
+    Codegen.codegen_error message
+;;
+
 (* TODO: need a type system for telling when llvalues are
    pointers(opaque/typed)/values/*)
 
@@ -63,6 +79,13 @@ let const_tag : int -> Llvm.llvalue Codegen.t =
 let const_ctl_pure_tag : Llvm.llvalue Codegen.t = const_tag 0
 let const_ctl_yield_tag : Llvm.llvalue Codegen.t = const_tag 1
 
+let const_label : int -> Llvm.llvalue Codegen.t =
+ fun i ->
+  let open Codegen.Let_syntax in
+  let%map label_type = Types.label in
+  Llvm.const_int label_type i
+;;
+
 (** [heap_allocate t ~runtime] generates code which allocates space on the heap
     for a [t], and returns a typed pointer to it (a [t*]) *)
 let heap_allocate : Llvm.lltype -> runtime:Runtime.t -> Llvm.llvalue Codegen.t =
@@ -91,14 +114,22 @@ let heap_store
   Codegen.use_builder (Llvm.build_bitcast t_ptr opaque_pointer "heap_ptr")
 ;;
 
+(** helper function for building [heap_store_t] functions *)
+let heap_store_aux
+    :  Llvm.lltype Codegen.t -> Llvm.llvalue -> runtime:Runtime.t
+    -> Llvm.llvalue Codegen.t
+  =
+ fun t v ~runtime ->
+  let open Codegen.Let_syntax in
+  let%bind t = t in
+  heap_store t v ~runtime
+;;
+
 (** [heap_store_int i ~runtime] allocates memory to hold a [Types.int] and
     stores [i] there. It returns the address as a [Types.opaque_pointer] *)
 let heap_store_int : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
- fun i ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind type_int = Types.int in
-  heap_store type_int i ~runtime
+  heap_store_aux Types.int
 ;;
 
 (* TODO: could just allocate [true] and [false] at program start, then reuse
@@ -106,10 +137,7 @@ let heap_store_int : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
 let heap_store_bool
     : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
- fun b ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind type_bool = Types.bool in
-  heap_store type_bool b ~runtime
+  heap_store_aux Types.bool
 ;;
 
 let heap_store_unit : runtime:Runtime.t -> Llvm.llvalue Codegen.t =
@@ -123,10 +151,13 @@ let heap_store_unit : runtime:Runtime.t -> Llvm.llvalue Codegen.t =
 let heap_store_marker
     : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
- fun m ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind type_marker = Types.marker in
-  heap_store type_marker m ~runtime
+  heap_store_aux Types.marker
+;;
+
+let heap_store_label
+    : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+  =
+  heap_store_aux Types.label
 ;;
 
 (** [dereference v t name] dereferences an [opaque_pointer] [v] as a [t]. [name]
@@ -309,30 +340,68 @@ let compile_construct_yield
   Codegen.use_builder (Llvm.build_bitcast ctl_yield_ptr opaque_ptr "ptr")
 ;;
 
+(** [compile_select_operation label ~op_name v ~effect_reprs] generates code
+    which selects the operation clause for [op_name] from [v] (a handler for the
+    effect [label] of type [Types.unique_pointer]) *)
+let compile_select_operation
+    :  Effect_label.t -> op_name:Variable.t -> Llvm.llvalue
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+  =
+ fun label ~op_name handler_opaque_pointer ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  let%bind repr = lookup_effect_repr effect_reprs label in
+  let { Effect_repr.hnd_type; operation_indices; _ } = repr in
+  let hnd_ptr_type = Llvm.pointer_type hnd_type in
+  let%bind handler =
+    Codegen.use_builder
+      (Llvm.build_bitcast handler_opaque_pointer hnd_ptr_type "hnd_ptr")
+  in
+  let%bind op_index =
+    match Map.find operation_indices op_name with
+    | Some op_index -> return op_index
+    | None ->
+      let message =
+        sprintf
+          "unbound operation %s for effect %s"
+          (Variable.to_string_user op_name)
+          (Effect_label.to_string label)
+      in
+      Codegen.codegen_error message
+  in
+  (* pointer into the struct - of type [op_clause**] *)
+  let%bind op_clause_ptr =
+    Codegen.use_builder (Llvm.build_struct_gep handler op_index "op_clause_ptr")
+  in
+  let%bind opaque_pointer = Types.opaque_pointer in
+  dereference op_clause_ptr opaque_pointer "op_clause"
+;;
+
 (** produces code to evaluate the given expression and store its value to the
     heap. The returned [llvalue] is the [Types.opaque_pointer] to this value. *)
-let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+let rec compile_expr
+    :  EPS.Expr.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun e ~runtime ->
+ fun e ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   match e with
   | EPS.Expr.Literal lit -> compile_literal lit ~runtime
   | EPS.Expr.Unary_operator (op, e) ->
-    let%bind arg = compile_expr e ~runtime in
+    let%bind arg = compile_expr e ~runtime ~effect_reprs in
     compile_unary_operator arg op ~runtime
   | EPS.Expr.Operator (e_left, op, e_right) ->
-    let%bind left = compile_expr e_left ~runtime in
-    let%bind right = compile_expr e_right ~runtime in
+    let%bind left = compile_expr e_left ~runtime ~effect_reprs in
+    let%bind right = compile_expr e_right ~runtime ~effect_reprs in
     compile_binary_operator ~left op ~right ~runtime
   | EPS.Expr.Construct_pure e ->
-    let%bind x = compile_expr e ~runtime in
+    let%bind x = compile_expr e ~runtime ~effect_reprs in
     compile_construct_pure x ~runtime
   | EPS.Expr.Construct_yield
       { marker = e_marker; op_clause = e_op_clause; resumption = e_resumption }
     ->
-    let%bind marker = compile_expr e_marker ~runtime in
-    let%bind op_clause = compile_expr e_op_clause ~runtime in
-    let%bind resumption = compile_expr e_resumption ~runtime in
+    let%bind marker = compile_expr e_marker ~runtime ~effect_reprs in
+    let%bind op_clause = compile_expr e_op_clause ~runtime ~effect_reprs in
+    let%bind resumption = compile_expr e_resumption ~runtime ~effect_reprs in
     compile_construct_yield ~marker ~op_clause ~resumption ~runtime
   | EPS.Expr.Fresh_marker ->
     let { Runtime.fresh_marker; _ } = runtime in
@@ -342,8 +411,8 @@ let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
     in
     heap_store_marker m ~runtime
   | EPS.Expr.Markers_equal (e1, e2) ->
-    let%bind v1 = compile_expr e1 ~runtime in
-    let%bind v2 = compile_expr e2 ~runtime in
+    let%bind v1 = compile_expr e1 ~runtime ~effect_reprs in
+    let%bind v2 = compile_expr e2 ~runtime ~effect_reprs in
     let%bind m1 = dereference_marker v1 in
     let%bind m2 = dereference_marker v2 in
     let { Runtime.markers_equal; _ } = runtime in
@@ -355,6 +424,16 @@ let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
            "markers_equal")
     in
     heap_store_bool eq ~runtime
+  | EPS.Expr.Effect_label label ->
+    let%bind repr = lookup_effect_repr effect_reprs label in
+    let { Effect_repr.id; _ } = repr in
+    let%bind label = const_label id in
+    heap_store_label label ~runtime
+  | EPS.Expr.Select_operation (label, op_name, e_handler) ->
+    let%bind handler_opaque_pointer =
+      compile_expr e_handler ~runtime ~effect_reprs
+    in
+    compile_select_operation label ~op_name handler_opaque_pointer ~effect_reprs
   | EPS.Expr.Nil_evidence_vector ->
     let { Runtime.nil_evidence_vector; _ } = runtime in
     Codegen.use_builder
@@ -365,25 +444,25 @@ let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
       ; handler = e_handler
       ; vector_tail = e_vector_tail
       } ->
-    let%bind label_ptr = compile_expr e_label ~runtime in
+    let%bind label_ptr = compile_expr e_label ~runtime ~effect_reprs in
     let%bind label = dereference_label label_ptr in
-    let%bind marker_ptr = compile_expr e_marker ~runtime in
+    let%bind marker_ptr = compile_expr e_marker ~runtime ~effect_reprs in
     let%bind marker = dereference_marker marker_ptr in
-    let%bind handler = compile_expr e_handler ~runtime in
-    let%bind vector_tail = compile_expr e_vector_tail ~runtime in
+    let%bind handler = compile_expr e_handler ~runtime ~effect_reprs in
+    let%bind vector_tail = compile_expr e_vector_tail ~runtime ~effect_reprs in
     let { Runtime.cons_evidence_vector; _ } = runtime in
     let args = Array.of_list [ label; marker; handler; vector_tail ] in
     Codegen.use_builder
       (Llvm.build_call cons_evidence_vector args "extended_vector")
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
-    let%bind label_ptr = compile_expr e_label ~runtime in
+    let%bind label_ptr = compile_expr e_label ~runtime ~effect_reprs in
     let%bind label = dereference_label label_ptr in
-    let%bind vector = compile_expr e_vector ~runtime in
+    let%bind vector = compile_expr e_vector ~runtime ~effect_reprs in
     let { Runtime.evidence_vector_lookup; _ } = runtime in
     let args = Array.of_list [ vector; label ] in
     Codegen.use_builder (Llvm.build_call evidence_vector_lookup args "evidence")
   | EPS.Expr.Get_evidence_marker e ->
-    let%bind evidence = compile_expr e ~runtime in
+    let%bind evidence = compile_expr e ~runtime ~effect_reprs in
     let { Runtime.get_evidence_marker; _ } = runtime in
     let%bind marker =
       Codegen.use_builder
@@ -394,26 +473,28 @@ let rec compile_expr : EPS.Expr.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
     in
     heap_store_marker marker ~runtime
   | EPS.Expr.Get_evidence_handler e ->
-    let%bind evidence = compile_expr e ~runtime in
+    let%bind evidence = compile_expr e ~runtime ~effect_reprs in
     let { Runtime.get_evidence_handler; _ } = runtime in
     Codegen.use_builder
       (Llvm.build_call
          get_evidence_handler
          (Array.of_list [ evidence ])
          "handler")
-  | EPS.Expr.Impure_built_in impure -> compile_impure_built_in impure ~runtime
+  | EPS.Expr.Impure_built_in impure ->
+    compile_impure_built_in impure ~runtime ~effect_reprs
   | _ -> failwith "not implemented"
  (* disable fragile-match *)
  [@@warning "-4"]
 
 and compile_impure_built_in
-    : EPS.Expr.impure_built_in -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+    :  EPS.Expr.impure_built_in -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun impure ~runtime ->
+ fun impure ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   match impure with
   | EPS.Expr.Impure_print_int e ->
-    let%bind v = compile_expr e ~runtime in
+    let%bind v = compile_expr e ~runtime ~effect_reprs in
     let%bind i = dereference_int v in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
@@ -427,4 +508,47 @@ and compile_impure_built_in
       Codegen.use_builder (Llvm.build_call read_int (Array.of_list []) "i")
     in
     heap_store_int i ~runtime
+;;
+
+let compile_effect_decl
+    : EPS.Program.Effect_decl.t -> id:int -> Effect_repr.t Codegen.t
+  =
+ fun { EPS.Program.Effect_decl.operations; name = _ } ~id ->
+  let open Codegen.Let_syntax in
+  (* result may be sorted anyway, but this makes intent obvious and is less
+     brittle *)
+  let operation_order =
+    Set.to_list operations |> List.sort ~compare:Variable.compare
+  in
+  let%bind opaque_pointer = Types.opaque_pointer in
+  let fields =
+    Array.of_list_map operation_order ~f:(fun _op -> opaque_pointer)
+  in
+  let%map hnd_type =
+    Codegen.use_context (fun context -> Llvm.struct_type context fields)
+  in
+  let operation_indices =
+    List.mapi operation_order ~f:(fun i op -> op, i)
+    |> Variable.Map.of_alist_exn
+  in
+  { Effect_repr.id; hnd_type; operation_indices }
+;;
+
+let compile_effect_decls
+    :  EPS.Program.Effect_decl.t list
+    -> Effect_repr.t Effect_label.Map.t Codegen.t
+  =
+ fun decls ->
+  let open Codegen.Let_syntax in
+  let initial = 0, Effect_label.Map.empty in
+  let%map _next_label_id, effect_reprs =
+    List.fold decls ~init:(return initial) ~f:(fun acc decl ->
+        let%bind next_label_id, effect_reprs = acc in
+        let { EPS.Program.Effect_decl.name; _ } = decl in
+        let%map repr = compile_effect_decl decl ~id:next_label_id in
+        let next_label_id = next_label_id + 1 in
+        let effect_reprs = Map.add_exn effect_reprs ~key:name ~data:repr in
+        next_label_id, effect_reprs)
+  in
+  effect_reprs
 ;;
