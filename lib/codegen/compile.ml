@@ -588,8 +588,10 @@ let compile_effect_decls
   let open Codegen.Let_syntax in
   let initial = 0, Effect_label.Map.empty in
   let%map _next_label_id, effect_reprs =
-    List.fold decls ~init:(return initial) ~f:(fun acc decl ->
-        let%bind next_label_id, effect_reprs = acc in
+    Codegen.list_fold
+      decls
+      ~init:initial
+      ~f:(fun (next_label_id, effect_reprs) decl ->
         let { EPS.Program.Effect_decl.name; _ } = decl in
         let%map repr = compile_effect_decl decl ~id:next_label_id in
         let next_label_id = next_label_id + 1 in
