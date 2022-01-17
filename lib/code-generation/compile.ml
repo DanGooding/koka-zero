@@ -310,8 +310,15 @@ let compile_construct_pure
   =
  fun x ~runtime ->
   let open Codegen.Let_syntax in
+  let%bind ctl_type = Types.ctl in
+  (* always allocate a [ctl], then cast, to be sure of correct alignment *)
+  let%bind ctl_ptr = heap_allocate ctl_type "ctl" ~runtime in
   let%bind ctl_pure_type = Types.ctl_pure in
-  let%bind ctl_pure_ptr = heap_allocate ctl_pure_type "ctl_pure" ~runtime in
+  let ctl_pure_ptr_type = Llvm.pointer_type ctl_pure_type in
+  let%bind ctl_pure_ptr =
+    Codegen.use_builder
+      (Llvm.build_bitcast ctl_ptr ctl_pure_ptr_type "ctl_pure_ptr")
+  in
   let%bind tag = const_ctl_pure_tag in
   let%bind () =
     compile_populate_struct ctl_pure_ptr [ tag, "tag"; x, "value" ]
@@ -329,8 +336,14 @@ let compile_construct_yield
   =
  fun ~marker ~op_clause ~resumption ~runtime ->
   let open Codegen.Let_syntax in
+  let%bind ctl_type = Types.ctl in
+  let%bind ctl_ptr = heap_allocate ctl_type "ctl" ~runtime in
   let%bind ctl_yield_type = Types.ctl_yield in
-  let%bind ctl_yield_ptr = heap_allocate ctl_yield_type "ctl_yield" ~runtime in
+  let ctl_yield_ptr_type = Llvm.pointer_type ctl_yield_type in
+  let%bind ctl_yield_ptr =
+    Codegen.use_builder
+      (Llvm.build_bitcast ctl_ptr ctl_yield_ptr_type "ctl_yield_ptr")
+  in
   let%bind tag = const_ctl_yield_tag in
   let%bind () =
     compile_populate_struct

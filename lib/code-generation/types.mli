@@ -10,7 +10,9 @@ val unit : Llvm.lltype Codegen.t
 val variant_tag : Llvm.lltype Codegen.t
 
 (** control monad variant, with unknown contents. This can be cast to [ctl_pure]
-    or [ctl_yield] depending on tag *)
+    or [ctl_yield] depending on tag. Only pointers to this type should be
+    allocated - A [ctl_pure] is smaller so may get aligned wrongly to be cast to
+    a [ctl] *)
 val ctl : Llvm.lltype Codegen.t
 
 (** control monad 'pure' variant: [Pure { tag; value }] *)
