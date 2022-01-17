@@ -1,0 +1,140 @@
+open Core
+open Import
+
+let symbol_of_variable = function
+  | Variable.User s -> "kku_" ^ s
+  | Variable.Language s -> "kkl_" ^ s
+  | Variable.Generated s -> "kkg_" ^ s
+;;
+
+let register_name_of_variable = function
+  | Variable.User s -> "u_" ^ s
+  | Variable.Language s -> "l_" ^ s
+  | Variable.Generated s -> "g_" ^ s
+;;
+
+let const_int : int -> Llvm.llvalue Codegen.t =
+ fun i ->
+  let open Codegen.Let_syntax in
+  let%map int_type = Types.int in
+  Llvm.const_int int_type i
+;;
+
+let const_false : Llvm.llvalue Codegen.t =
+  let open Codegen.Let_syntax in
+  let%map bool_type = Types.bool in
+  (* all zeros *)
+  Llvm.const_null bool_type
+;;
+
+let const_true : Llvm.llvalue Codegen.t =
+  let open Codegen.Let_syntax in
+  let%map bool_type = Types.bool in
+  Llvm.const_int bool_type 1
+;;
+
+let const_bool : bool -> Llvm.llvalue Codegen.t =
+ fun b -> if b then const_true else const_false
+;;
+
+(* unit carries no information, so is only kept for uniformity *)
+let const_unit =
+  let open Codegen.Let_syntax in
+  let%map unit_type = Types.unit in
+  Llvm.const_null unit_type
+;;
+
+let const_tag i =
+  let open Codegen.Let_syntax in
+  let%map tag_type = Types.variant_tag in
+  Llvm.const_int tag_type i
+;;
+
+let const_ctl_pure_tag = const_tag 0
+let const_ctl_yield_tag = const_tag 1
+
+let const_label i =
+  let open Codegen.Let_syntax in
+  let%map label_type = Types.label in
+  Llvm.const_int label_type i
+;;
+
+let heap_allocate t name ~runtime =
+  let open Codegen.Let_syntax in
+  let size = Llvm.size_of t in
+  let { Runtime.malloc; _ } = runtime in
+  let%bind heap_ptr =
+    Codegen.use_builder
+      (Llvm.build_call malloc (Array.of_list [ size ]) "heap_ptr")
+  in
+  let t_ptr_type = Llvm.pointer_type t in
+  Codegen.use_builder (Llvm.build_bitcast heap_ptr t_ptr_type (name ^ "_ptr"))
+;;
+
+let heap_store t v name ~runtime =
+  let open Codegen.Let_syntax in
+  let%bind t_ptr = heap_allocate t name ~runtime in
+  let%bind _store = Codegen.use_builder (Llvm.build_store v t_ptr) in
+  let%bind opaque_pointer = Types.opaque_pointer in
+  Codegen.use_builder (Llvm.build_bitcast t_ptr opaque_pointer "heap_ptr")
+;;
+
+let heap_store_aux
+    :  Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> runtime:Runtime.t
+    -> Llvm.llvalue Codegen.t
+  =
+ fun t name v ~runtime ->
+  let open Codegen.Let_syntax in
+  let%bind t = t in
+  heap_store t v name ~runtime
+;;
+
+let heap_store_int = heap_store_aux Types.int "int"
+let heap_store_bool = heap_store_aux Types.bool "bool"
+
+let heap_store_unit ~runtime =
+  let open Codegen.Let_syntax in
+  let%bind u = const_unit in
+  let%bind type_unit = Types.unit in
+  heap_store type_unit u "unit" ~runtime
+;;
+
+let heap_store_marker = heap_store_aux Types.marker "marker"
+let heap_store_label = heap_store_aux Types.label "label"
+
+let dereference ptr t name =
+  let open Codegen.Let_syntax in
+  let t_ptr_type = Llvm.pointer_type t in
+  let%bind t_ptr =
+    Codegen.use_builder (Llvm.build_bitcast ptr t_ptr_type (name ^ "ptr"))
+  in
+  Codegen.use_builder (Llvm.build_load t_ptr name)
+;;
+
+let dereference_aux
+    : Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> Llvm.llvalue Codegen.t
+  =
+ fun t name ptr ->
+  let open Codegen.Let_syntax in
+  let%bind t = t in
+  dereference ptr t name
+;;
+
+let dereference_int = dereference_aux Types.int "int"
+let dereference_bool = dereference_aux Types.bool "bool"
+let dereference_marker = dereference_aux Types.marker "marker"
+let dereference_label = dereference_aux Types.label "label"
+
+let compile_populate_struct
+    : Llvm.llvalue -> (Llvm.llvalue * string) list -> unit Codegen.t
+  =
+ fun struct_ptr members ->
+  let open Codegen.Let_syntax in
+  List.mapi members ~f:(fun i (x, name) ->
+      let%bind member_ptr =
+        Codegen.use_builder (Llvm.build_struct_gep struct_ptr i (name ^ "_p"))
+      in
+      let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
+      ())
+  |> Codegen.all_unit
+;;
