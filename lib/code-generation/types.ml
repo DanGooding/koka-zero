@@ -34,16 +34,12 @@ let ctl_pure =
   let open Codegen.Let_syntax in
   let%bind variant_tag = variant_tag in
   let%bind opaque_pointer = opaque_pointer in
-  let%bind padding = padding in
   let value = opaque_pointer in
-  let padding_array = Llvm.array_type padding (8 * 2) in
-  let fields = [ variant_tag; value; padding_array ] in
+  let fields = [ variant_tag; value ] in
   Codegen.use_context (fun context ->
       Llvm.struct_type context (Array.of_list fields))
 ;;
 
-(* TODO: somehow ensure these are all the same size! bitcasts _should_ be
-   rejected by assert_valid_function if they are different sizes *)
 let ctl =
   let open Codegen.Let_syntax in
   let%bind variant_tag = variant_tag in
