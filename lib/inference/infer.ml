@@ -244,6 +244,17 @@ and infer_fix_lambda
  fun (f, lambda) ~env ~effect_env ->
   let open Inference.Let_syntax in
   let xs, _e_body = lambda in
+  let%bind () =
+    if List.mem xs f ~equal:Variable.equal
+    then (
+      let message =
+        sprintf
+          "recursive function's name is shadowed by own parameter %s"
+          (Variable.to_string_user f)
+      in
+      Inference.type_error message)
+    else return ()
+  in
   (* expect `e` (which can refer to itself as `f`) to have type: *)
   (* `t_f_args -> eff_f t_f_result | <>` *)
   let%bind (t_f_args : Type.Mono.t list) =

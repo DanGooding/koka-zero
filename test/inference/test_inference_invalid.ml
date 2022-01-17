@@ -38,6 +38,21 @@ let%expect_test "if statement's branches must have the same type" =
       (location ()))) |}]
 ;;
 
+let%expect_test "fix lambdas name cannot collide with own parameters" =
+  let expr =
+    E.Value
+      (E.Fix_lambda
+         ( Variable.of_user "f"
+         , ([ Variable.of_user "g"; Variable.of_user "f" ], UE.lit_unit) ))
+  in
+  Util.print_expr_inference_result expr;
+  [%expect {|
+    (Error
+     ((kind Type_error)
+      (message "recursive function's name is shadowed by own parameter f")
+      (location ())))|}]
+;;
+
 let%expect_test "handler must include all operations" =
   let declarations = [ M.Decl.Effect Util.Expr.decl_state ] in
   let state_handler_set_only =
