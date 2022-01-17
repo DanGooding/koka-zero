@@ -5,21 +5,6 @@ module EPS = Koka_zero_evidence_translation.Evidence_passing_syntax
 (* TODO: need a type system for telling when llvalues are
    pointers(opaque/typed)/values/*)
 
-(** convert a [Varaible.t] to a string usable as symbol name (i.e. correctly
-    namespaced) *)
-let symbol_of_variable : Variable.t -> string = function
-  | Variable.User s -> "kku_" ^ s
-  | Variable.Language s -> "kkl_" ^ s
-  | Variable.Generated s -> "kkg_" ^ s
-;;
-
-(** convert a [Variable.t] to a string usable as a register name *)
-let register_name_of_variable : Variable.t -> string = function
-  | Variable.User s -> "u_" ^ s
-  | Variable.Language s -> "l_" ^ s
-  | Variable.Generated s -> "g_" ^ s
-;;
-
 (** get an effect's representation, or fail with a codegen impossible_error if
     not found *)
 let lookup_effect_repr
@@ -37,174 +22,6 @@ let lookup_effect_repr
     Codegen.impossible_error message
 ;;
 
-let const_int : int -> Llvm.llvalue Codegen.t =
- fun i ->
-  let open Codegen.Let_syntax in
-  let%map int_type = Types.int in
-  Llvm.const_int int_type i
-;;
-
-let const_false : Llvm.llvalue Codegen.t =
-  let open Codegen.Let_syntax in
-  let%map bool_type = Types.bool in
-  (* all zeros *)
-  Llvm.const_null bool_type
-;;
-
-let const_true : Llvm.llvalue Codegen.t =
-  let open Codegen.Let_syntax in
-  let%map bool_type = Types.bool in
-  Llvm.const_int bool_type 1
-;;
-
-let const_bool : bool -> Llvm.llvalue Codegen.t =
- fun b -> if b then const_true else const_false
-;;
-
-(* unit carries no information, so is only kept for uniformity *)
-let const_unit : Llvm.llvalue Codegen.t =
-  let open Codegen.Let_syntax in
-  let%map unit_type = Types.unit in
-  Llvm.const_null unit_type
-;;
-
-(** [const_tag i] generates the tag constant for branch [i] of a variant type *)
-let const_tag : int -> Llvm.llvalue Codegen.t =
- fun i ->
-  let open Codegen.Let_syntax in
-  let%map tag_type = Types.variant_tag in
-  Llvm.const_int tag_type i
-;;
-
-let const_ctl_pure_tag : Llvm.llvalue Codegen.t = const_tag 0
-let const_ctl_yield_tag : Llvm.llvalue Codegen.t = const_tag 1
-
-let const_label : int -> Llvm.llvalue Codegen.t =
- fun i ->
-  let open Codegen.Let_syntax in
-  let%map label_type = Types.label in
-  Llvm.const_int label_type i
-;;
-
-(** [heap_allocate t name ~runtime] generates code which allocates space on the
-    heap for a [t], and returns a typed pointer to it (a [t*]). [name] is used
-    as a stem for register names *)
-let heap_allocate
-    : Llvm.lltype -> string -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-  =
- fun t name ~runtime ->
-  let open Codegen.Let_syntax in
-  let size = Llvm.size_of t in
-  let { Runtime.malloc; _ } = runtime in
-  let%bind heap_ptr =
-    Codegen.use_builder
-      (Llvm.build_call malloc (Array.of_list [ size ]) "heap_ptr")
-  in
-  let t_ptr_type = Llvm.pointer_type t in
-  Codegen.use_builder (Llvm.build_bitcast heap_ptr t_ptr_type (name ^ "_ptr"))
-;;
-
-(** [heap_store t v name ~runtime] generates code which: allocates heap memory
-    for a [t], stores [v] there, and returns the pointer as a
-    [Types.opaque_pointer] *)
-let heap_store
-    :  Llvm.lltype -> Llvm.llvalue -> string -> runtime:Runtime.t
-    -> Llvm.llvalue Codegen.t
-  =
- fun t v name ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind t_ptr = heap_allocate t name ~runtime in
-  let%bind _store = Codegen.use_builder (Llvm.build_store v t_ptr) in
-  let%bind opaque_pointer = Types.opaque_pointer in
-  Codegen.use_builder (Llvm.build_bitcast t_ptr opaque_pointer "heap_ptr")
-;;
-
-(** helper function for building [heap_store_t] functions *)
-let heap_store_aux
-    :  Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> runtime:Runtime.t
-    -> Llvm.llvalue Codegen.t
-  =
- fun t name v ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind t = t in
-  heap_store t v name ~runtime
-;;
-
-(** [heap_store_int i ~runtime] allocates memory to hold a [Types.int] and
-    stores [i] there. It returns the address as a [Types.opaque_pointer] *)
-let heap_store_int : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-  =
-  heap_store_aux Types.int "int"
-;;
-
-(* TODO: could just allocate [true] and [false] at program start, then reuse
-   those *)
-let heap_store_bool
-    : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-  =
-  heap_store_aux Types.bool "bool"
-;;
-
-let heap_store_unit : runtime:Runtime.t -> Llvm.llvalue Codegen.t =
- fun ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind u = const_unit in
-  let%bind type_unit = Types.unit in
-  heap_store type_unit u "unit" ~runtime
-;;
-
-let heap_store_marker
-    : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-  =
-  heap_store_aux Types.marker "marker"
-;;
-
-let heap_store_label
-    : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-  =
-  heap_store_aux Types.label "label"
-;;
-
-(** [dereference v t name] dereferences an [opaque_pointer] [v] as a [t]. [name]
-    is used as a stem for the intermediate and final value *)
-let dereference
-    : Llvm.llvalue -> Llvm.lltype -> string -> Llvm.llvalue Codegen.t
-  =
- fun ptr t name ->
-  let open Codegen.Let_syntax in
-  let t_ptr_type = Llvm.pointer_type t in
-  let%bind t_ptr =
-    Codegen.use_builder (Llvm.build_bitcast ptr t_ptr_type (name ^ "ptr"))
-  in
-  Codegen.use_builder (Llvm.build_load t_ptr name)
-;;
-
-(** helper function for building [dereference_t] functions *)
-let dereference_aux
-    : Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> Llvm.llvalue Codegen.t
-  =
- fun t name ptr ->
-  let open Codegen.Let_syntax in
-  let%bind t = t in
-  dereference ptr t name
-;;
-
-let dereference_int : Llvm.llvalue -> Llvm.llvalue Codegen.t =
-  dereference_aux Types.int "int"
-;;
-
-let dereference_bool : Llvm.llvalue -> Llvm.llvalue Codegen.t =
-  dereference_aux Types.bool "bool"
-;;
-
-let dereference_marker : Llvm.llvalue -> Llvm.llvalue Codegen.t =
-  dereference_aux Types.marker "marker"
-;;
-
-let dereference_label : Llvm.llvalue -> Llvm.llvalue Codegen.t =
-  dereference_aux Types.label "label"
-;;
-
 (** compile a literal into code which returns a pointer to a new heap allocation
     (as a [Types.opaque_pointer]) containing that literal *)
 let compile_literal
@@ -214,12 +31,12 @@ let compile_literal
   let open Codegen.Let_syntax in
   match lit with
   | EPS.Literal.Int i ->
-    let%bind v = const_int i in
-    heap_store_int v ~runtime
+    let%bind v = Helpers.const_int i in
+    Helpers.heap_store_int v ~runtime
   | EPS.Literal.Bool b ->
-    let%bind v = const_bool b in
-    heap_store_bool v ~runtime
-  | EPS.Literal.Unit -> heap_store_unit ~runtime
+    let%bind v = Helpers.const_bool b in
+    Helpers.heap_store_bool v ~runtime
+  | EPS.Literal.Unit -> Helpers.heap_store_unit ~runtime
 ;;
 
 (** takes values which are [Types.opaque_pointer]s to the evaluated operands,
@@ -233,8 +50,8 @@ let compile_binary_operator
   let open Codegen.Let_syntax in
   match op with
   | EPS.Operator.Bool bool_op ->
-    let%bind x = dereference_bool left in
-    let%bind y = dereference_bool right in
+    let%bind x = Helpers.dereference_bool left in
+    let%bind y = Helpers.dereference_bool right in
     let%bind z =
       match bool_op with
       | EPS.Operator.Bool.And ->
@@ -242,10 +59,10 @@ let compile_binary_operator
       | EPS.Operator.Bool.Or ->
         Codegen.use_builder (Llvm.build_or x y "bool_or")
     in
-    heap_store_bool z ~runtime
+    Helpers.heap_store_bool z ~runtime
   | EPS.Operator.Int int_op ->
-    let%bind x = dereference_int left in
-    let%bind y = dereference_int right in
+    let%bind x = Helpers.dereference_int left in
+    let%bind y = Helpers.dereference_int right in
     let operation =
       match int_op with
       | EPS.Operator.Int.Plus -> `Int Llvm.build_add
@@ -266,10 +83,10 @@ let compile_binary_operator
     (match operation with
     | `Int build ->
       let%bind z = Codegen.use_builder (build x y "int_math") in
-      heap_store_int z ~runtime
+      Helpers.heap_store_int z ~runtime
     | `Bool icmp ->
       let%bind z = Codegen.use_builder (Llvm.build_icmp icmp x y "int_cmp") in
-      heap_store_bool z ~runtime)
+      Helpers.heap_store_bool z ~runtime)
 ;;
 
 let compile_unary_operator
@@ -280,26 +97,10 @@ let compile_unary_operator
   let open Codegen.Let_syntax in
   match op with
   | EPS.Operator.Unary.Bool EPS.Operator.Bool.Unary.Not ->
-    let%bind b = dereference_bool arg in
-    let%bind true_ = const_true in
+    let%bind b = Helpers.dereference_bool arg in
+    let%bind true_ = Helpers.const_true in
     let%bind not_b = Codegen.use_builder (Llvm.build_xor b true_ "not") in
-    heap_store_bool not_b ~runtime
-;;
-
-(** [compile_populate_struct p members] generates code to populate the struct
-    pointed to by [p], with the field values (and tmp names) [members] *)
-let compile_populate_struct
-    : Llvm.llvalue -> (Llvm.llvalue * string) list -> unit Codegen.t
-  =
- fun struct_ptr members ->
-  let open Codegen.Let_syntax in
-  List.mapi members ~f:(fun i (x, name) ->
-      let%bind member_ptr =
-        Codegen.use_builder (Llvm.build_struct_gep struct_ptr i (name ^ "_p"))
-      in
-      let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
-      ())
-  |> Codegen.all_unit
+    Helpers.heap_store_bool not_b ~runtime
 ;;
 
 (** [compile_construct_pure x ~runtime] produces code which heap allocates and
@@ -312,16 +113,16 @@ let compile_construct_pure
   let open Codegen.Let_syntax in
   let%bind ctl_type = Types.ctl in
   (* always allocate a [ctl], then cast, to be sure of correct alignment *)
-  let%bind ctl_ptr = heap_allocate ctl_type "ctl" ~runtime in
+  let%bind ctl_ptr = Helpers.heap_allocate ctl_type "ctl" ~runtime in
   let%bind ctl_pure_type = Types.ctl_pure in
   let ctl_pure_ptr_type = Llvm.pointer_type ctl_pure_type in
   let%bind ctl_pure_ptr =
     Codegen.use_builder
       (Llvm.build_bitcast ctl_ptr ctl_pure_ptr_type "ctl_pure_ptr")
   in
-  let%bind tag = const_ctl_pure_tag in
+  let%bind tag = Helpers.const_ctl_pure_tag in
   let%bind () =
-    compile_populate_struct ctl_pure_ptr [ tag, "tag"; x, "value" ]
+    Helpers.compile_populate_struct ctl_pure_ptr [ tag, "tag"; x, "value" ]
   in
   let%bind opaque_ptr = Types.opaque_pointer in
   Codegen.use_builder (Llvm.build_bitcast ctl_pure_ptr opaque_ptr "ptr")
@@ -337,16 +138,16 @@ let compile_construct_yield
  fun ~marker ~op_clause ~resumption ~runtime ->
   let open Codegen.Let_syntax in
   let%bind ctl_type = Types.ctl in
-  let%bind ctl_ptr = heap_allocate ctl_type "ctl" ~runtime in
+  let%bind ctl_ptr = Helpers.heap_allocate ctl_type "ctl" ~runtime in
   let%bind ctl_yield_type = Types.ctl_yield in
   let ctl_yield_ptr_type = Llvm.pointer_type ctl_yield_type in
   let%bind ctl_yield_ptr =
     Codegen.use_builder
       (Llvm.build_bitcast ctl_ptr ctl_yield_ptr_type "ctl_yield_ptr")
   in
-  let%bind tag = const_ctl_yield_tag in
+  let%bind tag = Helpers.const_ctl_yield_tag in
   let%bind () =
-    compile_populate_struct
+    Helpers.compile_populate_struct
       ctl_yield_ptr
       [ tag, "tag"
       ; marker, "marker"
@@ -393,7 +194,7 @@ let compile_select_operation
     Codegen.use_builder (Llvm.build_struct_gep handler op_index "op_clause_ptr")
   in
   let%bind opaque_pointer = Types.opaque_pointer in
-  dereference op_clause_field_ptr opaque_pointer "op_clause"
+  Helpers.dereference op_clause_field_ptr opaque_pointer "op_clause"
 ;;
 
 (** produces code to evaluate the given expression and store its value to the
@@ -438,12 +239,12 @@ let rec compile_expr
       Codegen.use_builder
         (Llvm.build_call fresh_marker (Array.of_list []) "fresh_marker")
     in
-    heap_store_marker m ~runtime
+    Helpers.heap_store_marker m ~runtime
   | EPS.Expr.Markers_equal (e1, e2) ->
     let%bind marker1_ptr = compile_expr e1 ~runtime ~effect_reprs in
     let%bind marker2_ptr = compile_expr e2 ~runtime ~effect_reprs in
-    let%bind marker1 = dereference_marker marker1_ptr in
-    let%bind marker2 = dereference_marker marker2_ptr in
+    let%bind marker1 = Helpers.dereference_marker marker1_ptr in
+    let%bind marker2 = Helpers.dereference_marker marker2_ptr in
     let { Runtime.markers_equal; _ } = runtime in
     let%bind eq =
       Codegen.use_builder
@@ -452,12 +253,12 @@ let rec compile_expr
            (Array.of_list [ marker1; marker2 ])
            "markers_equal")
     in
-    heap_store_bool eq ~runtime
+    Helpers.heap_store_bool eq ~runtime
   | EPS.Expr.Effect_label label ->
     let%bind repr = lookup_effect_repr effect_reprs label in
     let { Effect_repr.id; _ } = repr in
-    let%bind label = const_label id in
-    heap_store_label label ~runtime
+    let%bind label = Helpers.const_label id in
+    Helpers.heap_store_label label ~runtime
   | EPS.Expr.Construct_handler
       { handled_effect
       ; operation_clauses = operation_clause_exprs
@@ -483,9 +284,9 @@ let rec compile_expr
       ; vector_tail = e_vector_tail
       } ->
     let%bind label_ptr = compile_expr e_label ~runtime ~effect_reprs in
-    let%bind label = dereference_label label_ptr in
+    let%bind label = Helpers.dereference_label label_ptr in
     let%bind marker_ptr = compile_expr e_marker ~runtime ~effect_reprs in
-    let%bind marker = dereference_marker marker_ptr in
+    let%bind marker = Helpers.dereference_marker marker_ptr in
     let%bind handler = compile_expr e_handler ~runtime ~effect_reprs in
     let%bind vector_tail = compile_expr e_vector_tail ~runtime ~effect_reprs in
     let { Runtime.cons_evidence_vector; _ } = runtime in
@@ -494,7 +295,7 @@ let rec compile_expr
       (Llvm.build_call cons_evidence_vector args "extended_vector")
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
     let%bind label_ptr = compile_expr e_label ~runtime ~effect_reprs in
-    let%bind label = dereference_label label_ptr in
+    let%bind label = Helpers.dereference_label label_ptr in
     let%bind vector = compile_expr e_vector ~runtime ~effect_reprs in
     let { Runtime.evidence_vector_lookup; _ } = runtime in
     let args = Array.of_list [ vector; label ] in
@@ -509,7 +310,7 @@ let rec compile_expr
            (Array.of_list [ evidence ])
            "marker")
     in
-    heap_store_marker marker ~runtime
+    Helpers.heap_store_marker marker ~runtime
   | EPS.Expr.Get_evidence_handler e ->
     let%bind evidence = compile_expr e ~runtime ~effect_reprs in
     let { Runtime.get_evidence_handler; _ } = runtime in
@@ -548,7 +349,6 @@ and compile_fix_lambda
  fun (f, (xs, e_body)) ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   (* likely not compositional! (doesn't call compile-lambda) *)
-  (* TODO: worry about the function name being shadowed by parameter names *)
   failwith "not implemented"
 
 and compile_application
@@ -632,7 +432,7 @@ and compile_construct_handler
             Codegen.impossible_error message
         in
         let%map clause = compile_expr e_clause ~runtime ~effect_reprs in
-        clause, register_name_of_variable op_name)
+        clause, Helpers.register_name_of_variable op_name)
     |> Codegen.all
   in
   let%bind () =
@@ -640,9 +440,9 @@ and compile_construct_handler
     | None -> return ()
     | Some _ -> Codegen.unsupported_feature_error "return clause in handler"
   in
-  let%bind handler_ptr = heap_allocate hnd_type "hnd" ~runtime in
+  let%bind handler_ptr = Helpers.heap_allocate hnd_type "hnd" ~runtime in
   let%bind () =
-    compile_populate_struct handler_ptr operation_clauses_and_names
+    Helpers.compile_populate_struct handler_ptr operation_clauses_and_names
   in
   let%bind opaque_pointer = Types.opaque_pointer in
   Codegen.use_builder (Llvm.build_bitcast handler_ptr opaque_pointer "hnd_ptr")
@@ -656,19 +456,19 @@ and compile_impure_built_in
   match impure with
   | EPS.Expr.Impure_print_int e ->
     let%bind v = compile_expr e ~runtime ~effect_reprs in
-    let%bind i = dereference_int v in
+    let%bind i = Helpers.dereference_int v in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
       Codegen.use_builder
         (Llvm.build_call print_int (Array.of_list [ i ]) "void")
     in
-    heap_store_unit ~runtime
+    Helpers.heap_store_unit ~runtime
   | EPS.Expr.Impure_read_int ->
     let { Runtime.read_int; _ } = runtime in
     let%bind i =
       Codegen.use_builder (Llvm.build_call read_int (Array.of_list []) "i")
     in
-    heap_store_int i ~runtime
+    Helpers.heap_store_int i ~runtime
 ;;
 
 let compile_effect_decl
