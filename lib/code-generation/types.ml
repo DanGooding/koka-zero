@@ -15,6 +15,8 @@ let bool =
 
 let int = Codegen.use_context Llvm.i64_type
 let unit = Codegen.use_context Llvm.i8_type
+let marker = Codegen.use_context Llvm.i64_type
+let label = Codegen.use_context Llvm.i64_type
 let variant_tag = Codegen.use_context Llvm.i8_type
 let padding = Codegen.use_context Llvm.i8_type
 
@@ -50,5 +52,41 @@ let ctl =
       Llvm.struct_type context (Array.of_list fields))
 ;;
 
-let marker = Codegen.use_context Llvm.i64_type
-let label = Codegen.use_context Llvm.i64_type
+let closure =
+  let open Codegen.Let_syntax in
+  let%bind num_vars = Codegen.use_context Llvm.i64_type in
+  let%bind opaque_pointer = opaque_pointer in
+  let variable_array = Llvm.pointer_type opaque_pointer in
+  (* no recursive pointer sadly *)
+  let parent_closure = opaque_pointer in
+  let fields = [ num_vars; variable_array; parent_closure ] in
+  Codegen.use_context (fun context ->
+      Llvm.struct_type context (Array.of_list fields))
+;;
+
+let function_object =
+  let open Codegen.Let_syntax in
+  let%bind opaque_pointer = opaque_pointer in
+  let code_address = opaque_pointer in
+  let%bind closure = closure in
+  let closure_ptr = Llvm.pointer_type closure in
+  let%bind is_recursive = Codegen.use_context Llvm.i1_type in
+  let fields = [ code_address; closure_ptr; is_recursive ] in
+  Codegen.use_context (fun context ->
+      Llvm.struct_type context (Array.of_list fields))
+;;
+
+let function_code num_args =
+  let open Codegen.Let_syntax in
+  let%bind opaque_pointer = opaque_pointer in
+  let%bind function_object = function_object in
+  let function_object_ptr = Llvm.pointer_type function_object in
+  let%map closure = closure in
+  let closure_ptr = Llvm.pointer_type closure in
+  let argument_types =
+    function_object_ptr
+    :: closure_ptr
+    :: List.init num_args ~f:(fun _i -> opaque_pointer)
+  in
+  Llvm.function_type opaque_pointer (Array.of_list argument_types)
+;;
