@@ -405,6 +405,15 @@ let rec compile_expr
  fun e ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   match e with
+  | EPS.Expr.Variable v ->
+    (* lookup in environment to find access path *)
+    (* generate code to either traverse the closure or use a parameter directly *)
+    failwith "not implemented"
+  | EPS.Expr.Lambda lambda -> compile_lambda lambda ~runtime ~effect_reprs
+  | EPS.Expr.Fix_lambda fix_lambda ->
+    compile_fix_lambda fix_lambda ~runtime ~effect_reprs
+  | EPS.Expr.Application (e_f, e_args) ->
+    compile_application e_f e_args ~runtime ~effect_reprs
   | EPS.Expr.Literal lit -> compile_literal lit ~runtime
   | EPS.Expr.Unary_operator (op, e) ->
     let%bind arg = compile_expr e ~runtime ~effect_reprs in
@@ -514,6 +523,90 @@ let rec compile_expr
   | _ -> failwith "not implemented"
  (* disable fragile-match *)
  [@@warning "-4"]
+
+and compile_lambda
+    :  EPS.Expr.lambda -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+  =
+ fun (xs, e_body) ->
+  let open Codegen.Let_syntax in
+  (* save the current builder insertion location *)
+  (* new llvm function *)
+  (* with args [xs] + closure TODO: avoid closure shadowing any *)
+  (* function's first statement is to build closure capturing its own args *)
+  (* compile [e_body] in extended environment + that closure *)
+  (* verify that function*)
+  (* go back to where we were inserting *)
+  (* make this function object: - code address - non recursive - current closure
+     (not that function's new closure) *)
+  failwith "not implemented"
+
+and compile_fix_lambda
+    :  EPS.Expr.fix_lambda -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+  =
+ fun (f, (xs, e_body)) ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  (* likely not compositional! (doesn't call compile-lambda) *)
+  (* TODO: worry about the function name being shadowed by parameter names *)
+  failwith "not implemented"
+
+and compile_application
+    :  EPS.Expr.t -> EPS.Expr.t list -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+  =
+ fun e_f e_args ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  let%bind f_opaque_ptr = compile_expr e_f ~runtime ~effect_reprs in
+  let%bind arg_ptrs =
+    List.map e_args ~f:(compile_expr ~runtime ~effect_reprs) |> Codegen.all
+  in
+  (* cast v_f to function type *)
+  let%bind function_object_type = Types.function_object in
+  let function_object_ptr_type = Llvm.pointer_type function_object_type in
+  let%bind f_ptr =
+    Codegen.use_builder
+      (Llvm.build_bitcast f_opaque_ptr function_object_ptr_type "function_ptr")
+  in
+  (* extract fields of f *)
+  let%bind code_address_ptr =
+    Codegen.use_builder (Llvm.build_struct_gep f_ptr 0 "code_address_ptr")
+  in
+  let%bind code_address_opaque =
+    Codegen.use_builder (Llvm.build_load code_address_ptr "code_address")
+  in
+  let%bind closure_field_ptr =
+    Codegen.use_builder (Llvm.build_struct_gep f_ptr 1 "closure_field_ptr")
+  in
+  let%bind closure_ptr =
+    Codegen.use_builder (Llvm.build_load closure_field_ptr "closure_ptr")
+  in
+  let%bind is_recursive_ptr =
+    Codegen.use_builder (Llvm.build_struct_gep f_ptr 2 "is_recursive_ptr")
+  in
+  let%bind is_recursive =
+    Codegen.use_builder (Llvm.build_load is_recursive_ptr "is_recursive")
+  in
+  (* the number of arguments passed in the evidence passing representation *)
+  let num_eps_args = List.length arg_ptrs in
+  let%bind generated_function_type = Types.function_code num_eps_args in
+  let generated_function_ptr_type = Llvm.pointer_type generated_function_type in
+  (* pass either [f_ptr] or [null] depending on whether the function is
+     recursive *)
+  let null_function = Llvm.const_pointer_null generated_function_ptr_type in
+  let%bind f_self =
+    Codegen.use_builder
+      (Llvm.build_select is_recursive f_ptr null_function "f_self")
+  in
+  let args = Array.of_list (f_self :: closure_ptr :: arg_ptrs) in
+  let%bind typed_code_address =
+    Codegen.use_builder
+      (Llvm.build_bitcast
+         code_address_opaque
+         generated_function_ptr_type
+         "typed_code_address")
+  in
+  Codegen.use_builder (Llvm.build_call typed_code_address args "result")
 
 and compile_construct_handler
     :  Effect_label.t -> EPS.Expr.t Variable.Map.t -> EPS.Expr.t option
