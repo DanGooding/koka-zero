@@ -22,6 +22,13 @@ val const_ctl_pure_tag : Llvm.llvalue Codegen.t
 val const_ctl_yield_tag : Llvm.llvalue Codegen.t
 val const_label : int -> Llvm.llvalue Codegen.t
 
+(** converts a valid [Types.bool] (either [const_true]/[const_false]) into an
+    [i1] usable in a branch. *)
+val i1_of_bool : Llvm.llvalue -> Llvm.llvalue Codegen.t
+
+(** converts an [i1] into a valid [Types.bool] **)
+val bool_of_i1 : Llvm.llvalue -> Llvm.llvalue Codegen.t
+
 (** [heap_allocate t name ~runtime] generates code which allocates space on the
     heap for a [t], and returns a typed pointer to it (a [t*]). [name] is used
     as a stem for register names *)

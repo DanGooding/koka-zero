@@ -59,6 +59,19 @@ let const_label i =
   Llvm.const_int label_type i
 ;;
 
+let i1_of_bool b =
+  let open Codegen.Let_syntax in
+  let%bind i1 = Codegen.use_context Llvm.i1_type in
+  (* expects only [const_true]/[const_false] *)
+  Codegen.use_builder (Llvm.build_trunc b i1 "bool_bit")
+;;
+
+let bool_of_i1 b =
+  let open Codegen.Let_syntax in
+  let%bind bool = Types.bool in
+  Codegen.use_builder (Llvm.build_zext b bool "bool")
+;;
+
 let heap_allocate t name ~runtime =
   let open Codegen.Let_syntax in
   let size = Llvm.size_of t in

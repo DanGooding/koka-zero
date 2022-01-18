@@ -53,6 +53,8 @@ let compile_binary_operator
     let%bind x = Helpers.dereference_bool left in
     let%bind y = Helpers.dereference_bool right in
     let%bind z =
+      (* [and]/[or] work directly on bools, don't need to convert to [i1] and
+         back *)
       match bool_op with
       | EPS.Operator.Bool.And ->
         Codegen.use_builder (Llvm.build_and x y "bool_and")
@@ -86,7 +88,8 @@ let compile_binary_operator
       Helpers.heap_store_int z ~runtime
     | `Bool icmp ->
       let%bind z = Codegen.use_builder (Llvm.build_icmp icmp x y "int_cmp") in
-      Helpers.heap_store_bool z ~runtime)
+      let%bind b = Helpers.bool_of_i1 z in
+      Helpers.heap_store_bool b ~runtime)
 ;;
 
 let compile_unary_operator
