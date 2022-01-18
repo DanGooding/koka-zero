@@ -9,8 +9,6 @@ type 'a t
 include Monad.S with type 'a t := 'a t
 include Monad_utils.S with type 'a t := 'a t
 
-(* TODO: assert_valid{module,function} *)
-
 val run_then_write_module
   :  module_id:string
   -> filename:string
@@ -21,6 +19,10 @@ val run_then_dump_module : module_id:string -> unit t -> unit Or_codegen_error.t
 val use_builder : (Llvm.llbuilder -> 'a) -> 'a t
 val use_context : (Llvm.llcontext -> 'a) -> 'a t
 val use_module : (Llvm.llmodule -> 'a) -> 'a t
+
+(** runs llvm verifier over the module, failing with a [Codegen.verifier_error]
+    if it it is found to be invalid *)
+val check_module_valid : unit t
 
 (* discorage this, as cached values become stale. - better to have
    [use_current_block] *)

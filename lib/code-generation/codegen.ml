@@ -88,6 +88,12 @@ let use_builder f { Mutable_state.builder; _ } = f builder |> Result.Ok
 let use_context f { Mutable_state.context; _ } = f context |> Result.Ok
 let use_module f { Mutable_state.module_; _ } = f module_ |> Result.Ok
 
+let check_module_valid { Mutable_state.module_; _ } =
+  match Llvm_analysis.verify_module module_ with
+  | None -> Result.Ok ()
+  | Some report -> Codegen_error.verifier_error report |> Result.Error
+;;
+
 let current_block { Mutable_state.builder; _ } =
   Llvm.insertion_block builder |> Result.Ok
 ;;

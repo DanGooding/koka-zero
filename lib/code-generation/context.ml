@@ -3,8 +3,6 @@ open Import
 
 module Parameters = struct
   type t = (Variable.t * Llvm.llvalue) list
-  (* TODO: does this contain the extraneous `self` parameter for non recursive
-     functions? *)
 
   let find t v =
     List.find_map t ~f:(fun (v', x) -> Option.some_if Variable.(v = v') x)
@@ -16,7 +14,7 @@ module Closure = struct
     module T = struct
       type t =
         | Level of Variable.t list * t
-        | Empty
+        | Toplevel of int Variable.Map.t
       [@@deriving sexp]
     end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
@@ -28,7 +26,7 @@ module Closure = struct
     ; shape : Shape.t
     }
 
-  let extend { closure = parent; shape } parameters ~runtime =
+  let compile_extend { closure = parent; shape } parameters ~runtime =
     let open Codegen.Let_syntax in
     let%bind closure_type = Types.closure in
     let%bind closure_ptr =
@@ -71,29 +69,38 @@ module Closure = struct
     { closure = closure_ptr; shape }
   ;;
 
+  (** compile accessing [ closure->vars\[i\] ] *)
+  let compile_get_var (i : int) closure =
+    let open Codegen.Let_syntax in
+    let%bind vars_ptr =
+      Codegen.use_builder (Llvm.build_struct_gep closure 1 "vars_field")
+    in
+    let%bind vars = Codegen.use_builder (Llvm.build_load vars_ptr "vars") in
+    let%bind i64 = Codegen.use_context Llvm.i64_type in
+    let index = Llvm.const_int i64 i in
+    let%bind var_ptr =
+      Codegen.use_builder
+        (Llvm.build_gep vars (Array.of_list [ index ]) "var_ptr")
+    in
+    Codegen.use_builder (Llvm.build_load var_ptr "var")
+  ;;
+
   let rec compile_get { closure; shape } v =
     let open Codegen.Let_syntax in
     match shape with
-    | Shape.Empty ->
-      let message =
-        sprintf "variable not found in closure: %s" (Variable.to_string_user v)
-      in
-      Codegen.impossible_error message
+    | Shape.Toplevel names_to_indices ->
+      (match Map.find names_to_indices v with
+      | Some i -> compile_get_var i closure
+      | None ->
+        let message =
+          sprintf
+            "variable not found in closure: %s"
+            (Variable.to_string_user v)
+        in
+        Codegen.impossible_error message)
     | Shape.Level (vs, parent_shape) ->
       (match List.findi vs ~f:(fun _i v' -> Variable.(v = v')) with
-      | Some (i, _v) ->
-        (* compile accessing closure->vars[i] *)
-        let%bind vars_ptr =
-          Codegen.use_builder (Llvm.build_struct_gep closure 1 "vars_field")
-        in
-        let%bind vars = Codegen.use_builder (Llvm.build_load vars_ptr "vars") in
-        let%bind i64 = Codegen.use_context Llvm.i64_type in
-        let index = Llvm.const_int i64 i in
-        let%bind var_ptr =
-          Codegen.use_builder
-            (Llvm.build_gep vars (Array.of_list [ index ]) "var_ptr")
-        in
-        Codegen.use_builder (Llvm.build_load var_ptr "var")
+      | Some (i, _v) -> compile_get_var i closure
       | None ->
         (* compile accessing closure->parent *)
         let%bind parent_ptr =
@@ -112,6 +119,10 @@ type t =
   { parameters : Parameters.t
   ; closure : Closure.t
   }
+
+let compile_make_closure { parameters; closure } ~runtime =
+  Closure.compile_extend closure parameters ~runtime
+;;
 
 let compile_get { parameters; closure } v =
   let open Codegen.Let_syntax in
