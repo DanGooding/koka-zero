@@ -90,3 +90,11 @@ val compile_populate_struct
   :  Llvm.llvalue
   -> (Llvm.llvalue * string) list
   -> unit Codegen.t
+
+(** [compile_populate_array p elements] generates code to populate the array
+    pointed to by [p] (which must be an array pointer!), with the elements (and
+    tmp names) [elements] *)
+val compile_populate_array
+  :  Llvm.llvalue
+  -> (Llvm.llvalue * string) list
+  -> unit Codegen.t
