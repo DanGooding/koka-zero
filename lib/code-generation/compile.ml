@@ -200,6 +200,40 @@ let compile_select_operation
   Helpers.dereference op_clause_field_ptr opaque_pointer "op_clause"
 ;;
 
+(** [compile_construt_function_object code_address ~is_recursive ~env ~runtime]
+    generates code to heap allocate and populate a [Types.function_object], with
+    code pointed to by the (typed or opaque) [code_address], capturing [env] as
+    it's closure. *)
+let compile_construct_function_object
+    :  Llvm.llvalue -> is_recursive:bool -> env:Context.t -> runtime:Runtime.t
+    -> Llvm.llvalue Codegen.t
+  =
+ fun code_address ~is_recursive ~env ~runtime ->
+  let open Codegen.Let_syntax in
+  let%bind function_object_type = Types.function_object in
+  let%bind function_ptr =
+    Helpers.heap_allocate function_object_type "function" ~runtime
+  in
+  let%bind opaque_pointer = Types.opaque_pointer in
+  let%bind function_code_opaque_ptr =
+    Codegen.use_builder
+      (Llvm.build_bitcast code_address opaque_pointer "code_address_opaque_ptr")
+  in
+  let { Context.closure; _ } = env in
+  let { Context.Closure.closure; _ } = closure in
+  let%bind i1 = Codegen.use_context Llvm.i1_type in
+  let is_recursive = Llvm.const_int i1 (if is_recursive then 1 else 0) in
+  let fields =
+    [ function_code_opaque_ptr, "code"
+    ; closure, "closure"
+    ; is_recursive, "is_recursive"
+    ]
+  in
+  let%bind () = Helpers.compile_populate_struct function_ptr fields in
+  Codegen.use_builder
+    (Llvm.build_bitcast function_ptr opaque_pointer "function_opaque")
+;;
+
 (** produces code to evaluate the given expression and store its value to the
     heap. The returned [llvalue] is the [Types.opaque_pointer] to this value. *)
 let rec compile_expr
@@ -211,7 +245,7 @@ let rec compile_expr
   match e with
   | EPS.Expr.Variable v ->
     (* TODO: note this will be duplicated for each access, although common
-       subexpression exlimination should easily remove it *)
+       subexpression elimination should easily remove it *)
     Context.compile_get env v
   | EPS.Expr.Lambda lambda -> compile_lambda lambda ~env ~runtime ~effect_reprs
   | EPS.Expr.Fix_lambda fix_lambda ->
@@ -381,29 +415,121 @@ and compile_if_then_else
   in
   Codegen.use_builder (Llvm.build_phi incoming "if_result")
 
+(** [compile_function ~rec_name xs e_body ~captured ~runtime ~effect_reprs]
+    generates a function with the given arguments and body, and within the scope
+    given by [captured]. It returns this function's [llvalue]. The [llbuilder]'s
+    insertion point is saved and restored. *)
+and compile_function
+    :  rec_name:Variable.t option -> Variable.t list -> EPS.Expr.t
+    -> captured:Context.Closure.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+  =
+ fun ~rec_name xs e_body ~captured ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  (* save the current builder insertion location *)
+  let%bind containing_block = Codegen.use_builder Llvm.insertion_block in
+  (* new llvm function *)
+  let%bind type_ = Types.function_code (List.length xs) in
+  (* TODO:
+
+     - at toplevel: don't clash (shadowing not allowed!) however this isn't a
+     problem: functions aren't ever accessed by llvm symbol name, only through
+     the closure
+
+     - locally: base name off of containing fun? *)
+  let%bind name =
+    let name =
+      match rec_name with
+      | None ->
+        (* TODO: base off of containing [fun]? *) Variable.of_generated "local"
+      | Some name -> name
+    in
+    Codegen.unique_symbol_name name
+  in
+  let%bind function_ = Codegen.use_module (Llvm.define_function name type_) in
+  (* name parameters: *)
+  let params = Llvm.params function_ |> Array.to_list in
+  let f_self_param, closure_param, params =
+    match params with
+    | f_self_param :: closure_param :: params ->
+      f_self_param, closure_param, params
+    | _ ->
+      (* this is a programmer error not a data error *)
+      raise_s [%message "function type has unexpected number of parameters"]
+  in
+  let env_parameters : Context.Parameters.t =
+    match rec_name with
+    | None ->
+      (* TODO: merging two separate tasks like this is silly *)
+      Llvm.set_value_name "null" f_self_param;
+      List.zip_exn xs params
+    | Some rec_name -> List.zip_exn (rec_name :: xs) (f_self_param :: params)
+  in
+  List.iter env_parameters ~f:(fun (name, value) ->
+      Llvm.set_value_name (Helpers.register_name_of_variable name) value);
+  Llvm.set_value_name "closure" closure_param;
+  (* function's first statement is to build closure capturing its own args *)
+  let function_start_block = Llvm.entry_block function_ in
+  let%bind () =
+    Codegen.use_builder (Llvm.position_at_end function_start_block)
+  in
+  (* compile [e_body] in extended environment (capture variables which escaped
+     from the containing function) *)
+  let env' = { Context.closure = captured; parameters = env_parameters } in
+  let%bind result = compile_expr e_body ~env:env' ~runtime ~effect_reprs in
+  let%bind _return = Codegen.use_builder (Llvm.build_ret result) in
+  (* verify that function*)
+  (* TODO: unneeded - verify module at end *)
+  Llvm_analysis.assert_valid_function function_;
+  (* go back to where we were inserting *)
+  let%map () = Codegen.use_builder (Llvm.position_at_end containing_block) in
+  function_
+
 and compile_lambda
     :  EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun (_xs, _e_body) ->
-  (* save the current builder insertion location *)
-  (* new llvm function *)
-  (* with args [xs] + closure TODO: avoid closure shadowing any *)
-  (* function's first statement is to build closure capturing its own args *)
-  (* compile [e_body] in extended environment + that closure *)
-  (* verify that function*)
-  (* go back to where we were inserting *)
-  (* make this function object: - code address - non recursive - current closure
-     (not that function's new closure) *)
-  failwith "not implemented"
+ fun (xs, e_body) ~env ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  (* TODO: this rebuilds the escaping closure on every capture - cheaper to
+     build it once at function entry (keep it around in the context?) *)
+  let%bind escaping = Context.compile_make_closure env ~runtime in
+  let%bind function_code =
+    compile_function
+      ~rec_name:None
+      xs
+      e_body
+      ~captured:escaping
+      ~runtime
+      ~effect_reprs
+  in
+  compile_construct_function_object
+    function_code
+    ~is_recursive:false
+    ~env
+    ~runtime
 
 and compile_fix_lambda
     :  EPS.Expr.fix_lambda -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun (_f, (_xs, _e_body)) ~env:_ ~runtime:_ ~effect_reprs:_ ->
-  (* likely not compositional! (doesn't call compile-lambda) *)
-  failwith "not implemented"
+ fun (f, (xs, e_body)) ~env ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  let%bind escaping = Context.compile_make_closure env ~runtime in
+  let%bind function_code =
+    compile_function
+      ~rec_name:(Some f)
+      xs
+      e_body
+      ~captured:escaping
+      ~runtime
+      ~effect_reprs
+  in
+  compile_construct_function_object
+    function_code
+    ~is_recursive:true
+    ~env
+    ~runtime
 
 and compile_application
     :  EPS.Expr.t -> EPS.Expr.t list -> env:Context.t -> runtime:Runtime.t
