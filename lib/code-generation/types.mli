@@ -30,7 +30,7 @@ val ctl_yield : Llvm.lltype Codegen.t
 
 (** a closure holds free variables in a chain starting from the innermost
     function. The structure is as follows:
-    [{ i64 num_vars; opaque_pointer **vars; opaque_pointer *parent }]. The
+    [{ i64 num_vars; opaque_pointer *vars; opaque_pointer parent }]. The
     nil/empty closure is represented as a null pointer. *)
 val closure : Llvm.lltype Codegen.t
 
