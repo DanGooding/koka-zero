@@ -219,6 +219,10 @@ let rec compile_expr
   | EPS.Expr.Application (e_f, e_args) ->
     compile_application e_f e_args ~runtime ~effect_reprs
   | EPS.Expr.Literal lit -> compile_literal lit ~runtime
+  | EPS.Expr.If_then_else (e_cond, e_yes, e_no) ->
+    let%bind cond_ptr = compile_expr e_cond ~runtime ~effect_reprs in
+    let%bind cond = Helpers.dereference_bool cond_ptr in
+    compile_if_then_else cond ~e_yes ~e_no ~runtime ~effect_reprs
   | EPS.Expr.Unary_operator (op, e) ->
     let%bind arg = compile_expr e ~runtime ~effect_reprs in
     compile_unary_operator arg op ~runtime
@@ -327,6 +331,49 @@ let rec compile_expr
   | _ -> failwith "not implemented"
  (* disable fragile-match *)
  [@@warning "-4"]
+
+(** [compile_if_then_else b ~e_yes ~e_no ~runtime ~effect_reprs] generates code
+    to branch on the value of the [Types.bool] [b], and evaluate to the value of
+    either [e_yes] or [e_no] *)
+and compile_if_then_else
+    :  Llvm.llvalue -> e_yes:EPS.Expr.t -> e_no:EPS.Expr.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+  =
+ fun cond ~e_yes ~e_no ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  let%bind cond_i1 = Helpers.i1_of_bool cond in
+  let%bind if_start_block = Codegen.use_builder Llvm.insertion_block in
+  let current_function = Llvm.block_parent if_start_block in
+  let%bind yes_start_block =
+    Codegen.use_context (fun context ->
+        Llvm.append_block context "if_yes" current_function)
+  in
+  let%bind no_start_block =
+    Codegen.use_context (fun context ->
+        Llvm.append_block context "if_no" current_function)
+  in
+  let%bind _branch =
+    Codegen.use_builder
+      (Llvm.build_cond_br cond_i1 yes_start_block no_start_block)
+  in
+  (* compile yes branch *)
+  let%bind () = Codegen.use_builder (Llvm.position_at_end yes_start_block) in
+  let%bind yes_branch_result = compile_expr e_yes ~runtime ~effect_reprs in
+  let%bind yes_end_block = Codegen.use_builder Llvm.insertion_block in
+  (* compile no branch *)
+  let%bind () = Codegen.use_builder (Llvm.position_at_end no_start_block) in
+  let%bind no_branch_result = compile_expr e_no ~runtime ~effect_reprs in
+  let%bind no_end_block = Codegen.use_builder Llvm.insertion_block in
+  (* connect back together *)
+  let%bind if_end_block =
+    Codegen.use_context (fun context ->
+        Llvm.append_block context "post_if" current_function)
+  in
+  let%bind () = Codegen.use_builder (Llvm.position_at_end if_end_block) in
+  let incoming =
+    [ yes_branch_result, yes_end_block; no_branch_result, no_end_block ]
+  in
+  Codegen.use_builder (Llvm.build_phi incoming "if_result")
 
 and compile_lambda
     :  EPS.Expr.lambda -> runtime:Runtime.t
