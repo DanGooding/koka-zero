@@ -203,42 +203,44 @@ let compile_select_operation
 (** produces code to evaluate the given expression and store its value to the
     heap. The returned [llvalue] is the [Types.opaque_pointer] to this value. *)
 let rec compile_expr
-    :  EPS.Expr.t -> runtime:Runtime.t
+    :  EPS.Expr.t -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun e ~runtime ~effect_reprs ->
+ fun e ~env ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   match e with
   | EPS.Expr.Variable v ->
-    (* lookup in environment to find access path *)
-    (* generate code to either traverse the closure or use a parameter directly *)
-    failwith "not implemented"
-  | EPS.Expr.Lambda lambda -> compile_lambda lambda ~runtime ~effect_reprs
+    (* TODO: note this will be duplicated for each access, although common
+       subexpression exlimination should easily remove it *)
+    Context.compile_get env v
+  | EPS.Expr.Lambda lambda -> compile_lambda lambda ~env ~runtime ~effect_reprs
   | EPS.Expr.Fix_lambda fix_lambda ->
-    compile_fix_lambda fix_lambda ~runtime ~effect_reprs
+    compile_fix_lambda fix_lambda ~env ~runtime ~effect_reprs
   | EPS.Expr.Application (e_f, e_args) ->
-    compile_application e_f e_args ~runtime ~effect_reprs
+    compile_application e_f e_args ~env ~runtime ~effect_reprs
   | EPS.Expr.Literal lit -> compile_literal lit ~runtime
   | EPS.Expr.If_then_else (e_cond, e_yes, e_no) ->
-    let%bind cond_ptr = compile_expr e_cond ~runtime ~effect_reprs in
+    let%bind cond_ptr = compile_expr e_cond ~env ~runtime ~effect_reprs in
     let%bind cond = Helpers.dereference_bool cond_ptr in
-    compile_if_then_else cond ~e_yes ~e_no ~runtime ~effect_reprs
+    compile_if_then_else cond ~e_yes ~e_no ~env ~runtime ~effect_reprs
   | EPS.Expr.Unary_operator (op, e) ->
-    let%bind arg = compile_expr e ~runtime ~effect_reprs in
+    let%bind arg = compile_expr e ~env ~runtime ~effect_reprs in
     compile_unary_operator arg op ~runtime
   | EPS.Expr.Operator (e_left, op, e_right) ->
-    let%bind left = compile_expr e_left ~runtime ~effect_reprs in
-    let%bind right = compile_expr e_right ~runtime ~effect_reprs in
+    let%bind left = compile_expr e_left ~env ~runtime ~effect_reprs in
+    let%bind right = compile_expr e_right ~env ~runtime ~effect_reprs in
     compile_binary_operator ~left op ~right ~runtime
   | EPS.Expr.Construct_pure e ->
-    let%bind x = compile_expr e ~runtime ~effect_reprs in
+    let%bind x = compile_expr e ~env ~runtime ~effect_reprs in
     compile_construct_pure x ~runtime
   | EPS.Expr.Construct_yield
       { marker = e_marker; op_clause = e_op_clause; resumption = e_resumption }
     ->
-    let%bind marker = compile_expr e_marker ~runtime ~effect_reprs in
-    let%bind op_clause = compile_expr e_op_clause ~runtime ~effect_reprs in
-    let%bind resumption = compile_expr e_resumption ~runtime ~effect_reprs in
+    let%bind marker = compile_expr e_marker ~env ~runtime ~effect_reprs in
+    let%bind op_clause = compile_expr e_op_clause ~env ~runtime ~effect_reprs in
+    let%bind resumption =
+      compile_expr e_resumption ~env ~runtime ~effect_reprs
+    in
     compile_construct_yield ~marker ~op_clause ~resumption ~runtime
   | EPS.Expr.Fresh_marker ->
     let { Runtime.fresh_marker; _ } = runtime in
@@ -248,8 +250,8 @@ let rec compile_expr
     in
     Helpers.heap_store_marker m ~runtime
   | EPS.Expr.Markers_equal (e1, e2) ->
-    let%bind marker1_ptr = compile_expr e1 ~runtime ~effect_reprs in
-    let%bind marker2_ptr = compile_expr e2 ~runtime ~effect_reprs in
+    let%bind marker1_ptr = compile_expr e1 ~env ~runtime ~effect_reprs in
+    let%bind marker2_ptr = compile_expr e2 ~env ~runtime ~effect_reprs in
     let%bind marker1 = Helpers.dereference_marker marker1_ptr in
     let%bind marker2 = Helpers.dereference_marker marker2_ptr in
     let { Runtime.markers_equal; _ } = runtime in
@@ -275,10 +277,11 @@ let rec compile_expr
       handled_effect
       operation_clause_exprs
       return_clause
+      ~env
       ~runtime
       ~effect_reprs
   | EPS.Expr.Select_operation (label, op_name, e_handler) ->
-    let%bind handler_ptr = compile_expr e_handler ~runtime ~effect_reprs in
+    let%bind handler_ptr = compile_expr e_handler ~env ~runtime ~effect_reprs in
     compile_select_operation label ~op_name handler_ptr ~effect_reprs
   | EPS.Expr.Nil_evidence_vector ->
     let { Runtime.nil_evidence_vector; _ } = runtime in
@@ -290,25 +293,27 @@ let rec compile_expr
       ; handler = e_handler
       ; vector_tail = e_vector_tail
       } ->
-    let%bind label_ptr = compile_expr e_label ~runtime ~effect_reprs in
+    let%bind label_ptr = compile_expr e_label ~env ~runtime ~effect_reprs in
     let%bind label = Helpers.dereference_label label_ptr in
-    let%bind marker_ptr = compile_expr e_marker ~runtime ~effect_reprs in
+    let%bind marker_ptr = compile_expr e_marker ~env ~runtime ~effect_reprs in
     let%bind marker = Helpers.dereference_marker marker_ptr in
-    let%bind handler = compile_expr e_handler ~runtime ~effect_reprs in
-    let%bind vector_tail = compile_expr e_vector_tail ~runtime ~effect_reprs in
+    let%bind handler = compile_expr e_handler ~env ~runtime ~effect_reprs in
+    let%bind vector_tail =
+      compile_expr e_vector_tail ~env ~runtime ~effect_reprs
+    in
     let { Runtime.cons_evidence_vector; _ } = runtime in
     let args = Array.of_list [ label; marker; handler; vector_tail ] in
     Codegen.use_builder
       (Llvm.build_call cons_evidence_vector args "extended_vector")
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
-    let%bind label_ptr = compile_expr e_label ~runtime ~effect_reprs in
+    let%bind label_ptr = compile_expr e_label ~env ~runtime ~effect_reprs in
     let%bind label = Helpers.dereference_label label_ptr in
-    let%bind vector = compile_expr e_vector ~runtime ~effect_reprs in
+    let%bind vector = compile_expr e_vector ~env ~runtime ~effect_reprs in
     let { Runtime.evidence_vector_lookup; _ } = runtime in
     let args = Array.of_list [ vector; label ] in
     Codegen.use_builder (Llvm.build_call evidence_vector_lookup args "evidence")
   | EPS.Expr.Get_evidence_marker e ->
-    let%bind evidence = compile_expr e ~runtime ~effect_reprs in
+    let%bind evidence = compile_expr e ~env ~runtime ~effect_reprs in
     let { Runtime.get_evidence_marker; _ } = runtime in
     let%bind marker =
       Codegen.use_builder
@@ -319,7 +324,7 @@ let rec compile_expr
     in
     Helpers.heap_store_marker marker ~runtime
   | EPS.Expr.Get_evidence_handler e ->
-    let%bind evidence = compile_expr e ~runtime ~effect_reprs in
+    let%bind evidence = compile_expr e ~env ~runtime ~effect_reprs in
     let { Runtime.get_evidence_handler; _ } = runtime in
     Codegen.use_builder
       (Llvm.build_call
@@ -327,19 +332,20 @@ let rec compile_expr
          (Array.of_list [ evidence ])
          "handler")
   | EPS.Expr.Impure_built_in impure ->
-    compile_impure_built_in impure ~runtime ~effect_reprs
+    compile_impure_built_in impure ~env ~runtime ~effect_reprs
   | _ -> failwith "not implemented"
  (* disable fragile-match *)
  [@@warning "-4"]
 
-(** [compile_if_then_else b ~e_yes ~e_no ~runtime ~effect_reprs] generates code
-    to branch on the value of the [Types.bool] [b], and evaluate to the value of
-    either [e_yes] or [e_no] *)
+(** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs] generates
+    code to branch on the value of the [Types.bool] [b], and evaluate to the
+    value of either [e_yes] or [e_no] *)
 and compile_if_then_else
-    :  Llvm.llvalue -> e_yes:EPS.Expr.t -> e_no:EPS.Expr.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    :  Llvm.llvalue -> e_yes:EPS.Expr.t -> e_no:EPS.Expr.t -> env:Context.t
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> Llvm.llvalue Codegen.t
   =
- fun cond ~e_yes ~e_no ~runtime ~effect_reprs ->
+ fun cond ~e_yes ~e_no ~env ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind cond_i1 = Helpers.i1_of_bool cond in
   let%bind if_start_block = Codegen.use_builder Llvm.insertion_block in
@@ -358,11 +364,11 @@ and compile_if_then_else
   in
   (* compile yes branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end yes_start_block) in
-  let%bind yes_branch_result = compile_expr e_yes ~runtime ~effect_reprs in
+  let%bind yes_branch_result = compile_expr e_yes ~env ~runtime ~effect_reprs in
   let%bind yes_end_block = Codegen.use_builder Llvm.insertion_block in
   (* compile no branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end no_start_block) in
-  let%bind no_branch_result = compile_expr e_no ~runtime ~effect_reprs in
+  let%bind no_branch_result = compile_expr e_no ~env ~runtime ~effect_reprs in
   let%bind no_end_block = Codegen.use_builder Llvm.insertion_block in
   (* connect back together *)
   let%bind if_end_block =
@@ -376,11 +382,10 @@ and compile_if_then_else
   Codegen.use_builder (Llvm.build_phi incoming "if_result")
 
 and compile_lambda
-    :  EPS.Expr.lambda -> runtime:Runtime.t
+    :  EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun (xs, e_body) ->
-  let open Codegen.Let_syntax in
+ fun (_xs, _e_body) ->
   (* save the current builder insertion location *)
   (* new llvm function *)
   (* with args [xs] + closure TODO: avoid closure shadowing any *)
@@ -393,23 +398,22 @@ and compile_lambda
   failwith "not implemented"
 
 and compile_fix_lambda
-    :  EPS.Expr.fix_lambda -> runtime:Runtime.t
+    :  EPS.Expr.fix_lambda -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun (f, (xs, e_body)) ~runtime ~effect_reprs ->
-  let open Codegen.Let_syntax in
+ fun (_f, (_xs, _e_body)) ~env:_ ~runtime:_ ~effect_reprs:_ ->
   (* likely not compositional! (doesn't call compile-lambda) *)
   failwith "not implemented"
 
 and compile_application
-    :  EPS.Expr.t -> EPS.Expr.t list -> runtime:Runtime.t
+    :  EPS.Expr.t -> EPS.Expr.t list -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun e_f e_args ~runtime ~effect_reprs ->
+ fun e_f e_args ~env ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
-  let%bind f_opaque_ptr = compile_expr e_f ~runtime ~effect_reprs in
+  let%bind f_opaque_ptr = compile_expr e_f ~env ~runtime ~effect_reprs in
   let%bind arg_ptrs =
-    List.map e_args ~f:(compile_expr ~runtime ~effect_reprs) |> Codegen.all
+    List.map e_args ~f:(compile_expr ~env ~runtime ~effect_reprs) |> Codegen.all
   in
   (* cast v_f to function type *)
   let%bind function_object_type = Types.function_object in
@@ -460,10 +464,15 @@ and compile_application
 
 and compile_construct_handler
     :  Effect_label.t -> EPS.Expr.t Variable.Map.t -> EPS.Expr.t option
-    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
-    -> Llvm.llvalue Codegen.t
+    -> env:Context.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun handled_effect operation_clause_exprs return_clause ~runtime ~effect_reprs ->
+ fun handled_effect
+     operation_clause_exprs
+     return_clause
+     ~env
+     ~runtime
+     ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind repr = lookup_effect_repr effect_reprs handled_effect in
   let { Effect_repr.hnd_type; operations; _ } = repr in
@@ -481,7 +490,7 @@ and compile_construct_handler
             in
             Codegen.impossible_error message
         in
-        let%map clause = compile_expr e_clause ~runtime ~effect_reprs in
+        let%map clause = compile_expr e_clause ~env ~runtime ~effect_reprs in
         clause, Helpers.register_name_of_variable op_name)
     |> Codegen.all
   in
@@ -498,14 +507,14 @@ and compile_construct_handler
   Codegen.use_builder (Llvm.build_bitcast handler_ptr opaque_pointer "hnd_ptr")
 
 and compile_impure_built_in
-    :  EPS.Expr.impure_built_in -> runtime:Runtime.t
+    :  EPS.Expr.impure_built_in -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun impure ~runtime ~effect_reprs ->
+ fun impure ~env ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   match impure with
   | EPS.Expr.Impure_print_int e ->
-    let%bind v = compile_expr e ~runtime ~effect_reprs in
+    let%bind v = compile_expr e ~env ~runtime ~effect_reprs in
     let%bind i = Helpers.dereference_int v in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
