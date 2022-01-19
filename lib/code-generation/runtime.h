@@ -46,4 +46,4 @@ opaque_ptr kkr_get_evidence_handler(opaque_ptr);
 // write the given integer (plus a newline) to stdout
 void kkr_print_int(int_t);
 // read and parse an integer from stdin, exits on failure
-int_t read_int(void);
+int_t kkr_read_int(void);
