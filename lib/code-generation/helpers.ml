@@ -1,12 +1,6 @@
 open Core
 open Import
 
-let symbol_of_variable = function
-  | Variable.User s -> "kku_" ^ s
-  | Variable.Language s -> "kkl_" ^ s
-  | Variable.Generated s -> "kkg_" ^ s
-;;
-
 let register_name_of_variable = function
   | Variable.User s -> "u_" ^ s
   | Variable.Language s -> "l_" ^ s
