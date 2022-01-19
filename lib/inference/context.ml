@@ -56,6 +56,14 @@ let extend t ~var ~type_ =
   else `Cannot_shadow
 ;;
 
+let extend_toplevel t ~var ~type_ =
+  let binding = Binding.Value type_ in
+  let entry = { Entry.shadowable = true; binding } in
+  match Map.add t ~key:var ~data:entry with
+  | `Duplicate -> `Cannot_shadow
+  | `Ok t' -> `Ok t'
+;;
+
 let extend_operation t ~var ~label ~type_ =
   if Map.mem t var
   then `Cannot_shadow
