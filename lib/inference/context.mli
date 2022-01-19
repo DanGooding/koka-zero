@@ -24,6 +24,15 @@ type t [@@deriving sexp]
     [`Cannot_shadow] if [var] is not shadowable *)
 val extend : t -> var:Variable.t -> type_:Type.t -> t Or_cannot_shadow.t
 
+(** for a toplevel environment, add a new variable - failing if [var] is already
+    present: toplevel declarations must be unique, although they can be shadowed
+    locally *)
+val extend_toplevel
+  :  t
+  -> var:Variable.t
+  -> type_:Type.t
+  -> t Or_cannot_shadow.t
+
 (** add a new variable, which cannot be shadowed later, to the context. This
     returns [`Cannot_shadow] if [var] is already present. The variable gets
     bound to [Binding.Operation (label, type_)] *)
