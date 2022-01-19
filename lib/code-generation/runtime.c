@@ -108,8 +108,10 @@ void kkr_print_int(int_t i) {
   printf("%ld\n", i);
 }
 
-int_t read_int(void) {
+int_t kkr_read_int(void) {
   int_t result;
+  printf("input> ");
+  fflush(stdout);
   if (scanf("%ld", &result)) {
     kkr_exit_with_message("failed to read int");
   }
