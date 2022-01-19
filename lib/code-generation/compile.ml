@@ -238,44 +238,65 @@ let compile_construct_function_object
     heap. The returned [llvalue] is the [Types.opaque_pointer] to this value. *)
 let rec compile_expr
     :  EPS.Expr.t -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun e ~env ~runtime ~effect_reprs ->
+ fun e ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   match e with
   | EPS.Expr.Variable v ->
     (* TODO: note this will be duplicated for each access, although common
        subexpression elimination should easily remove it *)
     Context.compile_get env v
-  | EPS.Expr.Lambda lambda -> compile_lambda lambda ~env ~runtime ~effect_reprs
+  | EPS.Expr.Lambda lambda ->
+    compile_lambda lambda ~env ~runtime ~effect_reprs ~outer_symbol
   | EPS.Expr.Fix_lambda fix_lambda ->
-    compile_fix_lambda fix_lambda ~env ~runtime ~effect_reprs
+    compile_fix_lambda fix_lambda ~env ~runtime ~effect_reprs ~outer_symbol
   | EPS.Expr.Application (e_f, e_args) ->
-    compile_application e_f e_args ~env ~runtime ~effect_reprs
+    compile_application e_f e_args ~env ~runtime ~effect_reprs ~outer_symbol
   | EPS.Expr.Literal lit -> compile_literal lit ~runtime
   | EPS.Expr.If_then_else (e_cond, e_yes, e_no) ->
-    let%bind cond_ptr = compile_expr e_cond ~env ~runtime ~effect_reprs in
+    let%bind cond_ptr =
+      compile_expr e_cond ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let%bind cond = Helpers.dereference_bool cond_ptr in
-    compile_if_then_else cond ~e_yes ~e_no ~env ~runtime ~effect_reprs
+    compile_if_then_else
+      cond
+      ~e_yes
+      ~e_no
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   | EPS.Expr.Unary_operator (op, e) ->
-    let%bind arg = compile_expr e ~env ~runtime ~effect_reprs in
+    let%bind arg = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
     compile_unary_operator arg op ~runtime
   | EPS.Expr.Operator (e_left, op, e_right) ->
-    let%bind left = compile_expr e_left ~env ~runtime ~effect_reprs in
-    let%bind right = compile_expr e_right ~env ~runtime ~effect_reprs in
+    let%bind left =
+      compile_expr e_left ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    let%bind right =
+      compile_expr e_right ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     compile_binary_operator ~left op ~right ~runtime
   | EPS.Expr.Construct_pure e ->
-    let%bind x = compile_expr e ~env ~runtime ~effect_reprs in
+    let%bind x = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
     compile_construct_pure x ~runtime
   | EPS.Expr.Construct_yield
       { marker = e_marker; op_clause = e_op_clause; resumption = e_resumption }
     ->
-    let%bind marker = compile_expr e_marker ~env ~runtime ~effect_reprs in
-    let%bind op_clause = compile_expr e_op_clause ~env ~runtime ~effect_reprs in
+    let%bind marker =
+      compile_expr e_marker ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    let%bind op_clause =
+      compile_expr e_op_clause ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let%bind resumption =
-      compile_expr e_resumption ~env ~runtime ~effect_reprs
+      compile_expr e_resumption ~env ~runtime ~effect_reprs ~outer_symbol
     in
     compile_construct_yield ~marker ~op_clause ~resumption ~runtime
+  | EPS.Expr.Match_ctl { subject; pure_branch; yield_branch } ->
+    failwith "not implemented"
   | EPS.Expr.Fresh_marker ->
     let { Runtime.fresh_marker; _ } = runtime in
     let%bind m =
@@ -284,8 +305,12 @@ let rec compile_expr
     in
     Helpers.heap_store_marker m ~runtime
   | EPS.Expr.Markers_equal (e1, e2) ->
-    let%bind marker1_ptr = compile_expr e1 ~env ~runtime ~effect_reprs in
-    let%bind marker2_ptr = compile_expr e2 ~env ~runtime ~effect_reprs in
+    let%bind marker1_ptr =
+      compile_expr e1 ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    let%bind marker2_ptr =
+      compile_expr e2 ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let%bind marker1 = Helpers.dereference_marker marker1_ptr in
     let%bind marker2 = Helpers.dereference_marker marker2_ptr in
     let { Runtime.markers_equal; _ } = runtime in
@@ -314,8 +339,11 @@ let rec compile_expr
       ~env
       ~runtime
       ~effect_reprs
+      ~outer_symbol
   | EPS.Expr.Select_operation (label, op_name, e_handler) ->
-    let%bind handler_ptr = compile_expr e_handler ~env ~runtime ~effect_reprs in
+    let%bind handler_ptr =
+      compile_expr e_handler ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     compile_select_operation label ~op_name handler_ptr ~effect_reprs
   | EPS.Expr.Nil_evidence_vector ->
     let { Runtime.nil_evidence_vector; _ } = runtime in
@@ -327,27 +355,39 @@ let rec compile_expr
       ; handler = e_handler
       ; vector_tail = e_vector_tail
       } ->
-    let%bind label_ptr = compile_expr e_label ~env ~runtime ~effect_reprs in
+    let%bind label_ptr =
+      compile_expr e_label ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let%bind label = Helpers.dereference_label label_ptr in
-    let%bind marker_ptr = compile_expr e_marker ~env ~runtime ~effect_reprs in
+    let%bind marker_ptr =
+      compile_expr e_marker ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let%bind marker = Helpers.dereference_marker marker_ptr in
-    let%bind handler = compile_expr e_handler ~env ~runtime ~effect_reprs in
+    let%bind handler =
+      compile_expr e_handler ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let%bind vector_tail =
-      compile_expr e_vector_tail ~env ~runtime ~effect_reprs
+      compile_expr e_vector_tail ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.cons_evidence_vector; _ } = runtime in
     let args = Array.of_list [ label; marker; handler; vector_tail ] in
     Codegen.use_builder
       (Llvm.build_call cons_evidence_vector args "extended_vector")
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
-    let%bind label_ptr = compile_expr e_label ~env ~runtime ~effect_reprs in
+    let%bind label_ptr =
+      compile_expr e_label ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let%bind label = Helpers.dereference_label label_ptr in
-    let%bind vector = compile_expr e_vector ~env ~runtime ~effect_reprs in
+    let%bind vector =
+      compile_expr e_vector ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let { Runtime.evidence_vector_lookup; _ } = runtime in
     let args = Array.of_list [ vector; label ] in
     Codegen.use_builder (Llvm.build_call evidence_vector_lookup args "evidence")
   | EPS.Expr.Get_evidence_marker e ->
-    let%bind evidence = compile_expr e ~env ~runtime ~effect_reprs in
+    let%bind evidence =
+      compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let { Runtime.get_evidence_marker; _ } = runtime in
     let%bind marker =
       Codegen.use_builder
@@ -358,7 +398,9 @@ let rec compile_expr
     in
     Helpers.heap_store_marker marker ~runtime
   | EPS.Expr.Get_evidence_handler e ->
-    let%bind evidence = compile_expr e ~env ~runtime ~effect_reprs in
+    let%bind evidence =
+      compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
+    in
     let { Runtime.get_evidence_handler; _ } = runtime in
     Codegen.use_builder
       (Llvm.build_call
@@ -366,20 +408,17 @@ let rec compile_expr
          (Array.of_list [ evidence ])
          "handler")
   | EPS.Expr.Impure_built_in impure ->
-    compile_impure_built_in impure ~env ~runtime ~effect_reprs
-  | _ -> failwith "not implemented"
- (* disable fragile-match *)
- [@@warning "-4"]
+    compile_impure_built_in impure ~env ~runtime ~effect_reprs ~outer_symbol
 
-(** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs] generates
-    code to branch on the value of the [Types.bool] [b], and evaluate to the
-    value of either [e_yes] or [e_no] *)
+(** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol]
+    generates code to branch on the value of the [Types.bool] [b], and evaluate
+    to the value of either [e_yes] or [e_no] *)
 and compile_if_then_else
     :  Llvm.llvalue -> e_yes:EPS.Expr.t -> e_no:EPS.Expr.t -> env:Context.t
     -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
-    -> Llvm.llvalue Codegen.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun cond ~e_yes ~e_no ~env ~runtime ~effect_reprs ->
+ fun cond ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind cond_i1 = Helpers.i1_of_bool cond in
   let%bind if_start_block = Codegen.use_builder Llvm.insertion_block in
@@ -398,11 +437,15 @@ and compile_if_then_else
   in
   (* compile yes branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end yes_start_block) in
-  let%bind yes_branch_result = compile_expr e_yes ~env ~runtime ~effect_reprs in
+  let%bind yes_branch_result =
+    compile_expr e_yes ~env ~runtime ~effect_reprs ~outer_symbol
+  in
   let%bind yes_end_block = Codegen.use_builder Llvm.insertion_block in
   (* compile no branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end no_start_block) in
-  let%bind no_branch_result = compile_expr e_no ~env ~runtime ~effect_reprs in
+  let%bind no_branch_result =
+    compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol
+  in
   let%bind no_end_block = Codegen.use_builder Llvm.insertion_block in
   (* connect back together *)
   let%bind if_end_block =
@@ -415,38 +458,37 @@ and compile_if_then_else
   in
   Codegen.use_builder (Llvm.build_phi incoming "if_result")
 
-(** [compile_function ~rec_name xs e_body ~captured ~runtime ~effect_reprs]
+(** [compile_function rec_name xs e_body ~captured ~runtime ~effect_reprs ~outer_symbol]
     generates a function with the given arguments and body, and within the scope
     given by [captured]. It returns this function's [llvalue]. The [llbuilder]'s
     insertion point is saved and restored. *)
 and compile_function
     :  rec_name:Variable.t option -> Variable.t list -> EPS.Expr.t
     -> captured:Context.Closure.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun ~rec_name xs e_body ~captured ~runtime ~effect_reprs ->
+ fun ~rec_name xs e_body ~captured ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
-  (* save the current builder insertion location *)
-  let%bind containing_block = Codegen.use_builder Llvm.insertion_block in
   (* new llvm function *)
   let%bind type_ = Types.function_code (List.length xs) in
-  (* TODO:
-
-     - at toplevel: don't clash (shadowing not allowed!) however this isn't a
-     problem: functions aren't ever accessed by llvm symbol name, only through
-     the closure
-
-     - locally: base name off of containing fun? *)
-  let%bind name =
-    let name =
-      match rec_name with
-      | None ->
-        (* TODO: base off of containing [fun]? *) Variable.of_generated "local"
-      | Some name -> name
-    in
-    Codegen.unique_symbol_name name
+  let%bind symbol_name, outer_symbol =
+    match rec_name with
+    | Some name ->
+      let%map symbol_name =
+        Codegen.symbol_of_local_name ~containing:outer_symbol name
+      in
+      symbol_name, symbol_name
+    | None ->
+      let%map symbol_name =
+        Codegen.symbol_of_local_anonymous ~containing:outer_symbol
+      in
+      symbol_name, outer_symbol
   in
-  let%bind function_ = Codegen.use_module (Llvm.define_function name type_) in
+  let%bind function_ =
+    Codegen.use_module
+      (Llvm.define_function (Symbol_name.to_string symbol_name) type_)
+  in
   (* name parameters: *)
   let params = Llvm.params function_ |> Array.to_list in
   let f_self_param, closure_param, params =
@@ -457,39 +499,44 @@ and compile_function
       (* this is a programmer error not a data error *)
       raise_s [%message "function type has unexpected number of parameters"]
   in
+  (* parameters available via varaibles in the body *)
   let env_parameters : Context.Parameters.t =
     match rec_name with
-    | None ->
-      (* TODO: merging two separate tasks like this is silly *)
-      Llvm.set_value_name "null" f_self_param;
-      List.zip_exn xs params
     | Some rec_name -> List.zip_exn (rec_name :: xs) (f_self_param :: params)
+    | None -> List.zip_exn xs params
   in
   List.iter env_parameters ~f:(fun (name, value) ->
       Llvm.set_value_name (Helpers.register_name_of_variable name) value);
+  if Option.is_none rec_name
+  then Llvm.set_value_name "null" f_self_param
+  else ();
   Llvm.set_value_name "closure" closure_param;
   (* function's first statement is to build closure capturing its own args *)
   let function_start_block = Llvm.entry_block function_ in
-  let%bind () =
-    Codegen.use_builder (Llvm.position_at_end function_start_block)
+  let%map () =
+    Codegen.within_block function_start_block ~f:(fun () ->
+        (* compile [e_body] in extended environment (capture variables which
+           escaped from the containing function) *)
+        let env' =
+          { Context.closure = captured; parameters = env_parameters }
+        in
+        let%bind result =
+          compile_expr e_body ~env:env' ~runtime ~effect_reprs ~outer_symbol
+        in
+        let%map _return = Codegen.use_builder (Llvm.build_ret result) in
+        ())
   in
-  (* compile [e_body] in extended environment (capture variables which escaped
-     from the containing function) *)
-  let env' = { Context.closure = captured; parameters = env_parameters } in
-  let%bind result = compile_expr e_body ~env:env' ~runtime ~effect_reprs in
-  let%bind _return = Codegen.use_builder (Llvm.build_ret result) in
   (* verify that function*)
   (* TODO: unneeded - verify module at end *)
   Llvm_analysis.assert_valid_function function_;
-  (* go back to where we were inserting *)
-  let%map () = Codegen.use_builder (Llvm.position_at_end containing_block) in
   function_
 
 and compile_lambda
     :  EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun (xs, e_body) ~env ~runtime ~effect_reprs ->
+ fun (xs, e_body) ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   (* TODO: this rebuilds the escaping closure on every capture - cheaper to
      build it once at function entry (keep it around in the context?) *)
@@ -502,6 +549,7 @@ and compile_lambda
       ~captured:escaping
       ~runtime
       ~effect_reprs
+      ~outer_symbol
   in
   compile_construct_function_object
     function_code
@@ -511,9 +559,10 @@ and compile_lambda
 
 and compile_fix_lambda
     :  EPS.Expr.fix_lambda -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun (f, (xs, e_body)) ~env ~runtime ~effect_reprs ->
+ fun (f, (xs, e_body)) ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind escaping = Context.compile_make_closure env ~runtime in
   let%bind function_code =
@@ -524,6 +573,7 @@ and compile_fix_lambda
       ~captured:escaping
       ~runtime
       ~effect_reprs
+      ~outer_symbol
   in
   compile_construct_function_object
     function_code
@@ -533,13 +583,17 @@ and compile_fix_lambda
 
 and compile_application
     :  EPS.Expr.t -> EPS.Expr.t list -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun e_f e_args ~env ~runtime ~effect_reprs ->
+ fun e_f e_args ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
-  let%bind f_opaque_ptr = compile_expr e_f ~env ~runtime ~effect_reprs in
+  let%bind f_opaque_ptr =
+    compile_expr e_f ~env ~runtime ~effect_reprs ~outer_symbol
+  in
   let%bind arg_ptrs =
-    List.map e_args ~f:(compile_expr ~env ~runtime ~effect_reprs) |> Codegen.all
+    List.map e_args ~f:(compile_expr ~env ~runtime ~effect_reprs ~outer_symbol)
+    |> Codegen.all
   in
   (* cast v_f to function type *)
   let%bind function_object_type = Types.function_object in
@@ -591,14 +645,16 @@ and compile_application
 and compile_construct_handler
     :  Effect_label.t -> EPS.Expr.t Variable.Map.t -> EPS.Expr.t option
     -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
  fun handled_effect
      operation_clause_exprs
      return_clause
      ~env
      ~runtime
-     ~effect_reprs ->
+     ~effect_reprs
+     ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind repr = lookup_effect_repr effect_reprs handled_effect in
   let { Effect_repr.hnd_type; operations; _ } = repr in
@@ -616,7 +672,9 @@ and compile_construct_handler
             in
             Codegen.impossible_error message
         in
-        let%map clause = compile_expr e_clause ~env ~runtime ~effect_reprs in
+        let%map clause =
+          compile_expr e_clause ~env ~runtime ~effect_reprs ~outer_symbol
+        in
         clause, Helpers.register_name_of_variable op_name)
     |> Codegen.all
   in
@@ -634,13 +692,14 @@ and compile_construct_handler
 
 and compile_impure_built_in
     :  EPS.Expr.impure_built_in -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun impure ~env ~runtime ~effect_reprs ->
+ fun impure ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   match impure with
   | EPS.Expr.Impure_print_int e ->
-    let%bind v = compile_expr e ~env ~runtime ~effect_reprs in
+    let%bind v = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
     let%bind i = Helpers.dereference_int v in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
@@ -693,4 +752,57 @@ let compile_effect_decls
         next_label_id, effect_reprs)
   in
   effect_reprs
+;;
+
+let compile_program : EPS.Program.t -> unit Codegen.t =
+ fun { EPS.Program.effect_declarations; fun_declarations } ->
+  let open Codegen.Let_syntax in
+  let%bind effect_reprs = compile_effect_decls effect_declarations in
+  let%bind runtime = Runtime.declare in
+  (* compile all toplevel functions (each with the correct shape of context),
+     collecting all their code addresses *)
+  (* make `main` *)
+  let main = failwith "not implemented" in
+  (* allocate toplevel closure *)
+  (* allocate each toplevel function as a function object (code address, pointer
+     back to the same closure) *)
+  let env = failwith "not implemented" in
+  (* compile a call to `entry_point` - or should this be kept as an expression
+     rather than a function? *)
+  (* [entry_point()(runtime.nil_evidence_vector)] *)
+  let invocation =
+    EPS.Expr.Application
+      ( EPS.Expr.Application (EPS.Expr.Variable EPS.Keyword.entry_point, [])
+      , [ EPS.Expr.Nil_evidence_vector ] )
+  in
+  let%bind _unit =
+    compile_expr
+      invocation
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol:Symbol_name.main
+  in
+  (* return 0 *)
+  let%bind i32 = Codegen.use_context Llvm.i32_type in
+  let return_code = Llvm.const_int i32 0 in
+  let%bind _return = Codegen.use_builder (Llvm.build_ret return_code) in
+  let () = Llvm_analysis.assert_valid_function main in
+  let%map () = Codegen.check_module_valid in
+  failwith "not implemented"
+;;
+
+let compile_then_write_program
+    : EPS.Program.t -> filename:string -> unit Or_codegen_error.t
+  =
+ fun program ~filename ->
+  Codegen.run_then_write_module
+    ~module_id:"main"
+    ~filename
+    (compile_program program)
+;;
+
+let compile_then_dump_program : EPS.Program.t -> unit Or_codegen_error.t =
+ fun program ->
+  Codegen.run_then_dump_module ~module_id:"main" (compile_program program)
 ;;
