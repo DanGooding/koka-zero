@@ -46,11 +46,27 @@ let%expect_test "fix lambdas name cannot collide with own parameters" =
          , ([ Variable.of_user "g"; Variable.of_user "f" ], UE.lit_unit) ))
   in
   Util.print_expr_inference_result expr;
-  [%expect {|
+  [%expect
+    {|
     (Error
      ((kind Type_error)
       (message "recursive function's name is shadowed by own parameter f")
       (location ())))|}]
+;;
+
+let%expect_test "cannot shadow functions at toplevel" =
+  let declarations =
+    [ M.Decl.Fun (Variable.of_user "foo", ([], UE.lit_unit))
+    ; M.Decl.Fun (Variable.of_user "foo", ([], UE.lit_unit))
+    ]
+  in
+  let program = { M.Program.declarations } in
+  Util.print_check_program_without_main_result program;
+  [%expect
+    {|
+    (Error
+     ((kind Type_error) (message "cannot shadow 'foo' at toplevel")
+      (location ()))) |}]
 ;;
 
 let%expect_test "handler must include all operations" =

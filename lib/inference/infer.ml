@@ -79,6 +79,22 @@ let add_binding
     Inference.type_error message
 ;;
 
+(** attempt to add a binding to an environment representing the toplevel,
+    failing if this would shadow another (toplevel) binding *)
+let add_toplevel_binding
+    : env:Context.t -> var:Variable.t -> type_:Type.t -> Context.t Inference.t
+  =
+ fun ~env ~var ~type_ ->
+  let open Inference.Let_syntax in
+  match Context.extend_toplevel env ~var ~type_ with
+  | `Ok env' -> return env'
+  | `Cannot_shadow ->
+    let message =
+      sprintf "cannot shadow '%s' at toplevel" (Variable.to_string_user var)
+    in
+    Inference.type_error message
+;;
+
 (** infer the type and effect of an expression, and convert it to explicit form.
     These are local and may contain known metavariables *)
 let rec infer
@@ -515,7 +531,7 @@ let infer_fun_decl
   let f_name, _lambda = f in
   let%bind t_f, f' = infer_fix_lambda ~env ~effect_env f in
   let%bind (t_f : Type.Poly.t) = Inference.generalise_total t_f ~env in
-  let%map env' = add_binding ~env ~var:f_name ~type_:(Type.Poly t_f) in
+  let%map env' = add_toplevel_binding ~env ~var:f_name ~type_:(Type.Poly t_f) in
   env', f'
 ;;
 

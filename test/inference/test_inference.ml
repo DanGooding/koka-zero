@@ -205,6 +205,30 @@ let%expect_test "sequence doesn't require first to be unit" =
       (Seq (Value (Literal (Int 0))) (Value (Literal (Bool true)))))) |}]
 ;;
 
+let%expect_test "local function can shadow toplevel" =
+  let declarations =
+    [ M.Decl.Fun (Variable.of_user "foo", ([], UE.lit_unit))
+    ; M.Decl.Fun
+        ( Variable.of_user "bar"
+        , ( []
+          , E.Let
+              (Variable.of_user "foo", E.Lambda ([], UE.lit_unit), UE.lit_unit)
+          ) )
+    ]
+  in
+  let program = { M.Program.declarations } in
+  Util.print_check_program_without_main_result program;
+  [%expect {|
+    (Ok
+     ((declarations
+       ((Fun ((User foo) (() (Value (Literal Unit)))))
+        (Fun
+         ((User bar)
+          (()
+           (Let (User foo) (Lambda (() (Value (Literal Unit))))
+            (Value (Literal Unit)))))))))) |}]
+;;
+
 let%expect_test "handled effects reflected in subject's effect" =
   let declarations =
     [ M.Decl.Effect Util.Expr.decl_read; M.Decl.Effect Util.Expr.decl_exn ]
