@@ -24,12 +24,23 @@ val use_module : (Llvm.llmodule -> 'a) -> 'a t
     if it it is found to be invalid *)
 val check_module_valid : unit t
 
-(* discorage this, as cached values become stale. - better to have
-   [use_current_block] *)
-val current_block : Llvm.llbasicblock t
+(** run a computation locally within a given basic block, saving the previous
+    insertion point and restoring it afterwards *)
+val within_block : Llvm.llbasicblock -> f:(unit -> unit t) -> unit t
 
 (** fail due to an error which should have been caught in type inference*)
 val impossible_error : string -> 'a t
 
 (** fail due to attempting to compile a not-yet-implemented feature *)
 val unsupported_feature_error : string -> 'a t
+
+(** create a unique symbol for a local name, by prefixing with its outer
+    function's symbol, and adding a unique suffix *)
+val symbol_of_local_name
+  :  containing:Symbol_name.t
+  -> Variable.t
+  -> Symbol_name.t t
+
+(** create a unique symbol for an anonymous local funciton, in the same way as
+    [symbol_of_local_name] *)
+val symbol_of_local_anonymous : containing:Symbol_name.t -> Symbol_name.t t

@@ -1,9 +1,5 @@
 open Import
 
-(** convert a [Varaible.t] to a string usable as symbol name (i.e. correctly
-    namespaced) *)
-val symbol_of_variable : Variable.t -> string
-
 (** convert a [Variable.t] to a string usable as a register name *)
 val register_name_of_variable : Variable.t -> string
 

@@ -13,6 +13,12 @@ type t =
   ; read_int : Llvm.llvalue
   }
 
+let declare_function symbol return_type argument_types =
+  let name = Symbol_name.to_string symbol in
+  let type_ = Llvm.function_type return_type (Array.of_list argument_types) in
+  Codegen.use_module (Llvm.declare_function name type_)
+;;
+
 let declare =
   let open Codegen.Let_syntax in
   let%bind void_type = Codegen.use_context Llvm.void_type in
@@ -25,83 +31,58 @@ let declare =
   let%bind marker_type = Types.marker in
   let%bind label_type = Types.label in
   let%bind exit =
-    let name = "kkr_exit" in
-    let type_ = Llvm.function_type void_type (Array.of_list []) in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_exit" in
+    declare_function name void_type []
   in
   let%bind exit_with_message =
-    let name = "kkr_exit_with_message" in
-    let type_ = Llvm.function_type void_type (Array.of_list [ i8_ptr ]) in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_exit_with_message" in
+    declare_function name void_type [ i8_ptr ]
   in
   let%bind malloc =
-    let name = "kkr_malloc" in
-    let type_ =
-      Llvm.function_type opaque_pointer_type (Array.of_list [ i64 ])
-    in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_malloc" in
+    declare_function name opaque_pointer_type [ i64 ]
   in
   let%bind fresh_marker =
-    let name = "kkr_fresh_marker" in
-    let type_ = Llvm.function_type marker_type (Array.of_list []) in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_fresh_marker" in
+    declare_function name marker_type []
   in
   let%bind markers_equal =
-    let name = "kkr_markers_equal" in
-    let type_ =
-      Llvm.function_type bool_type (Array.of_list [ marker_type; marker_type ])
-    in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_markers_equal" in
+    declare_function name bool_type [ marker_type; marker_type ]
   in
   let%bind nil_evidence_vector =
-    let name = "kkr_nil_evidence_vector" in
-    let type_ = Llvm.function_type opaque_pointer_type (Array.of_list []) in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_nil_evidence_vector" in
+    declare_function name opaque_pointer_type []
   in
   let%bind cons_evidence_vector =
-    let name = "kkr_cons_evidence_vector" in
-    let type_ =
-      Llvm.function_type
-        opaque_pointer_type
-        (Array.of_list
-           [ label_type; marker_type; opaque_pointer_type; opaque_pointer_type ])
-    in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_cons_evidence_vector" in
+    declare_function
+      name
+      opaque_pointer_type
+      [ label_type; marker_type; opaque_pointer_type; opaque_pointer_type ]
   in
   let%bind evidence_vector_lookup =
-    let name = "kkr_evidence_vector_lookup" in
-    let type_ =
-      Llvm.function_type
-        opaque_pointer_type
-        (Array.of_list [ opaque_pointer_type; label_type ])
-    in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_evidence_vector_lookup" in
+    declare_function
+      name
+      opaque_pointer_type
+      [ opaque_pointer_type; label_type ]
   in
   let%bind get_evidence_marker =
-    let name = "kkr_get_evidence_marker" in
-    let type_ =
-      Llvm.function_type marker_type (Array.of_list [ opaque_pointer_type ])
-    in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_get_evidence_marker" in
+    declare_function name marker_type [ opaque_pointer_type ]
   in
   let%bind get_evidence_handler =
-    let name = "kkr_get_evidence_handler" in
-    let type_ =
-      Llvm.function_type
-        opaque_pointer_type
-        (Array.of_list [ opaque_pointer_type ])
-    in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_get_evidence_handler" in
+    declare_function name opaque_pointer_type [ opaque_pointer_type ]
   in
   let%bind print_int =
-    let name = "kkr_print_int" in
-    let type_ = Llvm.function_type void_type (Array.of_list [ int_type ]) in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_print_int" in
+    declare_function name void_type [ int_type ]
   in
   let%map read_int =
-    let name = "kkr_read_int" in
-    let type_ = Llvm.function_type int_type (Array.of_list []) in
-    Codegen.use_module (Llvm.declare_function name type_)
+    let name = Symbol_name.of_runtime_exn "kkr_read_int" in
+    declare_function name int_type []
   in
   { exit
   ; exit_with_message
