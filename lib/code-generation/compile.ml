@@ -234,6 +234,49 @@ let compile_construct_function_object
     (Llvm.build_bitcast function_ptr opaque_pointer "function_opaque")
 ;;
 
+(** [compile_conditional cond ~compile_true ~compile_false] generates a branch
+    based on the value of [i1] [cond], to either the code of [compile_true] or
+    [compile_false], then generates a phi node to combine their values *)
+let compile_conditional
+    :  Llvm.llvalue -> compile_true:(unit -> Llvm.llvalue Codegen.t)
+    -> compile_false:(unit -> Llvm.llvalue Codegen.t) -> Llvm.llvalue Codegen.t
+  =
+ fun cond ~compile_true ~compile_false ->
+  let open Codegen.Let_syntax in
+  let%bind if_start_block = Codegen.use_builder Llvm.insertion_block in
+  let current_function = Llvm.block_parent if_start_block in
+  let%bind true_start_block =
+    Codegen.use_context (fun context ->
+        Llvm.append_block context "if_true" current_function)
+  in
+  let%bind false_start_block =
+    Codegen.use_context (fun context ->
+        Llvm.append_block context "if_false" current_function)
+  in
+  let%bind _branch =
+    Codegen.use_builder
+      (Llvm.build_cond_br cond true_start_block false_start_block)
+  in
+  (* compile yes branch *)
+  let%bind () = Codegen.use_builder (Llvm.position_at_end true_start_block) in
+  let%bind true_branch_result = compile_true () in
+  let%bind true_end_block = Codegen.use_builder Llvm.insertion_block in
+  (* compile false branch *)
+  let%bind () = Codegen.use_builder (Llvm.position_at_end false_start_block) in
+  let%bind false_branch_result = compile_false () in
+  let%bind false_end_block = Codegen.use_builder Llvm.insertion_block in
+  (* connect back together *)
+  let%bind if_end_block =
+    Codegen.use_context (fun context ->
+        Llvm.append_block context "post_if" current_function)
+  in
+  let%bind () = Codegen.use_builder (Llvm.position_at_end if_end_block) in
+  let incoming =
+    [ true_branch_result, true_end_block; false_branch_result, false_end_block ]
+  in
+  Codegen.use_builder (Llvm.build_phi incoming "if_result")
+;;
+
 (** produces code to evaluate the given expression and store its value to the
     heap. The returned [llvalue] is the [Types.opaque_pointer] to this value. *)
 let rec compile_expr
@@ -253,7 +296,14 @@ let rec compile_expr
   | EPS.Expr.Fix_lambda fix_lambda ->
     compile_fix_lambda fix_lambda ~env ~runtime ~effect_reprs ~outer_symbol
   | EPS.Expr.Application (e_f, e_args) ->
-    compile_application e_f e_args ~env ~runtime ~effect_reprs ~outer_symbol
+    let%bind f = compile_expr e_f ~env ~runtime ~effect_reprs ~outer_symbol in
+    let%bind args =
+      List.map
+        e_args
+        ~f:(compile_expr ~env ~runtime ~effect_reprs ~outer_symbol)
+      |> Codegen.all
+    in
+    compile_application f args
   | EPS.Expr.Literal lit -> compile_literal lit ~runtime
   | EPS.Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind cond_ptr =
@@ -295,8 +345,18 @@ let rec compile_expr
       compile_expr e_resumption ~env ~runtime ~effect_reprs ~outer_symbol
     in
     compile_construct_yield ~marker ~op_clause ~resumption ~runtime
-  | EPS.Expr.Match_ctl { subject; pure_branch; yield_branch } ->
-    failwith "not implemented"
+  | EPS.Expr.Match_ctl { subject = e_subject; pure_branch; yield_branch } ->
+    let%bind subject =
+      compile_expr e_subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_match_ctl
+      subject
+      ~pure_branch
+      ~yield_branch
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   | EPS.Expr.Fresh_marker ->
     let { Runtime.fresh_marker; _ } = runtime in
     let%bind m =
@@ -410,6 +470,88 @@ let rec compile_expr
   | EPS.Expr.Impure_built_in impure ->
     compile_impure_built_in impure ~env ~runtime ~effect_reprs ~outer_symbol
 
+(** [compile_match_ctl subject ~pure_branch ~yield_branch ...] generates code to
+    branch on the ctl varaint poitned to by [Types.opaque_pointer]:[subject],
+    calling either [pure_branch] or [yield_branch] with its fields. (These are
+    also compiled) *)
+and compile_match_ctl
+    :  Llvm.llvalue -> pure_branch:EPS.Expr.lambda
+    -> yield_branch:EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
+  =
+ fun subject
+     ~pure_branch
+     ~yield_branch
+     ~env
+     ~runtime
+     ~effect_reprs
+     ~outer_symbol ->
+  let open Codegen.Let_syntax in
+  let%bind pure_function =
+    compile_lambda pure_branch ~env ~runtime ~effect_reprs ~outer_symbol
+  in
+  let%bind yield_function =
+    compile_lambda yield_branch ~env ~runtime ~effect_reprs ~outer_symbol
+  in
+  let%bind ctl_type = Types.ctl in
+  let ctl_ptr_type = Llvm.pointer_type ctl_type in
+  let%bind ctl_ptr =
+    Codegen.use_builder (Llvm.build_bitcast subject ctl_ptr_type "ctl_ptr")
+  in
+  let%bind tag_ptr =
+    Codegen.use_builder (Llvm.build_struct_gep ctl_ptr 0 "tag_ptr")
+  in
+  let%bind tag = Codegen.use_builder (Llvm.build_load tag_ptr "tag") in
+  let%bind pure_tag = Helpers.const_tag 0 in
+  let%bind is_pure =
+    Codegen.use_builder (Llvm.build_icmp Llvm.Icmp.Eq tag pure_tag "is_pure")
+  in
+  compile_conditional
+    is_pure
+    ~compile_true:(fun () ->
+      let%bind ctl_pure_type = Types.ctl_pure in
+      let ctl_pure_ptr_type = Llvm.pointer_type ctl_pure_type in
+      let%bind ctl_pure_ptr =
+        Codegen.use_builder
+          (Llvm.build_bitcast subject ctl_pure_ptr_type "ctl_pure_ptr")
+      in
+      let%bind value_ptr =
+        Codegen.use_builder (Llvm.build_struct_gep ctl_pure_ptr 1 "value_ptr")
+      in
+      let%bind value =
+        Codegen.use_builder (Llvm.build_load value_ptr "value")
+      in
+      compile_application pure_function [ value ])
+    ~compile_false:(fun () ->
+      let%bind ctl_yield_type = Types.ctl_yield in
+      let ctl_yield_ptr_type = Llvm.pointer_type ctl_yield_type in
+      let%bind ctl_yield_ptr =
+        Codegen.use_builder
+          (Llvm.build_bitcast subject ctl_yield_ptr_type "ctl_yield_ptr")
+      in
+      let%bind marker_ptr =
+        Codegen.use_builder (Llvm.build_struct_gep ctl_yield_ptr 1 "marker_ptr")
+      in
+      let%bind marker =
+        Codegen.use_builder (Llvm.build_load marker_ptr "marker")
+      in
+      let%bind op_clause_ptr =
+        Codegen.use_builder
+          (Llvm.build_struct_gep ctl_yield_ptr 2 "op_clause_ptr")
+      in
+      let%bind op_clause =
+        Codegen.use_builder (Llvm.build_load op_clause_ptr "op_clause")
+      in
+      let%bind resumption_ptr =
+        Codegen.use_builder
+          (Llvm.build_struct_gep ctl_yield_ptr 3 "resumption_ptr")
+      in
+      let%bind resumption =
+        Codegen.use_builder (Llvm.build_load resumption_ptr "resumption")
+      in
+      compile_application yield_function [ marker; op_clause; resumption ])
+
 (** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol]
     generates code to branch on the value of the [Types.bool] [b], and evaluate
     to the value of either [e_yes] or [e_no] *)
@@ -421,42 +563,12 @@ and compile_if_then_else
  fun cond ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind cond_i1 = Helpers.i1_of_bool cond in
-  let%bind if_start_block = Codegen.use_builder Llvm.insertion_block in
-  let current_function = Llvm.block_parent if_start_block in
-  let%bind yes_start_block =
-    Codegen.use_context (fun context ->
-        Llvm.append_block context "if_yes" current_function)
-  in
-  let%bind no_start_block =
-    Codegen.use_context (fun context ->
-        Llvm.append_block context "if_no" current_function)
-  in
-  let%bind _branch =
-    Codegen.use_builder
-      (Llvm.build_cond_br cond_i1 yes_start_block no_start_block)
-  in
-  (* compile yes branch *)
-  let%bind () = Codegen.use_builder (Llvm.position_at_end yes_start_block) in
-  let%bind yes_branch_result =
-    compile_expr e_yes ~env ~runtime ~effect_reprs ~outer_symbol
-  in
-  let%bind yes_end_block = Codegen.use_builder Llvm.insertion_block in
-  (* compile no branch *)
-  let%bind () = Codegen.use_builder (Llvm.position_at_end no_start_block) in
-  let%bind no_branch_result =
-    compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol
-  in
-  let%bind no_end_block = Codegen.use_builder Llvm.insertion_block in
-  (* connect back together *)
-  let%bind if_end_block =
-    Codegen.use_context (fun context ->
-        Llvm.append_block context "post_if" current_function)
-  in
-  let%bind () = Codegen.use_builder (Llvm.position_at_end if_end_block) in
-  let incoming =
-    [ yes_branch_result, yes_end_block; no_branch_result, no_end_block ]
-  in
-  Codegen.use_builder (Llvm.build_phi incoming "if_result")
+  compile_conditional
+    cond_i1
+    ~compile_true:(fun () ->
+      compile_expr e_yes ~env ~runtime ~effect_reprs ~outer_symbol)
+    ~compile_false:(fun () ->
+      compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol)
 
 (** [compile_function rec_name xs e_body ~captured ~runtime ~effect_reprs ~outer_symbol]
     generates a function with the given arguments and body, and within the scope
@@ -531,6 +643,9 @@ and compile_function
   Llvm_analysis.assert_valid_function function_;
   function_
 
+(** [compile_lambda lambda ...] compiles lambda as a function, and generates
+    code to construct a function object of it in the given [env]. The result is
+    a [Types.opaque_pointer] to it. *)
 and compile_lambda
     :  EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t
@@ -557,6 +672,9 @@ and compile_lambda
     ~env
     ~runtime
 
+(** [compile_fix_lambda lambda ...] compiles a recursive lambda as a function,
+    and generates code to construct a function object of it in the given [env].
+    The result is a [Types.opaque_pointer] to it. *)
 and compile_fix_lambda
     :  EPS.Expr.fix_lambda -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t
@@ -581,26 +699,19 @@ and compile_fix_lambda
     ~env
     ~runtime
 
+(** [compile_application f args] generates code to 'call' the function object
+    pointed to by [Types.opaque_pointer]:[f], with the given arguments. *)
 and compile_application
-    :  EPS.Expr.t -> EPS.Expr.t list -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t
-    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
+    : Llvm.llvalue -> Llvm.llvalue list -> Llvm.llvalue Codegen.t
   =
- fun e_f e_args ~env ~runtime ~effect_reprs ~outer_symbol ->
+ fun f_ptr arg_ptrs ->
   let open Codegen.Let_syntax in
-  let%bind f_opaque_ptr =
-    compile_expr e_f ~env ~runtime ~effect_reprs ~outer_symbol
-  in
-  let%bind arg_ptrs =
-    List.map e_args ~f:(compile_expr ~env ~runtime ~effect_reprs ~outer_symbol)
-    |> Codegen.all
-  in
   (* cast v_f to function type *)
   let%bind function_object_type = Types.function_object in
   let function_object_ptr_type = Llvm.pointer_type function_object_type in
   let%bind f_ptr =
     Codegen.use_builder
-      (Llvm.build_bitcast f_opaque_ptr function_object_ptr_type "function_ptr")
+      (Llvm.build_bitcast f_ptr function_object_ptr_type "function_ptr")
   in
   (* extract fields of f *)
   let%bind code_address_ptr =
