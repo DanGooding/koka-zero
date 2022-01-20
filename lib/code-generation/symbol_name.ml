@@ -15,6 +15,7 @@ end
 type t = string [@@deriving sexp]
 
 let to_string t = t
+let main = "main"
 
 let of_toplevel = function
   | Variable.User s -> "kku_" ^ s

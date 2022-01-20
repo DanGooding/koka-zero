@@ -13,6 +13,9 @@ type t [@@deriving sexp]
 (** get as a string to pass to llvm creation functions *)
 val to_string : t -> string
 
+(** name of the entry point symbol `main` *)
+val main : t
+
 (** convert a toplevel name (which is therefore unique) to a symbol *)
 val of_toplevel : Variable.t -> t
 
