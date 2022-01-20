@@ -162,3 +162,12 @@ let compile_populate_array array_ptr elements =
       ())
   |> Codegen.all_unit
 ;;
+
+let compile_access_field struct_ptr index name =
+  let open Codegen.Let_syntax in
+  let%bind field_ptr =
+    Codegen.use_builder
+      (Llvm.build_struct_gep struct_ptr index (name ^ "field_ptr"))
+  in
+  Codegen.use_builder (Llvm.build_load field_ptr name)
+;;
