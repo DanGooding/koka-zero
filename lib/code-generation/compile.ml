@@ -499,10 +499,7 @@ and compile_match_ctl
   let%bind ctl_ptr =
     Codegen.use_builder (Llvm.build_bitcast subject ctl_ptr_type "ctl_ptr")
   in
-  let%bind tag_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep ctl_ptr 0 "tag_ptr")
-  in
-  let%bind tag = Codegen.use_builder (Llvm.build_load tag_ptr "tag") in
+  let%bind tag = Helpers.compile_access_field ctl_ptr 0 "tag" in
   let%bind pure_tag = Helpers.const_tag 0 in
   let%bind is_pure =
     Codegen.use_builder (Llvm.build_icmp Llvm.Icmp.Eq tag pure_tag "is_pure")
@@ -516,12 +513,7 @@ and compile_match_ctl
         Codegen.use_builder
           (Llvm.build_bitcast subject ctl_pure_ptr_type "ctl_pure_ptr")
       in
-      let%bind value_ptr =
-        Codegen.use_builder (Llvm.build_struct_gep ctl_pure_ptr 1 "value_ptr")
-      in
-      let%bind value =
-        Codegen.use_builder (Llvm.build_load value_ptr "value")
-      in
+      let%bind value = Helpers.compile_access_field ctl_pure_ptr 1 "value" in
       compile_application pure_function [ value ])
     ~compile_false:(fun () ->
       let%bind ctl_yield_type = Types.ctl_yield in
@@ -530,25 +522,12 @@ and compile_match_ctl
         Codegen.use_builder
           (Llvm.build_bitcast subject ctl_yield_ptr_type "ctl_yield_ptr")
       in
-      let%bind marker_ptr =
-        Codegen.use_builder (Llvm.build_struct_gep ctl_yield_ptr 1 "marker_ptr")
-      in
-      let%bind marker =
-        Codegen.use_builder (Llvm.build_load marker_ptr "marker")
-      in
-      let%bind op_clause_ptr =
-        Codegen.use_builder
-          (Llvm.build_struct_gep ctl_yield_ptr 2 "op_clause_ptr")
-      in
+      let%bind marker = Helpers.compile_access_field ctl_yield_ptr 1 "marker" in
       let%bind op_clause =
-        Codegen.use_builder (Llvm.build_load op_clause_ptr "op_clause")
-      in
-      let%bind resumption_ptr =
-        Codegen.use_builder
-          (Llvm.build_struct_gep ctl_yield_ptr 3 "resumption_ptr")
+        Helpers.compile_access_field ctl_yield_ptr 2 "op_clause"
       in
       let%bind resumption =
-        Codegen.use_builder (Llvm.build_load resumption_ptr "resumption")
+        Helpers.compile_access_field ctl_yield_ptr 3 "resumption"
       in
       compile_application yield_function [ marker; op_clause; resumption ])
 
@@ -714,24 +693,11 @@ and compile_application
       (Llvm.build_bitcast f_ptr function_object_ptr_type "function_ptr")
   in
   (* extract fields of f *)
-  let%bind code_address_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep f_ptr 0 "code_address_ptr")
-  in
   let%bind code_address_opaque =
-    Codegen.use_builder (Llvm.build_load code_address_ptr "code_address")
+    Helpers.compile_access_field f_ptr 0 "code_address"
   in
-  let%bind closure_field_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep f_ptr 1 "closure_field_ptr")
-  in
-  let%bind closure_ptr =
-    Codegen.use_builder (Llvm.build_load closure_field_ptr "closure_ptr")
-  in
-  let%bind is_recursive_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep f_ptr 2 "is_recursive_ptr")
-  in
-  let%bind is_recursive =
-    Codegen.use_builder (Llvm.build_load is_recursive_ptr "is_recursive")
-  in
+  let%bind closure_ptr = Helpers.compile_access_field f_ptr 1 "closure" in
+  let%bind is_recursive = Helpers.compile_access_field f_ptr 2 "is_recursive" in
   (* the number of arguments passed in the evidence passing representation *)
   let num_eps_args = List.length arg_ptrs in
   let%bind generated_function_type = Types.function_code num_eps_args in
@@ -826,6 +792,9 @@ and compile_impure_built_in
     Helpers.heap_store_int i ~runtime
 ;;
 
+(** creates the representation of a declared effect. This builds the type of
+    handlers for that effect to be a struct with as many [Types.opaque_pointer]
+    fields as there are operations *)
 let compile_effect_decl
     : EPS.Program.Effect_decl.t -> id:int -> Effect_repr.t Codegen.t
   =
