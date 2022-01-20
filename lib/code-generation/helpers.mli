@@ -94,3 +94,11 @@ val compile_populate_array
   :  Llvm.llvalue
   -> (Llvm.llvalue * string) list
   -> unit Codegen.t
+
+(** [compile_access_field p index name] generates code to load field [index]
+    from the struct pointed to by [p] *)
+val compile_access_field
+  :  Llvm.llvalue
+  -> int
+  -> string
+  -> Llvm.llvalue Codegen.t
