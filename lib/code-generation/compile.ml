@@ -194,10 +194,10 @@ let compile_select_operation
   in
   (* pointer into the struct - of type [op_clause**] *)
   let%bind op_clause_field_ptr =
-    Codegen.use_builder (Llvm.build_struct_gep handler op_index "op_clause_ptr")
+    Codegen.use_builder
+      (Llvm.build_struct_gep handler op_index "op_clause_field_ptr")
   in
-  let%bind opaque_pointer = Types.opaque_pointer in
-  Helpers.dereference op_clause_field_ptr opaque_pointer "op_clause"
+  Codegen.use_builder (Llvm.build_load op_clause_field_ptr "op_clause")
 ;;
 
 (** [compile_construt_function_object code_address ~is_recursive ~env ~runtime]
