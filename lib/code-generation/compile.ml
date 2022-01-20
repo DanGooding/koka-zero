@@ -549,17 +549,17 @@ and compile_if_then_else
     ~compile_false:(fun () ->
       compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol)
 
-(** [compile_function rec_name xs e_body ~captured ~runtime ~effect_reprs ~outer_symbol]
+(** [compile_function rec_name xs e_body ~captured_shape ... ~outer_symbol]
     generates a function with the given arguments and body, and within the scope
-    given by [captured]. It returns this function's [llvalue]. The [llbuilder]'s
-    insertion point is saved and restored. *)
+    given by [captured_shape]. It returns this function's [llvalue]. The
+    [llbuilder]'s insertion point is saved and restored. *)
 and compile_function
     :  rec_name:Variable.t option -> Variable.t list -> EPS.Expr.t
-    -> captured:Context.Closure.t -> runtime:Runtime.t
+    -> captured_shape:Context.Closure.Shape.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
- fun ~rec_name xs e_body ~captured ~runtime ~effect_reprs ~outer_symbol ->
+ fun ~rec_name xs e_body ~captured_shape ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   (* new llvm function *)
   let%bind type_ = Types.function_code (List.length xs) in
@@ -602,6 +602,9 @@ and compile_function
   then Llvm.set_value_name "null" f_self_param
   else ();
   Llvm.set_value_name "closure" closure_param;
+  let captured =
+    { Context.Closure.shape = captured_shape; closure = closure_param }
+  in
   (* function's first statement is to build closure capturing its own args *)
   let function_start_block = Llvm.entry_block function_ in
   let%map () =
@@ -634,13 +637,15 @@ and compile_lambda
   let open Codegen.Let_syntax in
   (* TODO: this rebuilds the escaping closure on every capture - cheaper to
      build it once at function entry (keep it around in the context?) *)
+  (* ecaping closure contains everything in [env]: parameters and closure *)
   let%bind escaping = Context.compile_make_closure env ~runtime in
+  let { Context.Closure.shape = escaping_shape; _ } = escaping in
   let%bind function_code =
     compile_function
       ~rec_name:None
       xs
       e_body
-      ~captured:escaping
+      ~captured_shape:escaping_shape
       ~runtime
       ~effect_reprs
       ~outer_symbol
@@ -662,12 +667,13 @@ and compile_fix_lambda
  fun (f, (xs, e_body)) ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind escaping = Context.compile_make_closure env ~runtime in
+  let { Context.Closure.shape = escaping_shape; _ } = escaping in
   let%bind function_code =
     compile_function
       ~rec_name:(Some f)
       xs
       e_body
-      ~captured:escaping
+      ~captured_shape:escaping_shape
       ~runtime
       ~effect_reprs
       ~outer_symbol
