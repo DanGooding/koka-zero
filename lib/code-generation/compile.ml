@@ -241,7 +241,7 @@ let compile_conditional
   =
  fun cond ~compile_true ~compile_false ->
   let open Codegen.Let_syntax in
-  let%bind if_start_block = Codegen.use_builder Llvm.insertion_block in
+  let%bind if_start_block = Codegen.insertion_block_exn in
   let current_function = Llvm.block_parent if_start_block in
   let%bind true_start_block =
     Codegen.use_context (fun context ->
@@ -258,11 +258,11 @@ let compile_conditional
   (* compile yes branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end true_start_block) in
   let%bind true_branch_result = compile_true () in
-  let%bind true_end_block = Codegen.use_builder Llvm.insertion_block in
+  let%bind true_end_block = Codegen.insertion_block_exn in
   (* compile false branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end false_start_block) in
   let%bind false_branch_result = compile_false () in
-  let%bind false_end_block = Codegen.use_builder Llvm.insertion_block in
+  let%bind false_end_block = Codegen.insertion_block_exn in
   (* connect back together *)
   let%bind if_end_block =
     Codegen.use_context (fun context ->
