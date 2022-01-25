@@ -32,7 +32,7 @@ install: all ## Install the packages on the system
 
 .PHONY: start
 start: all ## Run the produced executable
-	opam exec -- dune exec --root . bin/main.exe $(ARGS)
+	opam exec -- dune exec --root . bin/main.exe -- $(ARGS)
 
 .PHONY: debug
 debug: ## Debug the main executable
