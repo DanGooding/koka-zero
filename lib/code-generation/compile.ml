@@ -1003,17 +1003,13 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
   Codegen.check_module_valid
 ;;
 
-let compile_then_write_program
-    : EPS.Program.t -> filename:string -> unit Or_codegen_error.t
-  =
- fun program ~filename ->
+let compile_then_write_program program ~filename =
   Codegen.run_then_write_module
     ~module_id:"main"
     ~filename
     (compile_program program)
 ;;
 
-let compile_then_dump_program : EPS.Program.t -> unit Or_codegen_error.t =
- fun program ->
+let compile_then_dump_program program =
   Codegen.run_then_dump_module ~module_id:"main" (compile_program program)
 ;;

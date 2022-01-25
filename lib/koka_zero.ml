@@ -7,9 +7,11 @@ module Evidence_passing_syntax =
 
 module Value = Koka_zero_interpreter.Value
 module Runtime_error = Koka_zero_interpreter.Runtime_error
+module Codegen_error = Koka_zero_code_generation.Codegen_error
 
 let parse_channel = Koka_zero_parsing.parse_channel
 let parse_string = Koka_zero_parsing.parse_string
 let infer_program = Koka_zero_inference.infer_program
 let translate = Koka_zero_evidence_translation.translate
 let interpret_program = Koka_zero_interpreter.interpret_program
+let compile_program = Koka_zero_code_generation.compile_then_write_program
