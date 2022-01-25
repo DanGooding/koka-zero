@@ -14,10 +14,10 @@ module Closure : sig
       | Level of Variable.t list * t
           (** a list of all the variables added to the closure at one nesting
               depth, and the parent closure's shape *)
-      | Toplevel of int Variable.Map.t
-          (** a map from names in scope from the current enclosing toplevel
-              function, to their indices in the _single_ toplevel closure. This
-              is is map rather than a list due to potential shadowing *)
+      | Toplevel of Variable.t list
+          (** names in scope from the current enclosing toplevel function, in
+              the _single_ toplevel closure. These are unique, so searching in
+              either order is guaranteed to work *)
     [@@deriving sexp]
   end
 
@@ -30,6 +30,12 @@ module Closure : sig
   (** produce code to cons parameters on the front, producing a child closure *)
   val compile_extend : t -> Parameters.t -> runtime:Runtime.t -> t Codegen.t
 
+  (** produce code to construct a toplevel closure, given its contents *)
+  val compile_make_toplevel
+    :  (Variable.t * Llvm.llvalue) list
+    -> runtime:Runtime.t
+    -> t Codegen.t
+
   (** generate code to retrieve a varaible from a closure, failing with a
       codegen_eror if it is not present. *)
   val compile_get : t -> Variable.t -> Llvm.llvalue Codegen.t
@@ -37,12 +43,15 @@ end
 
 (** maps in-scope names to their [llvalues] *)
 type t =
-  { parameters : Parameters.t
-  ; closure : Closure.t
-  }
+  (* TODO: this, or [option]al parameters *)
+  | With_parameters of
+      { parameters : Parameters.t
+      ; closure : Closure.t
+      }
+  | Toplevel of Closure.t
 
 (** generate code to extend the closure with the current parameters *)
-val compile_make_closure : t -> runtime:Runtime.t -> Closure.t Codegen.t
+val compile_capture : t -> runtime:Runtime.t -> Closure.t Codegen.t
 
 (** generate code to retrieve an in-scope variable, either directly from
     [parameters], or indirectly in the [closure]. fails with a codegen_error if

@@ -200,15 +200,15 @@ let compile_select_operation
   Codegen.use_builder (Llvm.build_load op_clause_field_ptr "op_clause")
 ;;
 
-(** [compile_construt_function_object code_address ~is_recursive ~env ~runtime]
+(** [compile_construt_function_object code_address ~is_recursive ~captured_closure ...]
     generates code to heap allocate and populate a [Types.function_object], with
-    code pointed to by the (typed or opaque) [code_address], capturing [env] as
-    it's closure. *)
+    code pointed to by the (typed or opaque) [code_address], keeping
+    [captured_closure] as it's closure. *)
 let compile_construct_function_object
-    :  Llvm.llvalue -> is_recursive:bool -> env:Context.t -> runtime:Runtime.t
-    -> Llvm.llvalue Codegen.t
+    :  Llvm.llvalue -> is_recursive:bool -> captured_closure:Llvm.llvalue
+    -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
   =
- fun code_address ~is_recursive ~env ~runtime ->
+ fun code_address ~is_recursive ~captured_closure ~runtime ->
   let open Codegen.Let_syntax in
   let%bind function_object_type = Types.function_object in
   let%bind function_ptr =
@@ -219,13 +219,11 @@ let compile_construct_function_object
     Codegen.use_builder
       (Llvm.build_bitcast code_address opaque_pointer "code_address_opaque_ptr")
   in
-  let { Context.closure; _ } = env in
-  let { Context.Closure.closure; _ } = closure in
   let%bind i1 = Codegen.use_context Llvm.i1_type in
   let is_recursive = Llvm.const_int i1 (if is_recursive then 1 else 0) in
   let fields =
     [ function_code_opaque_ptr, "code"
-    ; closure, "closure"
+    ; captured_closure, "closure"
     ; is_recursive, "is_recursive"
     ]
   in
@@ -549,33 +547,27 @@ and compile_if_then_else
     ~compile_false:(fun () ->
       compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol)
 
-(** [compile_function rec_name xs e_body ~captured_shape ... ~outer_symbol]
+(** [compile_function ~symbol_name rec_name xs e_body ~captured_shape ~outer_symbol ...]
     generates a function with the given arguments and body, and within the scope
     given by [captured_shape]. It returns this function's [llvalue]. The
     [llbuilder]'s insertion point is saved and restored. *)
 and compile_function
-    :  rec_name:Variable.t option -> Variable.t list -> EPS.Expr.t
-    -> captured_shape:Context.Closure.Shape.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t
-    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
+    :  symbol_name:Symbol_name.t -> rec_name:Variable.t option
+    -> Variable.t list -> EPS.Expr.t -> captured_shape:Context.Closure.Shape.t
+    -> outer_symbol:Symbol_name.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun ~rec_name xs e_body ~captured_shape ~runtime ~effect_reprs ~outer_symbol ->
+ fun ~symbol_name
+     ~rec_name
+     xs
+     e_body
+     ~captured_shape
+     ~outer_symbol
+     ~runtime
+     ~effect_reprs ->
   let open Codegen.Let_syntax in
   (* new llvm function *)
   let%bind type_ = Types.function_code (List.length xs) in
-  let%bind symbol_name, outer_symbol =
-    match rec_name with
-    | Some name ->
-      let%map symbol_name =
-        Codegen.symbol_of_local_name ~containing:outer_symbol name
-      in
-      symbol_name, symbol_name
-    | None ->
-      let%map symbol_name =
-        Codegen.symbol_of_local_anonymous ~containing:outer_symbol
-      in
-      symbol_name, outer_symbol
-  in
   let%bind function_ =
     Codegen.use_module
       (Llvm.define_function (Symbol_name.to_string symbol_name) type_)
@@ -612,7 +604,8 @@ and compile_function
         (* compile [e_body] in extended environment (capture variables which
            escaped from the containing function) *)
         let env' =
-          { Context.closure = captured; parameters = env_parameters }
+          Context.With_parameters
+            { closure = captured; parameters = env_parameters }
         in
         let%bind result =
           compile_expr e_body ~env:env' ~runtime ~effect_reprs ~outer_symbol
@@ -625,63 +618,100 @@ and compile_function
   Llvm_analysis.assert_valid_function function_;
   function_
 
+(** a special case of [compile_function], where the function's symbol name is
+    based on the containing function's name ([outer_symbol]) *)
+and compile_local_function
+    :  rec_name:Variable.t option -> Variable.t list -> EPS.Expr.t
+    -> captured_shape:Context.Closure.Shape.t -> outer_symbol:Symbol_name.t
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> Llvm.llvalue Codegen.t
+  =
+ fun ~rec_name xs e_body ~captured_shape ~outer_symbol ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  let%bind symbol_name, outer_symbol =
+    match rec_name with
+    | Some name ->
+      let%map symbol_name =
+        Codegen.symbol_of_local_name ~containing:outer_symbol name
+      in
+      symbol_name, symbol_name
+    | None ->
+      let%map symbol_name =
+        Codegen.symbol_of_local_anonymous ~containing:outer_symbol
+      in
+      symbol_name, outer_symbol
+  in
+  compile_function
+    ~symbol_name
+    ~rec_name
+    xs
+    e_body
+    ~captured_shape
+    ~outer_symbol
+    ~runtime
+    ~effect_reprs
+
 (** [compile_lambda lambda ...] compiles lambda as a function, and generates
     code to construct a function object of it in the given [env]. The result is
     a [Types.opaque_pointer] to it. *)
 and compile_lambda
-    :  EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t
-    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
+    :  EPS.Expr.lambda -> env:Context.t -> outer_symbol:Symbol_name.t
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> Llvm.llvalue Codegen.t
   =
- fun (xs, e_body) ~env ~runtime ~effect_reprs ~outer_symbol ->
+ fun (xs, e_body) ~env ~outer_symbol ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   (* TODO: this rebuilds the escaping closure on every capture - cheaper to
      build it once at function entry (keep it around in the context?) *)
   (* ecaping closure contains everything in [env]: parameters and closure *)
-  let%bind escaping = Context.compile_make_closure env ~runtime in
-  let { Context.Closure.shape = escaping_shape; _ } = escaping in
+  let%bind escaping = Context.compile_capture env ~runtime in
+  let { Context.Closure.shape = escaping_shape; closure = escaping_closure } =
+    escaping
+  in
   let%bind function_code =
-    compile_function
+    compile_local_function
       ~rec_name:None
       xs
       e_body
       ~captured_shape:escaping_shape
+      ~outer_symbol
       ~runtime
       ~effect_reprs
-      ~outer_symbol
   in
   compile_construct_function_object
     function_code
     ~is_recursive:false
-    ~env
+    ~captured_closure:escaping_closure
     ~runtime
 
 (** [compile_fix_lambda lambda ...] compiles a recursive lambda as a function,
     and generates code to construct a function object of it in the given [env].
     The result is a [Types.opaque_pointer] to it. *)
 and compile_fix_lambda
-    :  EPS.Expr.fix_lambda -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t
-    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
+    :  EPS.Expr.fix_lambda -> env:Context.t -> outer_symbol:Symbol_name.t
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> Llvm.llvalue Codegen.t
   =
- fun (f, (xs, e_body)) ~env ~runtime ~effect_reprs ~outer_symbol ->
+ fun (f, (xs, e_body)) ~env ~outer_symbol ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
-  let%bind escaping = Context.compile_make_closure env ~runtime in
-  let { Context.Closure.shape = escaping_shape; _ } = escaping in
+  let%bind escaping = Context.compile_capture env ~runtime in
+  let { Context.Closure.shape = escaping_shape; closure = escaping_closure } =
+    escaping
+  in
   let%bind function_code =
-    compile_function
+    compile_local_function
       ~rec_name:(Some f)
       xs
       e_body
       ~captured_shape:escaping_shape
+      ~outer_symbol
       ~runtime
       ~effect_reprs
-      ~outer_symbol
   in
   compile_construct_function_object
     function_code
     ~is_recursive:true
-    ~env
+    ~captured_closure:escaping_closure
     ~runtime
 
 (** [compile_application f args] generates code to 'call' the function object
@@ -840,19 +870,115 @@ let compile_effect_decls
   effect_reprs
 ;;
 
+(** [compile_fun_decl decl ~toplevel_names ...] compiles a toplevel function
+    declaration into an llvm function, and returns that function's [llvalue] and
+    name *)
+let compile_fun_decl
+    :  EPS.Program.Fun_decl.t -> toplevel_names:Variable.t list
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> (Variable.t * Llvm.llvalue) Codegen.t
+  =
+ fun decl ~toplevel_names ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  let f_name, (xs, e_body) = decl in
+  let captured_shape = Context.Closure.Shape.Toplevel toplevel_names in
+  let symbol_name = Symbol_name.of_toplevel f_name in
+  let%map code =
+    compile_function
+      ~symbol_name
+      ~rec_name:(Some f_name)
+      xs
+      e_body
+      ~captured_shape
+      ~outer_symbol:symbol_name
+      ~runtime
+      ~effect_reprs
+  in
+  f_name, code
+;;
+
+(** compile the given functions in order, allowing each to access the ones
+    before it through its context. Returns a associative list from names to
+    functions' [llvalues] (i.e. code addresses), in the order they should appear
+    in the toplevel closure *)
+let compile_fun_decls
+    :  EPS.Program.Fun_decl.t list -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> (Variable.t * Llvm.llvalue) list Codegen.t
+  =
+ fun decls ~runtime ~effect_reprs ->
+  let open Codegen.Let_syntax in
+  Codegen.list_fold decls ~init:[] ~f:(fun defined decl ->
+      let toplevel_names = List.map defined ~f:(fun (name, _code) -> name) in
+      let%map name, code =
+        compile_fun_decl decl ~toplevel_names ~runtime ~effect_reprs
+      in
+      defined @ [ name, code ])
+;;
+
 let compile_program : EPS.Program.t -> unit Codegen.t =
  fun { EPS.Program.effect_declarations; fun_declarations } ->
   let open Codegen.Let_syntax in
   let%bind effect_reprs = compile_effect_decls effect_declarations in
   let%bind runtime = Runtime.declare in
-  (* compile all toplevel functions (each with the correct shape of context),
-     collecting all their code addresses *)
+  (* compile toplevel functions, returning a list of their llvalues *)
+  let%bind named_code_addresses =
+    compile_fun_decls fun_declarations ~runtime ~effect_reprs
+  in
   (* make `main` *)
-  let main = failwith "not implemented" in
-  (* allocate toplevel closure *)
-  (* allocate each toplevel function as a function object (code address, pointer
-     back to the same closure) *)
-  let env = failwith "not implemented" in
+  let%bind main_type = Types.main_function in
+  let%bind main_function =
+    Codegen.use_module
+      (Llvm.define_function (Symbol_name.to_string Symbol_name.main) main_type)
+  in
+  let main_start_block = Llvm.entry_block main_function in
+  let%bind () = Codegen.use_builder (Llvm.position_at_end main_start_block) in
+  (* build a function object for each toplevel function *)
+  (* putting [null] for the parent for now *)
+  let%bind closure_type = Types.closure in
+  let closure_ptr_type = Llvm.pointer_type closure_type in
+  let null_closure = Llvm.const_pointer_null closure_ptr_type in
+  let%bind named_function_objects =
+    List.map named_code_addresses ~f:(fun (name, code) ->
+        let%map f =
+          compile_construct_function_object
+            code
+            ~is_recursive:true
+            ~captured_closure:null_closure
+            ~runtime
+        in
+        name, f)
+    |> Codegen.all
+  in
+  (* build the toplevel closure using the defined toplevel functions' function
+     objects' addresses *)
+  let%bind (toplevel_closure : Context.Closure.t) =
+    Context.Closure.compile_make_toplevel named_function_objects ~runtime
+  in
+  (* now update each function object to point back to the closure *)
+  let%bind () =
+    List.map named_function_objects ~f:(fun (_name, f_opaque) ->
+        let%bind function_object_type = Types.function_object in
+        let function_object_ptr_type = Llvm.pointer_type function_object_type in
+        let%bind f =
+          Codegen.use_builder
+            (Llvm.build_bitcast
+               f_opaque
+               function_object_ptr_type
+               "function_object_ptr")
+        in
+        (* currently pointing at null - update it *)
+        let%bind closure_field_ptr =
+          Codegen.use_builder (Llvm.build_struct_gep f 1 "closure_field_ptr")
+        in
+        let { Context.Closure.closure; _ } = toplevel_closure in
+        let%map _store =
+          Codegen.use_builder (Llvm.build_store closure closure_field_ptr)
+        in
+        ())
+    |> Codegen.all_unit
+  in
+  let env = Context.Toplevel toplevel_closure in
   (* compile a call to `entry_point` - or should this be kept as an expression
      rather than a function? *)
   (* [entry_point()(runtime.nil_evidence_vector)] *)
@@ -865,17 +991,16 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
     compile_expr
       invocation
       ~env
+      ~outer_symbol:Symbol_name.main
       ~runtime
       ~effect_reprs
-      ~outer_symbol:Symbol_name.main
   in
   (* return 0 *)
   let%bind i32 = Codegen.use_context Llvm.i32_type in
   let return_code = Llvm.const_int i32 0 in
   let%bind _return = Codegen.use_builder (Llvm.build_ret return_code) in
-  let () = Llvm_analysis.assert_valid_function main in
-  let%map () = Codegen.check_module_valid in
-  failwith "not implemented"
+  Llvm_analysis.assert_valid_function main_function;
+  Codegen.check_module_valid
 ;;
 
 let compile_then_write_program
