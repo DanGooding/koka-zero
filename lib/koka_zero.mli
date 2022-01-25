@@ -12,6 +12,8 @@ module Evidence_passing_syntax =
 module Value = Koka_zero_interpreter.Value
 module Runtime_error = Koka_zero_interpreter.Runtime_error
 open Runtime_error
+module Codegen_error = Koka_zero_code_generation.Codegen_error
+open Codegen_error
 
 val parse_channel
   :  ?filename:string
@@ -32,3 +34,8 @@ val translate : Explicit_syntax.Program.t -> Evidence_passing_syntax.Program.t
 val interpret_program
   :  Evidence_passing_syntax.Program.t
   -> Value.t Or_runtime_error.t
+
+val compile_program
+  :  Evidence_passing_syntax.Program.t
+  -> filename:string
+  -> unit Or_codegen_error.t
