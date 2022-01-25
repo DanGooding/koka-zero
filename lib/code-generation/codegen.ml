@@ -105,6 +105,20 @@ let use_module f { Mutable_state.module_; _ } state =
   Result.Ok (f module_, state)
 ;;
 
+let insertion_block { Mutable_state.builder; _ } state =
+  (* catch [Not_found] *)
+  let block = Option.try_with (fun () -> Llvm.insertion_block builder) in
+  Result.Ok (block, state)
+;;
+
+let insertion_block_exn =
+  let open Let_syntax in
+  match%map insertion_block with
+  | Some block -> block
+  | None ->
+    raise_s [%message "llbuilder is not currently inserting into any block"]
+;;
+
 let check_module_valid { Mutable_state.module_; _ } state =
   match Llvm_analysis.verify_module module_ with
   | None -> Result.Ok ((), state)
@@ -113,10 +127,12 @@ let check_module_valid { Mutable_state.module_; _ } state =
 
 let within_block local_block ~f =
   let open Let_syntax in
-  let%bind previous_block = use_builder Llvm.insertion_block in
+  let%bind previous_block = insertion_block in
   let%bind () = use_builder (Llvm.position_at_end local_block) in
   let%bind () = f () in
-  use_builder (Llvm.position_at_end previous_block)
+  match previous_block with
+  | None -> return ()
+  | Some previous_block -> use_builder (Llvm.position_at_end previous_block)
 ;;
 
 let impossible_error message _mstate _state =

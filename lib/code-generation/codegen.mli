@@ -20,12 +20,20 @@ val use_builder : (Llvm.llbuilder -> 'a) -> 'a t
 val use_context : (Llvm.llcontext -> 'a) -> 'a t
 val use_module : (Llvm.llmodule -> 'a) -> 'a t
 
+(** non-raising replacement for [Llvm.insertion_block] *)
+val insertion_block : Llvm.llbasicblock option t
+
+(** replacement for [Llvm.insertion_block] which makes the possible exception
+    explicit, and produces a more descriptive error *)
+val insertion_block_exn : Llvm.llbasicblock t
+
 (** runs llvm verifier over the module, failing with a [Codegen.verifier_error]
     if it it is found to be invalid *)
 val check_module_valid : unit t
 
 (** run a computation locally within a given basic block, saving the previous
-    insertion point and restoring it afterwards *)
+    insertion point and restoring it afterwards (if the builder was previously
+    inserting) *)
 val within_block : Llvm.llbasicblock -> f:(unit -> unit t) -> unit t
 
 (** fail due to an error which should have been caught in type inference*)
