@@ -14,7 +14,7 @@ module Closure = struct
     module T = struct
       type t =
         | Level of Variable.t list * t
-        | Toplevel of int Variable.Map.t
+        | Toplevel of Variable.t list
       [@@deriving sexp]
     end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
@@ -26,7 +26,13 @@ module Closure = struct
     ; shape : Shape.t
     }
 
-  let compile_extend { closure = parent; shape } parameters ~runtime =
+  (** [compile_extend_closure closure names_and_values ~runtime] creates a new
+      closure with the specified values, and the given parent *)
+  let compile_extend_closure
+      :  Llvm.llvalue -> (Variable.t * Llvm.llvalue) list -> runtime:Runtime.t
+      -> Llvm.llvalue Codegen.t
+    =
+   fun closure named_vars ~runtime ->
     let open Codegen.Let_syntax in
     let%bind closure_type = Types.closure in
     let%bind closure_ptr =
@@ -35,14 +41,13 @@ module Closure = struct
     let%bind opaque_pointer = Types.opaque_pointer in
     let%bind parent_opaque_pointer =
       Codegen.use_builder
-        (Llvm.build_bitcast parent opaque_pointer "parent_ptr")
+        (Llvm.build_bitcast closure opaque_pointer "parent_ptr")
     in
-    let num_vars = List.length parameters in
+    let num_vars = List.length named_vars in
     let vars_type = Llvm.array_type opaque_pointer num_vars in
     let%bind vars_ptr = Helpers.heap_allocate vars_type "vars" ~runtime in
-    let var_names = List.map parameters ~f:(fun (name, _value) -> name) in
     let var_values_and_register_names =
-      List.map parameters ~f:(fun (name, value) ->
+      List.map named_vars ~f:(fun (name, value) ->
           value, Helpers.register_name_of_variable name)
     in
     let%bind () =
@@ -65,8 +70,27 @@ module Closure = struct
         ; parent_opaque_pointer, "parent"
         ]
     in
+    closure_ptr
+ ;;
+
+  let compile_extend { closure = parent; shape } parameters ~runtime =
+    let open Codegen.Let_syntax in
+    let var_names = List.map parameters ~f:(fun (name, _value) -> name) in
     let shape = Shape.Level (var_names, shape) in
+    let%map closure_ptr = compile_extend_closure parent parameters ~runtime in
     { closure = closure_ptr; shape }
+  ;;
+
+  let compile_make_toplevel names_and_code ~runtime =
+    let open Codegen.Let_syntax in
+    let%bind opaque_pointer = Types.opaque_pointer in
+    let parent_closure = Llvm.const_pointer_null opaque_pointer in
+    let%map closure =
+      compile_extend_closure parent_closure names_and_code ~runtime
+    in
+    let names = List.map names_and_code ~f:(fun (name, _code) -> name) in
+    let shape = Shape.Toplevel names in
+    { closure; shape }
   ;;
 
   (** compile accessing [ closure->vars\[i\] ] *)
@@ -85,11 +109,17 @@ module Closure = struct
     Codegen.use_builder (Llvm.build_load var_ptr "var")
   ;;
 
+  let index_of_variable vs v =
+    match List.findi vs ~f:(fun _i v' -> Variable.(v = v')) with
+    | Some (i, _v) -> Some i
+    | None -> None
+  ;;
+
   let rec compile_get { closure; shape } v =
     let open Codegen.Let_syntax in
     match shape with
-    | Shape.Toplevel names_to_indices ->
-      (match Map.find names_to_indices v with
+    | Shape.Toplevel vs ->
+      (match index_of_variable vs v with
       | Some i -> compile_get_var i closure
       | None ->
         let message =
@@ -99,8 +129,8 @@ module Closure = struct
         in
         Codegen.impossible_error message)
     | Shape.Level (vs, parent_shape) ->
-      (match List.findi vs ~f:(fun _i v' -> Variable.(v = v')) with
-      | Some (i, _v) -> compile_get_var i closure
+      (match index_of_variable vs v with
+      | Some i -> compile_get_var i closure
       | None ->
         (* compile accessing closure->parent *)
         let%bind parent_ptr =
@@ -116,17 +146,25 @@ module Closure = struct
 end
 
 type t =
-  { parameters : Parameters.t
-  ; closure : Closure.t
-  }
+  | With_parameters of
+      { parameters : Parameters.t
+      ; closure : Closure.t
+      }
+  | Toplevel of Closure.t
 
-let compile_make_closure { parameters; closure } ~runtime =
-  Closure.compile_extend closure parameters ~runtime
+let compile_capture t ~runtime =
+  match t with
+  | With_parameters { parameters; closure } ->
+    Closure.compile_extend closure parameters ~runtime
+  | Toplevel closure -> Codegen.return closure
 ;;
 
-let compile_get { parameters; closure } v =
+let compile_get t v =
   let open Codegen.Let_syntax in
-  match Parameters.find parameters v with
-  | Some value -> return value
-  | None -> Closure.compile_get closure v
+  match t with
+  | With_parameters { parameters; closure } ->
+    (match Parameters.find parameters v with
+    | Some value -> return value
+    | None -> Closure.compile_get closure v)
+  | Toplevel closure -> Closure.compile_get closure v
 ;;
