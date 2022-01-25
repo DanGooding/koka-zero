@@ -50,3 +50,6 @@ val function_object : Llvm.lltype Codegen.t
         opaque_pointer arg_1, ... opaque_pointer arg_n)
     ] *)
 val function_code : int -> Llvm.lltype Codegen.t
+
+(** type of the binary's entry point: [i32 main()] *)
+val main_function : Llvm.lltype Codegen.t

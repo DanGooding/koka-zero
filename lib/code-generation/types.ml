@@ -90,3 +90,9 @@ let function_code num_args =
   in
   Llvm.function_type opaque_pointer (Array.of_list argument_types)
 ;;
+
+let main_function =
+  let open Codegen.Let_syntax in
+  let%map i32 = Codegen.use_context Llvm.i32_type in
+  Llvm.function_type i32 (Array.of_list [])
+;;
