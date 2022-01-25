@@ -9,14 +9,17 @@ let compile_to_eps filename =
   Koka_zero.translate program_explicit
 ;;
 
-let print_compiled filename =
-  match compile_to_eps filename with
+let compile ~in_filename ~out_filename =
+  match compile_to_eps in_filename with
   | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
   | Ok program_eps ->
-    Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
+    (match Koka_zero.compile_program program_eps ~filename:out_filename with
+    | Error error ->
+      Koka_zero.Codegen_error.string_of_t error |> eprintf "compile error: %s\n"
+    | Ok () -> ())
 ;;
 
-let interpret_compiled filename =
+let interpret_eps filename =
   match compile_to_eps filename with
   | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
   | Ok program ->
@@ -31,10 +34,10 @@ let interpret_compiled filename =
 let command_compile =
   Command.basic
     ~summary:"compile a program"
-    Command.Param.(
-      map
-        (anon ("filename" %: string))
-        ~f:(fun filename () -> print_compiled filename))
+    [%map_open.Command
+      let filename = anon ("filename" %: string)
+      and out_filename = flag "-o" (required string) ~doc:"output filename" in
+      fun () -> compile ~in_filename:filename ~out_filename]
 ;;
 
 let command_interpret =
@@ -43,7 +46,7 @@ let command_interpret =
     Command.Param.(
       map
         (anon ("filename" %: string))
-        ~f:(fun filename () -> interpret_compiled filename))
+        ~f:(fun filename () -> interpret_eps filename))
 ;;
 
 let command =
