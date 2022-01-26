@@ -164,7 +164,7 @@ let compile_construct_yield
 
 (** [compile_select_operation label ~op_name v ~effect_reprs] generates code
     which selects the operation clause for [op_name] from [v] (a handler for the
-    effect [label] of type [Types.unique_pointer]) *)
+    effect [label] of type [Types.opaque_pointer]) *)
 let compile_select_operation
     :  Effect_label.t -> op_name:Variable.t -> Llvm.llvalue
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
@@ -200,7 +200,7 @@ let compile_select_operation
   Codegen.use_builder (Llvm.build_load op_clause_field_ptr "op_clause")
 ;;
 
-(** [compile_construt_function_object code_address ~is_recursive ~captured_closure ...]
+(** [compile_construct_function_object code_address ~is_recursive ~captured_closure ...]
     generates code to heap allocate and populate a [Types.function_object], with
     code pointed to by the (typed or opaque) [code_address], keeping
     [captured_closure] as it's closure. *)
