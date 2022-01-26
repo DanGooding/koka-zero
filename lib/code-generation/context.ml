@@ -95,7 +95,7 @@ module Closure = struct
   ;;
 
   (** compile accessing [ closure->vars\[i\] ] *)
-  let compile_get_var (i : int) closure =
+  let compile_get_var (i : int) closure name =
     let open Codegen.Let_syntax in
     let%bind vars_ptr =
       Codegen.use_builder (Llvm.build_struct_gep closure 1 "vars_field")
@@ -105,9 +105,9 @@ module Closure = struct
     let index = Llvm.const_int i64 i in
     let%bind var_ptr =
       Codegen.use_builder
-        (Llvm.build_gep vars (Array.of_list [ index ]) "var_ptr")
+        (Llvm.build_gep vars (Array.of_list [ index ]) (name ^ "_ptr"))
     in
-    Codegen.use_builder (Llvm.build_load var_ptr "var")
+    Codegen.use_builder (Llvm.build_load var_ptr name)
   ;;
 
   let index_of_variable vs v =
@@ -121,7 +121,8 @@ module Closure = struct
     match shape with
     | Shape.Toplevel vs ->
       (match index_of_variable vs v with
-      | Some i -> compile_get_var i closure
+      | Some i ->
+        compile_get_var i closure (Helpers.register_name_of_variable v)
       | None ->
         let message =
           sprintf
@@ -131,7 +132,8 @@ module Closure = struct
         Codegen.impossible_error message)
     | Shape.Level (vs, parent_shape) ->
       (match index_of_variable vs v with
-      | Some i -> compile_get_var i closure
+      | Some i ->
+        compile_get_var i closure (Helpers.register_name_of_variable v)
       | None ->
         (* compile accessing closure->parent *)
         let%bind parent_field_ptr =
