@@ -740,7 +740,7 @@ and compile_application
   let generated_function_ptr_type = Llvm.pointer_type generated_function_type in
   (* pass either [f_ptr] or [null] depending on whether the function is
      recursive *)
-  let null_function = Llvm.const_pointer_null generated_function_ptr_type in
+  let null_function = Llvm.const_pointer_null function_object_ptr_type in
   let%bind f_self =
     Codegen.use_builder
       (Llvm.build_select is_recursive f_ptr null_function "f_self")
