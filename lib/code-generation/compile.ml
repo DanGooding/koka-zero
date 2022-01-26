@@ -624,9 +624,6 @@ and compile_function
         let%map _return = Codegen.use_builder (Llvm.build_ret result) in
         ())
   in
-  (* verify that function*)
-  (* TODO: unneeded - verify module at end *)
-  Llvm_analysis.assert_valid_function function_;
   function_
 
 (** a special case of [compile_function], where the function's symbol name is
@@ -1009,7 +1006,6 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
   let%bind i32 = Codegen.use_context Llvm.i32_type in
   let return_code = Llvm.const_int i32 0 in
   let%bind _return = Codegen.use_builder (Llvm.build_ret return_code) in
-  Llvm_analysis.assert_valid_function main_function;
   Codegen.check_module_valid
 ;;
 
