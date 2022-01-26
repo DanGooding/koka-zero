@@ -58,7 +58,7 @@ typedef struct vector_t {
 opaque_ptr kkr_nil_evidence_vector(void) {
   vector_t *vector = (vector_t *)kkr_malloc(sizeof(vector_t));
   // zero other fields for safety (fail fast on bugs)
-  *vector = (vector_t) { .is_nil = 10, .label = 0, .evidence = NULL, .tail = NULL };
+  *vector = (vector_t) { .is_nil = 1, .label = -1, .evidence = NULL, .tail = NULL };
   return (opaque_ptr)vector;
 }
 
