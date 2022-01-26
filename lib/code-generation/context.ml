@@ -27,7 +27,8 @@ module Closure = struct
     }
 
   (** [compile_extend_closure closure names_and_values ~runtime] creates a new
-      closure with the specified values, and the given parent *)
+      closure with the specified values (which should all be
+      [Types.opaque_pointer]), and the given parent *)
   let compile_extend_closure
       :  Llvm.llvalue -> (Variable.t * Llvm.llvalue) list -> runtime:Runtime.t
       -> Llvm.llvalue Codegen.t
