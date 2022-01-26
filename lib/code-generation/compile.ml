@@ -827,8 +827,7 @@ and compile_impure_built_in
     let%bind i = Helpers.dereference_int v in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
-      Codegen.use_builder
-        (Llvm.build_call print_int (Array.of_list [ i ]) "void")
+      Codegen.use_builder (Llvm.build_call print_int (Array.of_list [ i ]) "")
     in
     Helpers.heap_store_unit ~runtime
   | EPS.Expr.Impure_read_int ->
