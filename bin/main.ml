@@ -9,10 +9,14 @@ let compile_to_eps filename =
   Koka_zero.translate program_explicit
 ;;
 
-let compile ~in_filename ~out_filename =
+let compile ~in_filename ~print_eps ~out_filename =
   match compile_to_eps in_filename with
   | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
   | Ok program_eps ->
+    if print_eps
+    then
+      Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
+    else ();
     (match
        Koka_zero.compile_program
          program_eps
@@ -41,8 +45,14 @@ let command_compile =
     ~summary:"compile a program"
     [%map_open.Command
       let filename = anon ("filename" %: string)
-      and out_filename = flag "-o" (required string) ~doc:"output filename" in
-      fun () -> compile ~in_filename:filename ~out_filename]
+      and out_filename = flag "-o" (required string) ~doc:"output filename"
+      and print_eps =
+        flag
+          "-dump-eps"
+          no_arg
+          ~doc:"print the intermediate evidence passing AST"
+      in
+      fun () -> compile ~in_filename:filename ~print_eps ~out_filename]
 ;;
 
 let command_interpret =
