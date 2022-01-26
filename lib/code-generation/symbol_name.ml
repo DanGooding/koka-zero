@@ -35,7 +35,7 @@ let string_of_variable = function
 
 let of_local_aux ~containing (local_name : string) source =
   let suffix, source' = Suffix_source.next source in
-  let symbol = sprintf "%s__%s__%s" containing local_name suffix in
+  let symbol = sprintf "%s_%s_%s" containing local_name suffix in
   symbol, source'
 ;;
 
