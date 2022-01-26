@@ -134,11 +134,17 @@ module Closure = struct
       | Some i -> compile_get_var i closure
       | None ->
         (* compile accessing closure->parent *)
-        let%bind parent_ptr =
+        let%bind parent_field_ptr =
           Codegen.use_builder (Llvm.build_struct_gep closure 2 "parent_field")
         in
+        let%bind parent_opaque_ptr =
+          Codegen.use_builder (Llvm.build_load parent_field_ptr "parent_opaque")
+        in
+        let%bind closure_type = Types.closure in
+        let closure_ptr_type = Llvm.pointer_type closure_type in
         let%bind parent =
-          Codegen.use_builder (Llvm.build_load parent_ptr "parent")
+          Codegen.use_builder
+            (Llvm.build_bitcast parent_opaque_ptr closure_ptr_type "parent")
         in
         (* recurse on that *)
         let parent_closure = { closure = parent; shape = parent_shape } in
