@@ -251,6 +251,10 @@ let compile_conditional
     Codegen.use_context (fun context ->
         Llvm.append_block context "if_false" current_function)
   in
+  let%bind if_end_block =
+    Codegen.use_context (fun context ->
+        Llvm.append_block context "post_if" current_function)
+  in
   let%bind _branch =
     Codegen.use_builder
       (Llvm.build_cond_br cond true_start_block false_start_block)
@@ -258,16 +262,14 @@ let compile_conditional
   (* compile yes branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end true_start_block) in
   let%bind true_branch_result = compile_true () in
+  let%bind _br_end = Codegen.use_builder (Llvm.build_br if_end_block) in
   let%bind true_end_block = Codegen.insertion_block_exn in
   (* compile false branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end false_start_block) in
   let%bind false_branch_result = compile_false () in
+  let%bind _br_end = Codegen.use_builder (Llvm.build_br if_end_block) in
   let%bind false_end_block = Codegen.insertion_block_exn in
   (* connect back together *)
-  let%bind if_end_block =
-    Codegen.use_context (fun context ->
-        Llvm.append_block context "post_if" current_function)
-  in
   let%bind () = Codegen.use_builder (Llvm.position_at_end if_end_block) in
   let incoming =
     [ true_branch_result, true_end_block; false_branch_result, false_end_block ]
