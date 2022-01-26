@@ -572,35 +572,47 @@ and compile_function
     Codegen.use_module
       (Llvm.define_function (Symbol_name.to_string symbol_name) type_)
   in
-  (* name parameters: *)
-  let params = Llvm.params function_ |> Array.to_list in
-  let f_self_param, closure_param, params =
-    match params with
-    | f_self_param :: closure_param :: params ->
-      f_self_param, closure_param, params
-    | _ ->
-      (* this is a programmer error not a data error *)
-      raise_s [%message "function type has unexpected number of parameters"]
-  in
-  (* parameters available via varaibles in the body *)
-  let env_parameters : Context.Parameters.t =
-    match rec_name with
-    | Some rec_name -> List.zip_exn (rec_name :: xs) (f_self_param :: params)
-    | None -> List.zip_exn xs params
-  in
-  List.iter env_parameters ~f:(fun (name, value) ->
-      Llvm.set_value_name (Helpers.register_name_of_variable name) value);
-  if Option.is_none rec_name
-  then Llvm.set_value_name "null" f_self_param
-  else ();
-  Llvm.set_value_name "closure" closure_param;
-  let captured =
-    { Context.Closure.shape = captured_shape; closure = closure_param }
-  in
-  (* function's first statement is to build closure capturing its own args *)
   let function_start_block = Llvm.entry_block function_ in
   let%map () =
     Codegen.within_block function_start_block ~f:(fun () ->
+        (* name parameters: *)
+        let params = Llvm.params function_ |> Array.to_list in
+        let f_self_param, closure_param, params =
+          match params with
+          | f_self_param :: closure_param :: params ->
+            f_self_param, closure_param, params
+          | _ ->
+            (* this is a programmer error not a data error *)
+            raise_s
+              [%message "function type has unexpected number of parameters"]
+        in
+        let%bind opaque_pointer = Types.opaque_pointer in
+        let%bind f_self_param =
+          match rec_name with
+          | Some rec_name ->
+            let name = Helpers.register_name_of_variable rec_name in
+            Codegen.use_builder
+              (Llvm.build_bitcast f_self_param opaque_pointer name)
+          | None -> return f_self_param
+        in
+        (* parameters available via variables in the body *)
+        let env_parameters : Context.Parameters.t =
+          match rec_name with
+          | Some rec_name ->
+            List.zip_exn (rec_name :: xs) (f_self_param :: params)
+          | None -> List.zip_exn xs params
+        in
+        List.iter env_parameters ~f:(fun (name, value) ->
+            Llvm.set_value_name (Helpers.register_name_of_variable name) value);
+        if Option.is_none rec_name
+        then (
+          Llvm.set_value_name "null" f_self_param;
+          ignore (f_self_param : Llvm.llvalue))
+        else ();
+        Llvm.set_value_name "closure" closure_param;
+        let captured =
+          { Context.Closure.shape = captured_shape; closure = closure_param }
+        in
         (* compile [e_body] in extended environment (capture variables which
            escaped from the containing function) *)
         let env' =
