@@ -13,7 +13,12 @@ let compile ~in_filename ~out_filename =
   match compile_to_eps in_filename with
   | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
   | Ok program_eps ->
-    (match Koka_zero.compile_program program_eps ~filename:out_filename with
+    (match
+       Koka_zero.compile_program
+         program_eps
+         ~module_name:in_filename
+         ~filename:out_filename
+     with
     | Error error ->
       Koka_zero.Codegen_error.string_of_t error |> eprintf "compile error: %s\n"
     | Ok () -> ())

@@ -1013,13 +1013,14 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
   Codegen.check_module_valid
 ;;
 
-let compile_then_write_program program ~filename =
-  Codegen.run_then_write_module
-    ~module_id:"main"
-    ~filename
-    (compile_program program)
+let module_name_or_default = Option.value ~default:"anonymous"
+
+let compile_then_write_program ?module_name ~filename program =
+  let module_id = module_name_or_default module_name in
+  Codegen.run_then_write_module ~module_id ~filename (compile_program program)
 ;;
 
-let compile_then_dump_program program =
-  Codegen.run_then_dump_module ~module_id:"main" (compile_program program)
+let compile_then_dump_program ?module_name program =
+  let module_id = module_name_or_default module_name in
+  Codegen.run_then_dump_module ~module_id (compile_program program)
 ;;

@@ -36,6 +36,7 @@ val interpret_program
   -> Value.t Or_runtime_error.t
 
 val compile_program
-  :  Evidence_passing_syntax.Program.t
+  :  ?module_name:string
   -> filename:string
+  -> Evidence_passing_syntax.Program.t
   -> unit Or_codegen_error.t
