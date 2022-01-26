@@ -25,6 +25,10 @@ Or compile to textual llvm ir with:
 ```sh
 make start -- compile samples/reader.kk -o reader.ll
 ```
+Compile to an executable with e.g.
+```sh
+clang reader.ll lib/code-generation/runtime.c
+```
 
 Debug using OCaml debugger with:
 ```sh
