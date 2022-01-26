@@ -66,6 +66,10 @@ let write_module ~filename { Mutable_state.module_; _ } state =
     context object *)
 let run ~module_id (t : unit t) : unit Or_codegen_error.t =
   let mstate = Mutable_state.create_initial ~module_id in
+  Llvm.enable_pretty_stacktrace ();
+  Llvm.install_fatal_error_handler (fun message ->
+      eprintf "llvm fatal error: %s\n" message;
+      Out_channel.flush Out_channel.stderr);
   let state = State.initial in
   let result = t mstate state in
   let { Mutable_state.context; module_; builder = _ } = mstate in
