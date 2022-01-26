@@ -25,7 +25,7 @@ val ctl : Llvm.lltype Codegen.t
 val ctl_pure : Llvm.lltype Codegen.t
 
 (** control monad 'yield' variant:
-    [Yield { tag; marker; op_clause; resumption }] *)
+    [Yield { tag; opaque_pointer marker; op_clause; resumption }] *)
 val ctl_yield : Llvm.lltype Codegen.t
 
 (** a closure holds free variables in a chain starting from the innermost
