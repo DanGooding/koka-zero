@@ -21,7 +21,14 @@ Interpret a koka program with:
 make start -- interpret samples/fib.kk
 ```
 
-Or compile (to a lambda calculus representation - LLVM-IR is work-in-progress):
+Or compile to textual llvm ir with:
 ```sh
-make start -- compile samples/reader.kk
+make start -- compile samples/reader.kk -o reader.ll
+```
+
+Debug using OCaml debugger with:
+```sh
+make debug
+set arguments "compile" "samples/hello.kk" "-o" "hello.ll"
+run
 ```
