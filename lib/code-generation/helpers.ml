@@ -139,7 +139,8 @@ let compile_populate_struct
   let open Codegen.Let_syntax in
   List.mapi members ~f:(fun i (x, name) ->
       let%bind member_ptr =
-        Codegen.use_builder (Llvm.build_struct_gep struct_ptr i (name ^ "_p"))
+        Codegen.use_builder
+          (Llvm.build_struct_gep struct_ptr i (name ^ "_field_ptr"))
       in
       let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
       ())
@@ -167,7 +168,7 @@ let compile_access_field struct_ptr index name =
   let open Codegen.Let_syntax in
   let%bind field_ptr =
     Codegen.use_builder
-      (Llvm.build_struct_gep struct_ptr index (name ^ "field_ptr"))
+      (Llvm.build_struct_gep struct_ptr index (name ^ "_field_ptr"))
   in
   Codegen.use_builder (Llvm.build_load field_ptr name)
 ;;
