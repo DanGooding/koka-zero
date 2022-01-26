@@ -21,7 +21,7 @@ opaque_ptr kkr_malloc(uint64_t size) {
   if (p == NULL) {
     snprintf(malloc_error_message, MALLOC_ERROR_MESSAGE_CAPACITY,
              "failed to malloc %ld bytes", size);
-    kkr_exit_with_message(malloc_error_message);
+    kkr_exit_with_message((uint8_t *)malloc_error_message);
   }
   return p;
 }
@@ -90,7 +90,8 @@ opaque_ptr kkr_evidence_vector_lookup(opaque_ptr v, label_t label) {
     }
     current = current->tail;
   }
-  kkr_exit_with_message("effect label not found in evidence vector");
+  kkr_exit_with_message((uint8_t *)"effect label not found in evidence vector");
+  return NULL; // unreachable
 }
 
 
@@ -113,7 +114,7 @@ int_t kkr_read_int(void) {
   printf("input> ");
   fflush(stdout);
   if (scanf("%ld", &result)) {
-    kkr_exit_with_message("failed to read int");
+    kkr_exit_with_message((uint8_t *)"failed to read int");
   }
   return result;
 }
