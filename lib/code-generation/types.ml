@@ -46,7 +46,7 @@ let ctl =
   let open Codegen.Let_syntax in
   let%bind variant_tag = variant_tag in
   let%bind padding = padding in
-  let padding_array = Llvm.array_type padding (8 * 3) in
+  let padding_array = Llvm.array_type padding (7 + (8 * 3)) in
   let fields = [ variant_tag; padding_array ] in
   Codegen.use_context (fun context ->
       Llvm.struct_type context (Array.of_list fields))
