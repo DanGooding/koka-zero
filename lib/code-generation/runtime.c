@@ -96,12 +96,12 @@ opaque_ptr kkr_evidence_vector_lookup(opaque_ptr v, label_t label) {
 
 
 marker_t kkr_get_evidence_marker(opaque_ptr e) {
-  evidence_t *evidence = (evidence_t *)evidence;
+  evidence_t *evidence = (evidence_t *)e;
   return evidence->marker;
 }
 
 opaque_ptr kkr_get_evidence_handler(opaque_ptr e) {
-  evidence_t *evidence = (evidence_t *)evidence;
+  evidence_t *evidence = (evidence_t *)e;
   return evidence->handler;
 }
 
