@@ -113,9 +113,17 @@ int_t kkr_read_int(void) {
   int_t result;
   printf("input> ");
   fflush(stdout);
-  if (scanf("%ld", &result)) {
-    kkr_exit_with_message((uint8_t *)"failed to read int");
+  char *line = NULL;
+  size_t size = 0;
+  if (getline(&line, &size, stdin) < 0) {
+    free(line);
+    kkr_exit_with_message((uint8_t *)"failed to read input line");
   }
+  if (sscanf(line, "%ld\n", &result) != 1) {
+    free(line);
+    kkr_exit_with_message((uint8_t *)"failed to parse int");
+  }
+  free(line);
   return result;
 }
 
