@@ -14,9 +14,12 @@ type t =
   }
 
 let declare_function symbol return_type argument_types =
+  let open Codegen.Let_syntax in
   let name = Symbol_name.to_string symbol in
   let type_ = Llvm.function_type return_type (Array.of_list argument_types) in
-  Codegen.use_module (Llvm.declare_function name type_)
+  let%map function_ = Codegen.use_module (Llvm.declare_function name type_) in
+  Llvm.set_function_call_conv Llvm.CallConv.c function_;
+  function_
 ;;
 
 let declare =
