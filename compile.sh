@@ -6,7 +6,7 @@ KC=./_build/default/bin/main.exe
 CC=clang
 CFLAGS=-Wall
 
-RUNTIME=lib/code-generation/runtime.c
+RUNTIME=lib/runtime/runtime.c
 
 SOURCE="$1"
 BASENAME="${SOURCE%.kk}"
