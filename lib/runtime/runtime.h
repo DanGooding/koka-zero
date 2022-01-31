@@ -12,6 +12,9 @@ typedef int64_t int_t;
 typedef uint64_t marker_t;
 typedef uint64_t label_t;
 
+// initialises runtime garbage collection
+void kkr_init(void);
+
 // exits with failure
 void kkr_exit(void);
 // prints a null terminated error message, then exits with failure
