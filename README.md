@@ -12,7 +12,7 @@ eval $(opam env)
 
 make
 # which prompts to run
-# $ dune external-lib-deps --missing --root . @install
+dune external-lib-deps --missing --root . @install
 ```
 
 ## Usage
@@ -27,10 +27,12 @@ make start -- compile samples/reader.kk -o reader.ll
 ```
 Compile to an executable with e.g.
 ```sh
-clang reader.ll lib/code-generation/runtime.c
+clang reader.ll lib/code-generation/runtime.c -o reader
 ```
 
-Debug using OCaml debugger with:
+---
+
+Debug the compiler using OCaml debugger with:
 ```sh
 make debug
 set arguments "compile" "samples/hello.kk" "-o" "hello.ll"
