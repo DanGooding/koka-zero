@@ -7,6 +7,8 @@ CC=clang
 CFLAGS=-Wall
 
 RUNTIME=lib/runtime/runtime.c
+GC_INCLUDE=/home/dan/boehm/gc/include
+GC_LIB=/home/dan/boehm/gc/lib
 
 SOURCE="$1"
 BASENAME="${SOURCE%.kk}"
@@ -21,5 +23,5 @@ if [[ "$BINARY" = "$SOURCE" ]]; then
 fi
 
 $KC compile $SOURCE -o $IR
-$CC $CFLAGS $IR $RUNTIME -o $BINARY
+$CC $CFLAGS $IR $RUNTIME -I$GC_INCLUDE -L$GC_LIB -lgc -o $BINARY
 

@@ -1,6 +1,7 @@
 (** declarations of runtime's functions *)
 type t =
-  { exit : Llvm.llvalue
+  { init : Llvm.llvalue
+  ; exit : Llvm.llvalue
   ; exit_with_message : Llvm.llvalue
   ; malloc : Llvm.llvalue
   ; fresh_marker : Llvm.llvalue

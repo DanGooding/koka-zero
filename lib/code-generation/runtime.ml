@@ -1,5 +1,6 @@
 type t =
-  { exit : Llvm.llvalue
+  { init : Llvm.llvalue
+  ; exit : Llvm.llvalue
   ; exit_with_message : Llvm.llvalue
   ; malloc : Llvm.llvalue
   ; fresh_marker : Llvm.llvalue
@@ -33,6 +34,10 @@ let declare =
   let%bind int_type = Types.int in
   let%bind marker_type = Types.marker in
   let%bind label_type = Types.label in
+  let%bind init =
+    let name = Symbol_name.of_runtime_exn "kkr_init" in
+    declare_function name void_type []
+  in
   let%bind exit =
     let name = Symbol_name.of_runtime_exn "kkr_exit" in
     declare_function name void_type []
@@ -87,7 +92,8 @@ let declare =
     let name = Symbol_name.of_runtime_exn "kkr_read_int" in
     declare_function name int_type []
   in
-  { exit
+  { init
+  ; exit
   ; exit_with_message
   ; malloc
   ; fresh_marker

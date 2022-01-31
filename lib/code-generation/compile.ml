@@ -940,6 +940,10 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
   in
   let main_start_block = Llvm.entry_block main_function in
   let%bind () = Codegen.use_builder (Llvm.position_at_end main_start_block) in
+  let { Runtime.init; _ } = runtime in
+  let%bind _void =
+    Codegen.use_builder (Llvm.build_call init (Array.of_list []) "")
+  in
   (* build a function object for each toplevel function *)
   (* putting [null] for the parent for now *)
   let%bind closure_type = Types.closure in
