@@ -14,6 +14,10 @@ make
 # which prompts to run
 dune external-lib-deps --missing --root . @install
 ```
+The language runtime uses the [Boehm GC](https://hboehm.info/gc/) for memory 
+management. `GC_INCLUDE` and `GC_LIB` in `compile.sh` should be updated to 
+point to your system's install.
+
 
 ## Usage
 Interpret a koka program with:
@@ -23,11 +27,8 @@ make start -- interpret samples/fib.kk
 
 Or compile to textual llvm ir with:
 ```sh
-make start -- compile samples/reader.kk -o reader.ll
-```
-Compile to an executable with e.g.
-```sh
-clang reader.ll lib/code-generation/runtime.c -o reader
+./compile.sh samples/reader.kk
+./reader  # execute
 ```
 
 ---
