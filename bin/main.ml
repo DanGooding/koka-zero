@@ -7,8 +7,6 @@ let exit_with_error_messsage message =
   exit 1
 ;;
 
-let limit_length ~limit s = String.slice s 0 (min limit (String.length s))
-
 let typecheck_and_compile_to_expl filename =
   let open Result.Let_syntax in
   let%bind program = In_channel.with_file filename ~f:Koka_zero.parse_channel in
@@ -49,9 +47,8 @@ let interpret_eps filename =
     (match Koka_zero.interpret_program program with
     | Error error ->
       Koka_zero.Runtime_error.string_of_t error
-      |> limit_length ~limit:1000
-      |> sprintf "runtime error: %s\n"
-      |> exit_with_error_messsage
+      |> Koka_zero.Util.String_utils.limit_length ~limit:1000
+      |> eprintf "runtime error: %s\n"
     | Ok _unit -> ())
 ;;
 
