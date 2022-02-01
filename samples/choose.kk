@@ -34,8 +34,17 @@ fun pick-number() {
   x + y + z;
 };
 
+fun try-choose(n) {
+  with choice-user;
+  pick-number() == n;
+};
+
+fun int-of-bool(b) {
+  if b then 1 else 0;
+};
+
 fun main() {
-  with choice-user();
-  pick-number() == 101;
+  val success = try-choose(101);
+  print-int(int-of-bool(success));
 };
 

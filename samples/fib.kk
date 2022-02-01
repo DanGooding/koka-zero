@@ -18,7 +18,7 @@ fun for(start, stop, body) {
 };
 
 fun main() {
-  for(0, 20) fn(i) {
+  for(0, 25) fn(i) {
     // this is a very inefficient way to list fibonacci numbers!
     print-int(fib(i));
   };

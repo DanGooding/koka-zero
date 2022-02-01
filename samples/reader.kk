@@ -4,13 +4,13 @@ effect read {
 };
 
 fun foo() {
-  ask(()) + ask(());
+  ask(()) + ask(());  // 21 + 21 = 42
 };
 
 fun main() {
   with handler {
     control ask(unit) {
-      resume(1);
+      resume(21);
     };
   };
   print-int(foo());
