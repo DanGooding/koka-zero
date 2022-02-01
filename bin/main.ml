@@ -2,10 +2,15 @@ open Core
 
 let limit_length ~limit s = String.slice s 0 (min limit (String.length s))
 
-let compile_to_eps filename =
+let typecheck_and_compile_to_expl filename =
   let open Result.Let_syntax in
   let%bind program = In_channel.with_file filename ~f:Koka_zero.parse_channel in
-  let%map program_explicit = Koka_zero.infer_program program in
+  Koka_zero.infer_program program
+;;
+
+let compile_to_eps filename =
+  let open Result.Let_syntax in
+  let%map program_explicit = typecheck_and_compile_to_expl filename in
   Koka_zero.translate program_explicit
 ;;
 
@@ -40,6 +45,12 @@ let interpret_eps filename =
     | Ok _unit -> ())
 ;;
 
+let typecheck filename =
+  match typecheck_and_compile_to_expl filename with
+  | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
+  | Ok _program -> ()
+;;
+
 let command_compile =
   Command.basic
     ~summary:"compile a program"
@@ -64,10 +75,22 @@ let command_interpret =
         ~f:(fun filename () -> interpret_eps filename))
 ;;
 
+let command_typecheck =
+  Command.basic
+    ~summary:"type check a program"
+    Command.Param.(
+      map
+        (anon ("filename" %: string))
+        ~f:(fun filename () -> typecheck filename))
+;;
+
 let command =
   Command.group
     ~summary:"Koka compiler"
-    [ "compile", command_compile; "interpret", command_interpret ]
+    [ "compile", command_compile
+    ; "interpret", command_interpret
+    ; "check", command_typecheck
+    ]
 ;;
 
 let () = Command.run command
