@@ -1,5 +1,12 @@
 open Core
 
+(** print the given message to stderr and exit the process with a nonzero return
+    code (failure) *)
+let exit_with_error_messsage message =
+  eprintf "%s\n" message;
+  exit 1
+;;
+
 let limit_length ~limit s = String.slice s 0 (min limit (String.length s))
 
 let typecheck_and_compile_to_expl filename =
@@ -16,7 +23,8 @@ let compile_to_eps filename =
 
 let compile ~in_filename ~print_eps ~out_filename =
   match compile_to_eps in_filename with
-  | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
+  | Error error ->
+    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program_eps ->
     if print_eps
     then
@@ -29,25 +37,28 @@ let compile ~in_filename ~print_eps ~out_filename =
          ~filename:out_filename
      with
     | Error error ->
-      Koka_zero.Codegen_error.string_of_t error |> eprintf "compile error: %s\n"
+      Koka_zero.Codegen_error.string_of_t error |> exit_with_error_messsage
     | Ok () -> ())
 ;;
 
 let interpret_eps filename =
   match compile_to_eps filename with
-  | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
+  | Error error ->
+    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program ->
     (match Koka_zero.interpret_program program with
     | Error error ->
       Koka_zero.Runtime_error.string_of_t error
       |> limit_length ~limit:1000
-      |> eprintf "runtime error: %s\n"
+      |> sprintf "runtime error: %s\n"
+      |> exit_with_error_messsage
     | Ok _unit -> ())
 ;;
 
 let typecheck filename =
   match typecheck_and_compile_to_expl filename with
-  | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
+  | Error error ->
+    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok _program -> ()
 ;;
 
