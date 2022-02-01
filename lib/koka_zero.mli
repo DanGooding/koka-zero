@@ -14,6 +14,7 @@ module Runtime_error = Koka_zero_interpreter.Runtime_error
 open Runtime_error
 module Codegen_error = Koka_zero_code_generation.Codegen_error
 open Codegen_error
+module Util = Koka_zero_util
 
 val parse_channel
   :  ?filename:string

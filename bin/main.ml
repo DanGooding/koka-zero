@@ -1,7 +1,5 @@
 open Core
 
-let limit_length ~limit s = String.slice s 0 (min limit (String.length s))
-
 let compile_to_eps filename =
   let open Result.Let_syntax in
   let%bind program = In_channel.with_file filename ~f:Koka_zero.parse_channel in
@@ -35,7 +33,7 @@ let interpret_eps filename =
     (match Koka_zero.interpret_program program with
     | Error error ->
       Koka_zero.Runtime_error.string_of_t error
-      |> limit_length ~limit:1000
+      |> Koka_zero.Util.String_utils.limit_length ~limit:1000
       |> eprintf "runtime error: %s\n"
     | Ok _unit -> ())
 ;;
