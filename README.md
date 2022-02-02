@@ -1,7 +1,7 @@
 # Koka Zero
 
 Reimplementatin of core [Koka](https://koka-lang.github.io), compiling to 
-LLVM-IR, for my third year dissertation
+[LLVM-IR](https://llvm.org/docs/LangRef.html), for my third year dissertation
 
 ## Setup
 ```sh
@@ -15,20 +15,21 @@ make
 dune external-lib-deps --missing --root . @install
 ```
 The language runtime uses the [Boehm GC](https://hboehm.info/gc/) for memory 
-management. `GC_INCLUDE` and `GC_LIB` in `compile.sh` should be updated to 
+management. `GC` in `compile.sh` should be updated to 
 point to your system's install.
 
 
 ## Usage
-Interpret a koka program with:
-```sh
-make start -- interpret samples/fib.kk
-```
 
-Or compile to textual llvm ir with:
+Compile: first to textual llvm-ir, then via `clang` to an executable
 ```sh
 ./compile.sh samples/reader.kk
-./reader  # execute
+./reader
+```
+
+Or interpret a koka program with:
+```sh
+make start -- interpret samples/fib.kk
 ```
 
 ---
