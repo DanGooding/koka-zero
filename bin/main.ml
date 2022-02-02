@@ -9,7 +9,10 @@ let exit_with_error_messsage message =
 
 let typecheck_and_compile_to_expl filename =
   let open Result.Let_syntax in
-  let%bind program = In_channel.with_file filename ~f:Koka_zero.parse_channel in
+  let%bind program =
+    try In_channel.with_file filename ~f:Koka_zero.parse_channel with
+    | Sys_error message -> exit_with_error_messsage message
+  in
   Koka_zero.infer_program program
 ;;
 
