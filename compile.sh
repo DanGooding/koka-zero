@@ -2,13 +2,17 @@
 
 set -e
 
-KC=./_build/default/bin/main.exe
-CC=clang
-CFLAGS=-Wall
+# if this script is not run from the root directory of this project
+# then the path to that must be passed in
+PROJECT_ROOT=${PROJECT_ROOT:-.}
 
-RUNTIME=lib/runtime/runtime.c
-GC_INCLUDE=/home/dan/boehm/gc/include
-GC_LIB=/home/dan/boehm/gc/lib
+KOKA_COMPILER=${KOKA_COMPILER:-$PROJECT_ROOT/_build/default/bin/main.exe}
+LL_C_COMPILER=clang
+# intentionally rely on clang to know the system's target triple
+LL_C_FLAGS="-Wall -Wno-override-module"
+
+RUNTIME=$PROJECT_ROOT/lib/runtime/runtime.c
+GC=/home/dan/boehm/gc
 
 SOURCE="$1"
 BASENAME="${SOURCE%.kk}"
@@ -22,6 +26,6 @@ if [[ "$BINARY" = "$SOURCE" ]]; then
     BINARY="$BINARY.exe"
 fi
 
-$KC compile $SOURCE -o $IR
-$CC $CFLAGS $IR $RUNTIME -I$GC_INCLUDE -L$GC_LIB -lgc -o $BINARY
+$KOKA_COMPILER compile $SOURCE -o $IR
+$LL_C_COMPILER $LL_C_FLAGS $IR $RUNTIME -I$GC/include -L$GC/lib -lgc -o $BINARY
 

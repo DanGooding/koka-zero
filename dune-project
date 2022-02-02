@@ -1,4 +1,4 @@
-(lang dune 2.0)
+(lang dune 2.8)
 
 (name koka-zero)
 
@@ -27,3 +27,6 @@
 ;; don't require `dune__exe__` prefix when debugging
 ;; TODO: check the loss of namespacing is not an issue
 (wrapped_executables false)
+
+;; enable cram .t tests
+(cram enable)

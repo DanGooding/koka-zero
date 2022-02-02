@@ -1,15 +1,28 @@
 open Core
 
-let compile_to_eps filename =
+(** print the given message to stderr and exit the process with a nonzero return
+    code (failure) *)
+let exit_with_error_messsage message =
+  eprintf "%s\n" message;
+  exit 1
+;;
+
+let typecheck_and_compile_to_expl filename =
   let open Result.Let_syntax in
   let%bind program = In_channel.with_file filename ~f:Koka_zero.parse_channel in
-  let%map program_explicit = Koka_zero.infer_program program in
+  Koka_zero.infer_program program
+;;
+
+let compile_to_eps filename =
+  let open Result.Let_syntax in
+  let%map program_explicit = typecheck_and_compile_to_expl filename in
   Koka_zero.translate program_explicit
 ;;
 
 let compile ~in_filename ~print_eps ~out_filename =
   match compile_to_eps in_filename with
-  | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
+  | Error error ->
+    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program_eps ->
     if print_eps
     then
@@ -22,13 +35,14 @@ let compile ~in_filename ~print_eps ~out_filename =
          ~filename:out_filename
      with
     | Error error ->
-      Koka_zero.Codegen_error.string_of_t error |> eprintf "compile error: %s\n"
+      Koka_zero.Codegen_error.string_of_t error |> exit_with_error_messsage
     | Ok () -> ())
 ;;
 
 let interpret_eps filename =
   match compile_to_eps filename with
-  | Error error -> Koka_zero.Static_error.string_of_t error |> eprintf "%s\n"
+  | Error error ->
+    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program ->
     (match Koka_zero.interpret_program program with
     | Error error ->
@@ -36,6 +50,13 @@ let interpret_eps filename =
       |> Koka_zero.Util.String_utils.limit_length ~limit:1000
       |> eprintf "runtime error: %s\n"
     | Ok _unit -> ())
+;;
+
+let typecheck filename =
+  match typecheck_and_compile_to_expl filename with
+  | Error error ->
+    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
+  | Ok _program -> ()
 ;;
 
 let command_compile =
@@ -62,10 +83,22 @@ let command_interpret =
         ~f:(fun filename () -> interpret_eps filename))
 ;;
 
+let command_typecheck =
+  Command.basic
+    ~summary:"type check a program"
+    Command.Param.(
+      map
+        (anon ("filename" %: string))
+        ~f:(fun filename () -> typecheck filename))
+;;
+
 let command =
   Command.group
     ~summary:"Koka compiler"
-    [ "compile", command_compile; "interpret", command_interpret ]
+    [ "compile", command_compile
+    ; "interpret", command_interpret
+    ; "check", command_typecheck
+    ]
 ;;
 
 let () = Command.run command
