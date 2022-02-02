@@ -571,6 +571,24 @@ let infer_decls
   env', effect_env', declarations'
 ;;
 
+(** Check [Keywords.entry_point] is a total function [() -> <> ()], skipping if
+    not present *)
+let check_entry_point : Context.t -> unit Inference.t =
+ fun env ->
+  let open Inference.Let_syntax in
+  match Context.find env Min.Keyword.entry_point with
+  | None -> return ()
+  | Some (Context.Binding.Operation _) ->
+    raise_s [%message "entry point shadowed by operation"]
+  | Some (Context.Binding.Value t) ->
+    let t_expected =
+      (* () -> <> () *)
+      Type.Mono.Arrow ([], Effect.total, Type.Mono.Primitive Type.Primitive.Unit)
+    in
+    let%bind t_actual = Inference.instantiate_type t in
+    Inference.unify t_actual t_expected
+;;
+
 let infer_expr_toplevel
     :  Min.Expr.t -> declarations:Min.Decl.t list
     -> (Type.Mono.t * Effect.t * Expl.Expr.t) Or_static_error.t
@@ -599,10 +617,15 @@ let infer_program : Min.Program.t -> Explicit_syntax.Program.t Or_static_error.t
     @ declarations
     @ [ Min.Decl.Fun Min.Program.entry_point ]
   in
-  let%map.Result (_env, _effect_env, declarations'), _substitution =
+  let%map.Result declarations', _substitution =
     let env = Context.empty in
     let effect_env = Effect_signature.Context.empty in
-    Inference.run (infer_decls declarations ~env ~effect_env)
+    Inference.run
+      (let%bind.Inference env, _effect_env, declarations' =
+         infer_decls declarations ~env ~effect_env
+       in
+       let%map.Inference () = check_entry_point env in
+       declarations')
   in
   { Expl.Program.declarations = declarations' }
 ;;

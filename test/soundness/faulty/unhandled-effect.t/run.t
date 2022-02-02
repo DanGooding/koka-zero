@@ -1,3 +1,8 @@
 Every operation requires an enclosing handler
   $ koka-zero check unhandled-effect.kk
-  unhandled `ask` effect in main
+  type error: cannot unify
+  (Row (Open (Non_empty ((read 1))) (Metavariable e21)))
+  with
+  (Row (Closed ()))
+  
+  [1]
