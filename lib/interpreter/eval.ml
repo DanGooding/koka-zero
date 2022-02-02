@@ -263,9 +263,10 @@ and eval_impure_built_in
   | Expr.Impure_read_int ->
     let%map i =
       Interpreter.try_io_with ~message:"failed to read int" (fun () ->
+          printf "input> ";
           Out_channel.flush Out_channel.stdout;
           let line = In_channel.input_line_exn In_channel.stdin in
-          Int.of_string line)
+          Int.of_string (String.strip line))
     in
     Value.Primitive (Value.Int i)
 ;;
