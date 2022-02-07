@@ -2,6 +2,7 @@ open Import
 module Literal = Koka_zero_inference.Minimal_syntax.Literal
 module Operator = Koka_zero_inference.Minimal_syntax.Operator
 module Keyword = Koka_zero_inference.Minimal_syntax.Keyword
+module Parameter = Koka_zero_inference.Minimal_syntax.Parameter
 
 module Expr : sig
   type t =
@@ -59,7 +60,7 @@ module Expr : sig
     | Impure_built_in of impure_built_in
   [@@deriving sexp]
 
-  and lambda = Variable.t list * t [@@deriving sexp]
+  and lambda = Parameter.t list * t [@@deriving sexp]
 
   and fix_lambda = Variable.t * lambda [@@deriving sexp]
 

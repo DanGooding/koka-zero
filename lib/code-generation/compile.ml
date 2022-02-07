@@ -549,19 +549,20 @@ and compile_if_then_else
     ~compile_false:(fun () ->
       compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol)
 
-(** [compile_function ~symbol_name rec_name xs e_body ~captured_shape ~outer_symbol ...]
+(** [compile_function ~symbol_name rec_name ps e_body ~captured_shape ~outer_symbol ...]
     generates a function with the given arguments and body, and within the scope
     given by [captured_shape]. It returns this function's [llvalue]. The
     [llbuilder]'s insertion point is saved and restored. *)
 and compile_function
     :  symbol_name:Symbol_name.t -> rec_name:Variable.t option
-    -> Variable.t list -> EPS.Expr.t -> captured_shape:Context.Closure.Shape.t
-    -> outer_symbol:Symbol_name.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
+    -> EPS.Parameter.t list -> EPS.Expr.t
+    -> captured_shape:Context.Closure.Shape.t -> outer_symbol:Symbol_name.t
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> Llvm.llvalue Codegen.t
   =
  fun ~symbol_name
      ~rec_name
-     xs
+     ps
      e_body
      ~captured_shape
      ~outer_symbol
@@ -569,7 +570,7 @@ and compile_function
      ~effect_reprs ->
   let open Codegen.Let_syntax in
   (* new llvm function *)
-  let%bind type_ = Types.function_code (List.length xs) in
+  let%bind type_ = Types.function_code (List.length ps) in
   let%bind function_ =
     Codegen.use_module
       (Llvm.define_function (Symbol_name.to_string symbol_name) type_)
@@ -589,8 +590,7 @@ and compile_function
               [%message "function type has unexpected number of parameters"]
         in
         let%bind opaque_pointer = Types.opaque_pointer in
-        (* parameters available via variables in the the body*)
-        let%bind (env_parameters : Context.Parameters.t) =
+        let%bind (parameters : (EPS.Parameter.t * Llvm.llvalue) list) =
           match rec_name with
           | Some rec_name ->
             let%map f_self_param =
@@ -600,11 +600,25 @@ and compile_function
                    opaque_pointer
                    (Helpers.register_name_of_variable rec_name))
             in
-            List.zip_exn (rec_name :: xs) (f_self_param :: params)
+            let rec_p = EPS.Parameter.Variable rec_name in
+            List.zip_exn (rec_p :: ps) (f_self_param :: params)
           | None ->
             Llvm.set_value_name "null" f_self_param;
             ignore (f_self_param : Llvm.llvalue);
-            List.zip_exn xs params |> return
+            List.zip_exn ps params |> return
+        in
+        (* parameters available via variables in the the body*)
+        let (env_parameters : Context.Parameters.t) =
+          List.filter_map parameters ~f:(fun (p, value) ->
+              match p with
+              | EPS.Parameter.Variable name ->
+                Llvm.set_value_name
+                  (Helpers.register_name_of_variable name)
+                  value;
+                Some (name, value)
+              | EPS.Parameter.Wildcard ->
+                Llvm.set_value_name "_" value;
+                None)
         in
         List.iter env_parameters ~f:(fun (name, value) ->
             Llvm.set_value_name (Helpers.register_name_of_variable name) value);
@@ -629,12 +643,12 @@ and compile_function
 (** a special case of [compile_function], where the function's symbol name is
     based on the containing function's name ([outer_symbol]) *)
 and compile_local_function
-    :  rec_name:Variable.t option -> Variable.t list -> EPS.Expr.t
+    :  rec_name:Variable.t option -> EPS.Parameter.t list -> EPS.Expr.t
     -> captured_shape:Context.Closure.Shape.t -> outer_symbol:Symbol_name.t
     -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> Llvm.llvalue Codegen.t
   =
- fun ~rec_name xs e_body ~captured_shape ~outer_symbol ~runtime ~effect_reprs ->
+ fun ~rec_name ps e_body ~captured_shape ~outer_symbol ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind symbol_name, outer_symbol =
     match rec_name with
@@ -652,7 +666,7 @@ and compile_local_function
   compile_function
     ~symbol_name
     ~rec_name
-    xs
+    ps
     e_body
     ~captured_shape
     ~outer_symbol
@@ -667,7 +681,7 @@ and compile_lambda
     -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> Llvm.llvalue Codegen.t
   =
- fun (xs, e_body) ~env ~outer_symbol ~runtime ~effect_reprs ->
+ fun (ps, e_body) ~env ~outer_symbol ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   (* TODO: this rebuilds the escaping closure on every capture - cheaper to
      build it once at function entry (keep it around in the context?) *)
@@ -679,7 +693,7 @@ and compile_lambda
   let%bind function_code =
     compile_local_function
       ~rec_name:None
-      xs
+      ps
       e_body
       ~captured_shape:escaping_shape
       ~outer_symbol
@@ -700,7 +714,7 @@ and compile_fix_lambda
     -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> Llvm.llvalue Codegen.t
   =
- fun (f, (xs, e_body)) ~env ~outer_symbol ~runtime ~effect_reprs ->
+ fun (f, (ps, e_body)) ~env ~outer_symbol ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind escaping = Context.compile_capture env ~runtime in
   let { Context.Closure.shape = escaping_shape; closure = escaping_closure } =
@@ -709,7 +723,7 @@ and compile_fix_lambda
   let%bind function_code =
     compile_local_function
       ~rec_name:(Some f)
-      xs
+      ps
       e_body
       ~captured_shape:escaping_shape
       ~outer_symbol
@@ -887,14 +901,14 @@ let compile_fun_decl
   =
  fun decl ~toplevel_names ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
-  let f_name, (xs, e_body) = decl in
+  let f_name, (ps, e_body) = decl in
   let captured_shape = Context.Closure.Shape.Toplevel toplevel_names in
   let symbol_name = Symbol_name.of_toplevel f_name in
   let%map code =
     compile_function
       ~symbol_name
       ~rec_name:(Some f_name)
-      xs
+      ps
       e_body
       ~captured_shape
       ~outer_symbol:symbol_name
