@@ -92,13 +92,8 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
       | Value.Fix_lambda (f_name, lambda) ->
         lambda, Map.set f_env ~key:f_name ~data:(Value.Closure closure)
     in
-    let xs, e_body = lambda in
-    let%bind xs_to_args = Typecast.zip_arguments ~params:xs ~args:v_args in
-    let f_body_env =
-      List.fold xs_to_args ~init:f_env ~f:(fun f_body_env (x, v) ->
-          Map.set f_body_env ~key:x ~data:v)
-    in
-    eval_expr e_body ~env:f_body_env
+    let params, e_body = lambda in
+    eval_call ~f_env ~params ~e_body ~v_args
   | Expr.Literal lit -> eval_literal lit |> Value.Primitive |> return
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind v_cond = eval_expr e_cond ~env in
@@ -134,12 +129,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         yield_branch, [ Value.Marker marker; op_clause; resumption ]
     in
     let params, e_body = branch in
-    let%bind bindings = Typecast.zip_arguments ~params ~args in
-    let env' =
-      List.fold bindings ~init:env ~f:(fun env (x, v) ->
-          Map.set env ~key:x ~data:v)
-    in
-    eval_expr e_body ~env:env'
+    eval_call ~f_env:env ~params ~e_body ~v_args:args
   | Expr.Fresh_marker ->
     let%map m = Interpreter.fresh_marker in
     Value.Marker m
@@ -248,6 +238,21 @@ and eval_fix_lambda
  fun fix_lambda ~env ->
   let open Interpreter.Let_syntax in
   (Value.Fix_lambda fix_lambda, env) |> return
+
+and eval_call
+    :  f_env:Value.context -> params:Parameter.t list -> e_body:Expr.t
+    -> v_args:Value.t list -> Value.t Interpreter.t
+  =
+ fun ~f_env ~params ~e_body ~v_args ->
+  let open Interpreter.Let_syntax in
+  let%bind params_to_args = Typecast.zip_arguments ~params ~args:v_args in
+  let f_body_env =
+    List.fold params_to_args ~init:f_env ~f:(fun f_body_env (p, v) ->
+        match p with
+        | Parameter.Variable x -> Map.set f_body_env ~key:x ~data:v
+        | Parameter.Wildcard -> f_body_env)
+  in
+  eval_expr e_body ~env:f_body_env
 
 and eval_impure_built_in
     : Expr.impure_built_in -> env:Value.context -> Value.t Interpreter.t

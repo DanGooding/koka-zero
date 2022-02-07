@@ -44,12 +44,14 @@ let run (t : 'a t) : 'a =
 ;;
 
 let fresh_name = Variable.Name_source.next_name
+let parameters_of_names xs = List.map xs ~f:(fun x -> EPS.Parameter.Variable x)
 
 let make_lambda_1 make_body =
   let open Let_syntax in
   let%bind x = fresh_name in
   let%map body = make_body (E.Variable x) in
-  [ x ], body
+  let ps = parameters_of_names [ x ] in
+  ps, body
 ;;
 
 (* note since we can't pattern match on the type of make_body, there isn't much
@@ -61,7 +63,8 @@ let make_lambda_2 make_body =
   let%bind x1 = fresh_name in
   let%bind x2 = fresh_name in
   let%map body = make_body (E.Variable x1) (E.Variable x2) in
-  [ x1; x2 ], body
+  let ps = parameters_of_names [ x1; x2 ] in
+  ps, body
 ;;
 
 let make_lambda_3 make_body =
@@ -70,7 +73,8 @@ let make_lambda_3 make_body =
   let%bind x2 = fresh_name in
   let%bind x3 = fresh_name in
   let%map body = make_body (E.Variable x1) (E.Variable x2) (E.Variable x3) in
-  [ x1; x2; x3 ], body
+  let ps = parameters_of_names [ x1; x2; x3 ] in
+  ps, body
 ;;
 
 let make_lambda_4 make_body =
@@ -82,7 +86,8 @@ let make_lambda_4 make_body =
   let%map body =
     make_body (E.Variable x1) (E.Variable x2) (E.Variable x3) (E.Variable x4)
   in
-  [ x1; x2; x3; x4 ], body
+  let ps = parameters_of_names [ x1; x2; x3; x4 ] in
+  ps, body
 ;;
 
 let expr_of_lambda lambda = E.Lambda lambda
@@ -107,7 +112,7 @@ let make_match_ctl subject ~pure ~yield =
   let open Let_syntax in
   let%bind x = fresh_name in
   let%bind pure_branch_body = pure (E.Variable x) in
-  let pure_branch = [ x ], pure_branch_body in
+  let pure_branch = parameters_of_names [ x ], pure_branch_body in
   let%bind marker = fresh_name in
   let%bind op_clause = fresh_name in
   let%bind resumption = fresh_name in
@@ -117,6 +122,8 @@ let make_match_ctl subject ~pure ~yield =
       ~op_clause:(E.Variable op_clause)
       ~resumption:(E.Variable resumption)
   in
-  let yield_branch = [ marker; op_clause; resumption ], yield_branch_body in
+  let yield_branch =
+    parameters_of_names [ marker; op_clause; resumption ], yield_branch_body
+  in
   E.Match_ctl { subject; pure_branch; yield_branch }
 ;;

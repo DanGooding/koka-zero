@@ -117,7 +117,8 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
   | Expl.Expr.Let (x, v_subject, e_body) ->
     let%bind (`Value subject') = translate_value v_subject in
     let%map m_body = translate_expr e_body in
-    EPS.Expr.Application (EPS.Expr.Lambda ([ x ], m_body), [ subject' ])
+    EPS.Expr.Application
+      (EPS.Expr.Lambda ([ EPS.Parameter.Variable x ], m_body), [ subject' ])
   | Expl.Expr.Seq (e1, e2) ->
     let%bind e1' = translate_expr e1 in
     make_bind_into e1' ~f:(fun _x1 -> translate_expr e2)
@@ -174,10 +175,10 @@ and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
     `Value wrapped_perform
 
 and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
- fun (xs, e_body) ->
+ fun (ps, e_body) ->
   let open Generation.Let_syntax in
   let%map m_body = translate_expr e_body in
-  xs, m_body
+  ps, m_body
 
 and translate_fix_lambda
     : Expl.Expr.fix_lambda -> EPS.Expr.fix_lambda Generation.t
@@ -207,7 +208,7 @@ and translate_op_handler : Expl.Expr.op_handler -> EPS.Expr.t Generation.t =
   let open Generation.Let_syntax in
   let resume = Expl.Keyword.resume in
   let%map m_body = translate_expr op_body in
-  EPS.Expr.Lambda ([ op_argument; resume ], m_body)
+  EPS.Expr.Lambda ([ op_argument; EPS.Parameter.Variable resume ], m_body)
 
 and translate_impure_built_in
     : Expl.Expr.impure_built_in -> EPS.Expr.t Generation.t
