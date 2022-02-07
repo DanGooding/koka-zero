@@ -54,6 +54,14 @@ module Keyword : sig
   val read_int : Variable.t
 end
 
+module Parameter : sig
+  (** a binding of value to name, or ignoring with a wildcard *)
+  type t =
+    | Variable of Variable.t
+    | Wildcard
+  [@@deriving sexp]
+end
+
 module Expr : sig
   type t =
     | Value of value
@@ -81,7 +89,7 @@ module Expr : sig
   [@@deriving sexp]
 
   (** monomorphic binding *)
-  and lambda = Variable.t list * t [@@deriving sexp]
+  and lambda = Parameter.t list * t [@@deriving sexp]
 
   (** lambda which knows its own name *)
   and fix_lambda = Variable.t * lambda [@@deriving sexp]
@@ -95,7 +103,7 @@ module Expr : sig
 
   (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
-    { op_argument : Variable.t
+    { op_argument : Parameter.t
           (* TODO: extend to multiple args (requires checking against
              declaration, and makes translation harder - each operation in an
              effect needs to pass a differnt amount of arguments through

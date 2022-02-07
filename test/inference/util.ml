@@ -31,6 +31,11 @@ let print_expr_inference_result ?(declarations = []) expr =
   |> print_endline
 ;;
 
+module Parameter = struct
+  let var x = M.Parameter.Variable (Variable.of_user x)
+  let wildcard = M.Parameter.Wildcard
+end
+
 module Expr = struct
   let var x = E.Value (E.Variable (Variable.of_user x))
   let lit_unit = E.Value (E.Literal M.Literal.Unit)
@@ -103,7 +108,7 @@ module Expr = struct
 
   let singleton_handler
       ~(op_name : Variable.t)
-      ~(op_argument : Variable.t)
+      ~(op_argument : M.Parameter.t)
       ~(op_body : E.t)
       : E.handler
     =
@@ -113,19 +118,19 @@ module Expr = struct
   ;;
 
   let read_handler (value : int) : E.handler =
-    (* handler { ask(unit) { resume(value) } } *)
+    (* handler { ask(_) { resume(value) } } *)
     let op_name = Variable.of_user "ask" in
-    let op_argument = Variable.of_user "unit" in
+    let op_argument = M.Parameter.Wildcard in
     let op_body =
       E.Application (E.Value (E.Variable M.Keyword.resume), [ lit_int value ])
     in
     singleton_handler ~op_name ~op_argument ~op_body
   ;;
 
-  (* handler { throw(unit) { default } } *)
+  (* handler { throw(_) { default } } *)
   let exn_handler (default : E.t) : E.handler =
     let throw_clause =
-      let op_argument = Variable.of_user "unit" in
+      let op_argument = M.Parameter.Wildcard in
       let op_body = default in
       { E.op_argument; op_body }
     in

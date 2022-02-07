@@ -3,6 +3,7 @@ open Koka_zero_inference
 module M = Minimal_syntax
 module E = M.Expr
 module UE = Util.Expr
+module UP = Util.Parameter
 
 let%expect_test "identity gets polymorphic type" =
   (* TODO: once introduce declarations, add a better test than this (expressions
@@ -13,7 +14,7 @@ let%expect_test "identity gets polymorphic type" =
     let id = UE.var "id" in
     E.Let
       ( Variable.of_user "id"
-      , E.Lambda ([ Variable.of_user "z" ], UE.var "z")
+      , E.Lambda ([ UP.var "z" ], UE.var "z")
       , E.Application (E.Application (id, [ id ]), [ UE.lit_unit ]) )
   in
   Util.print_expr_inference_result expr;
@@ -21,7 +22,7 @@ let%expect_test "identity gets polymorphic type" =
     {|
     (Ok
      ((Primitive Unit) (Metavariable e7)
-      (Let (User id) (Lambda (((User z)) (Value (Variable (User z)))))
+      (Let (User id) (Lambda (((Variable (User z))) (Value (Variable (User z)))))
        (Application
         (Application (Value (Variable (User id))) ((Value (Variable (User id)))))
         ((Value (Literal Unit))))))) |}]
@@ -36,8 +37,7 @@ let%expect_test "fix combinator allows recursion" =
     E.Value
       (E.Fix_lambda
          ( Variable.of_user "f"
-         , ([ Variable.of_user "x" ], E.Application (UE.var "f", [ UE.var "x" ]))
-         ))
+         , ([ UP.var "x" ], E.Application (UE.var "f", [ UE.var "x" ])) ))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -48,8 +48,23 @@ let%expect_test "fix combinator allows recursion" =
       (Value
        (Fix_lambda
         ((User f)
-         (((User x))
+         (((Variable (User x)))
           (Application (Value (Variable (User f))) ((Value (Variable (User x))))))))))) |}]
+;;
+
+let%expect_test "wildcard parameters affect type" =
+  let expr =
+    (* fn (_, y, _) y *)
+    E.Value
+      (E.Lambda
+         ( [ M.Parameter.Wildcard
+           ; M.Parameter.Variable (Variable.of_user "y")
+           ; M.Parameter.Wildcard
+           ]
+         , UE.var "x" ))
+  in
+  Util.print_expr_inference_result expr;
+  [%expect {| (Error ((kind Type_error) (message "unbound variable: x") (location ()))) |}]
 ;;
 
 let%expect_test "literal unit" =
@@ -140,10 +155,7 @@ let%expect_test "multi argument functions" =
     E.Application
       ( E.Value
           (E.Lambda
-             ( [ Variable.of_user "b"
-               ; Variable.of_user "x"
-               ; Variable.of_user "y"
-               ]
+             ( [ UP.var "b"; UP.var "x"; UP.var "y" ]
              , E.If_then_else (UE.var "b", UE.var "x", UE.var "y") ))
       , [ UE.lit_bool true; UE.lit_int 1; UE.lit_int 0 ] )
   in
@@ -155,7 +167,7 @@ let%expect_test "multi argument functions" =
       (Application
        (Value
         (Lambda
-         (((User b) (User x) (User y))
+         (((Variable (User b)) (Variable (User x)) (Variable (User y)))
           (If_then_else (Value (Variable (User b))) (Value (Variable (User x)))
            (Value (Variable (User y)))))))
        ((Value (Literal (Bool true))) (Value (Literal (Int 1)))
@@ -163,9 +175,7 @@ let%expect_test "multi argument functions" =
 ;;
 
 let%expect_test "declared functions are generalised" =
-  let identity =
-    Variable.of_user "id", ([ Variable.of_user "x" ], UE.var "x")
-  in
+  let identity = Variable.of_user "id", ([ UP.var "x" ], UE.var "x") in
   let const_true =
     ( Variable.of_user "const_true"
     , ([], E.Application (UE.var "id", [ UE.lit_bool true ])) )
@@ -183,7 +193,7 @@ let%expect_test "declared functions are generalised" =
     {|
     (Ok
      ((declarations
-       ((Fun ((User id) (((User x)) (Value (Variable (User x))))))
+       ((Fun ((User id) (((Variable (User x))) (Value (Variable (User x))))))
         (Fun
          ((User const_true)
           (()
@@ -218,7 +228,8 @@ let%expect_test "local function can shadow toplevel" =
   in
   let program = { M.Program.declarations } in
   Util.print_check_program_without_main_result program;
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((declarations
        ((Fun ((User foo) (() (Value (Literal Unit)))))
@@ -238,7 +249,7 @@ let%expect_test "handled effects reflected in subject's effect" =
     (* (() -> <exn,read,read|e> a) -> e a *)
     E.Value
       (E.Lambda
-         ( [ Variable.of_user "f" ]
+         ( [ UP.var "f" ]
          , Util.Expr.make_handle_expr
              (Util.Expr.exn_handler UE.lit_unit)
              (Util.Expr.make_handle_expr
@@ -258,14 +269,14 @@ let%expect_test "handled effects reflected in subject's effect" =
       (Metavariable e24)
       (Value
        (Lambda
-        (((User f))
+        (((Variable (User f)))
          (Application
           (Value
            (Handler
             ((handled_effect exn)
              (operations
               (((User throw)
-                ((op_argument (User unit)) (op_body (Value (Literal Unit)))))))
+                ((op_argument Wildcard) (op_body (Value (Literal Unit)))))))
              (return_clause ()))))
           ((Value
             (Lambda
@@ -276,7 +287,7 @@ let%expect_test "handled effects reflected in subject's effect" =
                  ((handled_effect read)
                   (operations
                    (((User ask)
-                     ((op_argument (User unit))
+                     ((op_argument Wildcard)
                       (op_body
                        (Application (Value (Variable (User resume)))
                         ((Value (Literal (Int 1))))))))))
@@ -290,7 +301,7 @@ let%expect_test "handled effects reflected in subject's effect" =
                       ((handled_effect read)
                        (operations
                         (((User ask)
-                          ((op_argument (User unit))
+                          ((op_argument Wildcard)
                            (op_body
                             (Application (Value (Variable (User resume)))
                              ((Value (Literal (Int 1))))))))))
@@ -315,6 +326,7 @@ let%expect_test "return clause is typed correctly" =
                 , UE.lit_int 3 )
             ] )
       in
+      let op_argument = M.Parameter.Variable op_argument in
       { E.op_argument; op_body }
     in
     let return_clause =
@@ -323,6 +335,7 @@ let%expect_test "return clause is typed correctly" =
         E.If_then_else
           (E.Value (E.Variable op_argument), UE.lit_unit, UE.lit_unit)
       in
+      let op_argument = M.Parameter.Variable op_argument in
       Some { E.op_argument; op_body }
     in
     let operations =
@@ -347,13 +360,13 @@ let%expect_test "return clause is typed correctly" =
          ((handled_effect query)
           (operations
            (((User test)
-             ((op_argument (User x))
+             ((op_argument (Variable (User x)))
               (op_body
                (Application (Value (Variable (User resume)))
                 ((Operator (Value (Variable (User x))) (Int Equals)
                   (Value (Literal (Int 3)))))))))))
           (return_clause
-           (((op_argument (User b))
+           (((op_argument (Variable (User b)))
              (op_body
               (If_then_else (Value (Variable (User b))) (Value (Literal Unit))
                (Value (Literal Unit))))))))))
@@ -371,7 +384,7 @@ let%expect_test "handlers can delegate to outer handlers" =
   (* { ask(unit) { ask(()) + 1 } } *)
   let inner_handler =
     let op_name = Variable.of_user "ask" in
-    let op_argument = Variable.of_user "unit" in
+    let op_argument = M.Parameter.Wildcard in
     let op_body =
       E.Operator
         ( E.Application (UE.var "ask", [ UE.lit_unit ])
@@ -399,7 +412,7 @@ let%expect_test "handlers can delegate to outer handlers" =
          ((handled_effect read)
           (operations
            (((User ask)
-             ((op_argument (User unit))
+             ((op_argument Wildcard)
               (op_body
                (Application (Value (Variable (User resume)))
                 ((Value (Literal (Int 1))))))))))
@@ -413,7 +426,7 @@ let%expect_test "handlers can delegate to outer handlers" =
               ((handled_effect read)
                (operations
                 (((User ask)
-                  ((op_argument (User unit))
+                  ((op_argument Wildcard)
                    (op_body
                     (Operator
                      (Application

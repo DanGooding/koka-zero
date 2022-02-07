@@ -220,14 +220,21 @@ and infer_lambda
     :  Min.Expr.lambda -> env:Context.t -> effect_env:Effect_signature.Context.t
     -> (Type.Mono.t * Expl.Expr.lambda) Inference.t
   =
- fun (xs, expr_body) ~env ~effect_env ->
+ fun (ps, expr_body) ~env ~effect_env ->
   let open Inference.Let_syntax in
-  let%bind (xs_to_ts : (Variable.t * Type.Mono.t) list) =
-    List.map xs ~f:(fun x ->
-        let%map t_x = Inference.fresh_metavariable in
-        let t_x = Type.Mono.Metavariable t_x in
-        x, t_x)
+  let%bind (ps_to_ts : (Min.Parameter.t * Type.Mono.t) list) =
+    List.map ps ~f:(fun p ->
+        let%map t_p = Inference.fresh_metavariable in
+        let t_p = Type.Mono.Metavariable t_p in
+        p, t_p)
     |> Inference.all
+  in
+  let t_ps = List.map ps_to_ts ~f:(fun (_p, t_p) -> t_p) in
+  let (xs_to_ts : (Variable.t * Type.Mono.t) list) =
+    List.filter_map ps_to_ts ~f:(fun (p, t) ->
+        match p with
+        | Min.Parameter.Wildcard -> None
+        | Min.Parameter.Variable x -> Some (x, t))
   in
   let%bind () =
     match Variable.Map.of_alist xs_to_ts with
@@ -246,9 +253,8 @@ and infer_lambda
   let%map t_body, eff_body, expr_body' =
     infer ~env:env' ~effect_env expr_body
   in
-  let t_xs = List.map xs_to_ts ~f:(fun (_x, t_x) -> t_x) in
-  let t = Type.Mono.Arrow (t_xs, eff_body, t_body) in
-  t, (xs, expr_body')
+  let t = Type.Mono.Arrow (t_ps, eff_body, t_body) in
+  t, (ps, expr_body')
 
 (** infer the type of a fix-wrapped lambda. Since these are values, they are
     inherently total *)
@@ -259,9 +265,14 @@ and infer_fix_lambda
   =
  fun (f, lambda) ~env ~effect_env ->
   let open Inference.Let_syntax in
-  let xs, _e_body = lambda in
+  let ps, _e_body = lambda in
   let%bind () =
-    if List.mem xs f ~equal:Variable.equal
+    let vs =
+      List.filter_map ps ~f:(function
+          | Min.Parameter.Variable v -> Some v
+          | Min.Parameter.Wildcard -> None)
+    in
+    if List.mem vs f ~equal:Variable.equal
     then (
       let message =
         sprintf
@@ -274,9 +285,9 @@ and infer_fix_lambda
   (* expect `e` (which can refer to itself as `f`) to have type: *)
   (* `t_f_args -> eff_f t_f_result | <>` *)
   let%bind (t_f_args : Type.Mono.t list) =
-    List.map xs ~f:(fun _x ->
-        let%map t_x = Inference.fresh_metavariable in
-        Type.Mono.Metavariable t_x)
+    List.map ps ~f:(fun _p ->
+        let%map t_p = Inference.fresh_metavariable in
+        Type.Mono.Metavariable t_p)
     |> Inference.all
   in
   let%bind eff_f = Inference.fresh_effect_metavariable in
@@ -437,7 +448,10 @@ and infer_operation_clause
   let open Inference.Let_syntax in
   let { Min.Expr.op_argument; op_body } = op_handler in
   let%bind env' =
-    add_binding ~env ~var:op_argument ~type_:(Type.Mono t_argument)
+    match op_argument with
+    | Min.Parameter.Variable var ->
+      add_binding ~env ~var ~type_:(Type.Mono t_argument)
+    | Min.Parameter.Wildcard -> return env
   in
   let%bind t_result, eff_result, op_body' =
     infer ~env:env' ~effect_env op_body

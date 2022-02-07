@@ -2,12 +2,12 @@ open Koka_zero_inference
 module M = Minimal_syntax
 module E = M.Expr
 module UE = Util.Expr
+module UP = Util.Parameter
 
 let%expect_test "occurs check rejects omega combinator" =
   let expr =
     E.Value
-      (E.Lambda
-         ([ Variable.of_user "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
+      (E.Lambda ([ UP.var "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -42,8 +42,7 @@ let%expect_test "fix lambdas name cannot collide with own parameters" =
   let expr =
     E.Value
       (E.Fix_lambda
-         ( Variable.of_user "f"
-         , ([ Variable.of_user "g"; Variable.of_user "f" ], UE.lit_unit) ))
+         (Variable.of_user "f", ([ UP.var "g"; UP.var "f" ], UE.lit_unit)))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -74,7 +73,7 @@ let%expect_test "handler must include all operations" =
   let state_handler_set_only =
     (* handler { set(x) { () } } *)
     let set_clause =
-      let op_argument = Variable.of_user "x" in
+      let op_argument = UP.var "x" in
       let op_body = UE.lit_unit in
       { E.op_argument; op_body }
     in
