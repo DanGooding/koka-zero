@@ -1,6 +1,6 @@
 
 effect read {
-  control ask(x : ()) : int;
+  control ask(_ : ()) : int;
 };
 
 fun main() {
