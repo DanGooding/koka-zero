@@ -1,11 +1,11 @@
 
 effect read {
-  control ask(x : ()) : int;
+  control ask(_ : ()) : int;
 };
 
 effect control scramble(x : int) : int;
 
-effect control throw(x : ()) : ();
+effect control throw(_ : ()) : ();
 
 fun main() {
   with handler {
@@ -14,12 +14,12 @@ fun main() {
     };
   };
   with handler {
-    control throw(x) {
+    control throw(_) {
       ()
     };
   };
   with handler {
-    control ask(x) {
+    control ask(_) {
       resume(3)
     };
   };

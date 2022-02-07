@@ -1,9 +1,9 @@
 
-effect control exn(x : ()) : ();
+effect control exn(_ : ()) : ();
 
 fun f() {
   with handler {
-    control exn(x) {
+    control exn(_) {
       fn() { () }
     };
   };

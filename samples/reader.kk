@@ -1,6 +1,6 @@
 
 effect read {
-  control ask(x : ()) : int;
+  control ask(_ : ()) : int;
 };
 
 fun foo() {
@@ -9,7 +9,7 @@ fun foo() {
 
 fun main() {
   with handler {
-    control ask(unit) {
+    control ask(_) {
       resume(21);
     };
   };

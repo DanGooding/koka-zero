@@ -1,22 +1,22 @@
 
-effect control choice(x : ()) : bool;
+effect control choice(_ : ()) : bool;
 
 fun choice-const(b, action) {
-  with control choice(x) {
+  with control choice(_) {
     resume(b);
   };
   action();
 };
 
 fun choice-any(action) {
-  with control choice(x) {
+  with control choice(_) {
     resume(False) || resume(True);
   };
   action();
 };
 
 fun choice-user(action) {
-  with control choice(x) {
+  with control choice(_) {
     val b = read-int(()) != 0;
     resume(b);
   };
