@@ -2,6 +2,7 @@ open Core
 module Literal = Minimal_syntax.Literal
 module Operator = Minimal_syntax.Operator
 module Keyword = Minimal_syntax.Keyword
+module Parameter = Minimal_syntax.Parameter
 
 module Expr = struct
   module T = struct
@@ -25,7 +26,7 @@ module Expr = struct
       | Handler of handler
     [@@deriving sexp]
 
-    and lambda = Variable.t list * t [@@deriving sexp]
+    and lambda = Parameter.t list * t [@@deriving sexp]
 
     and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
@@ -43,7 +44,7 @@ module Expr = struct
     [@@deriving sexp]
 
     and op_handler =
-      { op_argument : Variable.t
+      { op_argument : Parameter.t
       ; op_body : t
       }
     [@@deriving sexp]

@@ -79,6 +79,17 @@ module Keyword = struct
   let read_int = Variable.of_user "read-int"
 end
 
+module Parameter = struct
+  module T = struct
+    type t =
+      | Variable of Variable.t
+      | Wildcard
+    [@@deriving sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+
+  include T
+end
+
 module Expr = struct
   module T = struct
     type t =
@@ -100,7 +111,7 @@ module Expr = struct
       | Handler of handler
     [@@deriving sexp]
 
-    and lambda = Variable.t list * t [@@deriving sexp]
+    and lambda = Parameter.t list * t [@@deriving sexp]
 
     and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
@@ -111,7 +122,7 @@ module Expr = struct
     [@@deriving sexp]
 
     and op_handler =
-      { op_argument : Variable.t
+      { op_argument : Parameter.t
       ; op_body : t
       }
     [@@deriving sexp]
@@ -196,7 +207,7 @@ module Program = struct
       let print_int_clause =
         (* TODO: use a name source for uniqueness? *)
         let arg = Variable.of_language_internal "x" in
-        { Expr.op_argument = arg
+        { Expr.op_argument = Parameter.Variable arg
         ; op_body =
             Expr.Application
               ( Expr.Value (Expr.Variable Keyword.resume)
@@ -207,7 +218,7 @@ module Program = struct
       in
       let read_int_clause =
         let arg = Variable.of_language_internal "_unit" in
-        { Expr.op_argument = arg
+        { Expr.op_argument = Parameter.Variable arg
         ; op_body =
             Expr.Application
               ( Expr.Value (Expr.Variable Keyword.resume)

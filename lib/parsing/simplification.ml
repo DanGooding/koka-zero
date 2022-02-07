@@ -211,63 +211,60 @@ let simplify_literal (lit : Syntax.literal) : Min.Literal.t =
   | Syntax.Bool b -> Min.Literal.Bool b
 ;;
 
-let simplify_parameter_id : Syntax.parameter_id -> Variable.t Or_static_error.t
-  = function
-  | Syntax.Parameter_id x -> simplify_identifier x |> Result.Ok
-  | Syntax.Parameter_wildcard ->
-    Static_error.unsupported_syntax "wildcard parameter" |> Result.Error
+let simplify_parameter_id : Syntax.parameter_id -> Min.Parameter.t = function
+  | Syntax.Parameter_id x -> simplify_identifier x |> Min.Parameter.Variable
+  | Syntax.Parameter_wildcard -> Min.Parameter.Wildcard
 ;;
 
 let simplify_parameter
-    : Syntax.parameter -> (Variable.t * Type.Mono.t) Or_static_error.t
+    : Syntax.parameter -> (Min.Parameter.t * Type.Mono.t) Or_static_error.t
   =
  fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
-  let%bind x = simplify_parameter_id id in
+  let p = simplify_parameter_id id in
   let%map t = simplify_type_as_type type_ in
-  x, t
+  p, t
 ;;
 
-let simplify_pattern : Syntax.pattern -> Variable.t Or_static_error.t = function
-  | Syntax.Pattern_id x -> simplify_identifier x |> Result.Ok
-  | Syntax.Pattern_wildcard ->
-    Static_error.unsupported_syntax "wildcard parameter" |> Result.Error
+let simplify_pattern : Syntax.pattern -> Min.Parameter.t = function
+  | Syntax.Pattern_id x -> simplify_identifier x |> Min.Parameter.Variable
+  | Syntax.Pattern_wildcard -> Min.Parameter.Wildcard
 ;;
 
 let simplify_annotated_pattern { Syntax.pattern; scheme }
-    : Variable.t Or_static_error.t
+    : Min.Parameter.t Or_static_error.t
   =
   let open Result.Let_syntax in
-  let%bind x = simplify_pattern pattern in
+  let p = simplify_pattern pattern in
   let%bind t =
     Option.map scheme ~f:simplify_type_scheme |> Static_error.all_option
   in
   let%map () = restrict_to_none t ~description:"type annotation on pattern" in
-  x
+  p
 ;;
 
 let simplify_pattern_parameter { Syntax.pattern; type_ }
-    : (Variable.t * Type.Mono.t option) Or_static_error.t
+    : (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
   =
   let open Result.Let_syntax in
-  let%bind x = simplify_pattern pattern in
+  let p = simplify_pattern pattern in
   let%map type_' =
     Option.map type_ ~f:simplify_type_as_type |> Static_error.all_option
   in
-  x, type_'
+  p, type_'
 ;;
 
 let simplify_operation_parameter
     :  Syntax.operation_parameter
-    -> (Variable.t * Type.Mono.t option) Or_static_error.t
+    -> (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
   =
  fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
-  let%bind id' = simplify_parameter_id id in
+  let p' = simplify_parameter_id id in
   let%map type_' =
     Option.map type_ ~f:simplify_type_as_type |> Static_error.all_option
   in
-  id', type_'
+  p', type_'
 ;;
 
 let simplify_binary_operator (op : Syntax.binary_operator)

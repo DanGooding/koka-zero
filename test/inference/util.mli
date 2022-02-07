@@ -10,6 +10,11 @@ val print_expr_inference_result
   -> M.Expr.t
   -> unit
 
+module Parameter : sig
+  val var : string -> M.Parameter.t
+  val wildcard : M.Parameter.t
+end
+
 module Expr : sig
   val var : string -> E.t
   val lit_bool : bool -> E.t
@@ -24,7 +29,7 @@ module Expr : sig
 
   val singleton_handler
     :  op_name:Variable.t
-    -> op_argument:Variable.t
+    -> op_argument:M.Parameter.t
     -> op_body:E.t
     -> E.handler
 
