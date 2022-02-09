@@ -21,6 +21,13 @@ end
 
 let resume_keyword = Identifier.Var (Var_id.of_string "resume")
 
+type constructor =
+  | Cons_bool_true
+  | Cons_bool_false
+  | Cons_list_cons
+  | Cons_list_nil
+[@@deriving sexp]
+
 (* Kinds: *)
 
 type kind_atom =
@@ -112,6 +119,8 @@ type parameter =
 type pattern =
   | Pattern_id of Identifier.t
   | Pattern_wildcard
+  | Pattern_constructor of constructor * pattern list
+  | Pattern_tuple of pattern list
 [@@deriving sexp]
 
 type annotated_pattern =
@@ -178,12 +187,7 @@ type operation_parameter =
 
 (* expressions: *)
 
-type literal =
-  | Unit
-  | Int of int
-  | Bool of bool
-[@@deriving sexp]
-
+type literal = Int of int [@@deriving sexp]
 type unary_operator = Exclamation [@@deriving sexp]
 
 type binary_operator =
@@ -206,7 +210,6 @@ type expr =
   | Return of expr
   | If_then_else of expr * block * block
   | If_then of expr * block
-  (* | Match *)
   (* TODO: which of [handle]/[handler] is the logical primitive? *)
   | Handler of effect_handler
   | Handle of
@@ -218,6 +221,13 @@ type expr =
   | Unary_op of unary_operator * expr
   | Application of expr * expr list
   | Identifier of Identifier.t
+  | Constructor of constructor
+  | Tuple_constructor of expr list
+  | List_literal of expr list
+  | Match of
+      { subject : expr
+      ; branches : (annotated_pattern * block) list
+      }
   | Literal of literal
   (* | Tuple of expr list *)
   (* | List of expr list *)
@@ -334,5 +344,10 @@ let insert_with_callback : callback:fn -> expr -> expr =
   | Handler _ | Handle _ | Fn _
   | Binary_op (_, _, _)
   | Unary_op (_, _)
-  | Identifier _ | Literal _ -> Application (e, [ Fn callback ])
+  | Identifier _
+  | Literal _
+  | Constructor _
+  | Tuple_constructor _
+  | List_literal _
+  | Match _ -> Application (e, [ Fn callback ])
 ;;

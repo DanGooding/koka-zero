@@ -17,6 +17,13 @@ end
 
 val resume_keyword : Identifier.t
 
+type constructor =
+  | Cons_bool_true
+  | Cons_bool_false
+  | Cons_list_cons
+  | Cons_list_nil
+[@@deriving sexp]
+
 (* Kinds: *)
 
 type kind_atom =
@@ -123,6 +130,8 @@ type parameter =
 type pattern =
   | Pattern_id of Identifier.t
   | Pattern_wildcard
+  | Pattern_constructor of constructor * pattern list
+  | Pattern_tuple of pattern list
 [@@deriving sexp]
 
 type annotated_pattern =
@@ -184,12 +193,7 @@ type operation_parameter =
 
 (* expressions: *)
 
-type literal =
-  | Unit
-  | Int of int
-  | Bool of bool
-[@@deriving sexp]
-
+type literal = Int of int [@@deriving sexp]
 type unary_operator = Exclamation [@@deriving sexp]
 
 type binary_operator =
@@ -224,6 +228,13 @@ type expr =
   | Unary_op of unary_operator * expr
   | Application of expr * expr list
   | Identifier of Identifier.t
+  | Constructor of constructor
+  | Tuple_constructor of expr list
+  | List_literal of expr list
+  | Match of
+      { subject : expr
+      ; branches : (annotated_pattern * block) list
+      }
   | Literal of literal
   | Annotated_expr of expr * type_scheme
 [@@deriving sexp]

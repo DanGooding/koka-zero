@@ -14,10 +14,11 @@
 %token <string> WILDCARD
 
 %token <int> INT
-%token <bool> BOOL
 (* %token <Float> FLOAT *)
 (* %token <string> STRING *)
 (* %token <char> CHAR *)
+
+%token CONS_TRUE CON_FALSE CONS_LIST_NIL CONS_LIST_CONS
 
 (* string literals define nicer syntax for use in the production rules
    they do not determine when the lexer produces these tokens *)
@@ -37,7 +38,7 @@
 
 %token IF THEN ELSE ELIF
 %token WITH
-(* %token MATCH *)
+%token MATCH
 %token RARROW "->" LARROW "<-"
 
 %token FUN FN VAL (* VAR *) CONTROL EXCEPT
@@ -162,6 +163,7 @@ let close_after_desugaring app : expr =
 %type <expr> expr_except_block
 %type <expr> expr
 %type <expr> basicexpr
+%type <expr> matchexpr
 %type <expr> fnexpr
 %type <expr> returnexpr
 %type <expr> ifexpr
@@ -197,7 +199,11 @@ let close_after_desugaring app : expr =
 %type <type_scheme option> annot
 %type <Identifier.t> identifier
 %type <Var_id.t> varid
+%type <constructor> constructor
+%type <(annotated_pattern * block) list> matchrules
+%type <annotated_pattern * block> matchrule
 %type <annotated_pattern> apattern
+%type <annotated_pattern list> apatterns
 %type <pattern> pattern
 %type <expr> handlerexpr
 %type <effect_handler> opclauses
@@ -434,7 +440,6 @@ puredecl:
     { Top_fun f }
   ;
 
-(* TODO: update puredecl to include this? *)
 (* %type <fun_declaration> fundecl *)
 fundecl:
   | id = funid; fn = funbody
@@ -453,9 +458,8 @@ binder:
 funid:
   | id = identifier
     { id }
-  (* TODO: how can a function name be [,,,]? *)
   (* | "[" commas "]"     { Var_id.of_string "[]"; } *)
-  (* TODO: are literals as function names needed? *)
+  (* exact names for for external linkage *)
   (* | STRING             { Var_id.of_string $1; } *)
   ;
 
@@ -588,7 +592,8 @@ expr:
 basicexpr:
   | e = ifexpr
     { e }
-  (* | matchexpr *)
+  | e = matchexpr
+    { e }
   | e = handlerexpr
     { e }
   | e = fnexpr
@@ -600,9 +605,11 @@ basicexpr:
 
 (* keyword expressions *)
 
-(* matchexpr: *)
-(*   | MATCH ntlexpr "{" semi* matchrules "}" *)
-(*   ; *)
+(* %type <expr> matchexpr *)
+matchexpr:
+  | MATCH; subject = ntlexpr; "{"; semi*; branches = matchrules; "}"
+    { Match { subject; branches } }
+  ;
 
 (* %type <expr> fnexpr *)
 fnexpr:
@@ -832,26 +839,27 @@ auxntlappexpr:
 atom:
   | id = identifier
     { Identifier id }
-  (* | constructor *)
+  | ctr = constructor
+    { Constructor ctr }
   | lit = literal
     { Literal lit }
   (* | mask *)
-  | "("; e = aexpr; ")"
-    { e }
-  (* not yet supported: *)
-    (* unit, parenthesized (possibly annotated) expression, tuple expression *)
-    (* list expression (elements may be terminated with comma instead of
-       separated) *)
+  (* unit, parenthesized (possibly annotated) expression, tuple expression *)
+  | "("; es = aexprs; ")"
+    { match es with
+      | [e] -> e
+      | _ -> Tuple_constr(Constructor_id.tuple, es)
+    }
+  (* list expression (elements may be terminated with comma instead of
+      separated) *)
+  | "["; es = aexprs; ","?; "]"
+    { List_literal es }
+  ;
 
 (* %type <literal> literal *)
 literal:
   | i = INT
     { Int i }
-  | b = BOOL
-    { Bool b }
-  (* TODO: better to add tuples with elements to `atom` *)
-  | "("; ")"
-    { Unit }
   (* | FLOAT | CHAR | STRING *)
   ;
 
@@ -949,10 +957,10 @@ pparameter:
 (* annotated expressions: separated or terminated by comma *)
 
 (* %type <expr list> aexprs *)
-(* aexprs: *)
-(*   | es = separated_list(",", aexpr) *)
-(*     { es } *)
-(*   ; *)
+aexprs:
+  | es = separated_list(",", aexpr)
+    { es }
+  ;
 
 (* %type <expr> aexpr *)
 aexpr:
@@ -1007,11 +1015,18 @@ varid:
   (* | ID_NAMED        { Var_id.of_string "named"; } *)
   ;
 
-(* %type <Constructor_id.t> constructor *)
-(* constructor: *)
-(*   | conid *)
-(*   ; *)
-
+(* %type <constructor> constructor *)
+constructor:
+  (* | conid *)
+  | CONS_TRUE
+    { Cons_bool_true }
+  | CONS_False
+    { Cons_bool_false }
+  | CONS_LIST_NIL
+      { Cons_list_nil }
+  | CONS_LIST_CONS
+    { Cons_list_cons }
+  ;
 
 (* %type <Constructor_id.t> conid *)
 (* conid: *)
@@ -1044,22 +1059,24 @@ varid:
 -- Matching
 ----------------------------------------------------------*)
 
-(* matchrules: *)
-(*   | list(matchrule semi+) *)
-(*   ; *)
+(* %type <(annotated_pattern * block) list> *)
+matchrules:
+  | branches = separated_list(semi+, matchrule); semi*
+    { branches }
+  ;
 
-(* matchrule: *)
-(*   | patterns1 "|" expr "->" blockexpr *)
-(*   | patterns1 "->" blockexpr *)
-(*   ; *)
+(* %type <annotated_pattern * block> matchrule *)
+matchrule:
+  (* | pattern "|" expr "->" blockexpr *)
+  | p = pattern; "->"; body = blockexpr
+    { p, body }
+  ;
 
-(* patterns1: *)
-(*   | separated_nonempy_list(",", pattern) *)
-(*   ; *)
-
-(* apatterns: *)
-(*   | separated_list(",", apattern) *)
-(*   ; *)
+(* %type <annotated_pattern list> apatterns *)
+apatterns:
+  | ps = separated_list(",", apattern)
+    { ps }
+  ;
 
 (* %type <annotated_pattern> apattern *)
 apattern:
@@ -1074,31 +1091,22 @@ pattern:
     { Pattern_id id }
   (* (* named pattern *) *)
   (* | identifier AS pattern *)
-  (* | conid *)
-  (* | conid "(" patargs ")" *)
-  (* (* unit, parenthesized, and tuple pattern *) *)
-  (* | "(" apatterns ")" *)
+  | con = constructor
+    { Pattern_constructor (con, []) }
+  | con = constructor; "("; args = apatterns; ")"
+    { Pattern_constructor (con, args) }
+  (* unit, parenthesized, and tuple pattern *)
+  | "("; elems = apatterns; ")"
+    { match elems with
+      | [ pattern ] -> pattern
+      | _ -> Pattern_tuple (elems)
+    }
   (* (* list pattern *) *)
   (* | "[" apatterns "]" *)
   (* | literal *)
   | WILDCARD
     { Pattern_wildcard }
   ;
-
-(* patargs:
-  | patargs1 *)
-(*  | (\* empty *\) *)
-(*  ; *)
-
-(* patargs1:
-  | patargs "," patarg *)
-(*  | patarg *)
-(*  ; *)
-
-(* patarg:
-  | identifier "=" apattern            (\* named argument *\) *)
-(*  | apattern *)
-(*  ; *)
 
 
 (* ---------------------------------------------------------

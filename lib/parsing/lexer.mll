@@ -95,7 +95,7 @@ rule read =
   | "else"                      { ELSE }
   | "elif"                      { ELIF }
   | "with"                      { WITH }
-  (* | "match"                     { MATCH } *)
+  | "match"                     { MATCH }
   | "return"                    { RETURN }
 
   (* | "as"                        { AS } *)
@@ -124,10 +124,6 @@ rule read =
 
   | "int"                       { TYPE_INT }
   | "bool"                      { TYPE_BOOL }
-
-  (* literals *)
-  | "True"                      { BOOL true }
-  | "False"                     { BOOL false }
 
   (* reserved operators *)
   | ':'                         { COLON }
@@ -177,6 +173,12 @@ rule read =
   (* Numbers *)
   | sign '0' ['x' 'X'] hex+ { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | sign digit+             { INT (int_of_string (Lexing.lexeme lexbuf)) }
+
+  (* Constructors *)
+ | "True"  { CONS_TRUE }
+ | "False" { CONS_FALSE }
+ | "Nil"   { CONS_LIST_NIL }
+ | "Cons"  { CONS_LIST_CONS }
 
   (* Identifiers and operators *)
   (* | con_id           { CONID (lex_identifier lexbuf) } *)

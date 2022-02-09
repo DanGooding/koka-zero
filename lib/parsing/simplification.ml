@@ -206,9 +206,7 @@ and simplify_type_result { Syntax.effect; result }
 
 let simplify_literal (lit : Syntax.literal) : Min.Literal.t =
   match lit with
-  | Syntax.Unit -> Min.Literal.Unit
   | Syntax.Int i -> Min.Literal.Int i
-  | Syntax.Bool b -> Min.Literal.Bool b
 ;;
 
 let simplify_parameter_id : Syntax.parameter_id -> Variable.t Or_static_error.t
@@ -232,6 +230,8 @@ let simplify_pattern : Syntax.pattern -> Variable.t Or_static_error.t = function
   | Syntax.Pattern_id x -> simplify_identifier x |> Result.Ok
   | Syntax.Pattern_wildcard ->
     Static_error.unsupported_syntax "wildcard parameter" |> Result.Error
+  | Syntax.Pattern_constructor (con, fields) -> failwith "not implemented"
+  | Syntax.Pattern_tuple elems -> failwith "not implemented"
 ;;
 
 let simplify_annotated_pattern { Syntax.pattern; scheme }
@@ -308,7 +308,7 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%map block_no' = simplify_block block_no in
     Min.Expr.If_then_else (e_cond', block_yes', block_no')
   | Syntax.If_then (e_cond, block_yes) ->
-    let block_no = Syntax.singleton_block (Syntax.Literal Syntax.Unit) in
+    let block_no = Syntax.singleton_block (Syntax.Tuple_constructor []) in
     Syntax.If_then_else (e_cond, block_yes, block_no) |> simplify_expr
   | Syntax.Handler handler ->
     let%map handler' = simplify_effect_handler handler in
@@ -327,6 +327,18 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
   | Syntax.Identifier x ->
     let x' = simplify_identifier x in
     Min.Expr.Variable x' |> Min.Expr.Value |> Result.Ok
+  | Syntax.Constructor con -> failwith "not implemented"
+  | Syntax.Tuple_constructor es -> failwith "not implemented"
+  | Syntax.List_literal e_elems ->
+    let nil = Syntax.Constructor Syntax.Cons_list_nil in
+    let cons = Syntax.Constructor Syntax.Cons_list_cons in
+    (* desugar *)
+    let e_cons_form =
+      List.fold_right e_elems ~init:nil ~f:(fun e e_tail ->
+          Syntax.Application (cons, [ e; e_tail ]))
+    in
+    simplify_expr e_cons_form
+  | Syntax.Match { subject; branches } -> failwith "not implemented"
   | Syntax.Literal lit ->
     let lit' = simplify_literal lit in
     Min.Expr.Literal lit' |> Min.Expr.Value |> Result.Ok
