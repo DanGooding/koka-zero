@@ -3,7 +3,7 @@ effect read {
   control ask(_ : ()) : int;
 };
 
-fun foo() {
+fun add-twice() {
   ask(()) + ask(());  // 21 + 21 = 42
 };
 
@@ -13,5 +13,5 @@ fun main() {
       resume(21);
     };
   };
-  print-int(foo());
+  print-int(add-twice());
 };
