@@ -1,11 +1,7 @@
 
-fun read-bool() {
-  read-int(()) != 0;
-};
-
 effect control yield-int(x : int) : ();
 
-// yield the fibonacci numbers in sequence
+// yield the fibonacci numbers
 fun fibs() {
   fun fibs-from(current, next) {
     yield-int(current);
@@ -16,11 +12,12 @@ fun fibs() {
 
 fun main() {
   with handler {
-    control yield-int(x) {
-      print-int(x);
-      if read-bool()  // continue?
-      then resume(())
-      else ();
+    control yield-int(n) {
+      if n <= 100
+      then {
+        print-int(n);
+        resume(());
+      }else ();
     };
   };
   fibs();
