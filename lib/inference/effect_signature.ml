@@ -1,14 +1,5 @@
 open Core
 
-module Operation = struct
-  type t =
-    { argument_type : Type.Mono.t
-    ; answer_type : Type.Mono.t
-    }
-  [@@deriving sexp]
-  (* TODO: include number of arguments when this becomes varaiable *)
-end
-
 module Signature = struct
   module T = struct
     type t = Variable.Set.t [@@deriving compare, sexp]

@@ -1,14 +1,5 @@
 open Core
 
-module Operation : sig
-  type t =
-    { argument_type : Type.Mono.t
-    ; answer_type : Type.Mono.t
-    }
-  [@@deriving sexp]
-  (* TODO: include number of arguments when this becomes varaiable *)
-end
-
 (** The signature of an effect is the set of operation names. This is used for
     structural matching to handlers *)
 type t [@@deriving sexp]
