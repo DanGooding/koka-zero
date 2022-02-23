@@ -243,7 +243,8 @@ let%expect_test "wildcard parameter" =
 fun foo(_a, b, _c, _, e, _f) { () };
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
-  [%expect {|
+  [%expect
+    {|
     (Ok
      (Program
       ((Pure_declaration
@@ -260,7 +261,8 @@ fun foo(_a, b, _c, _, e, _f) { () };
               ((pattern Pattern_wildcard) (type_ ()))))
             (result_type ()) (body ((statements ()) (last (Literal Unit)))))))))))) |}];
   Util.print_simplification_result syntax;
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((declarations
        ((Fun
@@ -1199,9 +1201,9 @@ let%expect_test "effect declaration" =
     {|
 effect my-effect {
   control choose-upto(n : int) : int;
-  control depth(dummy : ()) : int;
-  control get(dummy : ()) : int;
-  control set(x : int) : bool;
+  fun depth(dummy : ()) : int;
+  fun get(dummy : ()) : int;
+  fun set(x : int) : bool;
   control raise(x : int) : ();
 };
 |}
@@ -1223,19 +1225,19 @@ effect my-effect {
                (Type_atom (constructor Type_int) (arguments ())))))
             ((id depth) (type_parameters ())
              (shape
-              (Shape_control
+              (Shape_fun
                (((id (Parameter_id (Var dummy)))
                  (type_ (Parameters_or_tuple ()))))
                (Type_atom (constructor Type_int) (arguments ())))))
             ((id get) (type_parameters ())
              (shape
-              (Shape_control
+              (Shape_fun
                (((id (Parameter_id (Var dummy)))
                  (type_ (Parameters_or_tuple ()))))
                (Type_atom (constructor Type_int) (arguments ())))))
             ((id set) (type_parameters ())
              (shape
-              (Shape_control
+              (Shape_fun
                (((id (Parameter_id (Var x)))
                  (type_ (Type_atom (constructor Type_int) (arguments ())))))
                (Type_atom (constructor Type_bool) (arguments ())))))
@@ -1254,11 +1256,17 @@ effect my-effect {
          ((name my-effect)
           (operations
            (((User choose-upto)
-             ((argument (Primitive Int)) (answer (Primitive Int))))
-            ((User depth) ((argument (Primitive Unit)) (answer (Primitive Int))))
-            ((User get) ((argument (Primitive Unit)) (answer (Primitive Int))))
-            ((User raise) ((argument (Primitive Int)) (answer (Primitive Unit))))
-            ((User set) ((argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
+             ((shape Control) (argument (Primitive Int))
+              (answer (Primitive Int))))
+            ((User depth)
+             ((shape Fun) (argument (Primitive Unit)) (answer (Primitive Int))))
+            ((User get)
+             ((shape Fun) (argument (Primitive Unit)) (answer (Primitive Int))))
+            ((User raise)
+             ((shape Control) (argument (Primitive Int))
+              (answer (Primitive Unit))))
+            ((User set)
+             ((shape Fun) (argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
 ;;
 
 let%expect_test "multi shaped effect declaration" =
@@ -1404,7 +1412,9 @@ effect control yield(x : int) : bool;
        ((Effect
          ((name yield)
           (operations
-           (((User yield) ((argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
+           (((User yield)
+             ((shape Control) (argument (Primitive Int))
+              (answer (Primitive Bool)))))))))))) |}]
 ;;
 
 let%expect_test "handler" =
@@ -1595,13 +1605,13 @@ fun handle-example(action) {
              (Handler
               ((operations
                 (((User scramble)
-                  ((op_argument (Variable (User x)))
-                   (op_body
-                    (Application (Value (Variable (User resume)))
-                     ((Operator
-                       (Operator (Value (Variable (User x))) (Int Times)
-                        (Value (Variable (User x))))
-                       (Int Plus) (Value (Variable (User x)))))))))))
+                  (Fun
+                   ((op_argument (Variable (User x)))
+                    (op_body
+                     (Operator
+                      (Operator (Value (Variable (User x))) (Int Times)
+                       (Value (Variable (User x))))
+                      (Int Plus) (Value (Variable (User x))))))))))
                (return_clause ()))))
             ((Value (Variable (User action)))))))))))) |}]
 ;;
