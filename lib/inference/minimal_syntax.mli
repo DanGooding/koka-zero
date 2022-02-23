@@ -96,7 +96,7 @@ module Expr : sig
 
   (** an effect handler *)
   and handler =
-    { operations : op_handler Variable.Map.t
+    { operations : (Operation_shape.t * op_handler) Variable.Map.t
     ; return_clause : op_handler option
     }
   [@@deriving sexp]
@@ -126,8 +126,8 @@ module Decl : sig
   module Effect : sig
     module Operation : sig
       type t =
-        { (* TODO: different shapes (fun/var/ctl/except) *)
-          argument : Type.Mono.t
+        { shape : Operation_shape.t
+        ; argument : Type.Mono.t
         ; answer : Type.Mono.t
         }
       [@@deriving sexp]

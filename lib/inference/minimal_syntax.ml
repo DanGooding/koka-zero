@@ -116,7 +116,7 @@ module Expr = struct
     and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
     and handler =
-      { operations : op_handler Variable.Map.t
+      { operations : (Operation_shape.t * op_handler) Variable.Map.t
       ; return_clause : op_handler option
       }
     [@@deriving sexp]
@@ -140,7 +140,8 @@ module Decl = struct
   module Effect = struct
     module Operation = struct
       type t =
-        { argument : Type.Mono.t
+        { shape : Operation_shape.t
+        ; argument : Type.Mono.t
         ; answer : Type.Mono.t
         }
       [@@deriving sexp]
@@ -156,11 +157,13 @@ module Decl = struct
       let name = Effect.Label.of_string "console" in
       let operations =
         [ ( Variable.of_user "print-int"
-          , { Operation.argument = Type.Mono.Primitive Type.Primitive.Int
+          , { Operation.shape = Operation_shape.Fun
+            ; argument = Type.Mono.Primitive Type.Primitive.Int
             ; answer = Type.Mono.Primitive Type.Primitive.Unit
             } )
         ; ( Variable.of_user "read-int"
-          , { Operation.argument = Type.Mono.Primitive Type.Primitive.Unit
+          , { Operation.shape = Operation_shape.Fun
+            ; argument = Type.Mono.Primitive Type.Primitive.Unit
             ; answer = Type.Mono.Primitive Type.Primitive.Int
             } )
         ]
@@ -209,25 +212,19 @@ module Program = struct
         let arg = Variable.of_language_internal "x" in
         { Expr.op_argument = Parameter.Variable arg
         ; op_body =
-            Expr.Application
-              ( Expr.Value (Expr.Variable Keyword.resume)
-              , [ Expr.Impure_built_in
-                    (Expr.Impure_print_int (Expr.Value (Expr.Variable arg)))
-                ] )
+            Expr.Impure_built_in
+              (Expr.Impure_print_int (Expr.Value (Expr.Variable arg)))
         }
       in
       let read_int_clause =
         let arg = Variable.of_language_internal "_unit" in
         { Expr.op_argument = Parameter.Variable arg
-        ; op_body =
-            Expr.Application
-              ( Expr.Value (Expr.Variable Keyword.resume)
-              , [ Expr.Impure_built_in Expr.Impure_read_int ] )
+        ; op_body = Expr.Impure_built_in Expr.Impure_read_int
         }
       in
       let operations =
-        [ Keyword.print_int, print_int_clause
-        ; Keyword.read_int, read_int_clause
+        [ Keyword.print_int, (Operation_shape.Fun, print_int_clause)
+        ; Keyword.read_int, (Operation_shape.Fun, read_int_clause)
         ]
         |> Variable.Map.of_alist_exn
       in

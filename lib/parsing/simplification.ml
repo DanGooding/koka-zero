@@ -414,7 +414,7 @@ and simplify_effect_handler (Syntax.Effect_handler op_handlers)
   let named_op_handers, return_handlers =
     List.partition_map named_op_handers ~f:(fun (name, op_handler) ->
         match name with
-        | `Op name -> Either.First (name, op_handler)
+        | `Op (name, shape) -> Either.First (name, (shape, op_handler))
         | `Return -> Either.Second op_handler)
   in
   let%bind operations =
@@ -441,12 +441,12 @@ and simplify_effect_handler (Syntax.Effect_handler op_handlers)
 
 and simplify_operation_handler
     :  Syntax.operation_handler
-    -> ([ `Op of Variable.t | `Return ] * Min.Expr.op_handler) Or_static_error.t
+    -> ([ `Op of Variable.t * Operation_shape.t | `Return ]
+       * Min.Expr.op_handler)
+       Or_static_error.t
   =
   let open Result.Let_syntax in
-  function
-  | Syntax.Op_control { id; parameters; body } ->
-    let id' = simplify_var_id id in
+  let simplify_clause parameters body =
     let%bind parameters' =
       List.map parameters ~f:simplify_operation_parameter |> Result.all
     in
@@ -462,20 +462,22 @@ and simplify_operation_handler
         ~description:"type annotations on operation handler parameters"
     in
     let%map op_body = simplify_block body in
-    `Op id', { Min.Expr.op_argument; op_body }
-  (* TODO: this also loses the type safety (shouldn't be able to have a
-     `control` handler for a `fun` effect) *)
+    op_argument, op_body
+  in
+  function
+  | Syntax.Op_control { id; parameters; body } ->
+    let id' = simplify_var_id id in
+    let%map op_argument, op_body = simplify_clause parameters body in
+    let shape = Operation_shape.Control in
+    `Op (id', shape), { Min.Expr.op_argument; op_body }
   | Syntax.Op_fun { id; parameters; body } ->
-    let { Syntax.statements; last } = body in
-    let last =
-      Syntax.Application (Syntax.Identifier Syntax.resume_keyword, [ last ])
-    in
-    let body = { Syntax.statements; last } in
-    let as_control = Syntax.Op_control { id; parameters; body } in
-    simplify_operation_handler as_control
+    let id' = simplify_var_id id in
+    let%map op_argument, op_body = simplify_clause parameters body in
+    let shape = Operation_shape.Fun in
+    `Op (id', shape), { Min.Expr.op_argument; op_body }
   | Syntax.Op_except { id = _; parameters = _; body = _ } ->
-    (* TODO: doesn't get anying without proper handling of `resume` and use of
-       the knowledge for better implementations *)
+    (* TODO: doesn't gain any performance over control by default (special
+       implementation wouldn't collection resumption) *)
     Static_error.unsupported_syntax "`execption` effect" |> Result.Error
   | Syntax.Op_val { id = _; type_ = _; value = _ } ->
     (* need to first evaluate `value`, then capture it in the handler (fairly
@@ -496,30 +498,36 @@ let simplify_operation_declaration { Syntax.id; type_parameters; shape }
     : (Variable.t * Min.Decl.Effect.Operation.t) Or_static_error.t
   =
   let open Result.Let_syntax in
-  match shape with
-  | Syntax.Shape_fun (_, _) | Syntax.Shape_except (_, _) | Syntax.Shape_val _ ->
-    (* TODO: keep hander shapes, and check they match the effect, and the body
-       (use of `resume`) *)
-    Static_error.unsupported_syntax "non `control` effect" |> Result.Error
-  | Syntax.Shape_control (parameters, t_answer) ->
-    let id' = simplify_var_id id in
-    let%bind () =
-      restrict_to_empty
-        type_parameters
-        ~description:"type parameters for operation handler"
-    in
-    let%bind parameters' =
-      List.map parameters ~f:simplify_parameter |> Result.all
-    in
-    let _names, t_parameters = List.unzip parameters' in
-    let%bind t_parameter =
-      restrict_to_singleton
-        t_parameters
-        ~description:"operation can ony have exactly one argument"
-    in
-    let%map t_answer' = simplify_type_as_type t_answer in
-    ( id'
-    , { Min.Decl.Effect.Operation.argument = t_parameter; answer = t_answer' } )
+  let%bind shape, parameters, t_answer =
+    match shape with
+    | Syntax.Shape_except (_, _) | Syntax.Shape_val _ ->
+      Static_error.unsupported_syntax "non `control` effect" |> Result.Error
+    | Syntax.Shape_control (parameters, t_answer) ->
+      (Operation_shape.Control, parameters, t_answer) |> Result.Ok
+    | Syntax.Shape_fun (parameters, t_answer) ->
+      (Operation_shape.Fun, parameters, t_answer) |> Result.Ok
+  in
+  let id' = simplify_var_id id in
+  let%bind () =
+    restrict_to_empty
+      type_parameters
+      ~description:"type parameters for operation handler"
+  in
+  let%bind parameters' =
+    List.map parameters ~f:simplify_parameter |> Result.all
+  in
+  let _names, t_parameters = List.unzip parameters' in
+  let%bind t_parameter =
+    restrict_to_singleton
+      t_parameters
+      ~description:"operation can ony have exactly one argument"
+  in
+  let%map t_answer' = simplify_type_as_type t_answer in
+  ( id'
+  , { Min.Decl.Effect.Operation.shape
+    ; argument = t_parameter
+    ; answer = t_answer'
+    } )
 ;;
 
 let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
