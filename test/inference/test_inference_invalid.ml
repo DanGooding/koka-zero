@@ -71,14 +71,16 @@ let%expect_test "cannot shadow functions at toplevel" =
 let%expect_test "handler must include all operations" =
   let declarations = [ M.Decl.Effect Util.Expr.decl_state ] in
   let state_handler_set_only =
-    (* handler { set(x) { () } } *)
+    (* handler { fun set(x) { () } } *)
     let set_clause =
       let op_argument = UP.var "x" in
       let op_body = UE.lit_unit in
       { E.op_argument; op_body }
     in
     let operations =
-      Variable.Map.singleton (Variable.of_user "set") set_clause
+      Variable.Map.singleton
+        (Variable.of_user "set")
+        (Operation_shape.Fun, set_clause)
     in
     { E.operations; return_clause = None }
   in
@@ -89,4 +91,39 @@ let%expect_test "handler must include all operations" =
     (Error
      ((kind Type_error)
       (message "handler does not match any effect: ((User set))") (location ()))) |}]
+;;
+
+let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
+  =
+  let declarations = [ M.Decl.Effect Util.Expr.decl_read ] in
+  let read_handler =
+    Util.Expr.singleton_handler
+      ~op_name:(Variable.of_user "read")
+      ~op_argument:M.Parameter.Wildcard
+      ~op_body:
+        (E.Application
+           ( E.Value (E.Variable M.Keyword.resume)
+           , [ E.Value (E.Literal (M.Literal.Int 3)) ] ))
+      ~shape:Operation_shape.Control
+  in
+  let body = E.Value (E.Handler read_handler) in
+  Util.print_expr_inference_result ~declarations body;
+  [%expect {| type error: control > fun |}]
+;;
+
+let%expect_test "`fun` clause cannot use `resume`" =
+  let declarations = [ M.Decl.Effect Util.Expr.decl_read ] in
+  let read_handler =
+    Util.Expr.singleton_handler
+      ~op_name:(Variable.of_user "read")
+      ~op_argument:M.Parameter.Wildcard
+      ~op_body:
+        (E.Application
+           ( E.Value (E.Variable M.Keyword.resume)
+           , [ E.Value (E.Literal (M.Literal.Int 3)) ] ))
+      ~shape:Operation_shape.Fun
+  in
+  let body = E.Value (E.Handler read_handler) in
+  Util.print_expr_inference_result ~declarations body;
+  [%expect {| type error: resume not in scope |}]
 ;;

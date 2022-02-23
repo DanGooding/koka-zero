@@ -26,11 +26,13 @@ module Expr : sig
   val decl_exn : M.Decl.Effect.t
   val decl_query : M.Decl.Effect.t
   val decl_state : M.Decl.Effect.t
+  val decl_choose : M.Decl.Effect.t
 
   val singleton_handler
     :  op_name:Variable.t
     -> op_argument:M.Parameter.t
     -> op_body:E.t
+    -> shape:Operation_shape.t
     -> E.handler
 
   val read_handler : int -> E.handler
