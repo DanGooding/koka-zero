@@ -17,3 +17,8 @@ let can_implement ~handler ~declaration =
   (* exhaustive false cases: *)
   | Control, Fun -> false
 ;;
+
+let to_string = function
+  | Control -> "control"
+  | Fun -> "fun"
+;;

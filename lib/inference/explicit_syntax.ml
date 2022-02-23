@@ -38,7 +38,7 @@ module Expr = struct
 
     and handler =
       { handled_effect : Effect.Label.t
-      ; operations : op_handler Variable.Map.t
+      ; operations : (Operation_shape.t * op_handler) Variable.Map.t
       ; return_clause : op_handler option
       }
     [@@deriving sexp]

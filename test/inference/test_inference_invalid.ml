@@ -98,7 +98,7 @@ let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
   let declarations = [ M.Decl.Effect Util.Expr.decl_read ] in
   let read_handler =
     Util.Expr.singleton_handler
-      ~op_name:(Variable.of_user "read")
+      ~op_name:(Variable.of_user "ask")
       ~op_argument:M.Parameter.Wildcard
       ~op_body:
         (E.Application
@@ -108,14 +108,19 @@ let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
   in
   let body = E.Value (E.Handler read_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {| type error: control > fun |}]
+  [%expect {|
+    (Error
+     ((kind Type_error)
+      (message
+       "cannot handle operation `ask` declared as `fun` with `control` clause")
+      (location ()))) |}]
 ;;
 
 let%expect_test "`fun` clause cannot use `resume`" =
   let declarations = [ M.Decl.Effect Util.Expr.decl_read ] in
   let read_handler =
     Util.Expr.singleton_handler
-      ~op_name:(Variable.of_user "read")
+      ~op_name:(Variable.of_user "ask")
       ~op_argument:M.Parameter.Wildcard
       ~op_body:
         (E.Application
@@ -125,5 +130,7 @@ let%expect_test "`fun` clause cannot use `resume`" =
   in
   let body = E.Value (E.Handler read_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {| type error: resume not in scope |}]
+  [%expect {|
+    (Error
+     ((kind Type_error) (message "unbound variable: resume") (location ()))) |}]
 ;;

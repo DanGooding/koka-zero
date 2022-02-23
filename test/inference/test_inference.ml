@@ -264,10 +264,10 @@ let%expect_test "handled effects reflected in subject's effect" =
     {|
     (Ok
      ((Arrow
-       ((Arrow () (Row (Open (Non_empty ((exn 1) (read 2))) (Metavariable e23)))
+       ((Arrow () (Row (Open (Non_empty ((exn 1) (read 2))) (Metavariable e19)))
          (Primitive Unit)))
-       (Metavariable e23) (Primitive Unit))
-      (Metavariable e24)
+       (Metavariable e19) (Primitive Unit))
+      (Metavariable e20)
       (Value
        (Lambda
         (((Variable (User f)))
@@ -277,7 +277,8 @@ let%expect_test "handled effects reflected in subject's effect" =
             ((handled_effect exn)
              (operations
               (((User throw)
-                ((op_argument Wildcard) (op_body (Value (Literal Unit)))))))
+                (Control
+                 ((op_argument Wildcard) (op_body (Value (Literal Unit))))))))
              (return_clause ()))))
           ((Value
             (Lambda
@@ -288,10 +289,9 @@ let%expect_test "handled effects reflected in subject's effect" =
                  ((handled_effect read)
                   (operations
                    (((User ask)
-                     ((op_argument Wildcard)
-                      (op_body
-                       (Application (Value (Variable (User resume)))
-                        ((Value (Literal (Int 1))))))))))
+                     (Fun
+                      ((op_argument Wildcard)
+                       (op_body (Value (Literal (Int 1)))))))))
                   (return_clause ()))))
                ((Value
                  (Lambda
@@ -302,10 +302,9 @@ let%expect_test "handled effects reflected in subject's effect" =
                       ((handled_effect read)
                        (operations
                         (((User ask)
-                          ((op_argument Wildcard)
-                           (op_body
-                            (Application (Value (Variable (User resume)))
-                             ((Value (Literal (Int 1))))))))))
+                          (Fun
+                           ((op_argument Wildcard)
+                            (op_body (Value (Literal (Int 1)))))))))
                        (return_clause ()))))
                     ((Value
                       (Lambda (() (Application (Value (Variable (User f))) ()))))))))))))))))))))) |}]
@@ -353,18 +352,18 @@ let%expect_test "return clause is typed correctly" =
   [%expect
     {|
     (Ok
-     ((Primitive Unit) (Metavariable e15)
+     ((Primitive Unit) (Metavariable e13)
       (Application
        (Value
         (Handler
          ((handled_effect query)
           (operations
            (((User test)
-             ((op_argument (Variable (User x)))
-              (op_body
-               (Application (Value (Variable (User resume)))
-                ((Operator (Value (Variable (User x))) (Int Equals)
-                  (Value (Literal (Int 3)))))))))))
+             (Fun
+              ((op_argument (Variable (User x)))
+               (op_body
+                (Operator (Value (Variable (User x))) (Int Equals)
+                 (Value (Literal (Int 3))))))))))
           (return_clause
            (((op_argument (Variable (User b)))
              (op_body
@@ -409,17 +408,14 @@ let%expect_test "handlers can delegate to outer handlers" =
   [%expect
     {|
     (Ok
-     ((Primitive Int) (Metavariable e21)
+     ((Primitive Int) (Metavariable e19)
       (Application
        (Value
         (Handler
          ((handled_effect read)
           (operations
            (((User ask)
-             ((op_argument Wildcard)
-              (op_body
-               (Application (Value (Variable (User resume)))
-                ((Value (Literal (Int 1))))))))))
+             (Fun ((op_argument Wildcard) (op_body (Value (Literal (Int 1)))))))))
           (return_clause ()))))
        ((Value
          (Lambda
@@ -430,14 +426,16 @@ let%expect_test "handlers can delegate to outer handlers" =
               ((handled_effect read)
                (operations
                 (((User ask)
-                  ((op_argument Wildcard)
-                   (op_body
-                    (Operator
-                     (Application
-                      (Value
-                       (Perform ((operation (User ask)) (performed_effect read))))
-                      ((Value (Literal Unit))))
-                     (Int Plus) (Value (Literal (Int 1)))))))))
+                  (Fun
+                   ((op_argument Wildcard)
+                    (op_body
+                     (Operator
+                      (Application
+                       (Value
+                        (Perform
+                         ((operation (User ask)) (performed_effect read))))
+                       ((Value (Literal Unit))))
+                      (Int Plus) (Value (Literal (Int 1))))))))))
                (return_clause ()))))
             ((Value
               (Lambda
@@ -459,5 +457,19 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
   in
   let body = E.Value (E.Handler choose_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {| (() -> <choose|e> a) -> e a |}]
+  [%expect {|
+    (Ok
+     ((Arrow
+       ((Arrow () (Row (Open (Non_empty ((choose 1))) (Metavariable e0)))
+         (Metavariable a1)))
+       (Metavariable e0) (Metavariable a1))
+      (Metavariable e3)
+      (Value
+       (Handler
+        ((handled_effect choose)
+         (operations
+          (((User choose)
+            (Fun
+             ((op_argument Wildcard) (op_body (Value (Literal (Bool true)))))))))
+         (return_clause ())))))) |}]
 ;;

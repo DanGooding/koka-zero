@@ -15,16 +15,27 @@ let t_of_map m = Variable.Map.key_set m
 let t_of_handler { Minimal_syntax.Expr.operations; _ } = t_of_map operations
 
 module Context = struct
-  let signature_of_map = t_of_map
+  module T = struct
+    type t = (Effect.Label.t * Operation_shape.t Variable.Map.t) Signature.Map.t
+    [@@deriving sexp]
+  end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
-  type t = Effect.Label.t Signature.Map.t [@@deriving sexp]
+  include T
 
   let empty = Signature.Map.empty
-  let extend t ~label ~signature = Map.add t ~key:signature ~data:label
+
+  let extend t ~label ~operation_shapes =
+    let signature = Variable.Map.key_set operation_shapes in
+    Map.add t ~key:signature ~data:(label, operation_shapes)
+  ;;
 
   let extend_decl t { Minimal_syntax.Decl.Effect.name; operations } =
-    let signature = signature_of_map operations in
-    extend t ~label:name ~signature
+    let operation_shapes =
+      Variable.Map.map
+        operations
+        ~f:(fun { Minimal_syntax.Decl.Effect.Operation.shape; _ } -> shape)
+    in
+    extend t ~label:name ~operation_shapes
   ;;
 
   let find t s = Map.find t s

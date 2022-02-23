@@ -9,3 +9,5 @@ type t =
 
     for the currrently supported shapes: [Fun < Control] *)
 val can_implement : handler:t -> declaration:t -> bool
+
+val to_string : t -> string
