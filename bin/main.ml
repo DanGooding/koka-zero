@@ -7,7 +7,7 @@ let exit_with_error_messsage message =
   exit 1
 ;;
 
-let typecheck_and_compile_to_expl filename =
+let[@landmark] typecheck_and_compile_to_expl filename =
   let open Result.Let_syntax in
   let%bind program =
     try In_channel.with_file filename ~f:Koka_zero.parse_channel with
@@ -16,7 +16,7 @@ let typecheck_and_compile_to_expl filename =
   Koka_zero.infer_program program
 ;;
 
-let compile_to_eps filename =
+let[@landmark] compile_to_eps filename =
   let open Result.Let_syntax in
   let%map program_explicit = typecheck_and_compile_to_expl filename in
   Koka_zero.translate program_explicit
