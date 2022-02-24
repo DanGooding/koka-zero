@@ -194,7 +194,9 @@ and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
   let open Generation.Let_syntax in
   let { Expl.Expr.handled_effect; operations; return_clause } = handler in
   let%bind operation_clauses =
-    Map.map operations ~f:translate_op_handler |> Generation.all_map
+    Map.map operations ~f:(fun (shape, op_handler) ->
+        translate_op_handler shape op_handler)
+    |> Generation.all_map
   in
   let%map () =
     match return_clause with
@@ -203,12 +205,23 @@ and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
   in
   `Hnd (EPS.Expr.Construct_handler { handled_effect; operation_clauses })
 
-and translate_op_handler : Expl.Expr.op_handler -> EPS.Expr.t Generation.t =
- fun { Expl.Expr.op_argument; op_body } ->
+and translate_op_handler
+    : Operation_shape.t -> Expl.Expr.op_handler -> EPS.Expr.t Generation.t
+  =
+ fun shape { Expl.Expr.op_argument; op_body } ->
   let open Generation.Let_syntax in
-  let resume = Expl.Keyword.resume in
-  let%map m_body = translate_expr op_body in
-  EPS.Expr.Lambda ([ op_argument; EPS.Parameter.Variable resume ], m_body)
+  match shape with
+  | Operation_shape.Control ->
+    let resume = Expl.Keyword.resume in
+    let%map m_body = translate_expr op_body in
+    let clause =
+      EPS.Expr.Lambda ([ op_argument; EPS.Parameter.Variable resume ], m_body)
+    in
+    EPS.Expr.Construct_op_normal clause
+  | Operation_shape.Fun ->
+    let%map m_body = translate_expr op_body in
+    let clause = EPS.Expr.Lambda ([ op_argument ], m_body) in
+    EPS.Expr.Construct_op_tail clause
 
 and translate_impure_built_in
     : Expl.Expr.impure_built_in -> EPS.Expr.t Generation.t

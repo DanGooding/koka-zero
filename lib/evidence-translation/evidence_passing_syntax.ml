@@ -29,11 +29,22 @@ module Expr = struct
           }
       | Fresh_marker
       | Markers_equal of t * t
+      | Effect_label of Effect.Label.t
+      | Construct_op_normal of t
+      | Construct_op_tail of t
+      | Match_op of
+          { subject : t
+          ; normal_branch : lambda
+          ; tail_branch : lambda
+          }
       | Construct_handler of
           { handled_effect : Effect.Label.t
           ; operation_clauses : t Variable.Map.t
           }
-      | Effect_label of Effect.Label.t
+      | Select_operation of Effect.Label.t * Variable.t * t
+      (* TODO: perhaps this should be a function? (otherwise it needs to be
+         wrapped at every usage) - TODO: or should this already be changed to an
+         index into a record? *)
       | Nil_evidence_vector
       | Cons_evidence_vector of
           { label : t
@@ -47,10 +58,6 @@ module Expr = struct
           }
       | Get_evidence_marker of t
       | Get_evidence_handler of t
-      | Select_operation of Effect.Label.t * Variable.t * t
-      (* TODO: perhaps this should be a function? (otherwise it needs to be
-         wrapped at every usage) - TODO: or should this already be changed to an
-         index into a record? *)
       | Impure_built_in of impure_built_in
     [@@deriving sexp]
 
