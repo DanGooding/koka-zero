@@ -1,4 +1,4 @@
-`fun` operations should be performed as-if at the handler,
+`fun` operations should be performed as if at the handler,
 depsite tail resumption optimisation
   $ koka-zero interpret tail-resumption.kk
   10
