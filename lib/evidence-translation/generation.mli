@@ -11,7 +11,10 @@ include Monad.S with type 'a t := 'a t
 include Monad_utils.S with type 'a t := 'a t
 
 (** perform a generation computation using the default internal name source *)
-val run : 'a t -> 'a
+val run : 'a t -> 'a Or_static_error.t
+
+(** fail due to attempting to translate a feature which is not yet implemented *)
+val unsupported_feature_error : string -> 'a t
 
 (** create a globally unique variable *)
 val fresh_name : Variable.t t

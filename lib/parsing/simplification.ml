@@ -7,19 +7,19 @@ module Min = Minimal_syntax
     syntax' error with the given [description] *)
 let restrict_to_none ~description = function
   | None -> Result.Ok ()
-  | Some _ -> Static_error.unsupported_syntax description |> Result.Error
+  | Some _ -> Static_error.unsupported_feature description |> Result.Error
 ;;
 
 (** assert that the argument is [ \[\] ], otherwise returns an 'unsupported
     syntax' error with the given [message] *)
 let restrict_to_empty ~description = function
   | [] -> Result.Ok ()
-  | _ :: _ -> Static_error.unsupported_syntax description |> Result.Error
+  | _ :: _ -> Static_error.unsupported_feature description |> Result.Error
 ;;
 
 let restrict_to_singleton ~description = function
   | [ x ] -> Result.Ok x
-  | [] | _ :: _ -> Static_error.unsupported_syntax description |> Result.Error
+  | [] | _ :: _ -> Static_error.unsupported_feature description |> Result.Error
 ;;
 
 let restrict_to_all_none ~description xs =
@@ -73,7 +73,8 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
       (* brackets for precedence only *)
       | [ t ] -> Result.Ok t
       | _ts ->
-        Static_error.unsupported_syntax "tuples other than unit" |> Result.Error)
+        Static_error.unsupported_feature "tuples other than unit"
+        |> Result.Error)
   | Syntax.Effect_row r ->
     let message =
       sprintf
@@ -83,7 +84,7 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
     Static_error.syntax_error message |> Result.Error
   | Syntax.Scheme s ->
     let%bind _t = simplify_type_scheme s in
-    Static_error.unsupported_syntax "higher rank types" |> Result.Error
+    Static_error.unsupported_feature "higher rank types" |> Result.Error
   | Syntax.Type_atom { constructor; arguments } ->
     let%bind () =
       restrict_to_empty arguments ~description:"parameterised types"
@@ -91,12 +92,12 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
     (match constructor with
     (* variables / wildcards require closing over in a Type.Poly *)
     | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
-      Static_error.unsupported_syntax "wildcards/names/variables in types"
+      Static_error.unsupported_feature "wildcards/names/variables in types"
       |> Result.Error
     | Syntax.Type_int -> Type.Mono.Primitive Type.Primitive.Int |> Result.Ok
     | Syntax.Type_bool -> Type.Mono.Primitive Type.Primitive.Bool |> Result.Ok)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
-    Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
+    Static_error.unsupported_feature "kind annotation on type" |> Result.Error
 
 (** convert a [Syntax.type_], to an [Effect.t] failing if it is actually a
     [Type.t] or [Effect.Label.t], or if it doesn't represent a valid [Effect.t] *)
@@ -126,7 +127,7 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
     (* variables / wildcards require closing over in a Type.Poly *)
     | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
       (* TODO: this will need to be supported *)
-      Static_error.unsupported_syntax "wildcards/names/variables in effects"
+      Static_error.unsupported_feature "wildcards/names/variables in effects"
       |> Result.Error
     | Syntax.Type_int | Syntax.Type_bool ->
       let message =
@@ -136,7 +137,7 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
       in
       Static_error.syntax_error message |> Result.Error)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
-    Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
+    Static_error.unsupported_feature "kind annotation on type" |> Result.Error
   | Syntax.Arrow (_, _) | Syntax.Scheme _ | Syntax.Parameters_or_tuple _ ->
     let message =
       sprintf
@@ -172,7 +173,7 @@ and simplify_type_as_effect_label
       in
       Static_error.syntax_error message |> Result.Error)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
-    Static_error.unsupported_syntax "kind annotation on type" |> Result.Error
+    Static_error.unsupported_feature "kind annotation on type" |> Result.Error
   | Syntax.Arrow (_, _)
   | Syntax.Effect_row _ | Syntax.Scheme _ | Syntax.Parameters_or_tuple _ ->
     let message =
@@ -185,7 +186,7 @@ and simplify_type_as_effect_label
 and simplify_type_scheme { Syntax.forall_quantified = _; body = _ }
     : Type.Poly.t Or_static_error.t
   =
-  Static_error.unsupported_syntax "type scheme" |> Result.Error
+  Static_error.unsupported_feature "type scheme" |> Result.Error
 
 and simplify_parameter_type { Syntax.parameter_id; type_ }
     : (Variable.t option * Type.Mono.t) Or_static_error.t
@@ -298,7 +299,7 @@ let simplify_unary_operator (op : Syntax.unary_operator)
 let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
   let open Result.Let_syntax in
   match e with
-  | Syntax.Return _ -> Static_error.unsupported_syntax "return" |> Result.Error
+  | Syntax.Return _ -> Static_error.unsupported_feature "return" |> Result.Error
   | Syntax.If_then_else (e_cond, block_yes, block_no) ->
     let%bind e_cond' = simplify_expr e_cond in
     let%bind block_yes' = simplify_block block_yes in
@@ -337,7 +338,7 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%map op' = simplify_unary_operator op in
     Min.Expr.Unary_operator (op', e')
   | Syntax.Annotated_expr (_e, _scheme) ->
-    Static_error.unsupported_syntax "type annotation on expression"
+    Static_error.unsupported_feature "type annotation on expression"
     |> Result.Error
 
 and simplify_fun_declaration { Syntax.id; fn }
@@ -476,11 +477,11 @@ and simplify_operation_handler
   | Syntax.Op_except { id = _; parameters = _; body = _ } ->
     (* TODO: doesn't get anying without proper handling of `resume` and use of
        the knowledge for better implementations *)
-    Static_error.unsupported_syntax "`execption` effect" |> Result.Error
+    Static_error.unsupported_feature "`execption` effect" |> Result.Error
   | Syntax.Op_val { id = _; type_ = _; value = _ } ->
     (* need to first evaluate `value`, then capture it in the handler (fairly
        simple, but requires creating a fresh variable name) *)
-    Static_error.unsupported_syntax "`val` effect" |> Result.Error
+    Static_error.unsupported_feature "`val` effect" |> Result.Error
   | Syntax.Op_return { parameter; body } ->
     let%bind op_argument, type_ = simplify_operation_parameter parameter in
     let%bind () =
@@ -500,7 +501,7 @@ let simplify_operation_declaration { Syntax.id; type_parameters; shape }
   | Syntax.Shape_fun (_, _) | Syntax.Shape_except (_, _) | Syntax.Shape_val _ ->
     (* TODO: keep hander shapes, and check they match the effect, and the body
        (use of `resume`) *)
-    Static_error.unsupported_syntax "non `control` effect" |> Result.Error
+    Static_error.unsupported_feature "non `control` effect" |> Result.Error
   | Syntax.Shape_control (parameters, t_answer) ->
     let id' = simplify_var_id id in
     let%bind () =
@@ -556,7 +557,7 @@ let simplify_pure_declaration
     : Syntax.pure_declaration -> Min.Decl.t Or_static_error.t
   = function
   | Syntax.Top_val _ ->
-    Static_error.unsupported_syntax "toplevel val binding" |> Result.Error
+    Static_error.unsupported_feature "toplevel val binding" |> Result.Error
   | Syntax.Top_fun declaration ->
     let%map.Result declaration = simplify_fun_declaration declaration in
     Min.Decl.Fun declaration

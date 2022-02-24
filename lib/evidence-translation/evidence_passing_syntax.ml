@@ -32,7 +32,6 @@ module Expr = struct
       | Construct_handler of
           { handled_effect : Effect.Label.t
           ; operation_clauses : t Variable.Map.t
-          ; return_clause : t option
           }
       | Effect_label of Effect.Label.t
       | Nil_evidence_vector
