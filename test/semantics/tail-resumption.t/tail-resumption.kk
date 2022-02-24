@@ -16,7 +16,7 @@ effect read-B {
   fun ask-B(_ : ()) : int;
 };
 
-fun answer-B-double-A(x, action) {
+fun answer-B-double-A(action) {
   with handler {
     fun ask-B(_) {
       ask-A(()) * 2;

@@ -161,9 +161,10 @@ let under =
                              Expr.Application (resumption, [ x ])
                            in
                            Expr.Application
-                             ( Expr.Variable Names.under
-                             , [ label; handler_site_vector; e_resume; vector ]
-                             )
+                             ( Expr.Application
+                                 ( Expr.Variable Names.under
+                                 , [ label; handler_site_vector; e_resume ] )
+                             , [ vector ] )
                            |> Generation.return))
                  in
                  Expr.Construct_yield
@@ -181,11 +182,11 @@ let perform =
              Generation.make_lambda_expr_1 (fun vector ->
                  let evidence = Expr.Lookup_evidence { label; vector } in
                  let handler = Expr.Get_evidence_handler evidence in
-                 let marker = Expr.Get_evidence_marker evidence in
                  let op = Expr.Application (select, [ handler ]) in
                  Generation.make_match_op
                    op
                    ~normal:(fun op_clause ->
+                     let marker = Expr.Get_evidence_marker evidence in
                      (* monadic form of identity is: `\x -> pure x` *)
                      let identity_resumption = Expr.Variable Names.pure in
                      let%map op_clause =
@@ -200,11 +201,13 @@ let perform =
                        Expr.Get_evidence_handler_site_vector evidence
                      in
                      Expr.Application
-                       ( Expr.Variable Names.under
-                       , [ label
-                         ; handler_site_vector
-                         ; Expr.Application (op_clause, [ arg ])
-                         ] )
+                       ( Expr.Application
+                           ( Expr.Variable Names.under
+                           , [ label
+                             ; handler_site_vector
+                             ; Expr.Application (op_clause, [ arg ])
+                             ] )
+                       , [ vector ] )
                      |> Generation.return)))))
 ;;
 
