@@ -388,14 +388,10 @@ let rec compile_expr
     let%bind label = Helpers.const_label id in
     Helpers.heap_store_label label ~runtime
   | EPS.Expr.Construct_handler
-      { handled_effect
-      ; operation_clauses = operation_clause_exprs
-      ; return_clause
-      } ->
+      { handled_effect; operation_clauses = operation_clause_exprs } ->
     compile_construct_handler
       handled_effect
       operation_clause_exprs
-      return_clause
       ~env
       ~runtime
       ~effect_reprs
@@ -778,14 +774,12 @@ and compile_application
   Codegen.use_builder (Llvm.build_call typed_code_address args "result")
 
 and compile_construct_handler
-    :  Effect_label.t -> EPS.Expr.t Variable.Map.t -> EPS.Expr.t option
-    -> env:Context.t -> runtime:Runtime.t
-    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    :  Effect_label.t -> EPS.Expr.t Variable.Map.t -> env:Context.t
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
  fun handled_effect
      operation_clause_exprs
-     return_clause
      ~env
      ~runtime
      ~effect_reprs
@@ -812,11 +806,6 @@ and compile_construct_handler
         in
         clause, Helpers.register_name_of_variable op_name)
     |> Codegen.all
-  in
-  let%bind () =
-    match return_clause with
-    | None -> return ()
-    | Some _ -> Codegen.unsupported_feature_error "return clause in handler"
   in
   let%bind handler_ptr = Helpers.heap_allocate hnd_type "hnd" ~runtime in
   let%bind () =

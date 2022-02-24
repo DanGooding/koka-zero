@@ -141,14 +141,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     (* note this isn't polymorphic equals, but [Int.( = )] as markers are
        transparently [int]s *)
     m1 = m2 |> Value.Bool |> Value.Primitive
-  | Expr.Construct_handler { handled_effect; operation_clauses; return_clause }
-    ->
-    let%bind () =
-      match return_clause with
-      | None -> return ()
-      | Some _return_clause ->
-        Interpreter.unsupported_feature_error "return clause in handler"
-    in
+  | Expr.Construct_handler { handled_effect; operation_clauses } ->
     let%map operation_clauses =
       Map.map operation_clauses ~f:(fun op_clause ->
           let%bind v_op_clause = eval_expr op_clause ~env in
