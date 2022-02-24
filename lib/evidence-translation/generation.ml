@@ -12,18 +12,18 @@ end
 
 module T = struct
   (** a state monad to keep the name source state *)
-  type 'a t = State.t -> 'a * State.t
+  type 'a t = State.t -> ('a * State.t) Or_static_error.t
 
   let bind m ~f s =
-    let x, s' = m s in
+    let%bind.Result x, s' = m s in
     f x s'
   ;;
 
-  let return x s = x, s
+  let return x s = Result.Ok (x, s)
 
   let map =
     let map m ~f s =
-      let x, s' = m s in
+      let%map.Result x, s' = m s in
       f x, s'
     in
     `Custom map
@@ -38,12 +38,16 @@ end
 include T'
 include Monad_utils.Make (T')
 
-let run (t : 'a t) : 'a =
-  let x, _final = t State.initial in
+let run (t : 'a t) : 'a Or_static_error.t =
+  let%map.Result x, _final = t State.initial in
   x
 ;;
 
-let fresh_name = Variable.Name_source.next_name
+let unsupported_feature_error message _s =
+  Static_error.unsupported_feature message |> Result.Error
+;;
+
+let fresh_name s = Variable.Name_source.next_name s |> Result.Ok
 let parameters_of_names xs = List.map xs ~f:(fun x -> EPS.Parameter.Variable x)
 
 let make_lambda_1 make_body =

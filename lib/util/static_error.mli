@@ -6,7 +6,7 @@ module Or_static_error : sig
 end
 
 val syntax_error : ?at:Source_location.t -> string -> t
-val unsupported_syntax : ?at:Source_location.t -> string -> t
+val unsupported_feature : ?at:Source_location.t -> string -> t
 val type_error : ?at:Source_location.t -> string -> t
 val string_of_t : t -> string
 

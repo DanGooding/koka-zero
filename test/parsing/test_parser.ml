@@ -16,7 +16,7 @@ let%expect_test "toplevel value declaration" =
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "toplevel val binding") (location ()))) |}]
+     ((kind Unsupported_feature) (message "toplevel val binding") (location ()))) |}]
 ;;
 
 let%expect_test "single expression function" =
@@ -1313,7 +1313,7 @@ effect my-effect {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "non `control` effect") (location ()))) |}]
+     ((kind Unsupported_feature) (message "non `control` effect") (location ()))) |}]
 ;;
 
 let%expect_test "parameterised effect declaration" =
@@ -1373,7 +1373,7 @@ effect my-effect<a :: V> {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "type parameters for effect")
+     ((kind Unsupported_feature) (message "type parameters for effect")
       (location ()))) |}]
 ;;
 
@@ -1542,7 +1542,7 @@ fun one-operation() {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "`execption` effect") (location ()))) |}]
+     ((kind Unsupported_feature) (message "`execption` effect") (location ()))) |}]
 ;;
 
 let%expect_test "handle" =
@@ -1654,7 +1654,8 @@ fun square(x : int) : <> int {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "return type annotation") (location ()))) |}]
+     ((kind Unsupported_feature) (message "return type annotation")
+      (location ()))) |}]
 ;;
 
 let%expect_test "effect annotations" =
@@ -1770,7 +1771,8 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "return type annotation") (location ()))) |}]
+     ((kind Unsupported_feature) (message "return type annotation")
+      (location ()))) |}]
 ;;
 
 let%expect_test "apparently unnecessary brackets in arrow types" =
@@ -1878,6 +1880,6 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "type parameters for effect")
+     ((kind Unsupported_feature) (message "type parameters for effect")
       (location ()))) |}]
 ;;
