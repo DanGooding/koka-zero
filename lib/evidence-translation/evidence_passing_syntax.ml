@@ -50,6 +50,7 @@ module Expr = struct
           { label : t
           ; marker : t
           ; handler : t
+          ; handler_site_vector : t
           ; vector_tail : t
           }
       | Lookup_evidence of
@@ -58,6 +59,7 @@ module Expr = struct
           }
       | Get_evidence_marker of t
       | Get_evidence_handler of t
+      | Get_evidence_handler_site_vector of t
       | Impure_built_in of impure_built_in
     [@@deriving sexp]
 

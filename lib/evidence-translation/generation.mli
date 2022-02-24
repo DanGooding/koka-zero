@@ -51,3 +51,6 @@ val make_match_ctl
   -> pure:(E.t -> E.t t)
   -> yield:(marker:E.t -> op_clause:E.t -> resumption:E.t -> E.t t)
   -> E.t t
+
+(** builds a [Match_op] in the same way as [make_match_ctl] *)
+val make_match_op : E.t -> normal:(E.t -> E.t t) -> tail:(E.t -> E.t t) -> E.t t

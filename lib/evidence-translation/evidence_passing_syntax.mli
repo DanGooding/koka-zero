@@ -53,8 +53,9 @@ module Expr : sig
         { label : t
         ; marker : t
         ; handler : t
-              (* ; old_evidence : t *)
-              (* seems to only be for tail resumptions *)
+        ; handler_site_vector : t
+              (** evidence vector at handler - used for evaluating tail
+                  resumptive operations in-place *)
         ; vector_tail : t
         }
     | Lookup_evidence of
@@ -63,6 +64,8 @@ module Expr : sig
         }
     | Get_evidence_marker of t (* evidence entry -> marker *)
     | Get_evidence_handler of t (* evidence entry -> handler *)
+    | Get_evidence_handler_site_vector of t
+    (* evidence entry -> evidence vector *)
     | Impure_built_in of impure_built_in
   [@@deriving sexp]
 
