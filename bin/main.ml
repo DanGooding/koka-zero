@@ -18,7 +18,7 @@ let typecheck_and_compile_to_expl filename =
 
 let compile_to_eps filename =
   let open Result.Let_syntax in
-  let%map program_explicit = typecheck_and_compile_to_expl filename in
+  let%bind program_explicit = typecheck_and_compile_to_expl filename in
   Koka_zero.translate program_explicit
 ;;
 

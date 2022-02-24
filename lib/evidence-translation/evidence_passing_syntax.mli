@@ -33,7 +33,6 @@ module Expr : sig
     | Construct_handler of
         { handled_effect : Effect.Label.t
         ; operation_clauses : t Variable.Map.t
-        ; return_clause : t option
         } (** constructor for a `Hnd`, passed to [handler] *)
     | Effect_label of Effect.Label.t
         (** literal effect label - passed to [handler]/[perform] *)

@@ -196,12 +196,12 @@ and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
   let%bind operation_clauses =
     Map.map operations ~f:translate_op_handler |> Generation.all_map
   in
-  let%map return_clause =
-    Option.map return_clause ~f:translate_op_handler |> Generation.all_option
+  let%map () =
+    match return_clause with
+    | None -> return ()
+    | Some _ -> Generation.unsupported_feature_error "return clause in handler"
   in
-  `Hnd
-    (EPS.Expr.Construct_handler
-       { handled_effect; operation_clauses; return_clause })
+  `Hnd (EPS.Expr.Construct_handler { handled_effect; operation_clauses })
 
 and translate_op_handler : Expl.Expr.op_handler -> EPS.Expr.t Generation.t =
  fun { Expl.Expr.op_argument; op_body } ->
