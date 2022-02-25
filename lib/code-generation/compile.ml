@@ -162,6 +162,28 @@ let compile_construct_yield
   Codegen.use_builder (Llvm.build_bitcast ctl_yield_ptr opaque_ptr "ptr")
 ;;
 
+(** [compile_construct_op variant clause ...] generates code to allocate a
+    [Types.op] and populate it with the given [variant] and operation [clause] *)
+let compile_construct_op
+    :  [ `Normal | `Tail ] -> Llvm.llvalue -> runtime:Runtime.t
+    -> Llvm.llvalue Codegen.t
+  =
+ fun tag clause ~runtime ->
+  let open Codegen.Let_syntax in
+  let%bind op_type = Types.op in
+  let%bind op_ptr = Helpers.heap_allocate op_type "op" ~runtime in
+  let%bind tag =
+    match tag with
+    | `Normal -> Helpers.const_op_normal_tag
+    | `Tail -> Helpers.const_op_tail_tag
+  in
+  let%bind () =
+    Helpers.compile_populate_struct op_ptr [ tag, "tag"; clause, "clause" ]
+  in
+  let%bind opaque_pointer = Types.opaque_pointer in
+  Codegen.use_builder (Llvm.build_bitcast op_ptr opaque_pointer "ptr")
+;;
+
 (** [compile_select_operation label ~op_name v ~effect_reprs] generates code
     which selects the operation clause for [op_name] from [v] (a handler for the
     effect [label] of type [Types.opaque_pointer]) *)
@@ -396,6 +418,17 @@ let rec compile_expr
       ~runtime
       ~effect_reprs
       ~outer_symbol
+  | EPS.Expr.Construct_op_normal e_clause ->
+    let%bind clause =
+      compile_expr e_clause ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_construct_op `Normal clause ~runtime
+  | EPS.Expr.Construct_op_tail e_clause ->
+    let%bind clause =
+      compile_expr e_clause ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_construct_op `Tail clause ~runtime
+  | EPS.Expr.Match_op _ -> failwith "not implemented"
   | EPS.Expr.Select_operation (label, op_name, e_handler) ->
     let%bind handler_ptr =
       compile_expr e_handler ~env ~runtime ~effect_reprs ~outer_symbol

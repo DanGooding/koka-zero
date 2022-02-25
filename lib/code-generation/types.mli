@@ -28,6 +28,10 @@ val ctl_pure : Llvm.lltype Codegen.t
     [Yield { tag; opaque_pointer marker; op_clause; resumption }] *)
 val ctl_yield : Llvm.lltype Codegen.t
 
+(** operation clause variant, but merged into one types as `normal` and `tail`
+    have identical fields: [{ tag; opaque_pointer clause }]*)
+val op : Llvm.lltype Codegen.t
+
 (** a closure holds free variables in a chain starting from the innermost
     function. The structure is as follows:
     [{ i64 num_vars; opaque_pointer *vars; opaque_pointer parent }]. The
