@@ -517,7 +517,7 @@ and compile_match_ctl
     Codegen.use_builder (Llvm.build_bitcast subject ctl_ptr_type "ctl_ptr")
   in
   let%bind tag = Helpers.compile_access_field ctl_ptr 0 "tag" in
-  let%bind pure_tag = Helpers.const_tag 0 in
+  let%bind pure_tag = Helpers.const_ctl_pure_tag in
   let%bind is_pure =
     Codegen.use_builder (Llvm.build_icmp Llvm.Icmp.Eq tag pure_tag "is_pure")
   in
