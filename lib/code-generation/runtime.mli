@@ -11,6 +11,7 @@ type t =
   ; evidence_vector_lookup : Llvm.llvalue
   ; get_evidence_marker : Llvm.llvalue
   ; get_evidence_handler : Llvm.llvalue
+  ; get_evidence_handler_site_vector : Llvm.llvalue
   ; print_int : Llvm.llvalue
   ; read_int : Llvm.llvalue
   }

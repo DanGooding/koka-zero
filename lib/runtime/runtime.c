@@ -49,6 +49,7 @@ bool_t kkr_markers_equal(marker_t m1, marker_t m2) {
 typedef struct {
   opaque_ptr handler;
   marker_t marker;
+  struct vector_t handler_site_vector;
 
 } evidence_t;
 
@@ -71,10 +72,15 @@ opaque_ptr kkr_cons_evidence_vector(
   label_t label,
   marker_t marker,
   opaque_ptr handler,
+  opaque_ptr handler_site_vector,
   opaque_ptr vector_tail
 ) {
   evidence_t *evidence = (evidence_t *)kkr_malloc(sizeof(evidence_t));
-  *evidence = (evidence_t) { .handler = handler, .marker = marker };
+  *evidence = (evidence_t) {
+    .handler = handler,
+    .marker = marker,
+    .handler_site_vector = (vector_t *)handler_site_vector
+  };
 
   vector_t *vector = (vector_t *)kkr_malloc(sizeof(vector_t));
   *vector = (vector_t) {
@@ -108,6 +114,11 @@ marker_t kkr_get_evidence_marker(opaque_ptr e) {
 opaque_ptr kkr_get_evidence_handler(opaque_ptr e) {
   evidence_t *evidence = (evidence_t *)e;
   return evidence->handler;
+}
+
+opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr e) {
+  evidence_t *evidence = (evidence_t *)e;
+  return (opaque_ptr *)(evidence->handler_site_vector);
 }
 
 void kkr_print_int(int_t i) {

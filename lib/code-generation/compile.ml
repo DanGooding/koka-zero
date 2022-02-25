@@ -409,6 +409,7 @@ let rec compile_expr
       { label = e_label
       ; marker = e_marker
       ; handler = e_handler
+      ; handler_site_vector = e_handler_site_vector
       ; vector_tail = e_vector_tail
       } ->
     let%bind label_ptr =
@@ -422,11 +423,21 @@ let rec compile_expr
     let%bind handler =
       compile_expr e_handler ~env ~runtime ~effect_reprs ~outer_symbol
     in
+    let%bind handler_site_vector =
+      compile_expr
+        e_handler_site_vector
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
+    in
     let%bind vector_tail =
       compile_expr e_vector_tail ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.cons_evidence_vector; _ } = runtime in
-    let args = Array.of_list [ label; marker; handler; vector_tail ] in
+    let args =
+      Array.of_list [ label; marker; handler; handler_site_vector; vector_tail ]
+    in
     Codegen.use_builder
       (Llvm.build_call cons_evidence_vector args "extended_vector")
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
@@ -463,6 +474,16 @@ let rec compile_expr
          get_evidence_handler
          (Array.of_list [ evidence ])
          "handler")
+  | EPS.Expr.Get_evidence_handler_site_vector e ->
+    let%bind evidence =
+      compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    let { Runtime.get_evidence_handler_site_vector; _ } = runtime in
+    Codegen.use_builder
+      (Llvm.build_call
+         get_evidence_handler_site_vector
+         (Array.of_list [ evidence ])
+         "handler_site_vector")
   | EPS.Expr.Impure_built_in impure ->
     compile_impure_built_in impure ~env ~runtime ~effect_reprs ~outer_symbol
 
