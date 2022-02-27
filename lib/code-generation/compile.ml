@@ -363,6 +363,20 @@ let compile_switch
   Codegen.use_builder (Llvm.build_phi incoming "switch_result")
 ;;
 
+(** [compile_match_corrupted_tag ...] generates a default branch for a match
+    statement, executed when a variants tag has an unexpected value. This exits
+    the program, and results in a null [Types.opaque_pointer] to satisfy llvm's
+    type system *)
+let compile_match_corrupted_tag ~runtime () =
+  let open Codegen.Let_syntax in
+  let { Runtime.exit; _ } = runtime in
+  let%bind _void =
+    Codegen.use_builder (Llvm.build_call exit (Array.of_list []) "")
+  in
+  let%map opaque_pointer = Types.opaque_pointer in
+  Llvm.const_null opaque_pointer
+;;
+
 (** produces code to evaluate the given expression and store its value to the
     heap. The returned [llvalue] is the [Types.opaque_pointer] to this value. *)
 let rec compile_expr
@@ -626,37 +640,50 @@ and compile_match_ctl
   in
   let%bind tag = Helpers.compile_access_field ctl_ptr 0 "tag" in
   let%bind pure_tag = Helpers.const_ctl_pure_tag in
-  let%bind is_pure =
-    Codegen.use_builder (Llvm.build_icmp Llvm.Icmp.Eq tag pure_tag "is_pure")
+  let%bind yield_tag = Helpers.const_ctl_yield_tag in
+  let compile_pure () =
+    let%bind ctl_pure_type = Types.ctl_pure in
+    let ctl_pure_ptr_type = Llvm.pointer_type ctl_pure_type in
+    let%bind ctl_pure_ptr =
+      Codegen.use_builder
+        (Llvm.build_bitcast subject ctl_pure_ptr_type "ctl_pure_ptr")
+    in
+    let%bind value = Helpers.compile_access_field ctl_pure_ptr 1 "value" in
+    compile_application pure_function [ value ]
   in
-  compile_conditional
-    is_pure
-    ~compile_true:(fun () ->
-      let%bind ctl_pure_type = Types.ctl_pure in
-      let ctl_pure_ptr_type = Llvm.pointer_type ctl_pure_type in
-      let%bind ctl_pure_ptr =
-        Codegen.use_builder
-          (Llvm.build_bitcast subject ctl_pure_ptr_type "ctl_pure_ptr")
-      in
-      let%bind value = Helpers.compile_access_field ctl_pure_ptr 1 "value" in
-      compile_application pure_function [ value ])
-    ~compile_false:(fun () ->
-      let%bind ctl_yield_type = Types.ctl_yield in
-      let ctl_yield_ptr_type = Llvm.pointer_type ctl_yield_type in
-      let%bind ctl_yield_ptr =
-        Codegen.use_builder
-          (Llvm.build_bitcast subject ctl_yield_ptr_type "ctl_yield_ptr")
-      in
-      let%bind marker = Helpers.compile_access_field ctl_yield_ptr 1 "marker" in
-      let%bind op_clause =
-        Helpers.compile_access_field ctl_yield_ptr 2 "op_clause"
-      in
-      let%bind resumption =
-        Helpers.compile_access_field ctl_yield_ptr 3 "resumption"
-      in
-      compile_application yield_function [ marker; op_clause; resumption ])
+  let compile_yield () =
+    let%bind ctl_yield_type = Types.ctl_yield in
+    let ctl_yield_ptr_type = Llvm.pointer_type ctl_yield_type in
+    let%bind ctl_yield_ptr =
+      Codegen.use_builder
+        (Llvm.build_bitcast subject ctl_yield_ptr_type "ctl_yield_ptr")
+    in
+    let%bind marker = Helpers.compile_access_field ctl_yield_ptr 1 "marker" in
+    let%bind op_clause =
+      Helpers.compile_access_field ctl_yield_ptr 2 "op_clause"
+    in
+    let%bind resumption =
+      Helpers.compile_access_field ctl_yield_ptr 3 "resumption"
+    in
+    compile_application yield_function [ marker; op_clause; resumption ]
+  in
+  compile_switch
+    tag
+    ~table:
+      [ pure_tag, "ctl_pure", compile_pure
+      ; yield_tag, "ctl_yield", compile_yield
+      ]
+    ~compile_default:(compile_match_corrupted_tag ~runtime)
 
-and compile_match_op : _ =
+(** [compile_match_op subject ~normal_branch ~tail_branch ...] compiles a match
+    statement on a [Types.op] pointed to by [subject], calling either
+    normal/tail with the op's clause *)
+and compile_match_op
+    :  Llvm.llvalue -> normal_branch:EPS.Expr.lambda
+    -> tail_branch:EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
+  =
  fun subject
      ~normal_branch
      ~tail_branch
@@ -687,22 +714,13 @@ and compile_match_op : _ =
     let%bind clause = Helpers.compile_access_field op_ptr 1 "clause" in
     compile_application tail_function [ clause ]
   in
-  let compile_default () =
-    let { Runtime.exit; _ } = runtime in
-    (* TODO: error message *)
-    let%bind _void =
-      Codegen.use_builder (Llvm.build_call exit (Array.of_list []) "")
-    in
-    let%map opaque_pointer = Types.opaque_pointer in
-    Llvm.const_null opaque_pointer
-  in
   compile_switch
     tag
     ~table:
       [ normal_tag, "op_normal", compile_normal
       ; tail_tag, "op_tail", compile_tail
       ]
-    ~compile_default
+    ~compile_default:(compile_match_corrupted_tag ~runtime)
 
 (** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol]
     generates code to branch on the value of the [Types.bool] [b], and evaluate
