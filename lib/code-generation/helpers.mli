@@ -16,6 +16,8 @@ val const_tag : int -> Llvm.llvalue Codegen.t
 
 val const_ctl_pure_tag : Llvm.llvalue Codegen.t
 val const_ctl_yield_tag : Llvm.llvalue Codegen.t
+val const_op_normal_tag : Llvm.llvalue Codegen.t
+val const_op_tail_tag : Llvm.llvalue Codegen.t
 val const_label : int -> Llvm.llvalue Codegen.t
 
 (** converts a valid [Types.bool] (either [const_true]/[const_false]) into an

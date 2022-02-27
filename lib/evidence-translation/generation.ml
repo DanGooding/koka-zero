@@ -131,3 +131,10 @@ let make_match_ctl subject ~pure ~yield =
   in
   E.Match_ctl { subject; pure_branch; yield_branch }
 ;;
+
+let make_match_op subject ~normal ~tail =
+  let open Let_syntax in
+  let%bind normal_branch = make_lambda_1 normal in
+  let%map tail_branch = make_lambda_1 tail in
+  E.Match_op { subject; normal_branch; tail_branch }
+;;

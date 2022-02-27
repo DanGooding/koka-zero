@@ -52,6 +52,16 @@ let ctl =
       Llvm.struct_type context (Array.of_list fields))
 ;;
 
+let op =
+  let open Codegen.Let_syntax in
+  let%bind variant_tag = variant_tag in
+  let%bind opaque_pointer = opaque_pointer in
+  let clause = opaque_pointer in
+  let fields = [ variant_tag; clause ] in
+  Codegen.use_context (fun context ->
+      Llvm.struct_type context (Array.of_list fields))
+;;
+
 let closure =
   let open Codegen.Let_syntax in
   let%bind num_vars = Codegen.use_context Llvm.i64_type in

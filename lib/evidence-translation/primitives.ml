@@ -8,6 +8,7 @@ module Names = struct
   let pure = Variable.of_language_internal "pure"
   let prompt = Variable.of_language_internal "prompt"
   let handler = Variable.of_language_internal "handler"
+  let under = Variable.of_language_internal "under"
   let perform = Variable.of_language_internal "perform"
 end
 
@@ -74,7 +75,12 @@ let prompt =
              Generation.make_lambda_expr_1 (fun vector ->
                  let vector' =
                    Expr.Cons_evidence_vector
-                     { label; marker; handler; vector_tail = vector }
+                     { label
+                     ; marker
+                     ; handler
+                     ; handler_site_vector = vector
+                     ; vector_tail = vector
+                     }
                  in
                  let run_e_under = Expr.Application (e, [ vector' ]) in
                  Generation.make_match_ctl
@@ -129,6 +135,42 @@ let handler =
              |> Generation.return)))
 ;;
 
+(** under : (label, evv<e'>, mon<e'> a) -> mon<e> a *)
+let under =
+  let open Generation.Let_syntax in
+  map_name_lambda
+    ~name:Names.under
+    (Generation.make_lambda_3 (fun label handler_site_vector e ->
+         Generation.make_lambda_expr_1 (fun _perform_site_vector ->
+             let result = Expr.Application (e, [ handler_site_vector ]) in
+             Generation.make_match_ctl
+               result
+               ~pure:(fun x -> Expr.Construct_pure x |> Generation.return)
+               ~yield:(fun ~marker ~op_clause ~resumption ->
+                 let%map resumption' =
+                   (* inlined [underk] *)
+                   Generation.make_lambda_expr_1 (fun x ->
+                       Generation.make_lambda_expr_1 (fun vector ->
+                           let evidence =
+                             Expr.Lookup_evidence { label; vector }
+                           in
+                           let handler_site_vector =
+                             Expr.Get_evidence_handler_site_vector evidence
+                           in
+                           let e_resume =
+                             Expr.Application (resumption, [ x ])
+                           in
+                           Expr.Application
+                             ( Expr.Application
+                                 ( Expr.Variable Names.under
+                                 , [ label; handler_site_vector; e_resume ] )
+                             , [ vector ] )
+                           |> Generation.return))
+                 in
+                 Expr.Construct_yield
+                   { marker; op_clause; resumption = resumption' }))))
+;;
+
 (* TODO: or a label-indexed family? *)
 (** perform : (label, select : hnd<e,r> -> op<a,b,e,r>) -> a -> mon<label|e> r *)
 let perform =
@@ -140,22 +182,38 @@ let perform =
              Generation.make_lambda_expr_1 (fun vector ->
                  let evidence = Expr.Lookup_evidence { label; vector } in
                  let handler = Expr.Get_evidence_handler evidence in
-                 let marker = Expr.Get_evidence_marker evidence in
-                 let op_clause = Expr.Application (select, [ handler ]) in
-                 (* monadic form of identity is: `\x -> pure x` *)
-                 let identity_resumption = Expr.Variable Names.pure in
-                 let%map op_clause =
-                   Generation.make_lambda_expr_1 (fun resume ->
-                       Expr.Application (op_clause, [ arg; resume ])
-                       |> Generation.return)
-                 in
-                 Expr.Construct_yield
-                   { marker; op_clause; resumption = identity_resumption }))))
+                 let op = Expr.Application (select, [ handler ]) in
+                 Generation.make_match_op
+                   op
+                   ~normal:(fun op_clause ->
+                     let marker = Expr.Get_evidence_marker evidence in
+                     (* monadic form of identity is: `\x -> pure x` *)
+                     let identity_resumption = Expr.Variable Names.pure in
+                     let%map op_clause =
+                       Generation.make_lambda_expr_1 (fun resume ->
+                           Expr.Application (op_clause, [ arg; resume ])
+                           |> Generation.return)
+                     in
+                     Expr.Construct_yield
+                       { marker; op_clause; resumption = identity_resumption })
+                   ~tail:(fun op_clause ->
+                     let handler_site_vector =
+                       Expr.Get_evidence_handler_site_vector evidence
+                     in
+                     Expr.Application
+                       ( Expr.Application
+                           ( Expr.Variable Names.under
+                           , [ label
+                             ; handler_site_vector
+                             ; Expr.Application (op_clause, [ arg ])
+                             ] )
+                       , [ vector ] )
+                     |> Generation.return)))))
 ;;
 
 let prelude =
   let open Generation.Let_syntax in
-  let decls = [ compose_unary; bind; pure; prompt; handler; perform ] in
+  let decls = [ compose_unary; bind; pure; prompt; handler; under; perform ] in
   let%map decls_rev =
     Generation.list_fold decls ~init:[] ~f:(fun decls_rev decl ->
         let%map decl = decl in

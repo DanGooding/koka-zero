@@ -30,12 +30,22 @@ module Expr : sig
         }
     | Fresh_marker (** evaluates to a new unique marker *)
     | Markers_equal of t * t
+    | Effect_label of Effect.Label.t
+        (** literal effect label - passed to [handler]/[perform] *)
+    | Construct_op_normal of t (** constructor for an operation *)
+    | Construct_op_tail of t (** constructor for a tail resumptive operation *)
+    | Match_op of
+        { subject : t
+        ; normal_branch : lambda
+        ; tail_branch : lambda
+        }
     | Construct_handler of
         { handled_effect : Effect.Label.t
         ; operation_clauses : t Variable.Map.t
         } (** constructor for a `Hnd`, passed to [handler] *)
-    | Effect_label of Effect.Label.t
-        (** literal effect label - passed to [handler]/[perform] *)
+    | Select_operation of Effect.Label.t * Variable.t * t
+        (** primitive to get an operation from a handler's runtime
+            representation **)
     (* TODO: note evidence vectors are not first class - can have more sensible
        primitives if desired *)
     | Nil_evidence_vector
@@ -43,8 +53,9 @@ module Expr : sig
         { label : t
         ; marker : t
         ; handler : t
-              (* ; old_evidence : t *)
-              (* seems to only be for tail resumptions *)
+        ; handler_site_vector : t
+              (** evidence vector at handler - used for evaluating tail
+                  resumptive operations in-place *)
         ; vector_tail : t
         }
     | Lookup_evidence of
@@ -53,9 +64,8 @@ module Expr : sig
         }
     | Get_evidence_marker of t (* evidence entry -> marker *)
     | Get_evidence_handler of t (* evidence entry -> handler *)
-    | Select_operation of Effect.Label.t * Variable.t * t
-        (** primitive to get an operation from a handler's runtime
-            representation **)
+    | Get_evidence_handler_site_vector of t
+    (* evidence entry -> evidence vector *)
     | Impure_built_in of impure_built_in
   [@@deriving sexp]
 

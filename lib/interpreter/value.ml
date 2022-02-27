@@ -13,6 +13,7 @@ module T = struct
     | Ctl of ctl
     | Effect_label of Effect_label.t
     | Marker of Marker.t
+    | Op of op
     | Hnd of hnd
     | Evidence of evidence
     | Evidence_vector of evidence_vector
@@ -40,9 +41,14 @@ module T = struct
 
   and closure = function_ * context
 
+  and op =
+    | Op_normal of closure
+    | Op_tail of closure
+  [@@deriving sexp]
+
   and hnd =
     { handled_effect : Effect_label.t
-    ; operation_clauses : closure Variable.Map.t
+    ; operation_clauses : op Variable.Map.t
           (* TODO: return_clause omitted for now *)
     }
   [@@deriving sexp]
@@ -50,6 +56,7 @@ module T = struct
   and evidence =
     { marker : Marker.t
     ; handler : hnd
+    ; handler_site_vector : evidence_vector
     }
   [@@deriving sexp]
 

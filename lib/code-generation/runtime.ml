@@ -10,6 +10,7 @@ type t =
   ; evidence_vector_lookup : Llvm.llvalue
   ; get_evidence_marker : Llvm.llvalue
   ; get_evidence_handler : Llvm.llvalue
+  ; get_evidence_handler_site_vector : Llvm.llvalue
   ; print_int : Llvm.llvalue
   ; read_int : Llvm.llvalue
   }
@@ -67,7 +68,12 @@ let declare =
     declare_function
       name
       opaque_pointer_type
-      [ label_type; marker_type; opaque_pointer_type; opaque_pointer_type ]
+      [ label_type
+      ; marker_type
+      ; opaque_pointer_type (* handler *)
+      ; opaque_pointer_type (* handler site vector *)
+      ; opaque_pointer_type (* vector tail *)
+      ]
   in
   let%bind evidence_vector_lookup =
     let name = Symbol_name.of_runtime_exn "kkr_evidence_vector_lookup" in
@@ -82,6 +88,12 @@ let declare =
   in
   let%bind get_evidence_handler =
     let name = Symbol_name.of_runtime_exn "kkr_get_evidence_handler" in
+    declare_function name opaque_pointer_type [ opaque_pointer_type ]
+  in
+  let%bind get_evidence_handler_site_vector =
+    let name =
+      Symbol_name.of_runtime_exn "kkr_get_evidence_handler_site_vector"
+    in
     declare_function name opaque_pointer_type [ opaque_pointer_type ]
   in
   let%bind print_int =
@@ -103,6 +115,7 @@ let declare =
   ; evidence_vector_lookup
   ; get_evidence_marker
   ; get_evidence_handler
+  ; get_evidence_handler_site_vector
   ; print_int
   ; read_int
   }

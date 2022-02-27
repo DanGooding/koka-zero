@@ -48,6 +48,8 @@ let const_tag i =
 
 let const_ctl_pure_tag = const_tag 0
 let const_ctl_yield_tag = const_tag 1
+let const_op_normal_tag = const_tag 0
+let const_op_tail_tag = const_tag 1
 
 let const_label i =
   let open Codegen.Let_syntax in

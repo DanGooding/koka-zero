@@ -32,6 +32,14 @@ let effect_label_of_value =
   (* disable "fragile match" warning *) [@@warning "-4"]
 ;;
 
+let op_of_value =
+  let open Interpreter.Let_syntax in
+  function
+  | Value.Op op -> return op
+  | v -> Interpreter.type_error ~expected:"op" Value.sexp_of_t v
+  (* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
 let hnd_of_value =
   let open Interpreter.Let_syntax in
   function
