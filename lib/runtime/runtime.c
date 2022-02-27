@@ -49,7 +49,7 @@ bool_t kkr_markers_equal(marker_t m1, marker_t m2) {
 typedef struct {
   opaque_ptr handler;
   marker_t marker;
-  struct vector_t handler_site_vector;
+  struct vector_t *handler_site_vector;
 
 } evidence_t;
 
@@ -118,7 +118,7 @@ opaque_ptr kkr_get_evidence_handler(opaque_ptr e) {
 
 opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr e) {
   evidence_t *evidence = (evidence_t *)e;
-  return (opaque_ptr *)(evidence->handler_site_vector);
+  return (opaque_ptr)(evidence->handler_site_vector);
 }
 
 void kkr_print_int(int_t i) {
