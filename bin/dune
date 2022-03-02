@@ -4,4 +4,6 @@
  (libraries koka-zero)
  (preprocess
   (pps ppx_jane))
+ (instrumentation
+  (backend landmarks))
  (modes byte exe))

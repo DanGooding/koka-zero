@@ -1,0 +1,18 @@
+(lang dune 3.0)
+
+(context default)
+
+(context
+ (default
+  (name profile)
+  (instrument_with landmarks)
+  (env
+   (_ (env-vars ("OCAML_LANDMARKS" "on,time"))))))
+
+(context
+ (default
+  (name test)
+  (env
+   (_ (env-vars ("OCAML_LANDMARKS" "off"))))))
+
+

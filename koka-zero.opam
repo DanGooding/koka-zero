@@ -9,7 +9,7 @@ authors: ["Dan Gooding"]
 license: "ISC"
 depends: [
   "ocaml" {>= "4.08.0"}
-  "dune" {>= "2.8"}
+  "dune" {>= "3.0"}
   "ppx_expect" {with-test}
   "odoc" {with-doc}
 ]

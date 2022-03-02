@@ -26,6 +26,14 @@ lock: ## Generate a lock file
 build: ## Build the project, including non installable libraries and executables
 	opam exec -- dune build --root .
 
+.PHONY: build-prof
+build-prof: ## Build the project with profiling landmarks enabled
+	opam exec -- dune build --instrument-with landmarks --root .
+
+.PHONY: start-prof
+start-prof: build-prof
+	opam exec -- dune exec --context profile --instrument-with landmarks --root . bin/main.exe -- $(ARGS)
+
 .PHONY: install
 install: all ## Install the packages on the system
 	opam exec -- dune install --root .
@@ -41,7 +49,7 @@ debug: ## Debug the main executable
 
 .PHONY: test
 test: ## Run the unit tests
-	opam exec -- dune runtest --root .
+	opam exec -- dune runtest --context test --root .
 
 .PHONY: promote
 promote: ## Accept corrections to expect tests
