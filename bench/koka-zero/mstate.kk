@@ -36,7 +36,7 @@ fun counter(c) {
 };
 
 fun main() {
-  val n = read-int(());
+  val n = 10100100;
   with state(n);
   counter(0).print-int();
 };
