@@ -3,6 +3,7 @@ open Import
 module Literal = Koka_zero_inference.Minimal_syntax.Literal
 module Operator = Koka_zero_inference.Minimal_syntax.Operator
 module Keyword = Koka_zero_inference.Minimal_syntax.Keyword
+module Parameter = Koka_zero_inference.Minimal_syntax.Parameter
 
 module Expr = struct
   module T = struct
@@ -28,17 +29,28 @@ module Expr = struct
           }
       | Fresh_marker
       | Markers_equal of t * t
+      | Effect_label of Effect.Label.t
+      | Construct_op_normal of t
+      | Construct_op_tail of t
+      | Match_op of
+          { subject : t
+          ; normal_branch : lambda
+          ; tail_branch : lambda
+          }
       | Construct_handler of
           { handled_effect : Effect.Label.t
           ; operation_clauses : t Variable.Map.t
-          ; return_clause : t option
           }
-      | Effect_label of Effect.Label.t
+      | Select_operation of Effect.Label.t * Variable.t * t
+      (* TODO: perhaps this should be a function? (otherwise it needs to be
+         wrapped at every usage) - TODO: or should this already be changed to an
+         index into a record? *)
       | Nil_evidence_vector
       | Cons_evidence_vector of
           { label : t
           ; marker : t
           ; handler : t
+          ; handler_site_vector : t
           ; vector_tail : t
           }
       | Lookup_evidence of
@@ -47,14 +59,11 @@ module Expr = struct
           }
       | Get_evidence_marker of t
       | Get_evidence_handler of t
-      | Select_operation of Effect.Label.t * Variable.t * t
-      (* TODO: perhaps this should be a function? (otherwise it needs to be
-         wrapped at every usage) - TODO: or should this already be changed to an
-         index into a record? *)
+      | Get_evidence_handler_site_vector of t
       | Impure_built_in of impure_built_in
     [@@deriving sexp]
 
-    and lambda = Variable.t list * t [@@deriving sexp]
+    and lambda = Parameter.t list * t [@@deriving sexp]
 
     and fix_lambda = Variable.t * lambda [@@deriving sexp]
 

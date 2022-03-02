@@ -44,15 +44,16 @@ let convert_unary_operator : Min.Operator.Unary.t -> Expl.Operator.Unary.t =
  fun op -> op
 ;;
 
-let lookup_effect_label_for_handler
+let lookup_effect_for_handler
     :  effect_env:Effect_signature.Context.t -> Min.Expr.handler
-    -> Effect.Label.t Inference.t
+    -> (Effect.Label.t * Operation_shape.t Variable.Map.t) Inference.t
   =
  fun ~effect_env handler ->
   let open Inference.Let_syntax in
   let signature = Effect_signature.t_of_handler handler in
   match Effect_signature.Context.find effect_env signature with
-  | Some lab_handled -> return lab_handled
+  | Some (lab_handled, operation_shapes) ->
+    return (lab_handled, operation_shapes)
   | None ->
     (* TODO: use actual to_string to give nice output *)
     let signature_str =
@@ -64,7 +65,27 @@ let lookup_effect_label_for_handler
     Inference.type_error message
 ;;
 
+let check_handler_shape
+    :  handler:Operation_shape.t -> declaration:Operation_shape.t
+    -> name:Variable.t -> unit Inference.t
+  =
+  let open Inference.Let_syntax in
+  fun ~handler ~declaration ~name ->
+    if Operation_shape.can_implement ~handler ~declaration
+    then return ()
+    else (
+      let message =
+        sprintf
+          "cannot handle operation `%s` declared as `%s` with `%s` clause"
+          (Variable.to_string_user name)
+          (Operation_shape.to_string declaration)
+          (Operation_shape.to_string handler)
+      in
+      Inference.type_error message)
+;;
+
 (* TODO: perhaps a reader monad for environment? *)
+
 (** attempt to add a binding to the environment, giving a type error if [var] is
     not shadowable *)
 let add_binding
@@ -220,14 +241,21 @@ and infer_lambda
     :  Min.Expr.lambda -> env:Context.t -> effect_env:Effect_signature.Context.t
     -> (Type.Mono.t * Expl.Expr.lambda) Inference.t
   =
- fun (xs, expr_body) ~env ~effect_env ->
+ fun (ps, expr_body) ~env ~effect_env ->
   let open Inference.Let_syntax in
-  let%bind (xs_to_ts : (Variable.t * Type.Mono.t) list) =
-    List.map xs ~f:(fun x ->
-        let%map t_x = Inference.fresh_metavariable in
-        let t_x = Type.Mono.Metavariable t_x in
-        x, t_x)
+  let%bind (ps_to_ts : (Min.Parameter.t * Type.Mono.t) list) =
+    List.map ps ~f:(fun p ->
+        let%map t_p = Inference.fresh_metavariable in
+        let t_p = Type.Mono.Metavariable t_p in
+        p, t_p)
     |> Inference.all
+  in
+  let t_ps = List.map ps_to_ts ~f:(fun (_p, t_p) -> t_p) in
+  let (xs_to_ts : (Variable.t * Type.Mono.t) list) =
+    List.filter_map ps_to_ts ~f:(fun (p, t) ->
+        match p with
+        | Min.Parameter.Wildcard -> None
+        | Min.Parameter.Variable x -> Some (x, t))
   in
   let%bind () =
     match Variable.Map.of_alist xs_to_ts with
@@ -246,9 +274,8 @@ and infer_lambda
   let%map t_body, eff_body, expr_body' =
     infer ~env:env' ~effect_env expr_body
   in
-  let t_xs = List.map xs_to_ts ~f:(fun (_x, t_x) -> t_x) in
-  let t = Type.Mono.Arrow (t_xs, eff_body, t_body) in
-  t, (xs, expr_body')
+  let t = Type.Mono.Arrow (t_ps, eff_body, t_body) in
+  t, (ps, expr_body')
 
 (** infer the type of a fix-wrapped lambda. Since these are values, they are
     inherently total *)
@@ -259,9 +286,14 @@ and infer_fix_lambda
   =
  fun (f, lambda) ~env ~effect_env ->
   let open Inference.Let_syntax in
-  let xs, _e_body = lambda in
+  let ps, _e_body = lambda in
   let%bind () =
-    if List.mem xs f ~equal:Variable.equal
+    let vs =
+      List.filter_map ps ~f:(function
+          | Min.Parameter.Variable v -> Some v
+          | Min.Parameter.Wildcard -> None)
+    in
+    if List.mem vs f ~equal:Variable.equal
     then (
       let message =
         sprintf
@@ -274,9 +306,9 @@ and infer_fix_lambda
   (* expect `e` (which can refer to itself as `f`) to have type: *)
   (* `t_f_args -> eff_f t_f_result | <>` *)
   let%bind (t_f_args : Type.Mono.t list) =
-    List.map xs ~f:(fun _x ->
-        let%map t_x = Inference.fresh_metavariable in
-        Type.Mono.Metavariable t_x)
+    List.map ps ~f:(fun _p ->
+        let%map t_p = Inference.fresh_metavariable in
+        Type.Mono.Metavariable t_p)
     |> Inference.all
   in
   let%bind eff_f = Inference.fresh_effect_metavariable in
@@ -319,7 +351,9 @@ and infer_handler
  fun handler ~env ~effect_env ->
   let open Inference.Let_syntax in
   let { Min.Expr.operations; return_clause } = handler in
-  let%bind lab_handled = lookup_effect_label_for_handler ~effect_env handler in
+  let%bind lab_handled, operation_shapes =
+    lookup_effect_for_handler ~effect_env handler
+  in
   let%bind t_subject_meta = Inference.fresh_metavariable in
   let t_subject = Type.Mono.Metavariable t_subject_meta in
   let%bind eff_rest_meta = Inference.fresh_effect_metavariable in
@@ -346,16 +380,31 @@ and infer_handler
       Some return_clause'
   in
   (* check each op body has the right type *)
-  let%map (operations' : Expl.Expr.op_handler Variable.Map.t) =
-    Map.mapi operations ~f:(fun ~key:name ~data:op_handler ->
-        infer_operation
-          ~lab_handled
-          ~eff_rest
-          ~env
-          ~effect_env
-          ~t_handler_result
-          ~name
-          op_handler)
+  let%map (operations'
+            : (Operation_shape.t * Expl.Expr.op_handler) Variable.Map.t)
+    =
+    Map.mapi
+      operations
+      ~f:(fun ~key:name ~data:(handler_shape, op_handler) : _ ->
+        let declared_shape = Map.find_exn operation_shapes name in
+        let%bind () =
+          check_handler_shape
+            ~handler:handler_shape
+            ~declaration:declared_shape
+            ~name
+        in
+        let%map op_handler' =
+          infer_operation
+            ~lab_handled
+            ~eff_rest
+            ~env
+            ~effect_env
+            ~t_handler_result
+            ~name
+            ~shape:handler_shape
+            op_handler
+        in
+        handler_shape, op_handler')
     |> Inference.all_map
   in
   (* <lab_handled|eff_rest> *)
@@ -381,10 +430,17 @@ and infer_handler
 and infer_operation
     :  lab_handled:Effect.Label.t -> eff_rest:Effect.t -> env:Context.t
     -> effect_env:Effect_signature.Context.t -> t_handler_result:Type.Mono.t
-    -> name:Variable.t -> Min.Expr.op_handler
+    -> name:Variable.t -> shape:Operation_shape.t -> Min.Expr.op_handler
     -> Expl.Expr.op_handler Inference.t
   =
- fun ~lab_handled ~eff_rest ~env ~effect_env ~t_handler_result ~name op_handler ->
+ fun ~lab_handled
+     ~eff_rest
+     ~env
+     ~effect_env
+     ~t_handler_result
+     ~name
+     ~shape
+     op_handler ->
   (* TODO: rather than unifying to check the type here, use a different context
      containing the declarations *)
   (* TODO: using inference here is not ideal - since failure is not a type
@@ -404,23 +460,33 @@ and infer_operation
     Type.Mono.Arrow ([ t_argument ], eff_lab_handled, t_answer)
   in
   let%bind () = Inference.unify t_op t_op_expected in
-  let t_resume =
-    Type.Mono (Type.Mono.Arrow ([ t_answer ], eff_rest, t_handler_result))
-  in
-  let env_with_resume =
-    (* TODO: need to prevent escape of non first-class resume *)
-    match Context.extend env ~var:Min.Keyword.resume ~type_:t_resume with
-    | `Ok env_with_resume -> env_with_resume
-    | `Cannot_shadow ->
-      raise_s [%message "`resume` must be shadowable - can nest handlers"]
-  in
-  infer_operation_clause
-    ~eff_rest
-    ~env:env_with_resume
-    ~effect_env
-    ~t_handler_result
-    ~t_argument
-    op_handler
+  match shape with
+  | Operation_shape.Fun ->
+    infer_operation_clause
+      ~eff_rest
+      ~env
+      ~effect_env
+      ~t_handler_result:t_answer
+      ~t_argument
+      op_handler
+  | Operation_shape.Control ->
+    let t_resume =
+      Type.Mono (Type.Mono.Arrow ([ t_answer ], eff_rest, t_handler_result))
+    in
+    let env_with_resume =
+      (* TODO: need to prevent escape of non first-class resume *)
+      match Context.extend env ~var:Min.Keyword.resume ~type_:t_resume with
+      | `Ok env_with_resume -> env_with_resume
+      | `Cannot_shadow ->
+        raise_s [%message "`resume` must be shadowable - can nest handlers"]
+    in
+    infer_operation_clause
+      ~eff_rest
+      ~env:env_with_resume
+      ~effect_env
+      ~t_handler_result
+      ~t_argument
+      op_handler
 
 (** Infer and check an operartion clause's body's type
 
@@ -437,7 +503,10 @@ and infer_operation_clause
   let open Inference.Let_syntax in
   let { Min.Expr.op_argument; op_body } = op_handler in
   let%bind env' =
-    add_binding ~env ~var:op_argument ~type_:(Type.Mono t_argument)
+    match op_argument with
+    | Min.Parameter.Variable var ->
+      add_binding ~env ~var ~type_:(Type.Mono t_argument)
+    | Min.Parameter.Wildcard -> return env
   in
   let%bind t_result, eff_result, op_body' =
     infer ~env:env' ~effect_env op_body
@@ -458,7 +527,7 @@ let bind_operations
   let open Inference.Let_syntax in
   let { Min.Decl.Effect.name = label; operations } = declaration in
   Inference.map_fold operations ~init:env ~f:(fun ~key:op_name ~data:op env ->
-      let { Min.Decl.Effect.Operation.argument; answer } = op in
+      let { Min.Decl.Effect.Operation.shape = _; argument; answer } = op in
       (* `forall eff_rest. argument -> <label|eff_rest> answer` *)
       let%bind eff_rest = Inference.fresh_effect_variable in
       let tail = Effect.Row.Tail.Variable eff_rest in

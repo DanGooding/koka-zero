@@ -35,6 +35,7 @@ opaque_ptr kkr_cons_evidence_vector(
   label_t label,
   marker_t marker,
   opaque_ptr handler,
+  opaque_ptr handler_site_vector,
   opaque_ptr vector_tail);
 
 // lookup the evidence entry for a given label in an evidence vector
@@ -45,6 +46,8 @@ opaque_ptr kkr_evidence_vector_lookup(opaque_ptr vector, label_t label);
 marker_t kkr_get_evidence_marker(opaque_ptr);
 // access the [handler] field of an evidence entry
 opaque_ptr kkr_get_evidence_handler(opaque_ptr);
+// access the [handler_site_vector] field of an evidence entry
+opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr);
 
 // write the given integer (plus a newline) to stdout
 void kkr_print_int(int_t);

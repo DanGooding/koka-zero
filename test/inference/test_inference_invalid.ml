@@ -2,12 +2,12 @@ open Koka_zero_inference
 module M = Minimal_syntax
 module E = M.Expr
 module UE = Util.Expr
+module UP = Util.Parameter
 
 let%expect_test "occurs check rejects omega combinator" =
   let expr =
     E.Value
-      (E.Lambda
-         ([ Variable.of_user "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
+      (E.Lambda ([ UP.var "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -42,8 +42,7 @@ let%expect_test "fix lambdas name cannot collide with own parameters" =
   let expr =
     E.Value
       (E.Fix_lambda
-         ( Variable.of_user "f"
-         , ([ Variable.of_user "g"; Variable.of_user "f" ], UE.lit_unit) ))
+         (Variable.of_user "f", ([ UP.var "g"; UP.var "f" ], UE.lit_unit)))
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -72,14 +71,16 @@ let%expect_test "cannot shadow functions at toplevel" =
 let%expect_test "handler must include all operations" =
   let declarations = [ M.Decl.Effect Util.Expr.decl_state ] in
   let state_handler_set_only =
-    (* handler { set(x) { () } } *)
+    (* handler { fun set(x) { () } } *)
     let set_clause =
-      let op_argument = Variable.of_user "x" in
+      let op_argument = UP.var "x" in
       let op_body = UE.lit_unit in
       { E.op_argument; op_body }
     in
     let operations =
-      Variable.Map.singleton (Variable.of_user "set") set_clause
+      Variable.Map.singleton
+        (Variable.of_user "set")
+        (Operation_shape.Fun, set_clause)
     in
     { E.operations; return_clause = None }
   in
@@ -90,4 +91,46 @@ let%expect_test "handler must include all operations" =
     (Error
      ((kind Type_error)
       (message "handler does not match any effect: ((User set))") (location ()))) |}]
+;;
+
+let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
+  =
+  let declarations = [ M.Decl.Effect Util.Expr.decl_read ] in
+  let read_handler =
+    Util.Expr.singleton_handler
+      ~op_name:(Variable.of_user "ask")
+      ~op_argument:M.Parameter.Wildcard
+      ~op_body:
+        (E.Application
+           ( E.Value (E.Variable M.Keyword.resume)
+           , [ E.Value (E.Literal (M.Literal.Int 3)) ] ))
+      ~shape:Operation_shape.Control
+  in
+  let body = E.Value (E.Handler read_handler) in
+  Util.print_expr_inference_result ~declarations body;
+  [%expect {|
+    (Error
+     ((kind Type_error)
+      (message
+       "cannot handle operation `ask` declared as `fun` with `control` clause")
+      (location ()))) |}]
+;;
+
+let%expect_test "`fun` clause cannot use `resume`" =
+  let declarations = [ M.Decl.Effect Util.Expr.decl_read ] in
+  let read_handler =
+    Util.Expr.singleton_handler
+      ~op_name:(Variable.of_user "ask")
+      ~op_argument:M.Parameter.Wildcard
+      ~op_body:
+        (E.Application
+           ( E.Value (E.Variable M.Keyword.resume)
+           , [ E.Value (E.Literal (M.Literal.Int 3)) ] ))
+      ~shape:Operation_shape.Fun
+  in
+  let body = E.Value (E.Handler read_handler) in
+  Util.print_expr_inference_result ~declarations body;
+  [%expect {|
+    (Error
+     ((kind Type_error) (message "unbound variable: resume") (location ()))) |}]
 ;;

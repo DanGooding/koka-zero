@@ -1,6 +1,7 @@
 module Literal = Minimal_syntax.Literal
 module Operator = Minimal_syntax.Operator
 module Keyword = Minimal_syntax.Keyword
+module Parameter = Minimal_syntax.Parameter
 
 module Expr : sig
   type t =
@@ -27,7 +28,7 @@ module Expr : sig
   [@@deriving sexp]
 
   (** monomorphic binding *)
-  and lambda = Variable.t list * t [@@deriving sexp]
+  and lambda = Parameter.t list * t [@@deriving sexp]
 
   (** lambda which knows its own name *)
   and fix_lambda = Variable.t * lambda [@@deriving sexp]
@@ -42,14 +43,14 @@ module Expr : sig
   (** an effect handler *)
   and handler =
     { handled_effect : Effect.Label.t
-    ; operations : op_handler Variable.Map.t
+    ; operations : (Operation_shape.t * op_handler) Variable.Map.t
     ; return_clause : op_handler option
     }
   [@@deriving sexp]
 
   (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
-    { op_argument : Variable.t
+    { op_argument : Parameter.t
     ; op_body : t
     }
   [@@deriving sexp]

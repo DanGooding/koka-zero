@@ -1,11 +1,11 @@
 
 effect read {
-  control ask(x : ()) : int;
+  control ask(_ : ()) : int;
 };
 
 fun const(x, action) {
   with handler {
-    control ask(unit) {
+    control ask(_) {
       resume(x)
     };
   };
@@ -14,7 +14,7 @@ fun const(x, action) {
 
 fun increment(action) {
   with handler {
-    control ask(unit) {
+    control ask(_) {
       resume(ask(()) + 1)
     };
   };

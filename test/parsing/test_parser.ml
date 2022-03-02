@@ -16,7 +16,7 @@ let%expect_test "toplevel value declaration" =
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "toplevel val binding") (location ()))) |}]
+     ((kind Unsupported_feature) (message "toplevel val binding") (location ()))) |}]
 ;;
 
 let%expect_test "single expression function" =
@@ -87,14 +87,14 @@ fun main() {
            (Application
             (Value
              (Lambda
-              (((User x))
+              (((Variable (User x)))
                (Seq
                 (Application (Value (Variable (User print)))
                  ((Value (Variable (User x)))))
                 (Application
                  (Value
                   (Lambda
-                   (((User y))
+                   (((Variable (User y)))
                     (Operator (Value (Variable (User y))) (Int Times)
                      (Value (Literal (Int 2)))))))
                  ((Application (Value (Variable (User foo)))
@@ -146,14 +146,15 @@ fun wrapper() {
            (Application
             (Value
              (Lambda
-              (((User kebab-case))
+              (((Variable (User kebab-case)))
                (Application
                 (Value
                  (Lambda
-                  (((User x-y-z))
+                  (((Variable (User x-y-z)))
                    (Application
                     (Value
-                     (Lambda (((User number3-letter)) (Value (Literal Unit)))))
+                     (Lambda
+                      (((Variable (User number3-letter))) (Value (Literal Unit)))))
                     ((Value (Literal (Int 2))))))))
                 ((Value (Literal (Int 1))))))))
             ((Value (Literal (Int 0)))))))))))) |}]
@@ -228,13 +229,47 @@ fun wrapper() {
            (Application
             (Value
              (Lambda
-              (((User f'))
+              (((Variable (User f')))
                (Application
-                (Value (Lambda (((User f'')) (Value (Literal Unit)))))
+                (Value (Lambda (((Variable (User f''))) (Value (Literal Unit)))))
                 ((Application (Value (Variable (User diff)))
                   ((Value (Variable (User f'))))))))))
             ((Application (Value (Variable (User diff)))
               ((Value (Variable (User f)))))))))))))) |}]
+;;
+
+let%expect_test "wildcard parameter" =
+  let code = {|
+fun foo(_a, b, _c, _, e, _f) { () };
+|} in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Top_fun
+         ((id (Var foo))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern Pattern_wildcard) (type_ ()))
+              ((pattern (Pattern_id (Var b))) (type_ ()))
+              ((pattern Pattern_wildcard) (type_ ()))
+              ((pattern Pattern_wildcard) (type_ ()))
+              ((pattern (Pattern_id (Var e))) (type_ ()))
+              ((pattern Pattern_wildcard) (type_ ()))))
+            (result_type ()) (body ((statements ()) (last (Literal Unit)))))))))))) |}];
+  Util.print_simplification_result syntax;
+  [%expect
+    {|
+    (Ok
+     ((declarations
+       ((Fun
+         ((User foo)
+          ((Wildcard (Variable (User b)) Wildcard Wildcard (Variable (User e))
+            Wildcard)
+           (Value (Literal Unit))))))))) |}]
 ;;
 
 let%expect_test "operators" =
@@ -332,13 +367,14 @@ fun main() {
      ((declarations
        ((Fun
          ((User hypotenuse)
-          (((User a) (User b))
+          (((Variable (User a)) (Variable (User b)))
            (Application
             (Value
              (Lambda
-              (((User c-squared))
+              (((Variable (User c-squared)))
                (Application
-                (Value (Lambda (((User c)) (Value (Variable (User c))))))
+                (Value
+                 (Lambda (((Variable (User c))) (Value (Variable (User c))))))
                 ((Application (Value (Variable (User isqrt)))
                   ((Value (Variable (User c-squared))))))))))
             ((Operator
@@ -353,9 +389,10 @@ fun main() {
            (Application
             (Value
              (Lambda
-              (((User all))
+              (((Variable (User all)))
                (Application
-                (Value (Lambda (((User inside)) (Value (Literal Unit)))))
+                (Value
+                 (Lambda (((Variable (User inside))) (Value (Literal Unit)))))
                 ((Operator
                   (Operator
                    (Operator (Value (Literal (Int 0))) (Int Less_equal)
@@ -602,7 +639,7 @@ fun i() {
              (Application
               (Value
                (Lambda
-                (((User x))
+                (((Variable (User x)))
                  (Application (Value (Variable (User print)))
                   ((Operator (Value (Variable (User x))) (Int Modulo)
                     (Value (Literal (Int 7)))))))))
@@ -726,7 +763,7 @@ fun trailing-lambda() {
              ((Value (Literal (Int 1))) (Value (Literal (Int 10)))
               (Value
                (Lambda
-                (((User i))
+                (((Variable (User i)))
                  (Application (Value (Variable (User println)))
                   ((Operator (Value (Variable (User i))) (Int Times)
                     (Value (Variable (User i)))))))))))
@@ -735,7 +772,8 @@ fun trailing-lambda() {
               ((Value (Variable (User x))) (Value (Variable (User y)))
                (Value (Variable (User z)))
                (Value (Lambda (() (Value (Variable (User alpha))))))
-               (Value (Lambda (((User b)) (Value (Variable (User beta))))))
+               (Value
+                (Lambda (((Variable (User b))) (Value (Variable (User beta))))))
                (Value (Lambda (() (Value (Variable (User gamma))))))))
              (Application (Value (Variable (User h)))
               ((Application (Value (Variable (User g)))
@@ -825,11 +863,12 @@ fun one(aa, bb, cc, dd) {
      ((declarations
        ((Fun
          ((User one)
-          (((User aa) (User bb) (User cc) (User dd))
+          (((Variable (User aa)) (Variable (User bb)) (Variable (User cc))
+            (Variable (User dd)))
            (Application
             (Value
              (Lambda
-              (((User z))
+              (((Variable (User z)))
                (Application (Value (Variable (User aa)))
                 ((Value
                   (Lambda
@@ -850,7 +889,7 @@ fun one(aa, bb, cc, dd) {
                                 ((Value (Literal (Int 5)))
                                  (Value
                                   (Lambda
-                                   (((User x))
+                                   (((Variable (User x)))
                                     (Application
                                      (Value (Variable (User println)))
                                      ((Value (Variable (User x)))))))))))))))))))))))))))))
@@ -923,7 +962,7 @@ fun not-commented-out() { True; };
            (Application
             (Value
              (Lambda
-              (((User x))
+              (((Variable (User x)))
                (Operator (Value (Variable (User x))) (Int Times)
                 (Value (Variable (User x)))))))
             ((Operator
@@ -986,8 +1025,9 @@ fun main() {
            (Application
             (Value
              (Lambda
-              (((User x))
-               (Application (Value (Lambda (((User y)) (Value (Literal Unit)))))
+              (((Variable (User x)))
+               (Application
+                (Value (Lambda (((Variable (User y))) (Value (Literal Unit)))))
                 ((Operator (Value (Variable (User x))) (Int Times)
                   (Value (Literal (Int 5)))))))))
             ((Value (Literal (Int 1)))))))))))) |}]
@@ -1095,13 +1135,15 @@ fun trailing-lambdas() {
           (()
            (Value
             (Lambda
-             (((User a))
+             (((Variable (User a)))
               (Application (Value (Variable (User a)))
                ((Value
                  (Lambda
-                  (((User b))
+                  (((Variable (User b)))
                    (Application (Value (Variable (User b)))
-                    ((Value (Lambda (((User c)) (Value (Variable (User c))))))))))))))))))))))) |}]
+                    ((Value
+                      (Lambda
+                       (((Variable (User c))) (Value (Variable (User c))))))))))))))))))))))) |}]
 ;;
 
 let%expect_test "application after trailing lambda" =
@@ -1149,7 +1191,8 @@ fun app-after-trailing-lambda() {
             ((Application
               (Application (Value (Variable (User foo)))
                ((Value (Variable (User xs)))
-                (Value (Lambda (((User x)) (Value (Variable (User x))))))))
+                (Value
+                 (Lambda (((Variable (User x))) (Value (Variable (User x))))))))
               ((Value (Variable (User y))) (Value (Variable (User z)))))))))))))) |}]
 ;;
 
@@ -1158,9 +1201,9 @@ let%expect_test "effect declaration" =
     {|
 effect my-effect {
   control choose-upto(n : int) : int;
-  control depth(dummy : ()) : int;
-  control get(dummy : ()) : int;
-  control set(x : int) : bool;
+  fun depth(dummy : ()) : int;
+  fun get(dummy : ()) : int;
+  fun set(x : int) : bool;
   control raise(x : int) : ();
 };
 |}
@@ -1182,19 +1225,19 @@ effect my-effect {
                (Type_atom (constructor Type_int) (arguments ())))))
             ((id depth) (type_parameters ())
              (shape
-              (Shape_control
+              (Shape_fun
                (((id (Parameter_id (Var dummy)))
                  (type_ (Parameters_or_tuple ()))))
                (Type_atom (constructor Type_int) (arguments ())))))
             ((id get) (type_parameters ())
              (shape
-              (Shape_control
+              (Shape_fun
                (((id (Parameter_id (Var dummy)))
                  (type_ (Parameters_or_tuple ()))))
                (Type_atom (constructor Type_int) (arguments ())))))
             ((id set) (type_parameters ())
              (shape
-              (Shape_control
+              (Shape_fun
                (((id (Parameter_id (Var x)))
                  (type_ (Type_atom (constructor Type_int) (arguments ())))))
                (Type_atom (constructor Type_bool) (arguments ())))))
@@ -1213,11 +1256,17 @@ effect my-effect {
          ((name my-effect)
           (operations
            (((User choose-upto)
-             ((argument (Primitive Int)) (answer (Primitive Int))))
-            ((User depth) ((argument (Primitive Unit)) (answer (Primitive Int))))
-            ((User get) ((argument (Primitive Unit)) (answer (Primitive Int))))
-            ((User raise) ((argument (Primitive Int)) (answer (Primitive Unit))))
-            ((User set) ((argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
+             ((shape Control) (argument (Primitive Int))
+              (answer (Primitive Int))))
+            ((User depth)
+             ((shape Fun) (argument (Primitive Unit)) (answer (Primitive Int))))
+            ((User get)
+             ((shape Fun) (argument (Primitive Unit)) (answer (Primitive Int))))
+            ((User raise)
+             ((shape Control) (argument (Primitive Int))
+              (answer (Primitive Unit))))
+            ((User set)
+             ((shape Fun) (argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
 ;;
 
 let%expect_test "multi shaped effect declaration" =
@@ -1272,7 +1321,7 @@ effect my-effect {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "non `control` effect") (location ()))) |}]
+     ((kind Unsupported_feature) (message "non `control` effect") (location ()))) |}]
 ;;
 
 let%expect_test "parameterised effect declaration" =
@@ -1332,7 +1381,7 @@ effect my-effect<a :: V> {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "type parameters for effect")
+     ((kind Unsupported_feature) (message "type parameters for effect")
       (location ()))) |}]
 ;;
 
@@ -1363,7 +1412,9 @@ effect control yield(x : int) : bool;
        ((Effect
          ((name yield)
           (operations
-           (((User yield) ((argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
+           (((User yield)
+             ((shape Control) (argument (Primitive Int))
+              (answer (Primitive Bool)))))))))))) |}]
 ;;
 
 let%expect_test "handler" =
@@ -1501,7 +1552,7 @@ fun one-operation() {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "`execption` effect") (location ()))) |}]
+     ((kind Unsupported_feature) (message "`execption` effect") (location ()))) |}]
 ;;
 
 let%expect_test "handle" =
@@ -1548,19 +1599,19 @@ fun handle-example(action) {
      ((declarations
        ((Fun
          ((User handle-example)
-          (((User action))
+          (((Variable (User action)))
            (Application
             (Value
              (Handler
               ((operations
                 (((User scramble)
-                  ((op_argument (User x))
-                   (op_body
-                    (Application (Value (Variable (User resume)))
-                     ((Operator
-                       (Operator (Value (Variable (User x))) (Int Times)
-                        (Value (Variable (User x))))
-                       (Int Plus) (Value (Variable (User x)))))))))))
+                  (Fun
+                   ((op_argument (Variable (User x)))
+                    (op_body
+                     (Operator
+                      (Operator (Value (Variable (User x))) (Int Times)
+                       (Value (Variable (User x))))
+                      (Int Plus) (Value (Variable (User x))))))))))
                (return_clause ()))))
             ((Value (Variable (User action)))))))))))) |}]
 ;;
@@ -1613,7 +1664,8 @@ fun square(x : int) : <> int {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "return type annotation") (location ()))) |}]
+     ((kind Unsupported_feature) (message "return type annotation")
+      (location ()))) |}]
 ;;
 
 let%expect_test "effect annotations" =
@@ -1729,7 +1781,8 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "return type annotation") (location ()))) |}]
+     ((kind Unsupported_feature) (message "return type annotation")
+      (location ()))) |}]
 ;;
 
 let%expect_test "apparently unnecessary brackets in arrow types" =
@@ -1837,6 +1890,6 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
   [%expect
     {|
     (Error
-     ((kind Unsupported_syntax) (message "type parameters for effect")
+     ((kind Unsupported_feature) (message "type parameters for effect")
       (location ()))) |}]
 ;;

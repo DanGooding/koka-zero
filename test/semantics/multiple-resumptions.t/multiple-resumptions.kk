@@ -3,11 +3,11 @@ fun int-of-bool(b) {
   if b then 1 else 0;
 };
 
-effect control flip(x : ()) : bool;
+effect control flip(_ : ()) : bool;
 
 fun flip-either(action) {
   with handler {
-    control flip(x) {
+    control flip(_) {
       resume(False) || resume(True);
     };
   };

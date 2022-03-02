@@ -11,6 +11,7 @@ type t =
   | Ctl of ctl
   | Effect_label of Effect_label.t
   | Marker of Marker.t
+  | Op of op
   | Hnd of hnd
   | Evidence of evidence
   | Evidence_vector of evidence_vector
@@ -41,10 +42,16 @@ and function_ =
 (** function and captured environment *)
 and closure = function_ * context
 
+(** operation clause *)
+and op =
+  | Op_normal of closure
+  | Op_tail of closure
+[@@deriving sexp]
+
 (** handler (not the function, just the clauses) *)
 and hnd =
   { handled_effect : Effect_label.t
-  ; operation_clauses : closure Variable.Map.t
+  ; operation_clauses : op Variable.Map.t
   }
 [@@deriving sexp]
 
@@ -52,6 +59,7 @@ and hnd =
 and evidence =
   { marker : Marker.t
   ; handler : hnd
+  ; handler_site_vector : evidence_vector
   }
 [@@deriving sexp]
 

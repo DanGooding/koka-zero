@@ -92,13 +92,8 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
       | Value.Fix_lambda (f_name, lambda) ->
         lambda, Map.set f_env ~key:f_name ~data:(Value.Closure closure)
     in
-    let xs, e_body = lambda in
-    let%bind xs_to_args = Typecast.zip_arguments ~params:xs ~args:v_args in
-    let f_body_env =
-      List.fold xs_to_args ~init:f_env ~f:(fun f_body_env (x, v) ->
-          Map.set f_body_env ~key:x ~data:v)
-    in
-    eval_expr e_body ~env:f_body_env
+    let params, e_body = lambda in
+    eval_call ~f_env ~params ~e_body ~v_args
   | Expr.Literal lit -> eval_literal lit |> Value.Primitive |> return
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind v_cond = eval_expr e_cond ~env in
@@ -134,12 +129,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         yield_branch, [ Value.Marker marker; op_clause; resumption ]
     in
     let params, e_body = branch in
-    let%bind bindings = Typecast.zip_arguments ~params ~args in
-    let env' =
-      List.fold bindings ~init:env ~f:(fun env (x, v) ->
-          Map.set env ~key:x ~data:v)
-    in
-    eval_expr e_body ~env:env'
+    eval_call ~f_env:env ~params ~e_body ~v_args:args
   | Expr.Fresh_marker ->
     let%map m = Interpreter.fresh_marker in
     Value.Marker m
@@ -151,33 +141,48 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     (* note this isn't polymorphic equals, but [Int.( = )] as markers are
        transparently [int]s *)
     m1 = m2 |> Value.Bool |> Value.Primitive
-  | Expr.Construct_handler { handled_effect; operation_clauses; return_clause }
-    ->
-    let%bind () =
-      match return_clause with
-      | None -> return ()
-      | Some _return_clause ->
-        Interpreter.unsupported_feature_error "return clause in handler"
+  | Expr.Construct_op_normal e ->
+    let%bind clause = eval_expr e ~env in
+    let%map clause = Typecast.closure_of_value clause in
+    Value.Op_normal clause |> Value.Op
+  | Expr.Construct_op_tail e ->
+    let%bind clause = eval_expr e ~env in
+    let%map clause = Typecast.closure_of_value clause in
+    Value.Op_tail clause |> Value.Op
+  | Expr.Match_op { subject; normal_branch; tail_branch } ->
+    let%bind subject = eval_expr subject ~env in
+    let%bind branch, args =
+      match%map Typecast.op_of_value subject with
+      | Value.Op_normal clause -> normal_branch, [ Value.Closure clause ]
+      | Value.Op_tail clause -> tail_branch, [ Value.Closure clause ]
     in
+    let params, e_body = branch in
+    eval_call ~f_env:env ~params ~e_body ~v_args:args
+  | Expr.Construct_handler { handled_effect; operation_clauses } ->
     let%map operation_clauses =
       Map.map operation_clauses ~f:(fun op_clause ->
           let%bind v_op_clause = eval_expr op_clause ~env in
-          Typecast.closure_of_value v_op_clause)
+          Typecast.op_of_value v_op_clause)
       |> Interpreter.all_map
     in
     Value.Hnd { Value.handled_effect; operation_clauses }
   | Expr.Effect_label label -> Value.Effect_label label |> return
   | Expr.Nil_evidence_vector -> Value.Evidence_vector Value.Evv_nil |> return
-  | Expr.Cons_evidence_vector { label; marker; handler; vector_tail } ->
+  | Expr.Cons_evidence_vector
+      { label; marker; handler; handler_site_vector; vector_tail } ->
     let%bind label = eval_expr label ~env in
     let%bind marker = eval_expr marker ~env in
     let%bind handler = eval_expr handler ~env in
+    let%bind handler_site_vector = eval_expr handler_site_vector ~env in
     let%bind vector_tail = eval_expr vector_tail ~env in
     let%bind label = Typecast.effect_label_of_value label in
     let%bind marker = Typecast.marker_of_value marker in
     let%bind handler = Typecast.hnd_of_value handler in
+    let%bind handler_site_vector =
+      Typecast.evidence_vector_of_value handler_site_vector
+    in
     let%map vector_tail = Typecast.evidence_vector_of_value vector_tail in
-    let evidence = { Value.marker; handler } in
+    let evidence = { Value.marker; handler; handler_site_vector } in
     Value.Evv_cons { label; evidence; tail = vector_tail }
     |> Value.Evidence_vector
   | Expr.Lookup_evidence { label; vector } ->
@@ -202,6 +207,10 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     let%bind v = eval_expr e ~env in
     let%map { Value.handler; _ } = Typecast.evidence_of_value v in
     Value.Hnd handler
+  | Expr.Get_evidence_handler_site_vector e ->
+    let%bind v = eval_expr e ~env in
+    let%map { Value.handler_site_vector; _ } = Typecast.evidence_of_value v in
+    Value.Evidence_vector handler_site_vector
   | Expr.Select_operation (label, op_name, e_handler) ->
     let%bind v_handler = eval_expr e_handler ~env in
     let%bind { Value.handled_effect; operation_clauses } =
@@ -219,7 +228,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         in
         Interpreter.impossible_error message)
     in
-    let%map (op_clause : Value.closure) =
+    let%map (op_clause : Value.op) =
       match Map.find operation_clauses op_name with
       | Some op_clause -> return op_clause
       | None ->
@@ -230,7 +239,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         in
         Interpreter.impossible_error message
     in
-    op_clause |> Value.Closure
+    op_clause |> Value.Op
   | Expr.Impure_built_in impure -> eval_impure_built_in impure ~env
 
 and eval_lambda
@@ -248,6 +257,21 @@ and eval_fix_lambda
  fun fix_lambda ~env ->
   let open Interpreter.Let_syntax in
   (Value.Fix_lambda fix_lambda, env) |> return
+
+and eval_call
+    :  f_env:Value.context -> params:Parameter.t list -> e_body:Expr.t
+    -> v_args:Value.t list -> Value.t Interpreter.t
+  =
+ fun ~f_env ~params ~e_body ~v_args ->
+  let open Interpreter.Let_syntax in
+  let%bind params_to_args = Typecast.zip_arguments ~params ~args:v_args in
+  let f_body_env =
+    List.fold params_to_args ~init:f_env ~f:(fun f_body_env (p, v) ->
+        match p with
+        | Parameter.Variable x -> Map.set f_body_env ~key:x ~data:v
+        | Parameter.Wildcard -> f_body_env)
+  in
+  eval_expr e_body ~env:f_body_env
 
 and eval_impure_built_in
     : Expr.impure_built_in -> env:Value.context -> Value.t Interpreter.t

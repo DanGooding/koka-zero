@@ -31,6 +31,11 @@ let print_expr_inference_result ?(declarations = []) expr =
   |> print_endline
 ;;
 
+module Parameter = struct
+  let var x = M.Parameter.Variable (Variable.of_user x)
+  let wildcard = M.Parameter.Wildcard
+end
+
 module Expr = struct
   let var x = E.Value (E.Variable (Variable.of_user x))
   let lit_unit = E.Value (E.Literal M.Literal.Unit)
@@ -50,9 +55,10 @@ module Expr = struct
   let decl_read =
     let name = Effect.Label.of_string "read" in
     let op_ask =
+      let shape = Operation_shape.Fun in
       let argument = Type.Mono.Primitive Type.Primitive.Unit in
       let answer = Type.Mono.Primitive Type.Primitive.Int in
-      { M.Decl.Effect.Operation.argument; answer }
+      { M.Decl.Effect.Operation.shape; argument; answer }
     in
     let operations = Variable.Map.singleton (Variable.of_user "ask") op_ask in
     { M.Decl.Effect.name; operations }
@@ -61,10 +67,11 @@ module Expr = struct
   let decl_exn : M.Decl.Effect.t =
     let name = Effect.Label.of_string "exn" in
     let op_ask =
+      let shape = Operation_shape.Control in
       let argument = Type.Mono.Primitive Type.Primitive.Unit in
       (* TODO: this should be forall a. a, once polymorphic effects are added *)
       let answer = Type.Mono.Primitive Type.Primitive.Unit in
-      { M.Decl.Effect.Operation.argument; answer }
+      { M.Decl.Effect.Operation.shape; argument; answer }
     in
     let operations = Variable.Map.singleton (Variable.of_user "throw") op_ask in
     { M.Decl.Effect.name; operations }
@@ -73,10 +80,11 @@ module Expr = struct
   let decl_query : M.Decl.Effect.t =
     let name = Effect.Label.of_string "query" in
     let op_ask =
+      let shape = Operation_shape.Fun in
       let argument = Type.Mono.Primitive Type.Primitive.Int in
       (* TODO: this should be forall a. a, once polymorphic effects are added *)
       let answer = Type.Mono.Primitive Type.Primitive.Bool in
-      { M.Decl.Effect.Operation.argument; answer }
+      { M.Decl.Effect.Operation.shape; argument; answer }
     in
     let operations = Variable.Map.singleton (Variable.of_user "test") op_ask in
     { M.Decl.Effect.name; operations }
@@ -85,14 +93,16 @@ module Expr = struct
   let decl_state =
     let name = Effect.Label.of_string "state" in
     let op_get =
+      let shape = Operation_shape.Fun in
       let argument = Type.Mono.Primitive Type.Primitive.Unit in
       let answer = Type.Mono.Primitive Type.Primitive.Int in
-      { M.Decl.Effect.Operation.argument; answer }
+      { M.Decl.Effect.Operation.shape; argument; answer }
     in
     let op_set =
+      let shape = Operation_shape.Fun in
       let argument = Type.Mono.Primitive Type.Primitive.Int in
       let answer = Type.Mono.Primitive Type.Primitive.Unit in
-      { M.Decl.Effect.Operation.argument; answer }
+      { M.Decl.Effect.Operation.shape; argument; answer }
     in
     let operations =
       Variable.Map.of_alist_exn
@@ -101,36 +111,51 @@ module Expr = struct
     { M.Decl.Effect.name; operations }
   ;;
 
+  let decl_choose : M.Decl.Effect.t =
+    let name = Effect.Label.of_string "choose" in
+    let op_ask =
+      let shape = Operation_shape.Control in
+      let argument = Type.Mono.Primitive Type.Primitive.Unit in
+      let answer = Type.Mono.Primitive Type.Primitive.Bool in
+      { M.Decl.Effect.Operation.shape; argument; answer }
+    in
+    let operations =
+      Variable.Map.singleton (Variable.of_user "choose") op_ask
+    in
+    { M.Decl.Effect.name; operations }
+  ;;
+
   let singleton_handler
       ~(op_name : Variable.t)
-      ~(op_argument : Variable.t)
+      ~(op_argument : M.Parameter.t)
       ~(op_body : E.t)
+      ~(shape : Operation_shape.t)
       : E.handler
     =
     let clause = { E.op_argument; op_body } in
-    let operations = Variable.Map.singleton op_name clause in
+    let operations = Variable.Map.singleton op_name (shape, clause) in
     { E.operations; return_clause = None }
   ;;
 
   let read_handler (value : int) : E.handler =
-    (* handler { ask(unit) { resume(value) } } *)
+    (* handler { fun ask(_) { resume(value) } } *)
     let op_name = Variable.of_user "ask" in
-    let op_argument = Variable.of_user "unit" in
-    let op_body =
-      E.Application (E.Value (E.Variable M.Keyword.resume), [ lit_int value ])
-    in
-    singleton_handler ~op_name ~op_argument ~op_body
+    let op_argument = M.Parameter.Wildcard in
+    let op_body = lit_int value in
+    singleton_handler ~op_name ~op_argument ~op_body ~shape:Operation_shape.Fun
   ;;
 
-  (* handler { throw(unit) { default } } *)
+  (* handler { control throw(_) { default } } *)
   let exn_handler (default : E.t) : E.handler =
     let throw_clause =
-      let op_argument = Variable.of_user "unit" in
+      let op_argument = M.Parameter.Wildcard in
       let op_body = default in
       { E.op_argument; op_body }
     in
     let operations =
-      Variable.Map.singleton (Variable.of_user "throw") throw_clause
+      Variable.Map.singleton
+        (Variable.of_user "throw")
+        (Operation_shape.Control, throw_clause)
     in
     { E.operations; return_clause = None }
   ;;

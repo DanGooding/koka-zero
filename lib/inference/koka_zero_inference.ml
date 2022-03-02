@@ -1,5 +1,6 @@
 module Type = Type
 module Effect = Effect
+module Operation_shape = Operation_shape
 module Variable = Variable
 module Minimal_syntax = Minimal_syntax
 module Explicit_syntax = Explicit_syntax

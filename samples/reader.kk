@@ -1,17 +1,17 @@
 
 effect read {
-  control ask(x : ()) : int;
+  control ask(_ : ()) : int;
 };
 
-fun foo() {
+fun add-twice() {
   ask(()) + ask(());  // 21 + 21 = 42
 };
 
 fun main() {
   with handler {
-    control ask(unit) {
+    control ask(_) {
       resume(21);
     };
   };
-  print-int(foo());
+  print-int(add-twice());
 };

@@ -11,7 +11,10 @@ include Monad.S with type 'a t := 'a t
 include Monad_utils.S with type 'a t := 'a t
 
 (** perform a generation computation using the default internal name source *)
-val run : 'a t -> 'a
+val run : 'a t -> 'a Or_static_error.t
+
+(** fail due to attempting to translate a feature which is not yet implemented *)
+val unsupported_feature_error : string -> 'a t
 
 (** create a globally unique variable *)
 val fresh_name : Variable.t t
@@ -48,3 +51,6 @@ val make_match_ctl
   -> pure:(E.t -> E.t t)
   -> yield:(marker:E.t -> op_clause:E.t -> resumption:E.t -> E.t t)
   -> E.t t
+
+(** builds a [Match_op] in the same way as [make_match_ctl] *)
+val make_match_op : E.t -> normal:(E.t -> E.t t) -> tail:(E.t -> E.t t) -> E.t t

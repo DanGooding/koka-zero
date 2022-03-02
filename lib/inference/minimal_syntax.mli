@@ -54,6 +54,14 @@ module Keyword : sig
   val read_int : Variable.t
 end
 
+module Parameter : sig
+  (** a binding of value to name, or ignoring with a wildcard *)
+  type t =
+    | Variable of Variable.t
+    | Wildcard
+  [@@deriving sexp]
+end
+
 module Expr : sig
   type t =
     | Value of value
@@ -81,21 +89,21 @@ module Expr : sig
   [@@deriving sexp]
 
   (** monomorphic binding *)
-  and lambda = Variable.t list * t [@@deriving sexp]
+  and lambda = Parameter.t list * t [@@deriving sexp]
 
   (** lambda which knows its own name *)
   and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
   (** an effect handler *)
   and handler =
-    { operations : op_handler Variable.Map.t
+    { operations : (Operation_shape.t * op_handler) Variable.Map.t
     ; return_clause : op_handler option
     }
   [@@deriving sexp]
 
   (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
-    { op_argument : Variable.t
+    { op_argument : Parameter.t
           (* TODO: extend to multiple args (requires checking against
              declaration, and makes translation harder - each operation in an
              effect needs to pass a differnt amount of arguments through
@@ -118,8 +126,8 @@ module Decl : sig
   module Effect : sig
     module Operation : sig
       type t =
-        { (* TODO: different shapes (fun/var/ctl/except) *)
-          argument : Type.Mono.t
+        { shape : Operation_shape.t
+        ; argument : Type.Mono.t
         ; answer : Type.Mono.t
         }
       [@@deriving sexp]
