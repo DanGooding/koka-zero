@@ -1,3 +1,12 @@
+/* Adapted from the koka benchmark suite
+   https://github.com/koka-lang/koka/blob/master/test/bench/koka/mstate-int.kk
+   the license of which is reproduced below
+*/
+/* Copyright 2012-2021, Microsoft Research, Daan Leijen
+   This is free software; you can redistribute it and/or modify it under the
+   terms of the Apache License, Version 2.0.
+*/
+
 import std/os/readline
 
 effect st
