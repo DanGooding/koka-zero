@@ -11,7 +11,7 @@ Benchmark = namedtuple('Benchmark', 'name inputs')
 # TODO: track resident set size?
 # TODO: real vs. user vs. system??
 # a Datapoint stores the data collected from a single benchmark run
-DataVpoint = namedtuple('Datapoint', 'time_real_seconds')
+Datapoint = namedtuple('Datapoint', 'time_real_seconds')
 
 def set_executable(path):
     ''' add execute permissions for those who have read permissions.
@@ -99,9 +99,8 @@ def compile_koka_zero_benchmark(name, project_root='.'):
 
     compiler_path = f'{project_root}/compile.sh'
     _compile_result = subprocess.run(
-        [compiler_path, path], # TODO: shell script = problem?
+        [compiler_path, path],
         check=True,
-        # shell=True,
         env=env)
 
     exe_path = f'{path_prefix}'
@@ -168,6 +167,7 @@ def run_benchmarks(benchmarks, repeats=1, project_root='.'):
             print('koka     :', summarise(koka_results))
             print('koka-zero:', summarise(koka_zero_results))
 
+            # TODO list of datapoints -> datapoint of lists
             bench_koka_results[input_] = koka_results
             bench_koka_zero_results[input_] = koka_zero_results
 
