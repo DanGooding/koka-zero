@@ -1,3 +1,5 @@
+import std/os/readline
+
 effect st
   ctl get() : int
   ctl set(i : int)  : ()
@@ -18,5 +20,6 @@ fun counter( c : int ) : _ int
 
 
 pub fun main()
-  with state(10100100)
+  val n = readline().parse-int().unjust()
+  with state(n)
   counter(0).println
