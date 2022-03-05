@@ -1,3 +1,4 @@
+import std/os/readline
 
 fun fib(n) {
   if n == 0
@@ -8,5 +9,5 @@ fun fib(n) {
 }
 
 fun main() {
-  println(fib(25))
+  readline().parse-int().unjust().fib().println()
 }
