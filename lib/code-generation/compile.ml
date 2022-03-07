@@ -614,8 +614,9 @@ let rec compile_expr
     calling either [pure_branch] or [yield_branch] with its fields. (These are
     also compiled) *)
 and compile_match_ctl
-    :  Llvm.llvalue -> pure_branch:EPS.Expr.lambda
-    -> yield_branch:EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
+    :  Llvm.llvalue -> pure_branch:Variable.t * EPS.Expr.t
+    -> yield_branch:Variable.t * Variable.t * Variable.t * EPS.Expr.t
+    -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
@@ -627,12 +628,6 @@ and compile_match_ctl
      ~effect_reprs
      ~outer_symbol ->
   let open Codegen.Let_syntax in
-  let%bind pure_function =
-    compile_lambda pure_branch ~env ~runtime ~effect_reprs ~outer_symbol
-  in
-  let%bind yield_function =
-    compile_lambda yield_branch ~env ~runtime ~effect_reprs ~outer_symbol
-  in
   let%bind ctl_type = Types.ctl in
   let ctl_ptr_type = Llvm.pointer_type ctl_type in
   let%bind ctl_ptr =
@@ -648,8 +643,15 @@ and compile_match_ctl
       Codegen.use_builder
         (Llvm.build_bitcast subject ctl_pure_ptr_type "ctl_pure_ptr")
     in
-    let%bind value = Helpers.compile_access_field ctl_pure_ptr 1 "value" in
-    compile_application pure_function [ value ]
+    let x_value, body = pure_branch in
+    let%bind value =
+      Helpers.compile_access_field
+        ctl_pure_ptr
+        1
+        (Helpers.register_name_of_variable x_value)
+    in
+    let env' = Context.add_local_exn env ~name:x_value ~value in
+    compile_expr body ~env:env' ~runtime ~effect_reprs ~outer_symbol
   in
   let compile_yield () =
     let%bind ctl_yield_type = Types.ctl_yield in
@@ -658,14 +660,32 @@ and compile_match_ctl
       Codegen.use_builder
         (Llvm.build_bitcast subject ctl_yield_ptr_type "ctl_yield_ptr")
     in
-    let%bind marker = Helpers.compile_access_field ctl_yield_ptr 1 "marker" in
+    let x_marker, x_op_clause, x_resumption, body = yield_branch in
+    let%bind marker =
+      Helpers.compile_access_field
+        ctl_yield_ptr
+        1
+        (Helpers.register_name_of_variable x_marker)
+    in
     let%bind op_clause =
-      Helpers.compile_access_field ctl_yield_ptr 2 "op_clause"
+      Helpers.compile_access_field
+        ctl_yield_ptr
+        2
+        (Helpers.register_name_of_variable x_op_clause)
     in
     let%bind resumption =
-      Helpers.compile_access_field ctl_yield_ptr 3 "resumption"
+      Helpers.compile_access_field
+        ctl_yield_ptr
+        3
+        (Helpers.register_name_of_variable x_resumption)
     in
-    compile_application yield_function [ marker; op_clause; resumption ]
+    let env' =
+      env
+      |> Context.add_local_exn ~name:x_marker ~value:marker
+      |> Context.add_local_exn ~name:x_op_clause ~value:op_clause
+      |> Context.add_local_exn ~name:x_resumption ~value:resumption
+    in
+    compile_expr body ~env:env' ~runtime ~effect_reprs ~outer_symbol
   in
   compile_switch
     tag
@@ -679,8 +699,8 @@ and compile_match_ctl
     statement on a [Types.op] pointed to by [subject], calling either
     normal/tail with the op's clause *)
 and compile_match_op
-    :  Llvm.llvalue -> normal_branch:EPS.Expr.lambda
-    -> tail_branch:EPS.Expr.lambda -> env:Context.t -> runtime:Runtime.t
+    :  Llvm.llvalue -> normal_branch:Variable.t * EPS.Expr.t
+    -> tail_branch:Variable.t * EPS.Expr.t -> env:Context.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> outer_symbol:Symbol_name.t -> Llvm.llvalue Codegen.t
   =
@@ -692,12 +712,6 @@ and compile_match_op
      ~effect_reprs
      ~outer_symbol ->
   let open Codegen.Let_syntax in
-  let%bind normal_function =
-    compile_lambda normal_branch ~env ~runtime ~effect_reprs ~outer_symbol
-  in
-  let%bind tail_function =
-    compile_lambda tail_branch ~env ~runtime ~effect_reprs ~outer_symbol
-  in
   let%bind op_type = Types.op in
   let op_ptr_type = Llvm.pointer_type op_type in
   let%bind op_ptr =
@@ -706,19 +720,22 @@ and compile_match_op
   let%bind tag = Helpers.compile_access_field op_ptr 0 "tag" in
   let%bind normal_tag = Helpers.const_op_normal_tag in
   let%bind tail_tag = Helpers.const_op_tail_tag in
-  let compile_normal () =
-    let%bind clause = Helpers.compile_access_field op_ptr 1 "clause" in
-    compile_application normal_function [ clause ]
-  in
-  let compile_tail () =
-    let%bind clause = Helpers.compile_access_field op_ptr 1 "clause" in
-    compile_application tail_function [ clause ]
+  let make_compile_branch branch () =
+    let x, body = branch in
+    let%bind clause =
+      Helpers.compile_access_field
+        op_ptr
+        1
+        (Helpers.register_name_of_variable x)
+    in
+    let env' = Context.add_local_exn env ~name:x ~value:clause in
+    compile_expr body ~env:env' ~runtime ~effect_reprs ~outer_symbol
   in
   compile_switch
     tag
     ~table:
-      [ normal_tag, "op_normal", compile_normal
-      ; tail_tag, "op_tail", compile_tail
+      [ normal_tag, "op_normal", make_compile_branch normal_branch
+      ; tail_tag, "op_tail", make_compile_branch tail_branch
       ]
     ~compile_default:(compile_match_corrupted_tag ~runtime)
 
@@ -799,7 +816,7 @@ and compile_function
             List.zip_exn ps params |> return
         in
         (* parameters available via variables in the the body*)
-        let (env_parameters : Context.Parameters.t) =
+        let (env_locals : Context.Locals.t) =
           List.filter_map parameters ~f:(fun (p, value) ->
               match p with
               | EPS.Parameter.Variable name ->
@@ -811,7 +828,7 @@ and compile_function
                 Llvm.set_value_name "_" value;
                 None)
         in
-        List.iter env_parameters ~f:(fun (name, value) ->
+        List.iter env_locals ~f:(fun (name, value) ->
             Llvm.set_value_name (Helpers.register_name_of_variable name) value);
         Llvm.set_value_name "closure" closure_param;
         let captured =
@@ -819,10 +836,7 @@ and compile_function
         in
         (* compile [e_body] in extended environment (capture variables which
            escaped from the containing function) *)
-        let env' =
-          Context.With_parameters
-            { closure = captured; parameters = env_parameters }
-        in
+        let env' = Context.Local { closure = captured; locals = env_locals } in
         let%bind result =
           compile_expr e_body ~env:env' ~runtime ~effect_reprs ~outer_symbol
         in

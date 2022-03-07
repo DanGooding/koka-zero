@@ -6,6 +6,7 @@ module Locals : sig
   type t = (Variable.t * Llvm.llvalue) list
 
   val find : t -> Variable.t -> Llvm.llvalue option
+  val add : t -> name:Variable.t -> value:Llvm.llvalue -> t
 end
 
 module Closure : sig
@@ -45,7 +46,7 @@ end
 (** maps in-scope names to their [llvalues] *)
 type t =
   (* TODO: this, or [option]al parameters *)
-  | Locals of
+  | Local of
       { locals : Locals.t
       ; closure : Closure.t
       }
@@ -58,3 +59,6 @@ val compile_capture : t -> runtime:Runtime.t -> Closure.t Codegen.t
     [parameters], or indirectly in the [closure]. fails with a codegen_error if
     it is not in scope. *)
 val compile_get : t -> Variable.t -> Llvm.llvalue Codegen.t
+
+(** add another local binding to the context, failing if at [Toplevel] *)
+val add_local_exn : t -> name:Variable.t -> value:Llvm.llvalue -> t
