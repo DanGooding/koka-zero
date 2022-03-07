@@ -13,6 +13,9 @@ Benchmark = namedtuple('Benchmark', 'name inputs')
 # a Datapoint stores the data collected from a single benchmark run
 Datapoint = namedtuple('Datapoint', 'time_real_seconds')
 
+# a command such as Command('ls', ['-al', '~'])
+Command = namedtuple('Command', 'name args')
+
 def set_executable(path):
     ''' add execute permissions for those who have read permissions.
         taken from https://stackoverflow.com/a/30463972
@@ -80,7 +83,7 @@ def compile_koka_benchmark(name, project_root='.'):
         check=True)
 
     set_executable(exe_path)
-    return exe_path, []
+    return Command(name=exe_path, args=[])
 
 def make_koka_zero():
     subprocess.run(['make'], check=True)
@@ -102,7 +105,7 @@ def compile_koka_zero_benchmark(name, project_root='.'):
 
     exe_path = f'{path_prefix}'
 
-    return exe_path, []
+    return Command(name=exe_path, args=[])
 
 def make_koka_zero_interpreter():
     subprocess.run(['make'], check=True)
@@ -112,7 +115,7 @@ def setup_koka_zero_interpreter_benchmark(name, project_root='.'):
     path = f'{path_prefix}.kk'
     command = f'{project_root}/_build/default/bin/main.exe'
     args = 'interpret', path
-    return command, args
+    return Command(name=command, args=args)
 
 def run_benchmark(command, input_data, repeats=1):
     """ given an executable to benchmark,
@@ -120,10 +123,9 @@ def run_benchmark(command, input_data, repeats=1):
         return a list of datapoints for the given number of runs
     """
     datapoints = []
-    exe_path, args = command
     for _ in range(repeats):
         benchmark_result = subprocess.run(
-            ['/usr/bin/time', '-f%e', exe_path] + list(args),
+            ['/usr/bin/time', '-f%e', command.name] + list(command.args),
             check=True,
             input=input_data.encode('ascii'),
             capture_output=True)
