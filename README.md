@@ -14,9 +14,9 @@ make
 # which prompts to run
 dune external-lib-deps --missing --root . @install
 ```
-The language runtime uses the [Boehm GC](https://hboehm.info/gc/) for memory 
-management. `GC` in `compile.sh` should be updated to 
-point to your system's install.
+The language runtime uses the [Boehm Garbage Collector](https://hboehm.info/gc/) for memory 
+management. `$GC` in `compile.sh` should be updated to 
+point to your system's install (e.g. `/home/xyz/gc`).
 
 
 ## Usage
