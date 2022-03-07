@@ -8,6 +8,8 @@ module Locals = struct
     List.find_map t ~f:(fun (v', x) -> Option.some_if Variable.(v = v') x)
   ;;
 
+  let add t ~name ~value = (name, value) :: t
+
   (* TODO: filter shadowed names out? *)
 end
 
@@ -157,7 +159,7 @@ module Closure = struct
 end
 
 type t =
-  | Locals of
+  | Local of
       { locals : Locals.t
       ; closure : Closure.t
       }
@@ -165,16 +167,24 @@ type t =
 
 let compile_capture t ~runtime =
   match t with
-  | Locals { locals; closure } -> Closure.compile_extend closure locals ~runtime
+  | Local { locals; closure } -> Closure.compile_extend closure locals ~runtime
   | Toplevel closure -> Codegen.return closure
 ;;
 
 let compile_get t v =
   let open Codegen.Let_syntax in
   match t with
-  | Locals { locals; closure } ->
+  | Local { locals; closure } ->
     (match Locals.find locals v with
     | Some value -> return value
     | None -> Closure.compile_get closure v)
   | Toplevel closure -> Closure.compile_get closure v
+;;
+
+let add_local_exn t ~name ~value =
+  match t with
+  | Toplevel _ -> raise_s [%message "attempt to add a local at toplevel"]
+  | Local { locals; closure } ->
+    let locals = Locals.add locals ~name ~value in
+    Local { locals; closure }
 ;;
