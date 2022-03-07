@@ -116,7 +116,7 @@ let make_match_ctl subject ~pure ~yield =
   let open Let_syntax in
   let%bind x = fresh_name in
   let%bind pure_branch_body = pure (E.Variable x) in
-  let pure_branch = parameters_of_names [ x ], pure_branch_body in
+  let pure_branch = x, pure_branch_body in
   let%bind marker = fresh_name in
   let%bind op_clause = fresh_name in
   let%bind resumption = fresh_name in
@@ -126,15 +126,17 @@ let make_match_ctl subject ~pure ~yield =
       ~op_clause:(E.Variable op_clause)
       ~resumption:(E.Variable resumption)
   in
-  let yield_branch =
-    parameters_of_names [ marker; op_clause; resumption ], yield_branch_body
-  in
+  let yield_branch = marker, op_clause, resumption, yield_branch_body in
   E.Match_ctl { subject; pure_branch; yield_branch }
 ;;
 
 let make_match_op subject ~normal ~tail =
   let open Let_syntax in
-  let%bind normal_branch = make_lambda_1 normal in
-  let%map tail_branch = make_lambda_1 tail in
+  let%bind f = fresh_name in
+  let%bind normal_branch_body = normal (E.Variable f) in
+  let normal_branch = f, normal_branch_body in
+  let%bind f' = fresh_name in
+  let%map tail_branch_body = tail (E.Variable f') in
+  let tail_branch = f', tail_branch_body in
   E.Match_op { subject; normal_branch; tail_branch }
 ;;

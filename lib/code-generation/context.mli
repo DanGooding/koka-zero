@@ -1,7 +1,8 @@
 open Import
 
-module Parameters : sig
-  (** maps the current function's parameters to their [llvalues] *)
+module Locals : sig
+  (** maps the current function's locals and parameters to their [llvalues]. The
+      first name is the innermost, so must search in forward order *)
   type t = (Variable.t * Llvm.llvalue) list
 
   val find : t -> Variable.t -> Llvm.llvalue option
@@ -27,8 +28,8 @@ module Closure : sig
     ; shape : Shape.t
     }
 
-  (** produce code to cons parameters on the front, producing a child closure *)
-  val compile_extend : t -> Parameters.t -> runtime:Runtime.t -> t Codegen.t
+  (** produce code to cons locals on the front, producing a child closure *)
+  val compile_extend : t -> Locals.t -> runtime:Runtime.t -> t Codegen.t
 
   (** produce code to construct a toplevel closure, given its contents *)
   val compile_make_toplevel
@@ -44,8 +45,8 @@ end
 (** maps in-scope names to their [llvalues] *)
 type t =
   (* TODO: this, or [option]al parameters *)
-  | With_parameters of
-      { parameters : Parameters.t
+  | Locals of
+      { locals : Locals.t
       ; closure : Closure.t
       }
   | Toplevel of Closure.t
