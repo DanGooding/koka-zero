@@ -35,11 +35,10 @@ def get_koka_version_info():
         check=True, capture_output=True)
     gcc_version = gcc_version_result.stdout.decode('ascii')
 
-    return (
-        'koka:\n'
-        f'{koka_version}\n'
-        'gcc:\n'
-        f'{gcc_version}\n')
+    return {
+        'koka': koka_version,
+        'gcc': gcc_version
+    }
 
 def get_koka_zero_version_info(gc_location=None):
     codebase_version_result = subprocess.run(
@@ -66,13 +65,11 @@ def get_koka_zero_version_info(gc_location=None):
                     gc_version = match[0]
                     break
 
-    return (
-        'koka-zero:\n'
-        f'commit {commit}\n'
-        'clang:\n'
-        f'{clang_version}\n'
-        'Boehm GC:\n'
-        f'{gc_version}\n')
+    return {
+        'koka-zero commit': commit,
+        'clang': clang_version,
+        'Boehm GC': gc_version
+    }
 
 def compile_koka_benchmark(name, project_root='.'):
     path_prefix = f'{project_root}/bench/koka/{name}'
