@@ -28,8 +28,7 @@ let compile ~in_filename ~print_eps ~out_filename =
     Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program_eps ->
     if print_eps
-    then
-      Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
+    then Koka_zero.pretty_print_program program_eps |> print_endline
     else ();
     (match
        Koka_zero.compile_program

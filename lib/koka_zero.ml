@@ -14,5 +14,6 @@ let parse_channel = Koka_zero_parsing.parse_channel
 let parse_string = Koka_zero_parsing.parse_string
 let infer_program = Koka_zero_inference.infer_program
 let translate = Koka_zero_evidence_translation.translate
+let pretty_print_program = Koka_zero_evidence_translation.pretty_print_program
 let interpret_program = Koka_zero_interpreter.interpret_program
 let compile_program = Koka_zero_code_generation.compile_then_write_program

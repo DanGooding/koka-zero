@@ -34,6 +34,8 @@ val translate
   :  Explicit_syntax.Program.t
   -> Evidence_passing_syntax.Program.t Or_static_error.t
 
+val pretty_print_program : Evidence_passing_syntax.Program.t -> string
+
 val interpret_program
   :  Evidence_passing_syntax.Program.t
   -> Value.t Or_runtime_error.t
