@@ -230,6 +230,7 @@ def run_benchmarks(benchmarks, repeats=1, project_root='.', include_interpreter=
 def main():
     benchmarks = [
         Benchmark(name='sum', inputs=[1_000, 10_000, 100_000]),
+        Benchmark(name='trib', inputs=range(10, 25)),
         Benchmark(name='fib', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
         # Benchmark(name='fib-eff', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
         # TODO: mstate-int32 for koka?
@@ -237,7 +238,7 @@ def main():
         # mstate segfaults (stack overflows) at 100_000 in koka
         # TODO: fun vs ctl
     ]
-    repeats = 10
+    repeats = 5
     project_root = '.'
     run_benchmarks(benchmarks, repeats=repeats, project_root=project_root)
 
