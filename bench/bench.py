@@ -35,11 +35,10 @@ def get_koka_version_info():
         check=True, capture_output=True)
     gcc_version = gcc_version_result.stdout.decode('ascii')
 
-    return (
-        'koka:\n'
-        f'{koka_version}\n'
-        'gcc:\n'
-        f'{gcc_version}\n')
+    return {
+        'koka': koka_version,
+        'gcc': gcc_version
+    }
 
 def get_koka_zero_version_info(gc_location=None):
     codebase_version_result = subprocess.run(
@@ -66,13 +65,11 @@ def get_koka_zero_version_info(gc_location=None):
                     gc_version = match[0]
                     break
 
-    return (
-        'koka-zero:\n'
-        f'commit {commit}\n'
-        'clang:\n'
-        f'{clang_version}\n'
-        'Boehm GC:\n'
-        f'{gc_version}\n')
+    return {
+        'koka-zero commit': commit,
+        'clang': clang_version,
+        'Boehm GC': gc_version
+    }
 
 def compile_koka_benchmark(name, project_root='.'):
     path_prefix = f'{project_root}/bench/koka/{name}'
@@ -83,7 +80,7 @@ def compile_koka_benchmark(name, project_root='.'):
         check=True)
 
     set_executable(exe_path)
-    return exe_path
+    return exe_path, []
 
 def make_koka_zero():
     subprocess.run(['make'], check=True)
@@ -105,17 +102,28 @@ def compile_koka_zero_benchmark(name, project_root='.'):
 
     exe_path = f'{path_prefix}'
 
-    return exe_path
+    return exe_path, []
 
-def run_benchmark(exe_path, input_data, repeats=1):
+def make_koka_zero_interpreter():
+    subprocess.run(['make'], check=True)
+
+def setup_koka_zero_interpreter_benchmark(name, project_root='.'):
+    path_prefix = f'{project_root}/bench/koka-zero/{name}'
+    path = f'{path_prefix}.kk'
+    command = f'{project_root}/_build/default/bin/main.exe'
+    args = 'interpret', path
+    return command, args
+
+def run_benchmark(command, input_data, repeats=1):
     """ given an executable to benchmark,
         and input to pass it as a string,
         return a list of datapoints for the given number of runs
     """
     datapoints = []
+    exe_path, args = command
     for _ in range(repeats):
         benchmark_result = subprocess.run(
-            ['/usr/bin/time', '-f%e', exe_path],
+            ['/usr/bin/time', '-f%e', exe_path] + list(args),
             check=True,
             input=input_data.encode('ascii'),
             capture_output=True)
@@ -132,49 +140,72 @@ def summarise(datapoints):
     return Datapoint(time_real_seconds=
         statistics.mean(d.time_real_seconds for d in datapoints))
 
-def run_benchmarks(benchmarks, repeats=1, project_root='.'):
+def transpose(datapoints):
+    """ turn a list of datapoints into a datapoint of lists """
+    time_real_seconds = []
+    for d in datapoints:
+        time_real_seconds.append(d.time_real_seconds)
+    return Datapoint(time_real_seconds=time_real_seconds)
+
+
+def run_benchmarks(benchmarks, repeats=1, project_root='.', include_interpreter=False):
     """ run the given benchmarks, writing the results to a log file """
     koka_version = get_koka_version_info()
     koka_zero_version = get_koka_zero_version_info(
         gc_location='/home/dan/boehm/gc')
 
     make_koka_zero()
+    if include_interpreter:
+        make_koka_zero_interpreter()
 
     results = {}
 
     for bench in benchmarks:
         print(bench.name)
         # TODO: capture compiler output (to silence)
-        koka_bench_exe = compile_koka_benchmark(
+        koka_bench_command = compile_koka_benchmark(
             bench.name, project_root=project_root)
-        koka_zero_bench_exe = compile_koka_zero_benchmark(
+        koka_zero_bench_command = compile_koka_zero_benchmark(
             bench.name, project_root=project_root)
+        if include_interpreter:
+            koka_zero_interpreter_bench_command = \
+                setup_koka_zero_interpreter_benchmark(
+                    bench.name, project_root=project_root)
 
         bench_koka_results = {}
         bench_koka_zero_results = {}
+        if include_interpreter:
+            bench_koka_zero_interpreter_results = {}
         for input_ in bench.inputs:
             input_data = str(input_)
+            print(input_)
 
+            # TODO: abstract BenchmarkSubject class which koka/koka-zero inherit from
             koka_results = run_benchmark(
-                koka_bench_exe, input_data, repeats=repeats)
+                koka_bench_command, input_data, repeats=repeats)
+            print('koka                 :', summarise(koka_results))
             koka_zero_results = run_benchmark(
-                koka_zero_bench_exe, input_data, repeats=repeats)
+                koka_zero_bench_command, input_data, repeats=repeats)
+            print('koka-zero            :', summarise(koka_zero_results))
+            if include_interpreter:
+                koka_zero_interpreter_results = run_benchmark(
+                    koka_zero_interpreter_bench_command, input_data, repeats=repeats)
+                print('koka-zero interpreter:', summarise(koka_zero_interpreter_results))
             # TODO: discard maximum?
-
             # TODO: catch & log segfaults
 
-            print(input_)
-            print('koka     :', summarise(koka_results))
-            print('koka-zero:', summarise(koka_zero_results))
-
-            # TODO list of datapoints -> datapoint of lists
-            bench_koka_results[input_] = koka_results
-            bench_koka_zero_results[input_] = koka_zero_results
+            bench_koka_results[input_] = transpose(koka_results)
+            bench_koka_zero_results[input_] = transpose(koka_zero_results)
+            if include_interpreter:
+                bench_koka_zero_interpreter_results[input_] = \
+                    transpose(koka_zero_interpreter_results)
 
         bench_results = {
             'koka': bench_koka_results,
-            'koka-zero': bench_koka_zero_results
+            'koka-zero': bench_koka_zero_results,
             }
+        if include_interpreter:
+            bench_results['koka-zero interpreter'] = bench_koka_zero_interpreter_results
         results[bench.name] = bench_results
 
     now = datetime.now()
@@ -200,6 +231,7 @@ def main():
     benchmarks = [
         Benchmark(name='sum', inputs=[1_000, 10_000, 100_000]),
         Benchmark(name='fib', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
+        # Benchmark(name='fib-eff', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
         # TODO: mstate-int32 for koka?
         Benchmark(name='mstate', inputs=[1, 10, 100, 1_000, 10_000])
         # mstate segfaults (stack overflows) at 100_000 in koka
