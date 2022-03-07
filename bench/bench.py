@@ -180,6 +180,7 @@ def run_benchmarks(benchmarks, repeats=1, project_root='.', include_interpreter=
             input_data = str(input_)
             print(input_)
 
+            # TODO: abstract BenchmarkSubject class which koka/koka-zero inherit from
             koka_results = run_benchmark(
                 koka_bench_command, input_data, repeats=repeats)
             print('koka                 :', summarise(koka_results))
@@ -230,6 +231,7 @@ def main():
     benchmarks = [
         Benchmark(name='sum', inputs=[1_000, 10_000, 100_000]),
         Benchmark(name='fib', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
+        # Benchmark(name='fib-eff', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
         # TODO: mstate-int32 for koka?
         Benchmark(name='mstate', inputs=[1, 10, 100, 1_000, 10_000])
         # mstate segfaults (stack overflows) at 100_000 in koka
