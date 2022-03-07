@@ -5,7 +5,11 @@ module Parameter = Koka_zero_inference.Minimal_syntax.Parameter
 module Literal = Koka_zero_inference.Minimal_syntax.Literal
 module Operator = Koka_zero_inference.Minimal_syntax.Operator
 
-let print_variable : Variable.t -> string = Variable.to_string_user
+let print_variable : Variable.t -> string = function
+  | Variable.User x -> "u_" ^ x
+  | Variable.Language x -> "l_" ^ x
+  | Variable.Generated x -> "g_" ^ x
+;;
 
 let print_parameter : Parameter.t -> string = function
   | Parameter.Wildcard -> "_"
