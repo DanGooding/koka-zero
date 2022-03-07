@@ -80,7 +80,7 @@ def compile_koka_benchmark(name, project_root='.'):
         check=True)
 
     set_executable(exe_path)
-    return exe_path
+    return exe_path, []
 
 def make_koka_zero():
     subprocess.run(['make'], check=True)
@@ -102,17 +102,28 @@ def compile_koka_zero_benchmark(name, project_root='.'):
 
     exe_path = f'{path_prefix}'
 
-    return exe_path
+    return exe_path, []
 
-def run_benchmark(exe_path, input_data, repeats=1):
+def make_koka_zero_interpreter():
+    subprocess.run(['make'], check=True)
+
+def setup_koka_zero_interpreter_benchmark(name, project_root='.'):
+    path_prefix = f'{project_root}/bench/koka-zero/{name}'
+    path = f'{path_prefix}.kk'
+    command = f'{project_root}/_build/default/bin/main.exe'
+    args = 'interpret', path
+    return command, args
+
+def run_benchmark(command, input_data, repeats=1):
     """ given an executable to benchmark,
         and input to pass it as a string,
         return a list of datapoints for the given number of runs
     """
     datapoints = []
+    exe_path, args = command
     for _ in range(repeats):
         benchmark_result = subprocess.run(
-            ['/usr/bin/time', '-f%e', exe_path],
+            ['/usr/bin/time', '-f%e', exe_path] + list(args),
             check=True,
             input=input_data.encode('ascii'),
             capture_output=True)
@@ -137,49 +148,63 @@ def transpose(datapoints):
     return Datapoint(time_real_seconds=time_real_seconds)
 
 
-def run_benchmarks(benchmarks, repeats=1, project_root='.'):
+def run_benchmarks(benchmarks, repeats=1, project_root='.', include_interpreter=False):
     """ run the given benchmarks, writing the results to a log file """
     koka_version = get_koka_version_info()
     koka_zero_version = get_koka_zero_version_info(
         gc_location='/home/dan/boehm/gc')
 
     make_koka_zero()
+    if include_interpreter:
+        make_koka_zero_interpreter()
 
     results = {}
 
     for bench in benchmarks:
         print(bench.name)
         # TODO: capture compiler output (to silence)
-        koka_bench_exe = compile_koka_benchmark(
+        koka_bench_command = compile_koka_benchmark(
             bench.name, project_root=project_root)
-        koka_zero_bench_exe = compile_koka_zero_benchmark(
+        koka_zero_bench_command = compile_koka_zero_benchmark(
             bench.name, project_root=project_root)
+        if include_interpreter:
+            koka_zero_interpreter_bench_command = \
+                setup_koka_zero_interpreter_benchmark(
+                    bench.name, project_root=project_root)
 
         bench_koka_results = {}
         bench_koka_zero_results = {}
+        if include_interpreter:
+            bench_koka_zero_interpreter_results = {}
         for input_ in bench.inputs:
             input_data = str(input_)
+            print(input_)
 
             koka_results = run_benchmark(
-                koka_bench_exe, input_data, repeats=repeats)
+                koka_bench_command, input_data, repeats=repeats)
+            print('koka                 :', summarise(koka_results))
             koka_zero_results = run_benchmark(
-                koka_zero_bench_exe, input_data, repeats=repeats)
+                koka_zero_bench_command, input_data, repeats=repeats)
+            print('koka-zero            :', summarise(koka_zero_results))
+            if include_interpreter:
+                koka_zero_interpreter_results = run_benchmark(
+                    koka_zero_interpreter_bench_command, input_data, repeats=repeats)
+                print('koka-zero interpreter:', summarise(koka_zero_interpreter_results))
             # TODO: discard maximum?
-
             # TODO: catch & log segfaults
 
-            print(input_)
-            print('koka     :', summarise(koka_results))
-            print('koka-zero:', summarise(koka_zero_results))
-
-            # TODO list of datapoints -> datapoint of lists
             bench_koka_results[input_] = transpose(koka_results)
             bench_koka_zero_results[input_] = transpose(koka_zero_results)
+            if include_interpreter:
+                bench_koka_zero_interpreter_results[input_] = \
+                    transpose(koka_zero_interpreter_results)
 
         bench_results = {
             'koka': bench_koka_results,
-            'koka-zero': bench_koka_zero_results
+            'koka-zero': bench_koka_zero_results,
             }
+        if include_interpreter:
+            bench_results['koka-zero interpreter'] = bench_koka_zero_interpreter_results
         results[bench.name] = bench_results
 
     now = datetime.now()
