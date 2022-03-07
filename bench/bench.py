@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
 import json
@@ -16,106 +17,180 @@ Datapoint = namedtuple('Datapoint', 'time_real_seconds')
 # a command such as Command('ls', ['-al', '~'])
 Command = namedtuple('Command', 'name args')
 
+class Subject(ABC):
+    """ a benchmark subject is a compiler/interpreter which can
+        compile and run given benchmarks
+    """
+
+    def __init__(self, project_root='.'):
+        self.project_root = project_root
+
+    @abstractmethod
+    def name(self):
+        """ the name of this subject as a string """
+        ...
+
+    @abstractmethod
+    def make(self):
+        """ build the compiler itself (if applicable)"""
+        ...
+
+    @abstractmethod
+    def get_version_info(self):
+        """ return a dictionary containing versions of this subject
+            and any applicable dependencies
+        """
+        ...
+
+    @abstractmethod
+    def compile_benchmark(self, name):
+        """ compile the named benchmark to an binary (if applicable)
+            and return a Command which executes it
+        """
+        ...
+
+class KokaSubject(Subject):
+    """ the established Koka compiler """
+
+    def __init__(self, project_root='.'):
+        super().__init__(project_root=project_root)
+
+    def name(self):
+        return 'koka'
+
+    def make(self):
+        pass
+
+    def get_version_info(self):
+        koka_version_result = subprocess.run(
+            ['koka', '--version'],
+            check=True, capture_output=True)
+
+        koka_version = koka_version_result.stdout.decode('utf-8')
+
+        gcc_version_result = subprocess.run(
+            ['gcc', '--version'],
+            check=True, capture_output=True)
+        gcc_version = gcc_version_result.stdout.decode('ascii')
+
+        return {
+            'koka': koka_version,
+            'gcc': gcc_version
+        }
+
+    def compile_benchmark(self, name):
+        path_prefix = f'{self.project_root}/bench/koka/{name}'
+        path = f'{path_prefix}.kk'
+        exe_path = f'{path_prefix}'
+        _compile_result = subprocess.run(
+            ['koka', path, '-O2', '-o', exe_path],
+            check=True)
+
+        set_executable(exe_path)
+        return Command(name=exe_path, args=[])
+
+
+class KokaZeroSubject(Subject):
+    """ this, the koka zero compiler """
+
+    def __init__(self, gc_location=None, project_root='.'):
+        super().__init__(project_root=project_root)
+        self.gc_location = gc_location
+
+    def name(self):
+        return 'koka-zero'
+
+    def get_version_info(self):
+        codebase_version_result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            check=True, capture_output=True)
+
+        commit = codebase_version_result.stdout.decode('ascii').strip()
+
+        clang_version_result = subprocess.run(
+            ['clang', '--version'],
+            check=True, capture_output=True)
+        clang_version = clang_version_result.stdout.decode('ascii')
+
+        gc_version = '<unknown>'
+        if self.gc_location is not None:
+            gc_readme_path = f'{self.gc_location}/README.md'
+
+            gc_version_re = re.compile(r'version +\d+\.\d+\.\d+')
+            with open(gc_readme_path) as f:
+                for line in f:
+                    match = re.search(gc_version_re, line)
+                    if match:
+                        gc_version = match[0]
+                        break
+
+        return {
+            'koka-zero commit': commit,
+            'clang': clang_version,
+            'Boehm GC': gc_version
+        }
+
+    def make(self):
+        subprocess.run(['make'], check=True, cwd=self.project_root)
+
+    def compile_benchmark(self, name):
+        path_prefix = f'{self.project_root}/bench/koka-zero/{name}'
+        path = f'{path_prefix}.kk'
+
+        # preserve $PATH etc
+        env = os.environ.copy()
+        env['OPT_LEVEL'] = '3'
+        env['PROJECT_ROOT'] = self.project_root
+
+        compiler_path = f'{self.project_root}/compile.sh'
+        _compile_result = subprocess.run(
+            [compiler_path, path],
+            check=True,
+            env=env)
+
+        exe_path = f'{path_prefix}'
+
+        return Command(name=exe_path, args=[])
+
+class KokaZeroInterpreterSubject(Subject):
+    def __init__(self, project_root='.'):
+        super().__init__(project_root=project_root)
+
+    def name(self):
+        return 'koka-zero-interpreter'
+
+    def make(self):
+        subprocess.run(['make'], check=True, cwd=self.project_root)
+
+    def get_version_info(self):
+        codebase_version_result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            check=True, capture_output=True)
+
+        commit = codebase_version_result.stdout.decode('ascii').strip()
+
+        return {
+            'koka-zero commit': commit
+        }
+
+    def compile_benchmark(self, name):
+        """ no actual work done when compiling, just prepare
+            the command to evaluate
+        """
+        path_prefix = f'{self.project_root}/bench/koka-zero/{name}'
+        path = f'{path_prefix}.kk'
+        command = f'{self.project_root}/_build/default/bin/main.exe'
+        return Command(name=command, args=['interpret', path])
+
+
 def set_executable(path):
-    ''' add execute permissions for those who have read permissions.
+    """ add execute permissions for those who have read permissions.
         taken from https://stackoverflow.com/a/30463972
         CC BY-SA 3.0 licensed
-    '''
+    """
     mode = os.stat(path).st_mode
     mode |= (mode & 0o444) >> 2  # copy R bits to X
     os.chmod(path, mode)
-
-
-def get_koka_version_info():
-    koka_version_result = subprocess.run(
-        ['koka', '--version'],
-        check=True, capture_output=True)
-
-    koka_version = koka_version_result.stdout.decode('utf-8')
-
-    gcc_version_result = subprocess.run(
-        ['gcc', '--version'],
-        check=True, capture_output=True)
-    gcc_version = gcc_version_result.stdout.decode('ascii')
-
-    return {
-        'koka': koka_version,
-        'gcc': gcc_version
-    }
-
-def get_koka_zero_version_info(gc_location=None):
-    codebase_version_result = subprocess.run(
-        ['git', 'rev-parse', 'HEAD'],
-        check=True, capture_output=True)
-
-    commit = codebase_version_result.stdout.decode('ascii').strip()
-
-    clang_version_result = subprocess.run(
-        ['clang', '--version'],
-        check=True, capture_output=True)
-    clang_version = clang_version_result.stdout.decode('ascii')
-
-
-    gc_version = '<unknown>'
-    if gc_location is not None:
-        gc_readme_path = f'{gc_location}/README.md'
-
-        gc_version_re = re.compile(r'version +\d+\.\d+\.\d+')
-        with open(gc_readme_path) as f:
-            for line in f:
-                match = re.search(gc_version_re, line)
-                if match:
-                    gc_version = match[0]
-                    break
-
-    return {
-        'koka-zero commit': commit,
-        'clang': clang_version,
-        'Boehm GC': gc_version
-    }
-
-def compile_koka_benchmark(name, project_root='.'):
-    path_prefix = f'{project_root}/bench/koka/{name}'
-    path = f'{path_prefix}.kk'
-    exe_path = f'{path_prefix}'
-    _compile_result = subprocess.run(
-        ['koka', path, '-O2', '-o', exe_path],
-        check=True)
-
-    set_executable(exe_path)
-    return Command(name=exe_path, args=[])
-
-def make_koka_zero():
-    subprocess.run(['make'], check=True)
-
-def compile_koka_zero_benchmark(name, project_root='.'):
-    path_prefix = f'{project_root}/bench/koka-zero/{name}'
-    path = f'{path_prefix}.kk'
-
-    # preserve $PATH etc
-    env = os.environ.copy()
-    env['OPT_LEVEL'] = '3'
-    env['PROJECT_ROOT'] = project_root
-
-    compiler_path = f'{project_root}/compile.sh'
-    _compile_result = subprocess.run(
-        [compiler_path, path],
-        check=True,
-        env=env)
-
-    exe_path = f'{path_prefix}'
-
-    return Command(name=exe_path, args=[])
-
-def make_koka_zero_interpreter():
-    subprocess.run(['make'], check=True)
-
-def setup_koka_zero_interpreter_benchmark(name, project_root='.'):
-    path_prefix = f'{project_root}/bench/koka-zero/{name}'
-    path = f'{path_prefix}.kk'
-    command = f'{project_root}/_build/default/bin/main.exe'
-    args = 'interpret', path
-    return Command(name=command, args=args)
 
 def run_benchmark(command, input_data, repeats=1):
     """ given an executable to benchmark,
@@ -150,73 +225,48 @@ def transpose(datapoints):
     return Datapoint(time_real_seconds=time_real_seconds)
 
 
-def run_benchmarks(benchmarks, repeats=1, project_root='.', include_interpreter=False):
+def run_benchmarks(subjects, benchmarks, repeats=1, project_root='.'):
     """ run the given benchmarks, writing the results to a log file """
-    koka_version = get_koka_version_info()
-    koka_zero_version = get_koka_zero_version_info(
-        gc_location='/home/dan/boehm/gc')
 
-    make_koka_zero()
-    if include_interpreter:
-        make_koka_zero_interpreter()
+    versions = {}
+    for subject in subjects:
+        versions[subject.name()] = subject.get_version_info()
 
     results = {}
 
     for bench in benchmarks:
         print(bench.name)
-        # TODO: capture compiler output (to silence)
-        koka_bench_command = compile_koka_benchmark(
-            bench.name, project_root=project_root)
-        koka_zero_bench_command = compile_koka_zero_benchmark(
-            bench.name, project_root=project_root)
-        if include_interpreter:
-            koka_zero_interpreter_bench_command = \
-                setup_koka_zero_interpreter_benchmark(
-                    bench.name, project_root=project_root)
 
-        bench_koka_results = {}
-        bench_koka_zero_results = {}
-        if include_interpreter:
-            bench_koka_zero_interpreter_results = {}
-        for input_ in bench.inputs:
-            input_data = str(input_)
-            print(input_)
+        commands = {}
+        bench_results = {}
+        for subject in subjects:
+            # TODO: capture compiler output (to silence)
+            commands[subject.name()] = subject.compile_benchmark(bench.name)
+            results[subject.name()] = {}
 
-            # TODO: abstract BenchmarkSubject class which koka/koka-zero inherit from
-            koka_results = run_benchmark(
-                koka_bench_command, input_data, repeats=repeats)
-            print('koka                 :', summarise(koka_results))
-            koka_zero_results = run_benchmark(
-                koka_zero_bench_command, input_data, repeats=repeats)
-            print('koka-zero            :', summarise(koka_zero_results))
-            if include_interpreter:
-                koka_zero_interpreter_results = run_benchmark(
-                    koka_zero_interpreter_bench_command, input_data, repeats=repeats)
-                print('koka-zero interpreter:', summarise(koka_zero_interpreter_results))
-            # TODO: discard maximum?
-            # TODO: catch & log segfaults
+        for input_data in bench.inputs:
+            print(input_data)
+            input_str = str(input_data)
+            bench_results[input_data] = {}
 
-            bench_koka_results[input_] = transpose(koka_results)
-            bench_koka_zero_results[input_] = transpose(koka_zero_results)
-            if include_interpreter:
-                bench_koka_zero_interpreter_results[input_] = \
-                    transpose(koka_zero_interpreter_results)
+            for subject in subjects:
+                res = run_benchmark(
+                    commands[subject.name()],
+                    input_str,
+                    repeats=repeats)
+                # TODO: discard maximum?
+                # TODO: catch & log segfaults
 
-        bench_results = {
-            'koka': bench_koka_results,
-            'koka-zero': bench_koka_zero_results,
-            }
-        if include_interpreter:
-            bench_results['koka-zero interpreter'] = bench_koka_zero_interpreter_results
+                print(f'{subject.name():<25}:', summarise(res))
+
+                bench_results[input_data][subject.name()] = transpose(res)
+
         results[bench.name] = bench_results
 
     now = datetime.now()
     log = {
         'date': str(now),
-        'version': {
-            'koka': koka_version,
-            'koka-zero': koka_zero_version
-        },
+        'version': versions,
         'results': results
     }
     timestamp = now.strftime('%Y%m%d-%H%M%S')
@@ -230,6 +280,12 @@ def run_benchmarks(benchmarks, repeats=1, project_root='.', include_interpreter=
 
 
 def main():
+    project_root = '.'
+    subjects = [
+        KokaSubject(project_root=project_root),
+        KokaZeroSubject(project_root=project_root, gc_location='/home/dan/boehm/gc'),
+        KokaZeroInterpreterSubject(project_root=project_root)
+    ]
     benchmarks = [
         Benchmark(name='sum', inputs=[1_000, 10_000, 100_000]),
         Benchmark(name='trib', inputs=range(10, 25)),
@@ -241,8 +297,7 @@ def main():
         # TODO: fun vs ctl
     ]
     repeats = 5
-    project_root = '.'
-    run_benchmarks(benchmarks, repeats=repeats, project_root=project_root)
+    run_benchmarks(subjects, benchmarks, repeats=repeats, project_root=project_root)
 
 
 if __name__ == '__main__':
