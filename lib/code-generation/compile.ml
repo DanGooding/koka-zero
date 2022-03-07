@@ -864,15 +864,13 @@ and compile_local_function
     ~runtime
     ~effect_reprs
 
-(** [compile_lambda lambda ...] compiles lambda as a function, and generates
-    code to construct a function object of it in the given [env]. The result is
-    a [Types.opaque_pointer] to it. *)
-and compile_lambda
-    :  EPS.Expr.lambda -> env:Context.t -> outer_symbol:Symbol_name.t
-    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
-    -> Llvm.llvalue Codegen.t
+(** a helper function used by [compile_lambda] and [compile_lambda_like] *)
+and compile_lambda_like
+    :  [ `Fix_lambda of Variable.t | `Lambda ] -> EPS.Expr.lambda
+    -> env:Context.t -> outer_symbol:Symbol_name.t -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun (ps, e_body) ~env ~outer_symbol ~runtime ~effect_reprs ->
+ fun rec_status (ps, e_body) ~env ~outer_symbol ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
   (* TODO: this rebuilds the escaping closure on every capture - cheaper to
      build it once at function entry (keep it around in the context?) *)
@@ -881,9 +879,14 @@ and compile_lambda
   let { Context.Closure.shape = escaping_shape; closure = escaping_closure } =
     escaping
   in
+  let rec_name, is_recursive =
+    match rec_status with
+    | `Fix_lambda rec_name -> Some rec_name, true
+    | `Lambda -> None, false
+  in
   let%bind function_code =
     compile_local_function
-      ~rec_name:None
+      ~rec_name
       ps
       e_body
       ~captured_shape:escaping_shape
@@ -893,39 +896,37 @@ and compile_lambda
   in
   compile_construct_function_object
     function_code
-    ~is_recursive:false
+    ~is_recursive
     ~captured_closure:escaping_closure
     ~runtime
 
-(** [compile_fix_lambda lambda ...] compiles a recursive lambda as a function,
-    and generates code to construct a function object of it in the given [env].
-    The result is a [Types.opaque_pointer] to it. *)
+(** [compile_lambda lambda ...] compiles a lambda as a function, and generates
+    code to construct a function object of it in the given [env]. The result is
+    a [Types.opaque_pointer] to it. *)
+and compile_lambda
+    :  EPS.Expr.lambda -> env:Context.t -> outer_symbol:Symbol_name.t
+    -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> Llvm.llvalue Codegen.t
+  =
+ fun lambda ~env ~outer_symbol ~runtime ~effect_reprs ->
+  compile_lambda_like `Lambda lambda ~env ~outer_symbol ~runtime ~effect_reprs
+
+(** [compile_fix_lambda fix_lambda ...] compiles a recursive lambda as a
+    function, and generates code to construct a function object of it in the
+    given [env]. The result is a [Types.opaque_pointer] to it. *)
 and compile_fix_lambda
     :  EPS.Expr.fix_lambda -> env:Context.t -> outer_symbol:Symbol_name.t
     -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> Llvm.llvalue Codegen.t
   =
- fun (f, (ps, e_body)) ~env ~outer_symbol ~runtime ~effect_reprs ->
-  let open Codegen.Let_syntax in
-  let%bind escaping = Context.compile_capture env ~runtime in
-  let { Context.Closure.shape = escaping_shape; closure = escaping_closure } =
-    escaping
-  in
-  let%bind function_code =
-    compile_local_function
-      ~rec_name:(Some f)
-      ps
-      e_body
-      ~captured_shape:escaping_shape
-      ~outer_symbol
-      ~runtime
-      ~effect_reprs
-  in
-  compile_construct_function_object
-    function_code
-    ~is_recursive:true
-    ~captured_closure:escaping_closure
+ fun (f, lambda) ~env ~outer_symbol ~runtime ~effect_reprs ->
+  compile_lambda_like
+    (`Fix_lambda f)
+    lambda
+    ~env
+    ~outer_symbol
     ~runtime
+    ~effect_reprs
 
 (** [compile_application f args] generates code to 'call' the function object
     pointed to by [Types.opaque_pointer]:[f], with the given arguments. *)
