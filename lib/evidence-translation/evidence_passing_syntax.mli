@@ -22,11 +22,9 @@ module Expr : sig
         }
     | Match_ctl of
         { subject : t
-        ; pure_branch : lambda (* gets one argument *)
-        ; yield_branch : lambda
+        ; pure_branch : Variable.t * t (* gets one argument *)
+        ; yield_branch : Variable.t * Variable.t * Variable.t * t
               (* gets one argument per field in Yield *)
-              (* TODO: making the arguments explicit here would make more sense,
-                 even if we later compile as a lambda *)
         }
     | Fresh_marker (** evaluates to a new unique marker *)
     | Markers_equal of t * t
@@ -36,8 +34,8 @@ module Expr : sig
     | Construct_op_tail of t (** constructor for a tail resumptive operation *)
     | Match_op of
         { subject : t
-        ; normal_branch : lambda
-        ; tail_branch : lambda
+        ; normal_branch : Variable.t * t
+        ; tail_branch : Variable.t * t
         }
     | Construct_handler of
         { handled_effect : Effect.Label.t

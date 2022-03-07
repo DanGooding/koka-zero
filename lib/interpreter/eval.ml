@@ -122,14 +122,24 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     Value.Yield { marker; op_clause; resumption } |> Value.Ctl
   | Expr.Match_ctl { subject; pure_branch; yield_branch } ->
     let%bind v_subject = eval_expr subject ~env in
-    let%bind branch, args =
+    let%bind bindings, body =
       match%map Typecast.ctl_of_value v_subject with
-      | Value.Pure v -> pure_branch, [ v ]
+      | Value.Pure v ->
+        let x, pure_body = pure_branch in
+        [ x, v ], pure_body
       | Value.Yield { marker; op_clause; resumption } ->
-        yield_branch, [ Value.Marker marker; op_clause; resumption ]
+        let x_marker, x_op_clause, x_resumption, yield_body = yield_branch in
+        ( [ x_marker, Value.Marker marker
+          ; x_op_clause, op_clause
+          ; x_resumption, resumption
+          ]
+        , yield_body )
     in
-    let params, e_body = branch in
-    eval_call ~f_env:env ~params ~e_body ~v_args:args
+    let env' =
+      List.fold bindings ~init:env ~f:(fun env (x, v) ->
+          Map.set env ~key:x ~data:v)
+    in
+    eval_expr body ~env:env'
   | Expr.Fresh_marker ->
     let%map m = Interpreter.fresh_marker in
     Value.Marker m
@@ -151,13 +161,14 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     Value.Op_tail clause |> Value.Op
   | Expr.Match_op { subject; normal_branch; tail_branch } ->
     let%bind subject = eval_expr subject ~env in
-    let%bind branch, args =
+    let%bind branch, value =
       match%map Typecast.op_of_value subject with
-      | Value.Op_normal clause -> normal_branch, [ Value.Closure clause ]
-      | Value.Op_tail clause -> tail_branch, [ Value.Closure clause ]
+      | Value.Op_normal clause -> normal_branch, Value.Closure clause
+      | Value.Op_tail clause -> tail_branch, Value.Closure clause
     in
-    let params, e_body = branch in
-    eval_call ~f_env:env ~params ~e_body ~v_args:args
+    let x, e_body = branch in
+    let env' = Map.set env ~key:x ~data:value in
+    eval_expr e_body ~env:env'
   | Expr.Construct_handler { handled_effect; operation_clauses } ->
     let%map operation_clauses =
       Map.map operation_clauses ~f:(fun op_clause ->

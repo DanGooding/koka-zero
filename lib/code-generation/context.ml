@@ -1,12 +1,14 @@
 open Core
 open Import
 
-module Parameters = struct
+module Locals = struct
   type t = (Variable.t * Llvm.llvalue) list
 
   let find t v =
     List.find_map t ~f:(fun (v', x) -> Option.some_if Variable.(v = v') x)
   ;;
+
+  (* TODO: filter shadowed names out? *)
 end
 
 module Closure = struct
@@ -74,11 +76,11 @@ module Closure = struct
     closure_ptr
  ;;
 
-  let compile_extend { closure = parent; shape } parameters ~runtime =
+  let compile_extend { closure = parent; shape } locals ~runtime =
     let open Codegen.Let_syntax in
-    let var_names = List.map parameters ~f:(fun (name, _value) -> name) in
+    let var_names = List.map locals ~f:(fun (name, _value) -> name) in
     let shape = Shape.Level (var_names, shape) in
-    let%map closure_ptr = compile_extend_closure parent parameters ~runtime in
+    let%map closure_ptr = compile_extend_closure parent locals ~runtime in
     { closure = closure_ptr; shape }
   ;;
 
@@ -95,7 +97,7 @@ module Closure = struct
   ;;
 
   (** compile accessing [ closure->vars\[i\] ] *)
-  let compile_get_var (i : int) closure name =
+  let compile_get_var (i : int) (closure : Llvm.llvalue) name =
     let open Codegen.Let_syntax in
     let%bind vars_ptr =
       Codegen.use_builder (Llvm.build_struct_gep closure 1 "vars_field")
@@ -155,24 +157,23 @@ module Closure = struct
 end
 
 type t =
-  | With_parameters of
-      { parameters : Parameters.t
+  | Locals of
+      { locals : Locals.t
       ; closure : Closure.t
       }
   | Toplevel of Closure.t
 
 let compile_capture t ~runtime =
   match t with
-  | With_parameters { parameters; closure } ->
-    Closure.compile_extend closure parameters ~runtime
+  | Locals { locals; closure } -> Closure.compile_extend closure locals ~runtime
   | Toplevel closure -> Codegen.return closure
 ;;
 
 let compile_get t v =
   let open Codegen.Let_syntax in
   match t with
-  | With_parameters { parameters; closure } ->
-    (match Parameters.find parameters v with
+  | Locals { locals; closure } ->
+    (match Locals.find locals v with
     | Some value -> return value
     | None -> Closure.compile_get closure v)
   | Toplevel closure -> Closure.compile_get closure v

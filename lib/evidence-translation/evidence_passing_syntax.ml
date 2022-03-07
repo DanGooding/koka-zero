@@ -24,8 +24,8 @@ module Expr = struct
           }
       | Match_ctl of
           { subject : t
-          ; pure_branch : lambda
-          ; yield_branch : lambda
+          ; pure_branch : Variable.t * t
+          ; yield_branch : Variable.t * Variable.t * Variable.t * t
           }
       | Fresh_marker
       | Markers_equal of t * t
@@ -34,8 +34,8 @@ module Expr = struct
       | Construct_op_tail of t
       | Match_op of
           { subject : t
-          ; normal_branch : lambda
-          ; tail_branch : lambda
+          ; normal_branch : Variable.t * t
+          ; tail_branch : Variable.t * t
           }
       | Construct_handler of
           { handled_effect : Effect.Label.t
