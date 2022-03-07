@@ -47,6 +47,10 @@ test: ## Run the unit tests
 promote: ## Accept corrections to expect tests
 	opam exec -- dune promote --root .
 
+.PHONY: bench
+bench: ## Run benchmarks
+	python3 bench/bench.py
+
 .PHONY: clean
 clean: ## Clean build artifacts and other generated files
 	opam exec -- dune clean --root .
