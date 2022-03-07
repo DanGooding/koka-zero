@@ -132,6 +132,14 @@ def summarise(datapoints):
     return Datapoint(time_real_seconds=
         statistics.mean(d.time_real_seconds for d in datapoints))
 
+def transpose(datapoints):
+    """ turn a list of datapoints into a datapoint of lists """
+    time_real_seconds = []
+    for d in datapoints:
+        time_real_seconds.append(d.time_real_seconds)
+    return Datapoint(time_real_seconds=time_real_seconds)
+
+
 def run_benchmarks(benchmarks, repeats=1, project_root='.'):
     """ run the given benchmarks, writing the results to a log file """
     koka_version = get_koka_version_info()
@@ -168,8 +176,8 @@ def run_benchmarks(benchmarks, repeats=1, project_root='.'):
             print('koka-zero:', summarise(koka_zero_results))
 
             # TODO list of datapoints -> datapoint of lists
-            bench_koka_results[input_] = koka_results
-            bench_koka_zero_results[input_] = koka_zero_results
+            bench_koka_results[input_] = transpose(koka_results)
+            bench_koka_zero_results[input_] = transpose(koka_zero_results)
 
         bench_results = {
             'koka': bench_koka_results,
