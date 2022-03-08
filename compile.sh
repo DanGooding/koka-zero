@@ -7,10 +7,11 @@ set -e
 PROJECT_ROOT=${PROJECT_ROOT:-.}
 
 KOKA_COMPILER=${KOKA_COMPILER:-$PROJECT_ROOT/_build/default/bin/main.exe}
+
 LL_C_COMPILER=clang
 OPT_LEVEL=${OPT_LEVEL:-0}
 # intentionally rely on clang to know the system's target triple
-LL_C_FLAGS="-Wall -Wno-override-module -O$OPT_LEVEL"
+LL_C_FLAGS="-Wall -Wno-override-module -DENABLE_GC -O$OPT_LEVEL"
 
 RUNTIME=$PROJECT_ROOT/lib/runtime/runtime.c
 GC=/home/dan/boehm/gc
