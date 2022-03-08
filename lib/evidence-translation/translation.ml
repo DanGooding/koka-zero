@@ -107,13 +107,9 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
   | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind e_cond' = translate_expr e_cond in
     make_bind_into e_cond' ~f:(fun cond ->
-        Generation.make_lambda_expr_1 (fun vector ->
-            let%bind e_yes' = translate_expr e_yes in
-            let%map e_no' = translate_expr e_no in
-            EPS.Expr.If_then_else
-              ( cond
-              , EPS.Expr.Application (e_yes', [ vector ])
-              , EPS.Expr.Application (e_no', [ vector ]) )))
+        let%bind e_yes' = translate_expr e_yes in
+        let%map e_no' = translate_expr e_no in
+        EPS.Expr.If_then_else (cond, e_yes', e_no'))
   | Expl.Expr.Let (x, v_subject, e_body) ->
     let%bind (`Value subject') = translate_value v_subject in
     let%map m_body = translate_expr e_body in
