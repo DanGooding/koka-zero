@@ -1,10 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef ENABLE_GC
 #include "gc.h"
+#endif
 #include "runtime.h"
 
 void kkr_init(void) {
+  #ifdef ENABLE_GC
   GC_INIT();
+  #endif
 }
 
 void kkr_exit(void) {
@@ -22,7 +26,11 @@ void kkr_exit_with_message(const uint8_t *message) {
 char malloc_error_message[MALLOC_ERROR_MESSAGE_CAPACITY];
 
 opaque_ptr kkr_malloc(uint64_t size) {
+  #ifdef ENABLE_GC
   opaque_ptr p = GC_MALLOC(size);
+  #else
+  opaque_ptr p = malloc(size);
+  #endif
   if (p == NULL) {
     snprintf(malloc_error_message, MALLOC_ERROR_MESSAGE_CAPACITY,
              "failed to malloc %ld bytes", size);
