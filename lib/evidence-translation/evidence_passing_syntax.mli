@@ -7,6 +7,7 @@ module Parameter = Koka_zero_inference.Minimal_syntax.Parameter
 module Expr : sig
   type t =
     | Variable of Variable.t
+    | Let of Parameter.t * t * t (** local binding [let y = x in e] *)
     | Lambda of lambda
     | Fix_lambda of fix_lambda
     | Application of t * t list
