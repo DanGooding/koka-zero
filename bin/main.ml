@@ -16,14 +16,15 @@ let typecheck_and_compile_to_expl filename =
   Koka_zero.infer_program program
 ;;
 
-let compile_to_eps filename =
+let compile_to_eps ~optimise filename =
   let open Result.Let_syntax in
   let%bind program_explicit = typecheck_and_compile_to_expl filename in
-  Koka_zero.translate program_explicit
+  let%map program_eps = Koka_zero.translate program_explicit in
+  if optimise then Koka_zero.rewrite_program program_eps else program_eps
 ;;
 
-let compile ~in_filename ~print_eps ~out_filename =
-  match compile_to_eps in_filename with
+let compile ~in_filename ~optimise ~print_eps ~out_filename =
+  match compile_to_eps ~optimise in_filename with
   | Error error ->
     Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program_eps ->
@@ -43,7 +44,7 @@ let compile ~in_filename ~print_eps ~out_filename =
 ;;
 
 let interpret_eps filename =
-  match compile_to_eps filename with
+  match compile_to_eps ~optimise:false filename with
   | Error error ->
     Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program ->
@@ -68,13 +69,15 @@ let command_compile =
     [%map_open.Command
       let filename = anon ("filename" %: string)
       and out_filename = flag "-o" (required string) ~doc:"output filename"
+      and optimise =
+        flag "-optimise" no_arg ~doc:"apply tree rewriting optimisations"
       and print_eps =
         flag
           "-dump-eps"
           no_arg
           ~doc:"print the intermediate evidence passing AST"
       in
-      fun () -> compile ~in_filename:filename ~print_eps ~out_filename]
+      fun () -> compile ~in_filename:filename ~optimise ~print_eps ~out_filename]
 ;;
 
 let command_interpret =

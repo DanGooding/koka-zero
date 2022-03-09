@@ -1,6 +1,7 @@
 module Evidence_passing_syntax = Evidence_passing_syntax
 
 let translate program = Generation.run (Translation.translate program)
+let rewrite_program = Rewriting.rewrite_program
 
 module Free_variables = Free_variables
 
