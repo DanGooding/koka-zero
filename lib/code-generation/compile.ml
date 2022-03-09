@@ -392,6 +392,17 @@ let rec compile_expr
     (* TODO: note this will be duplicated for each access, although common
        subexpression elimination should easily remove it *)
     Context.compile_get env v
+  | EPS.Expr.Let (p, e_subject, e_body) ->
+    let%bind subject =
+      compile_expr e_subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    let env' =
+      match p with
+      | EPS.Parameter.Wildcard -> env
+      | EPS.Parameter.Variable v ->
+        Context.add_local_exn env ~name:v ~value:subject
+    in
+    compile_expr e_body ~env:env' ~runtime ~effect_reprs ~outer_symbol
   | EPS.Expr.Lambda lambda ->
     compile_lambda lambda ~env ~runtime ~effect_reprs ~outer_symbol
   | EPS.Expr.Fix_lambda fix_lambda ->

@@ -9,6 +9,7 @@ module Expr = struct
   module T = struct
     type t =
       | Variable of Variable.t
+      | Let of Parameter.t * t * t
       | Lambda of lambda
       | Fix_lambda of fix_lambda
       | Application of t * t list

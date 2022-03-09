@@ -75,6 +75,14 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         sprintf "unbound variable `%s`" (Variable.to_string_user name)
       in
       Interpreter.impossible_error message)
+  | Expr.Let (p, e_subject, e_body) ->
+    let%bind v_subject = eval_expr e_subject ~env in
+    let env' =
+      match p with
+      | Parameter.Wildcard -> env
+      | Parameter.Variable v -> Map.set env ~key:v ~data:v_subject
+    in
+    eval_expr e_body ~env:env'
   | Expr.Lambda lambda ->
     let%map closure = eval_lambda lambda ~env in
     Value.Closure closure

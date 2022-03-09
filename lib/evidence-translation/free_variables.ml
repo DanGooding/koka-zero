@@ -4,6 +4,14 @@ open Evidence_passing_syntax
 
 let rec free_in_expr : Expr.t -> Variable.Set.t = function
   | Expr.Variable v -> Variable.Set.singleton v
+  | Expr.Let (p, subject, body) ->
+    let subject_free = free_in_expr subject in
+    let body_free =
+      match p with
+      | Parameter.Wildcard -> free_in_expr body
+      | Parameter.Variable v -> free_in_binding v body
+    in
+    Set.union subject_free body_free
   | Expr.Lambda lambda -> free_in_lambda lambda
   | Expr.Fix_lambda fix_lambda -> free_in_fix_lambda fix_lambda
   | Expr.Application (e_f, e_args) -> free_in_exprs (e_f :: e_args)
