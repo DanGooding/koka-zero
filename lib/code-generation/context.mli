@@ -7,6 +7,9 @@ module Locals : sig
 
   val find : t -> Variable.t -> Llvm.llvalue option
   val add : t -> name:Variable.t -> value:Llvm.llvalue -> t
+
+  (** remove all names not in the given set *)
+  val inter_names : t -> Variable.Set.t -> t
 end
 
 module Closure : sig
@@ -52,8 +55,14 @@ type t =
       }
   | Toplevel of Closure.t
 
-(** generate code to extend the closure with the current parameters *)
-val compile_capture : t -> runtime:Runtime.t -> Closure.t Codegen.t
+(** generate code to extend the closure with the subset of locals which are free
+    (escaping variables). note this does not check that non-local free variables
+    are actually present in the closure. *)
+val compile_capture
+  :  t
+  -> free:Variable.Set.t
+  -> runtime:Runtime.t
+  -> Closure.t Codegen.t
 
 (** generate code to retrieve an in-scope variable, either directly from
     [parameters], or indirectly in the [closure]. fails with a codegen_error if
