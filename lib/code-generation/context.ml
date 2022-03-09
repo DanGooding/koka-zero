@@ -5,10 +5,15 @@ module Locals = struct
   type t = (Variable.t * Llvm.llvalue) list
 
   let find t v =
-    List.find_map t ~f:(fun (v', x) -> Option.some_if Variable.(v = v') x)
+    List.find_map t ~f:(fun (v', value) ->
+        Option.some_if Variable.(v = v') value)
   ;;
 
   let add t ~name ~value = (name, value) :: t
+
+  let inter_names t names =
+    List.filter t ~f:(fun (name, _) -> Set.mem names name)
+  ;;
 
   (* TODO: filter shadowed names out? *)
 end
@@ -56,7 +61,7 @@ module Closure = struct
           value, Helpers.register_name_of_variable name)
     in
     let%bind () =
-      (* vars_ptr has type [opaque_pointer x num_vars]*, we can fill in the
+      (* vars_ptr has type [opaque_pointer value num_vars]*, we can fill in the
          elements in the same way as a struct *)
       Helpers.compile_populate_array vars_ptr var_values_and_register_names
     in
@@ -165,10 +170,16 @@ type t =
       }
   | Toplevel of Closure.t
 
-let compile_capture t ~runtime =
+let compile_capture t ~free ~runtime =
   match t with
-  | Local { locals; closure } -> Closure.compile_extend closure locals ~runtime
   | Toplevel closure -> Codegen.return closure
+  | Local { locals; closure } ->
+    (* TODO: check all [free] are in [locals] or [closure]? *)
+    (match Locals.inter_names locals free with
+    (* don't allocate at all unless adding free variables! *)
+    | [] -> Codegen.return closure
+    (* closures are chained *)
+    | escaping_locals -> Closure.compile_extend closure escaping_locals ~runtime)
 ;;
 
 let compile_get t v =

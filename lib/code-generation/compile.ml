@@ -1,6 +1,7 @@
 open Core
 open Import
 module EPS = Koka_zero_evidence_translation.Evidence_passing_syntax
+module Free_variables = Koka_zero_evidence_translation.Free_variables
 
 (* TODO: need a type system for telling when llvalues are
    pointers(opaque/typed)/values/*)
@@ -878,30 +879,34 @@ and compile_local_function
     ~runtime
     ~effect_reprs
 
-(** a helper function used by [compile_lambda] and [compile_lambda_like] *)
+(** a helper function used by [compile_lambda] and [compile_fix_lambda] *)
 and compile_lambda_like
-    :  [ `Fix_lambda of Variable.t | `Lambda ] -> EPS.Expr.lambda
+    :  [ `Fix_lambda of EPS.Expr.fix_lambda | `Lambda of EPS.Expr.lambda ]
     -> env:Context.t -> outer_symbol:Symbol_name.t -> runtime:Runtime.t
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun rec_status (ps, e_body) ~env ~outer_symbol ~runtime ~effect_reprs ->
+ fun lambda_like ~env ~outer_symbol ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
-  (* TODO: this rebuilds the escaping closure on every capture - cheaper to
-     build it once at function entry (keep it around in the context?) *)
-  (* ecaping closure contains everything in [env]: parameters and closure *)
-  let%bind escaping = Context.compile_capture env ~runtime in
+  let free =
+    match lambda_like with
+    | `Fix_lambda fix_lambda -> Free_variables.free_in_fix_lambda fix_lambda
+    | `Lambda lambda -> Free_variables.free_in_lambda lambda
+  in
+  (* capture all free varaibles which are local (non-local ones are already in
+     the closure, so just chain)*)
+  let%bind escaping = Context.compile_capture env ~free ~runtime in
   let { Context.Closure.shape = escaping_shape; closure = escaping_closure } =
     escaping
   in
-  let rec_name, is_recursive =
-    match rec_status with
-    | `Fix_lambda rec_name -> Some rec_name, true
-    | `Lambda -> None, false
+  let rec_name, is_recursive, (params, e_body) =
+    match lambda_like with
+    | `Fix_lambda (rec_name, lambda) -> Some rec_name, true, lambda
+    | `Lambda lambda -> None, false, lambda
   in
   let%bind function_code =
     compile_local_function
       ~rec_name
-      ps
+      params
       e_body
       ~captured_shape:escaping_shape
       ~outer_symbol
@@ -923,7 +928,7 @@ and compile_lambda
     -> Llvm.llvalue Codegen.t
   =
  fun lambda ~env ~outer_symbol ~runtime ~effect_reprs ->
-  compile_lambda_like `Lambda lambda ~env ~outer_symbol ~runtime ~effect_reprs
+  compile_lambda_like (`Lambda lambda) ~env ~outer_symbol ~runtime ~effect_reprs
 
 (** [compile_fix_lambda fix_lambda ...] compiles a recursive lambda as a
     function, and generates code to construct a function object of it in the
@@ -933,10 +938,9 @@ and compile_fix_lambda
     -> runtime:Runtime.t -> effect_reprs:Effect_repr.t Effect_label.Map.t
     -> Llvm.llvalue Codegen.t
   =
- fun (f, lambda) ~env ~outer_symbol ~runtime ~effect_reprs ->
+ fun fix_lambda ~env ~outer_symbol ~runtime ~effect_reprs ->
   compile_lambda_like
-    (`Fix_lambda f)
-    lambda
+    (`Fix_lambda fix_lambda)
     ~env
     ~outer_symbol
     ~runtime
