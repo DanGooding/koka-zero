@@ -7,6 +7,12 @@ val translate
   :  Explicit_syntax.Program.t
   -> Evidence_passing_syntax.Program.t Or_static_error.t
 
+(** apply optimising transformations *)
+val rewrite_program
+  (* TODO: perhaps always use this? *)
+  :  Evidence_passing_syntax.Program.t
+  -> Evidence_passing_syntax.Program.t
+
 module Free_variables = Free_variables
 
 module Private : sig

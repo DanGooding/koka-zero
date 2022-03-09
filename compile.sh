@@ -10,6 +10,12 @@ KOKA_COMPILER=${KOKA_COMPILER:-$PROJECT_ROOT/_build/default/bin/main.exe}
 
 LL_C_COMPILER=clang
 OPT_LEVEL=${OPT_LEVEL:-0}
+if [ "$OPT_LEVEL" -gt 0 ]; then
+    KOKA_OPT_FLAG=-optimise
+else
+    KOKA_OPT_FLAG=""
+fi
+
 # intentionally rely on clang to know the system's target triple
 LL_C_FLAGS="-Wall -Wno-override-module -O$OPT_LEVEL"
 
@@ -34,6 +40,6 @@ if [[ "$BINARY" = "$SOURCE" ]]; then
     BINARY="$BINARY.exe"
 fi
 
-$KOKA_COMPILER compile $SOURCE -o $IR
+$KOKA_COMPILER compile $SOURCE -o $IR $KOKA_OPT_FLAG
 $LL_C_COMPILER $LL_C_FLAGS $IR $RUNTIME -o $BINARY
 

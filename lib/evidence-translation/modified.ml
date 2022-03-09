@@ -28,3 +28,19 @@ include Monad_utils.Make (T')
 let original x = false, x
 let modified x = true, x
 let inspect (changed, x) = if changed then `Modified x else `Unchanged
+let value (_, x) = x
+
+let rec apply_while_changes x ~f =
+  let changed, x' = f x in
+  if changed
+  then (
+    let _, x_final = apply_while_changes x' ~f in
+    true, x_final)
+  else false, x'
+;;
+
+let original_for_none f x =
+  match f x with
+  | None -> original x
+  | Some x' -> modified x'
+;;
