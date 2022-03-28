@@ -11,5 +11,6 @@ _opam/
 scratch/
 *.ll
 *.exe
+.koka/
 
 bench/log
