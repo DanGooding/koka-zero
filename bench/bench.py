@@ -258,6 +258,7 @@ def run_benchmarks(subjects, benchmarks, repeats=1, project_root='.'):
 
                 print(f'{subject.name():<25}:', summarise(res))
 
+                layout = 'input,subject'
                 bench_results[input_data][subject.name()] = transpose(res)
 
         results[bench.name] = bench_results
@@ -266,6 +267,7 @@ def run_benchmarks(subjects, benchmarks, repeats=1, project_root='.'):
     log = {
         'date': str(now),
         'version': versions,
+        'layout': layout,
         'results': results
     }
     timestamp = now.strftime('%Y%m%d-%H%M%S')
@@ -283,7 +285,7 @@ def main():
     subjects = [
         KokaSubject(project_root=project_root),
         KokaZeroSubject(project_root=project_root, gc_location='/home/dan/boehm/gc'),
-        KokaZeroInterpreterSubject(project_root=project_root)
+        # KokaZeroInterpreterSubject(project_root=project_root)
     ]
     benchmarks = [
         Benchmark(name='sum', inputs=[1_000, 10_000, 100_000]),
