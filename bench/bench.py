@@ -2,12 +2,20 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
 import json
+from math import inf
 import os
 import re
 import statistics
 import subprocess
 
-Benchmark = namedtuple('Benchmark', 'name inputs')
+Benchmark = namedtuple('Benchmark', 'name inputs input_limits')
+
+# range of inputs a subject is run on
+InputLimit = namedtuple('InputLimit', 'min max')
+def input_limit(min=-inf, max=inf):
+    return InputLimit(min=min, max=max)
+def input_no_limit():
+    return InputLimit(min=-inf, max=inf)
 
 # TODO: track resident set size?
 # TODO: real vs. user vs. system??
@@ -249,6 +257,11 @@ def run_benchmarks(subjects, benchmarks, repeats=1, project_root='.'):
             bench_results[input_data] = {}
 
             for subject in subjects:
+                if subject.name() in bench.input_limits:
+                    limits = bench.input_limits[subject.name()]
+                    if input_data < limits.min or input_data > limits.max:
+                        continue
+
                 res = run_benchmark(
                     commands[subject.name()],
                     input_str,
@@ -288,13 +301,20 @@ def main():
         # KokaZeroInterpreterSubject(project_root=project_root)
     ]
     benchmarks = [
-        Benchmark(name='sum', inputs=[1_000, 10_000, 100_000]),
-        Benchmark(name='trib', inputs=range(10, 25)),
-        Benchmark(name='fib', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
+        Benchmark(name='sum', inputs=range(20_000, 200_000, 10_000),
+                  input_limits={'koka-zero': input_limit(max=250_000),
+                                'koka': input_limit(max=350_000)}),
+        # Benchmark(name='trib', inputs=range(10, 25)),
+        Benchmark(name='fib', inputs=range(23, 45),
+                  input_limits={
+                      'koka-zero': input_limit(max=31),
+                      'koka': input_limit(min=38)}),
         # Benchmark(name='fib-eff', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
         # TODO: mstate-int32 for koka?
-        Benchmark(name='mstate', inputs=[1, 10, 100, 1_000, 10_000])
-        # mstate segfaults (stack overflows) at 100_000 in koka
+        Benchmark(name='mstate', inputs=range(10_000, 100_000, 10_000),
+                  input_limits={'koka-zero': input_no_limit(),
+                                'koka': input_limit(max=75_000)})
+        # mstate segfaults (stack overflows) at 80_000 in koka
         # TODO: fun vs ctl
     ]
     repeats = 10
