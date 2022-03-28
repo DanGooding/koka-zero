@@ -242,7 +242,6 @@ def run_benchmarks(subjects, benchmarks, repeats=1, project_root='.'):
         for subject in subjects:
             # TODO: capture compiler output (to silence)
             commands[subject.name()] = subject.compile_benchmark(bench.name)
-            results[subject.name()] = {}
 
         for input_data in bench.inputs:
             print(input_data)
@@ -296,7 +295,7 @@ def main():
         # mstate segfaults (stack overflows) at 100_000 in koka
         # TODO: fun vs ctl
     ]
-    repeats = 5
+    repeats = 10
     run_benchmarks(subjects, benchmarks, repeats=repeats, project_root=project_root)
 
 
