@@ -315,6 +315,10 @@ def main():
                   input_limits={'koka-zero': input_no_limit(),
                                 'koka': input_limit(max=75_000)})
         # mstate segfaults (stack overflows) at 80_000 in koka
+        # TODO: want same number of samples for each
+        Benchmark(name='triples', inputs=range(100, 1000, 50),
+                  input_limits={'koka-zero': input_limit(max=251),
+                                'koka': input_limit(max=951)})
         # TODO: fun vs ctl
     ]
     repeats = 10
