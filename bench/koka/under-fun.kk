@@ -1,6 +1,7 @@
 import std/os/readline
 
-effect ctl scramble(x : int) : int
+effect use-scramble
+  ctl scramble(x : int) : int
 
 // make `n` recursive calls, then call `action`
 fun under-n(n, action) {
