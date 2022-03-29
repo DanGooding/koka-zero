@@ -319,7 +319,15 @@ def main():
         Benchmark(name='triples', inputs=range(100, 1000, 50),
                   input_limits={'koka-zero': input_limit(max=251),
                                 'koka': input_limit(max=951)})
-        # TODO: fun vs ctl
+        # Benchmark(name='triples', inputs=range(100, 1000, 50),
+        #           input_limits={'koka-zero': input_limit(max=251),
+        #                         'koka': input_limit(max=951)})
+        Benchmark(name='under-control', inputs=range(10_000, 100_000, 10_000),
+                  input_limits={
+                      'koka': input_limit(max=25_000)}),
+        # TODO: koka takes ~0s for all of under-fun
+        Benchmark(name='under-fun', inputs=range(10_000, 100_000, 10_000),
+                  input_limits={})
     ]
     repeats = 10
     run_benchmarks(subjects, benchmarks, repeats=repeats, project_root=project_root)
