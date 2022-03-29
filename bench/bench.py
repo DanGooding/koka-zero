@@ -301,27 +301,20 @@ def main():
         # KokaZeroInterpreterSubject(project_root=project_root)
     ]
     benchmarks = [
-        Benchmark(name='sum', inputs=range(20_000, 200_000, 10_000),
-                  input_limits={'koka-zero': input_limit(max=250_000),
-                                'koka': input_limit(max=350_000)}),
         # Benchmark(name='trib', inputs=range(10, 25)),
         Benchmark(name='fib', inputs=range(23, 45),
                   input_limits={
                       'koka-zero': input_limit(max=31),
                       'koka': input_limit(min=38)}),
         # Benchmark(name='fib-eff', inputs=[23, 24, 25, 26, 27, 28, 29, 30, 31]),
-        # TODO: mstate-int32 for koka?
         Benchmark(name='mstate', inputs=range(10_000, 100_000, 10_000),
                   input_limits={'koka-zero': input_no_limit(),
-                                'koka': input_limit(max=75_000)})
+                                'koka': input_limit(max=75_000)}),
         # mstate segfaults (stack overflows) at 80_000 in koka
         # TODO: want same number of samples for each
         Benchmark(name='triples', inputs=range(100, 1000, 50),
                   input_limits={'koka-zero': input_limit(max=251),
-                                'koka': input_limit(max=951)})
-        # Benchmark(name='triples', inputs=range(100, 1000, 50),
-        #           input_limits={'koka-zero': input_limit(max=251),
-        #                         'koka': input_limit(max=951)})
+                                'koka': input_limit(max=951)}),
         Benchmark(name='under-control', inputs=range(10_000, 100_000, 10_000),
                   input_limits={
                       'koka': input_limit(max=25_000)}),
