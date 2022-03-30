@@ -7,14 +7,10 @@ let opaque_pointer =
   Llvm.pointer_type i8
 ;;
 
-let bool =
-  (* could use i1 (single bit) but can't allocate that little, nor can an i8*
-     point to it *)
-  Codegen.use_context Llvm.i8_type
-;;
-
+(* bool, int, unit are unboxed, fit directly in [opaque_pointer] *)
+let bool = Codegen.use_context Llvm.i64_type
 let int = Codegen.use_context Llvm.i64_type
-let unit = Codegen.use_context Llvm.i8_type
+let unit = Codegen.use_context Llvm.i64_type
 let marker = Codegen.use_context Llvm.i64_type
 let label = Codegen.use_context Llvm.i64_type
 let variant_tag = Codegen.use_context Llvm.i8_type

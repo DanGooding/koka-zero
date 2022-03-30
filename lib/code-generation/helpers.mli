@@ -27,6 +27,26 @@ val i1_of_bool : Llvm.llvalue -> Llvm.llvalue Codegen.t
 (** converts an [i1] into a valid [Types.bool] **)
 val bool_of_i1 : Llvm.llvalue -> Llvm.llvalue Codegen.t
 
+(** builds a cast from [Types.opaque_pointer] to a [Types.int] *)
+val cast_unboxed_int_of_opaque
+  :  Llvm.llvalue
+  -> string
+  -> Llvm.llvalue Codegen.t
+
+(** builds a cast from [Types.opaque_pointer] to a [Types.bool] *)
+val cast_unboxed_bool_of_opaque
+  :  Llvm.llvalue
+  -> string
+  -> Llvm.llvalue Codegen.t
+
+(** builds an int to ptr cast from e.g. [Types.int] or [Types.bool] to
+    [Types.opaque_pointer] *)
+val cast_opaque_of_unboxed : Llvm.llvalue -> Llvm.llvalue Codegen.t
+
+(** a constant [Types.opaque_pointer] from a constant e.g. [Types.int] or
+    [Types.bool]*)
+val const_cast_opaque_of_unboxed : Llvm.llvalue -> Llvm.llvalue Codegen.t
+
 (** [heap_allocate t name ~runtime] generates code which allocates space on the
     heap for a [t], and returns a typed pointer to it (a [t*]). [name] is used
     as a stem for register names *)
@@ -46,19 +66,6 @@ val heap_store
   -> runtime:Runtime.t
   -> Llvm.llvalue Codegen.t
 
-(** [heap_store_int i ~runtime] allocates memory to hold a [Types.int] and
-    stores [i] there. It returns the address as a [Types.opaque_pointer] *)
-val heap_store_int : Llvm.llvalue -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-
-(* TODO: could just allocate [true] and [false] at program start, then reuse
-   those *)
-val heap_store_bool
-  :  Llvm.llvalue
-  -> runtime:Runtime.t
-  -> Llvm.llvalue Codegen.t
-
-val heap_store_unit : runtime:Runtime.t -> Llvm.llvalue Codegen.t
-
 val heap_store_marker
   :  Llvm.llvalue
   -> runtime:Runtime.t
@@ -77,8 +84,6 @@ val dereference
   -> string
   -> Llvm.llvalue Codegen.t
 
-val dereference_int : Llvm.llvalue -> Llvm.llvalue Codegen.t
-val dereference_bool : Llvm.llvalue -> Llvm.llvalue Codegen.t
 val dereference_marker : Llvm.llvalue -> Llvm.llvalue Codegen.t
 val dereference_label : Llvm.llvalue -> Llvm.llvalue Codegen.t
 

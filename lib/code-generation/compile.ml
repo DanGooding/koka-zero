@@ -25,19 +25,19 @@ let lookup_effect_repr
 
 (** compile a literal into code which returns a pointer to a new heap allocation
     (as a [Types.opaque_pointer]) containing that literal *)
-let compile_literal
-    : EPS.Literal.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-  =
- fun lit ~runtime ->
+let compile_literal : EPS.Literal.t -> Llvm.llvalue Codegen.t =
+ fun lit ->
   let open Codegen.Let_syntax in
   match lit with
   | EPS.Literal.Int i ->
     let%bind v = Helpers.const_int i in
-    Helpers.heap_store_int v ~runtime
+    Helpers.const_cast_opaque_of_unboxed v
   | EPS.Literal.Bool b ->
     let%bind v = Helpers.const_bool b in
-    Helpers.heap_store_bool v ~runtime
-  | EPS.Literal.Unit -> Helpers.heap_store_unit ~runtime
+    Helpers.const_cast_opaque_of_unboxed v
+  | EPS.Literal.Unit ->
+    let%bind v = Helpers.const_unit in
+    Helpers.const_cast_opaque_of_unboxed v
 ;;
 
 (** takes values which are [Types.opaque_pointer]s to the evaluated operands,
@@ -45,27 +45,27 @@ let compile_literal
     heap. *)
 let compile_binary_operator
     :  left:Llvm.llvalue -> EPS.Operator.t -> right:Llvm.llvalue
-    -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
+    -> Llvm.llvalue Codegen.t
   =
- fun ~left op ~right ~runtime ->
+ fun ~left op ~right ->
   let open Codegen.Let_syntax in
   match op with
   | EPS.Operator.Bool bool_op ->
-    let%bind x = Helpers.dereference_bool left in
-    let%bind y = Helpers.dereference_bool right in
+    let%bind x = Helpers.cast_unboxed_bool_of_opaque left "left" in
+    let%bind y = Helpers.cast_unboxed_bool_of_opaque right "right" in
     let%bind z =
-      (* [and]/[or] work directly on bools, don't need to convert to [i1] and
-         back *)
+      (* [and]/[or] work directly on [Types.bool]s, don't need to convert to
+         [i1] and back *)
       match bool_op with
       | EPS.Operator.Bool.And ->
         Codegen.use_builder (Llvm.build_and x y "bool_and")
       | EPS.Operator.Bool.Or ->
         Codegen.use_builder (Llvm.build_or x y "bool_or")
     in
-    Helpers.heap_store_bool z ~runtime
+    Helpers.cast_opaque_of_unboxed z
   | EPS.Operator.Int int_op ->
-    let%bind x = Helpers.dereference_int left in
-    let%bind y = Helpers.dereference_int right in
+    let%bind x = Helpers.cast_unboxed_int_of_opaque left "left" in
+    let%bind y = Helpers.cast_unboxed_int_of_opaque right "right" in
     let operation =
       match int_op with
       | EPS.Operator.Int.Plus -> `Int Llvm.build_add
@@ -85,26 +85,27 @@ let compile_binary_operator
     in
     (match operation with
     | `Int build ->
-      let%bind z = Codegen.use_builder (build x y "int_math") in
-      Helpers.heap_store_int z ~runtime
+      let%bind z = Codegen.use_builder (build x y "int_math_result") in
+      Helpers.cast_opaque_of_unboxed z
     | `Bool icmp ->
-      let%bind z = Codegen.use_builder (Llvm.build_icmp icmp x y "int_cmp") in
+      let%bind z =
+        Codegen.use_builder (Llvm.build_icmp icmp x y "int_cmp_result")
+      in
       let%bind b = Helpers.bool_of_i1 z in
-      Helpers.heap_store_bool b ~runtime)
+      Helpers.cast_opaque_of_unboxed b)
 ;;
 
 let compile_unary_operator
-    :  Llvm.llvalue -> EPS.Operator.Unary.t -> runtime:Runtime.t
-    -> Llvm.llvalue Codegen.t
+    : Llvm.llvalue -> EPS.Operator.Unary.t -> Llvm.llvalue Codegen.t
   =
- fun arg op ~runtime ->
+ fun arg op ->
   let open Codegen.Let_syntax in
   match op with
   | EPS.Operator.Unary.Bool EPS.Operator.Bool.Unary.Not ->
-    let%bind b = Helpers.dereference_bool arg in
+    let%bind b = Helpers.cast_unboxed_bool_of_opaque arg "operand" in
     let%bind true_ = Helpers.const_true in
     let%bind not_b = Codegen.use_builder (Llvm.build_xor b true_ "not") in
-    Helpers.heap_store_bool not_b ~runtime
+    Helpers.cast_opaque_of_unboxed not_b
 ;;
 
 (** [compile_construct_pure x ~runtime] produces code which heap allocates and
@@ -405,12 +406,12 @@ let rec compile_expr
       |> Codegen.all
     in
     compile_application f args
-  | EPS.Expr.Literal lit -> compile_literal lit ~runtime
+  | EPS.Expr.Literal lit -> compile_literal lit
   | EPS.Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind cond_ptr =
       compile_expr e_cond ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind cond = Helpers.dereference_bool cond_ptr in
+    let%bind cond = Helpers.cast_unboxed_bool_of_opaque cond_ptr "cond" in
     compile_if_then_else
       cond
       ~e_yes
@@ -421,7 +422,7 @@ let rec compile_expr
       ~outer_symbol
   | EPS.Expr.Unary_operator (op, e) ->
     let%bind arg = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
-    compile_unary_operator arg op ~runtime
+    compile_unary_operator arg op
   | EPS.Expr.Operator (e_left, op, e_right) ->
     let%bind left =
       compile_expr e_left ~env ~runtime ~effect_reprs ~outer_symbol
@@ -429,7 +430,7 @@ let rec compile_expr
     let%bind right =
       compile_expr e_right ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    compile_binary_operator ~left op ~right ~runtime
+    compile_binary_operator ~left op ~right
   | EPS.Expr.Construct_pure e ->
     let%bind x = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
     compile_construct_pure x ~runtime
@@ -482,7 +483,7 @@ let rec compile_expr
            (Array.of_list [ marker1; marker2 ])
            "markers_equal")
     in
-    Helpers.heap_store_bool eq ~runtime
+    Helpers.cast_opaque_of_unboxed eq
   | EPS.Expr.Effect_label label ->
     let%bind repr = lookup_effect_repr effect_reprs label in
     let { Effect_repr.id; _ } = repr in
@@ -1038,18 +1039,19 @@ and compile_impure_built_in
   match impure with
   | EPS.Expr.Impure_print_int e ->
     let%bind v = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
-    let%bind i = Helpers.dereference_int v in
+    let%bind i = Helpers.cast_unboxed_int_of_opaque v "i" in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
       Codegen.use_builder (Llvm.build_call print_int (Array.of_list [ i ]) "")
     in
-    Helpers.heap_store_unit ~runtime
+    let%bind u = Helpers.const_unit in
+    Helpers.cast_opaque_of_unboxed u
   | EPS.Expr.Impure_read_int ->
     let { Runtime.read_int; _ } = runtime in
     let%bind i =
       Codegen.use_builder (Llvm.build_call read_int (Array.of_list []) "i")
     in
-    Helpers.heap_store_int i ~runtime
+    Helpers.cast_opaque_of_unboxed i
 ;;
 
 (** creates the representation of a declared effect. This builds the type of
