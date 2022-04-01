@@ -10,11 +10,11 @@
 (maintainers
   "Dan Gooding")
 
-(generate_opam_files true)
+(generate_opam_files false)
 
 (package
  (name koka-zero)
- (synopsis "Reimplementatin of core Koka, compiling to LLVM-IR, for my dissertation")
+ (synopsis "Reimplementatin of core Koka")
  (description "Reimplementatin of core Koka, compiling to LLVM-IR, for my dissertation")
  (depends
   (ocaml (>= 4.08.0))
