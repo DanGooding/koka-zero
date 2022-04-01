@@ -2,7 +2,7 @@
 
 (name koka-zero)
 
-(license ISC)
+(license MIT)
 
 (authors
   "Dan Gooding")
