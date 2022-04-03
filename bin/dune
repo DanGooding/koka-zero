@@ -2,6 +2,7 @@
  (name main)
  (public_name koka-zero)
  (libraries koka-zero)
+ (instrumentation (backend bisect_ppx))
  (preprocess
   (pps ppx_jane))
  (modes byte exe))

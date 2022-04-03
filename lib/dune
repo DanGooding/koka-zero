@@ -9,4 +9,5 @@
      koka-zero.evidence-translation
      koka-zero.interpreter
      koka-zero.code-generation)
+  (instrumentation (backend bisect_ppx))
   (preprocess (pps ppx_jane)))

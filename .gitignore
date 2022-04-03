@@ -8,6 +8,8 @@ _build/
 # Local OPAM switch
 _opam/
 
+_coverage/
+
 scratch/
 *.ll
 *.exe

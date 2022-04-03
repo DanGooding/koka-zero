@@ -47,6 +47,12 @@ test: ## Run the unit tests
 promote: ## Accept corrections to expect tests
 	opam exec -- dune promote --root .
 
+.PHONY: coverage
+coverage:
+	opam exec -- dune runtest --instrument-with bisect_ppx --force
+	bisect-ppx-report summary
+	bisect-ppx-report html
+
 .PHONY: clean
 clean: ## Clean build artifacts and other generated files
 	opam exec -- dune clean --root .

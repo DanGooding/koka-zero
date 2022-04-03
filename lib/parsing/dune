@@ -3,6 +3,7 @@
  (public_name koka-zero.parsing)
  ;; note the forward dependency on the next pipeline stage (inference)
  (libraries core menhirLib str koka_zero_util koka_zero_inference)
+ (instrumentation (backend bisect_ppx))
  (preprocess
   (per_module
    ((pps ppx_jane) syntax simplification koka_zero_parsing)

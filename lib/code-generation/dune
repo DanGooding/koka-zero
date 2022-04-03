@@ -2,5 +2,6 @@
  (name koka_zero_code_generation)
  (public_name koka-zero.code-generation)
  (libraries core llvm llvm.analysis koka_zero_evidence_translation)
+ (instrumentation (backend bisect_ppx))
  (preprocess
   (pps ppx_jane)))
