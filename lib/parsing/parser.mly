@@ -1,7 +1,10 @@
 (*
   Modified from the koka (v2.3.2) grammar specification
   https://github.com/koka-lang/koka/blob/v2.3.2/doc/spec/grammar/parser.y
-  the license of which is reproduced below
+  the license of which is reproduced below.
+  Modifications include converting from Bison to Menhir syntax, removing
+  productions for syntax not supported in KokaZero, restructuring productions 
+  to resolve ambiguities, and building an AST from the parse.
 *)
 (* Copyright 2012-2021, Microsoft Research, Daan Leijen
    This is free software; you can redistribute it and/or modify it under the

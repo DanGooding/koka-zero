@@ -482,7 +482,6 @@ and infer_operation
       Type.Mono (Type.Mono.Arrow ([ t_answer ], eff_rest, t_handler_result))
     in
     let env_with_resume =
-      (* TODO: need to prevent escape of non first-class resume *)
       match Context.extend env ~var:Min.Keyword.resume ~type_:t_resume with
       | `Ok env_with_resume -> env_with_resume
       | `Cannot_shadow ->
