@@ -163,6 +163,14 @@ let rec infer
       infer ~env:env' ~effect_env expr_body
     in
     t_body, eff_body, Expl.Expr.Let (x, val_subject', expr_body')
+  | Min.Expr.Let_mono (x, subject, body) ->
+    let%bind t_subject, eff_subject, subject' =
+      infer ~env ~effect_env subject
+    in
+    let%bind env' = add_binding ~env ~var:x ~type_:(Type.Mono t_subject) in
+    let%bind t_body, eff_body, body' = infer ~env:env' ~effect_env body in
+    let%map () = Inference.unify_effects eff_subject eff_body in
+    t_body, eff_body, Expl.Expr.Let_mono (x, subject', body')
   | Min.Expr.Seq (expr1, expr2) ->
     let%bind _t1, eff1, expr1' = infer ~env ~effect_env expr1 in
     let%bind t2, eff2, expr2' = infer ~env ~effect_env expr2 in

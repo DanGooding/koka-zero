@@ -361,10 +361,11 @@ and simplify_declaration_preceding
     Min.Expr.Let (f_name, Min.Expr.Fix_lambda f_fix_lambda, e)
   (* local `val` is monomorphic binding *)
   | Syntax.Val (pattern, block) ->
-    let%bind x = simplify_annotated_pattern pattern in
+    let%bind p = simplify_annotated_pattern pattern in
     let%map e_x = simplify_block block in
-    (* (\x. e) e_x *)
-    Min.Expr.Application (Min.Expr.Value (Min.Expr.Lambda ([ x ], e)), [ e_x ])
+    (match p with
+    | Min.Parameter.Variable x -> Min.Expr.Let_mono (x, e_x, e)
+    | Min.Parameter.Wildcard -> Min.Expr.Seq (e_x, e))
 
 (** given the simplification of the tail of a block, and a statement (its head)
     produce the resulting expression *)

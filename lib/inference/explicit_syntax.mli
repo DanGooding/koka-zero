@@ -7,6 +7,8 @@ module Expr : sig
   type t =
     | Value of value
     | Let of Variable.t * value * t (** [Let] provides polymorphic binding *)
+    | Let_mono of Variable.t * t * t
+        (** [Let_mono] provides monomorphic binding *)
     | Application of t * t list
     | Seq of t * t
         (** evaluates first expression, then second. both may be of any type *)

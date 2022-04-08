@@ -84,22 +84,15 @@ fun main() {
        ((Fun
          ((User main)
           (()
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User x)))
-               (Seq
-                (Application (Value (Variable (User print)))
-                 ((Value (Variable (User x)))))
-                (Application
-                 (Value
-                  (Lambda
-                   (((Variable (User y)))
-                    (Operator (Value (Variable (User y))) (Int Times)
-                     (Value (Literal (Int 2)))))))
-                 ((Application (Value (Variable (User foo)))
-                   ((Value (Variable (User x)))))))))))
-            ((Value (Literal (Int 1)))))))))))) |}]
+           (Let_mono (User x) (Value (Literal (Int 1)))
+            (Seq
+             (Application (Value (Variable (User print)))
+              ((Value (Variable (User x)))))
+             (Let_mono (User y)
+              (Application (Value (Variable (User foo)))
+               ((Value (Variable (User x)))))
+              (Operator (Value (Variable (User y))) (Int Times)
+               (Value (Literal (Int 2)))))))))))))) |}]
 ;;
 
 let%expect_test "dashes in identifiers" =
@@ -143,21 +136,10 @@ fun wrapper() {
        ((Fun
          ((User wrapper)
           (()
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User kebab-case)))
-               (Application
-                (Value
-                 (Lambda
-                  (((Variable (User x-y-z)))
-                   (Application
-                    (Value
-                     (Lambda
-                      (((Variable (User number3-letter))) (Value (Literal Unit)))))
-                    ((Value (Literal (Int 2))))))))
-                ((Value (Literal (Int 1))))))))
-            ((Value (Literal (Int 0)))))))))))) |}]
+           (Let_mono (User kebab-case) (Value (Literal (Int 0)))
+            (Let_mono (User x-y-z) (Value (Literal (Int 1)))
+             (Let_mono (User number3-letter) (Value (Literal (Int 2)))
+              (Value (Literal Unit)))))))))))) |}]
 ;;
 
 let%expect_test "hex literals" =
@@ -226,16 +208,13 @@ fun wrapper() {
        ((Fun
          ((User wrapper)
           (()
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User f')))
-               (Application
-                (Value (Lambda (((Variable (User f''))) (Value (Literal Unit)))))
-                ((Application (Value (Variable (User diff)))
-                  ((Value (Variable (User f'))))))))))
-            ((Application (Value (Variable (User diff)))
-              ((Value (Variable (User f)))))))))))))) |}]
+           (Let_mono (User f')
+            (Application (Value (Variable (User diff)))
+             ((Value (Variable (User f)))))
+            (Let_mono (User f'')
+             (Application (Value (Variable (User diff)))
+              ((Value (Variable (User f')))))
+             (Value (Literal Unit))))))))))) |}]
 ;;
 
 let%expect_test "wildcard parameter" =
@@ -368,58 +347,50 @@ fun main() {
        ((Fun
          ((User hypotenuse)
           (((Variable (User a)) (Variable (User b)))
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User c-squared)))
-               (Application
-                (Value
-                 (Lambda (((Variable (User c))) (Value (Variable (User c))))))
-                ((Application (Value (Variable (User isqrt)))
-                  ((Value (Variable (User c-squared))))))))))
-            ((Operator
-              (Operator (Value (Variable (User a))) (Int Times)
-               (Value (Variable (User a))))
-              (Int Plus)
-              (Operator (Value (Variable (User b))) (Int Times)
-               (Value (Variable (User b))))))))))
+           (Let_mono (User c-squared)
+            (Operator
+             (Operator (Value (Variable (User a))) (Int Times)
+              (Value (Variable (User a))))
+             (Int Plus)
+             (Operator (Value (Variable (User b))) (Int Times)
+              (Value (Variable (User b)))))
+            (Let_mono (User c)
+             (Application (Value (Variable (User isqrt)))
+              ((Value (Variable (User c-squared)))))
+             (Value (Variable (User c))))))))
         (Fun
          ((User main)
           (()
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User all)))
-               (Application
-                (Value
-                 (Lambda (((Variable (User inside))) (Value (Literal Unit)))))
-                ((Operator
-                  (Operator
-                   (Operator (Value (Literal (Int 0))) (Int Less_equal)
-                    (Value (Variable (User x))))
-                   (Bool And)
-                   (Operator (Value (Variable (User x))) (Int Less_than)
-                    (Value (Literal (Int 7)))))
-                  (Bool Or)
-                  (Operator
-                   (Operator (Value (Literal (Int 100))) (Int Less_than)
-                    (Value (Variable (User x))))
-                   (Bool And)
-                   (Operator (Value (Variable (User x))) (Int Greater_equal)
-                    (Value (Literal (Int 9000)))))))))))
-            ((Operator
+           (Let_mono (User all)
+            (Operator
+             (Operator
               (Operator
-               (Operator
-                (Operator (Value (Literal (Int 12))) (Int Plus)
-                 (Operator (Value (Literal (Int 33))) (Int Times)
-                  (Value (Literal (Int 44)))))
-                (Int Minus)
-                (Operator (Value (Literal (Int 36))) (Int Divide)
-                 (Value (Literal (Int 4)))))
-               (Int Plus)
-               (Operator (Value (Literal (Int 91))) (Int Modulo)
+               (Operator (Value (Literal (Int 12))) (Int Plus)
+                (Operator (Value (Literal (Int 33))) (Int Times)
+                 (Value (Literal (Int 44)))))
+               (Int Minus)
+               (Operator (Value (Literal (Int 36))) (Int Divide)
+                (Value (Literal (Int 4)))))
+              (Int Plus)
+              (Operator (Value (Literal (Int 91))) (Int Modulo)
+               (Value (Literal (Int 7)))))
+             (Int Plus) (Value (Literal (Int 11))))
+            (Let_mono (User inside)
+             (Operator
+              (Operator
+               (Operator (Value (Literal (Int 0))) (Int Less_equal)
+                (Value (Variable (User x))))
+               (Bool And)
+               (Operator (Value (Variable (User x))) (Int Less_than)
                 (Value (Literal (Int 7)))))
-              (Int Plus) (Value (Literal (Int 11))))))))))))) |}]
+              (Bool Or)
+              (Operator
+               (Operator (Value (Literal (Int 100))) (Int Less_than)
+                (Value (Variable (User x))))
+               (Bool And)
+               (Operator (Value (Variable (User x))) (Int Greater_equal)
+                (Value (Literal (Int 9000))))))
+             (Value (Literal Unit))))))))))) |}]
 ;;
 
 let%expect_test "negative integer literals" =
@@ -636,14 +607,10 @@ fun i() {
           (()
            (Seq
             (If_then_else (Value (Variable (User condition)))
-             (Application
-              (Value
-               (Lambda
-                (((Variable (User x)))
-                 (Application (Value (Variable (User print)))
-                  ((Operator (Value (Variable (User x))) (Int Modulo)
-                    (Value (Literal (Int 7)))))))))
-              ((Value (Literal (Int 101)))))
+             (Let_mono (User x) (Value (Literal (Int 101)))
+              (Application (Value (Variable (User print)))
+               ((Operator (Value (Variable (User x))) (Int Modulo)
+                 (Value (Literal (Int 7)))))))
              (Value (Literal Unit)))
             (If_then_else (Value (Variable (User b)))
              (Seq (Application (Value (Variable (User aaa))) ())
@@ -865,35 +832,30 @@ fun one(aa, bb, cc, dd) {
          ((User one)
           (((Variable (User aa)) (Variable (User bb)) (Variable (User cc))
             (Variable (User dd)))
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User z)))
-               (Application (Value (Variable (User aa)))
-                ((Value
-                  (Lambda
-                   (()
-                    (Seq
-                     (Application (Value (Variable (User println)))
-                      ((Value (Variable (User zz)))))
-                     (Application (Value (Variable (User bb)))
-                      ((Value
-                        (Lambda
-                         (()
-                          (Application (Value (Variable (User cc)))
-                           ((Value (Literal (Int 3)))
-                            (Value
-                             (Lambda
-                              (()
-                               (Application (Value (Variable (User dd)))
-                                ((Value (Literal (Int 5)))
-                                 (Value
-                                  (Lambda
-                                   (((Variable (User x)))
-                                    (Application
-                                     (Value (Variable (User println)))
-                                     ((Value (Variable (User x)))))))))))))))))))))))))))))
-            ((Value (Literal (Int 1)))))))))))) |}]
+           (Let_mono (User z) (Value (Literal (Int 1)))
+            (Application (Value (Variable (User aa)))
+             ((Value
+               (Lambda
+                (()
+                 (Seq
+                  (Application (Value (Variable (User println)))
+                   ((Value (Variable (User zz)))))
+                  (Application (Value (Variable (User bb)))
+                   ((Value
+                     (Lambda
+                      (()
+                       (Application (Value (Variable (User cc)))
+                        ((Value (Literal (Int 3)))
+                         (Value
+                          (Lambda
+                           (()
+                            (Application (Value (Variable (User dd)))
+                             ((Value (Literal (Int 5)))
+                              (Value
+                               (Lambda
+                                (((Variable (User x)))
+                                 (Application (Value (Variable (User println)))
+                                  ((Value (Variable (User x)))))))))))))))))))))))))))))))))) |}]
 ;;
 
 let%expect_test "single line comments" =
@@ -959,16 +921,13 @@ fun not-commented-out() { True; };
         (Fun
          ((User documented)
           (()
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User x)))
-               (Operator (Value (Variable (User x))) (Int Times)
-                (Value (Variable (User x)))))))
-            ((Operator
-              (Operator (Value (Literal (Int 1))) (Int Plus)
-               (Value (Literal (Int 2))))
-              (Int Plus) (Value (Literal (Int 3)))))))))
+           (Let_mono (User x)
+            (Operator
+             (Operator (Value (Literal (Int 1))) (Int Plus)
+              (Value (Literal (Int 2))))
+             (Int Plus) (Value (Literal (Int 3))))
+            (Operator (Value (Variable (User x))) (Int Times)
+             (Value (Variable (User x))))))))
         (Fun ((User not-commented-out) (() (Value (Literal (Bool true)))))))))) |}]
 ;;
 
@@ -1022,15 +981,11 @@ fun main() {
        ((Fun
          ((User main)
           (()
-           (Application
-            (Value
-             (Lambda
-              (((Variable (User x)))
-               (Application
-                (Value (Lambda (((Variable (User y))) (Value (Literal Unit)))))
-                ((Operator (Value (Variable (User x))) (Int Times)
-                  (Value (Literal (Int 5)))))))))
-            ((Value (Literal (Int 1)))))))))))) |}]
+           (Let_mono (User x) (Value (Literal (Int 1)))
+            (Let_mono (User y)
+             (Operator (Value (Variable (User x))) (Int Times)
+              (Value (Literal (Int 5))))
+             (Value (Literal Unit))))))))))) |}]
 ;;
 
 let%expect_test "" =
