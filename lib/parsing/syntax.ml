@@ -222,15 +222,13 @@ type expr =
   | Application of expr * expr list
   | Identifier of Identifier.t
   | Constructor of constructor
-  | Tuple_constructor of expr list
+  | Tuple_literal of expr list
   | List_literal of expr list
   | Match of
       { subject : expr
       ; branches : (annotated_pattern * block) list
       }
   | Literal of literal
-  (* | Tuple of expr list *)
-  (* | List of expr list *)
   | Annotated_expr of expr * type_scheme
 [@@deriving sexp]
 
@@ -347,7 +345,7 @@ let insert_with_callback : callback:fn -> expr -> expr =
   | Identifier _
   | Literal _
   | Constructor _
-  | Tuple_constructor _
+  | Tuple_literal _
   | List_literal _
   | Match _ -> Application (e, [ Fn callback ])
 ;;

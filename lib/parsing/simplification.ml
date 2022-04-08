@@ -308,7 +308,7 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%map block_no' = simplify_block block_no in
     Min.Expr.If_then_else (e_cond', block_yes', block_no')
   | Syntax.If_then (e_cond, block_yes) ->
-    let block_no = Syntax.singleton_block (Syntax.Tuple_constructor []) in
+    let block_no = Syntax.singleton_block (Syntax.Tuple_literal []) in
     Syntax.If_then_else (e_cond, block_yes, block_no) |> simplify_expr
   | Syntax.Handler handler ->
     let%map handler' = simplify_effect_handler handler in
@@ -328,7 +328,7 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let x' = simplify_identifier x in
     Min.Expr.Variable x' |> Min.Expr.Value |> Result.Ok
   | Syntax.Constructor con -> failwith "not implemented"
-  | Syntax.Tuple_constructor es -> failwith "not implemented"
+  | Syntax.Tuple_literal es -> failwith "not implemented"
   | Syntax.List_literal e_elems ->
     let nil = Syntax.Constructor Syntax.Cons_list_nil in
     let cons = Syntax.Constructor Syntax.Cons_list_cons in

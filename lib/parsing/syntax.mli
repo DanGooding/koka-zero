@@ -229,7 +229,7 @@ type expr =
   | Application of expr * expr list
   | Identifier of Identifier.t
   | Constructor of constructor
-  | Tuple_constructor of expr list
+  | Tuple_literal of expr list
   | List_literal of expr list
   | Match of
       { subject : expr
