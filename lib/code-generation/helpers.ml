@@ -70,6 +70,30 @@ let bool_of_i1 b =
   Codegen.use_builder (Llvm.build_zext b bool "bool")
 ;;
 
+let cast_unboxed_int_of_opaque p name =
+  let open Codegen.Let_syntax in
+  let%bind int = Types.int in
+  Codegen.use_builder (Llvm.build_ptrtoint p int name)
+;;
+
+let cast_unboxed_bool_of_opaque p name =
+  let open Codegen.Let_syntax in
+  let%bind bool = Types.bool in
+  Codegen.use_builder (Llvm.build_ptrtoint p bool name)
+;;
+
+let cast_opaque_of_unboxed v =
+  let open Codegen.Let_syntax in
+  let%bind opaque_pointer = Types.opaque_pointer in
+  Codegen.use_builder (Llvm.build_inttoptr v opaque_pointer "unboxed")
+;;
+
+let const_cast_opaque_of_unboxed v =
+  let open Codegen.Let_syntax in
+  let%map opaque_pointer = Types.opaque_pointer in
+  Llvm.const_inttoptr v opaque_pointer
+;;
+
 let heap_allocate t name ~runtime =
   let open Codegen.Let_syntax in
   let size = Llvm.size_of t in
@@ -100,16 +124,6 @@ let heap_store_aux
   heap_store t v name ~runtime
 ;;
 
-let heap_store_int = heap_store_aux Types.int "int"
-let heap_store_bool = heap_store_aux Types.bool "bool"
-
-let heap_store_unit ~runtime =
-  let open Codegen.Let_syntax in
-  let%bind u = const_unit in
-  let%bind type_unit = Types.unit in
-  heap_store type_unit u "unit" ~runtime
-;;
-
 let heap_store_marker = heap_store_aux Types.marker "marker"
 let heap_store_label = heap_store_aux Types.label "label"
 
@@ -131,8 +145,6 @@ let dereference_aux
   dereference ptr t name
 ;;
 
-let dereference_int = dereference_aux Types.int "int"
-let dereference_bool = dereference_aux Types.bool "bool"
 let dereference_marker = dereference_aux Types.marker "marker"
 let dereference_label = dereference_aux Types.label "label"
 
