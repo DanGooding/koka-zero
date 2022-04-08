@@ -30,5 +30,5 @@ fun find-satisfying(pred) {
 };
 
 fun main() {
-  find-satisfying(fn(x) x == 101).int-of-bool.print-int();
+  find-satisfying(fn(x) x == 111).int-of-bool.print-int();
 };
