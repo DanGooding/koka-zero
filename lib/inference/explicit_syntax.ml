@@ -9,6 +9,7 @@ module Expr = struct
     type t =
       | Value of value
       | Let of Variable.t * value * t
+      | Let_mono of Variable.t * t * t
       | Application of t * t list
       | Seq of t * t
       | If_then_else of t * t * t
