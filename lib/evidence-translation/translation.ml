@@ -113,8 +113,7 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
   | Expl.Expr.Let (x, v_subject, e_body) ->
     let%bind (`Value subject') = translate_value v_subject in
     let%map m_body = translate_expr e_body in
-    EPS.Expr.Application
-      (EPS.Expr.Lambda ([ EPS.Parameter.Variable x ], m_body), [ subject' ])
+    EPS.Expr.Let (EPS.Parameter.Variable x, subject', m_body)
   | Expl.Expr.Seq (e1, e2) ->
     let%bind e1' = translate_expr e1 in
     make_bind_into e1' ~f:(fun _x1 -> translate_expr e2)
