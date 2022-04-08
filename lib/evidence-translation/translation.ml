@@ -17,7 +17,6 @@ let monadic_of_value : EPS.Expr.t -> EPS.Expr.t =
 ;;
 
 let translate_literal (l : Expl.Literal.t) : EPS.Literal.t = l
-let translate_operator (op : Expl.Operator.t) : EPS.Operator.t = op
 
 let translate_unary_operator (op : Expl.Operator.Unary.t) : EPS.Operator.Unary.t
   =
@@ -97,13 +96,7 @@ let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
     make_map_into m_e ~f:(fun x ->
         `Value (EPS.Expr.Unary_operator (op', x)) |> return)
   | Expl.Expr.Operator (e_left, op, e_right) ->
-    (* TODO: note this has no short-circuiting for boolean operators *)
-    let op' = translate_operator op in
-    let%bind m_left = translate_expr e_left in
-    make_bind_into m_left ~f:(fun x_left ->
-        let%bind m_right = translate_expr e_right in
-        make_map_into m_right ~f:(fun x_right ->
-            `Value (EPS.Expr.Operator (x_left, op', x_right)) |> return))
+    translate_operator ~e_left op ~e_right
   | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind e_cond' = translate_expr e_cond in
     make_bind_into e_cond' ~f:(fun cond ->
@@ -190,6 +183,37 @@ and translate_fix_lambda
   let open Generation.Let_syntax in
   let%map m_lambda = translate_lambda lambda in
   f, m_lambda
+
+(** tranlate an operator expression, taking operands as untranslated expressions
+    to allow short-circuiting for boolean operators *)
+and translate_operator
+    :  e_left:Expl.Expr.t -> Expl.Operator.t -> e_right:Expl.Expr.t
+    -> EPS.Expr.t Generation.t
+  =
+ fun ~e_left op ~e_right ->
+  let open Generation.Let_syntax in
+  match op with
+  | Expl.Operator.Int iop ->
+    let op = EPS.Operator.Int iop in
+    let%bind m_left = translate_expr e_left in
+    make_bind_into m_left ~f:(fun x_left ->
+        let%bind m_right = translate_expr e_right in
+        make_map_into m_right ~f:(fun x_right ->
+            `Value (EPS.Expr.Operator (x_left, op, x_right)) |> return))
+  | Expl.Operator.Bool bop ->
+    let%bind m_left = translate_expr e_left in
+    make_bind_into m_left ~f:(fun x_left ->
+        let%map m_right = translate_expr e_right in
+        let lift_bool b =
+          monadic_of_value (EPS.Expr.Literal (EPS.Literal.Bool b))
+        in
+        match bop with
+        | Expl.Operator.Bool.Or ->
+          (* a || b == a ? pure True : b *)
+          EPS.Expr.If_then_else (x_left, lift_bool true, m_right)
+        | Expl.Operator.Bool.And ->
+          (* a && b == a ? b : pure False *)
+          EPS.Expr.If_then_else (x_left, m_right, lift_bool false))
 
 and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
   =
