@@ -17,7 +17,7 @@ else
 fi
 
 # intentionally rely on clang to know the system's target triple
-LL_C_FLAGS="-Wall -Wno-override-module -O$OPT_LEVEL"
+LL_C_FLAGS="-Wall -Wno-override-module -O$OPT_LEVEL" # -fno-optimize-sibling-calls
 
 RUNTIME=$PROJECT_ROOT/lib/runtime/runtime.c
 
