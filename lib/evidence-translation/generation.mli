@@ -37,12 +37,14 @@ val make_lambda_2 : (E.t -> E.t -> E.t t) -> E.lambda t
 val make_lambda_3 : (E.t -> E.t -> E.t -> E.t t) -> E.lambda t
 
 val make_lambda_4 : (E.t -> E.t -> E.t -> E.t -> E.t t) -> E.lambda t
+val make_lambda_5 : (E.t -> E.t -> E.t -> E.t -> E.t -> E.t t) -> E.lambda t
 
 (* analogues of [make_lambda_n] which wrap the result into an expression *)
 val make_lambda_expr_1 : (E.t -> E.t t) -> E.t t
 val make_lambda_expr_2 : (E.t -> E.t -> E.t t) -> E.t t
 val make_lambda_expr_3 : (E.t -> E.t -> E.t -> E.t t) -> E.t t
 val make_lambda_expr_4 : (E.t -> E.t -> E.t -> E.t -> E.t t) -> E.t t
+val make_lambda_expr_5 : (E.t -> E.t -> E.t -> E.t -> E.t -> E.t t) -> E.t t
 
 (** builds a [Match_ctl] expression in a similar way to [make_lambda_n], but
     labelling the parameters in the yield branch for clarity *)
