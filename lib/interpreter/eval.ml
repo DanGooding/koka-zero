@@ -326,16 +326,12 @@ let eval_fun_decl
 ;;
 
 let eval_program : Program.t -> Value.t Interpreter.t =
- fun { Program.effect_declarations = _; fun_declarations } ->
+ fun { Program.effect_declarations = _; fun_declarations; entry_expr } ->
   let open Interpreter.Let_syntax in
   let env = Value.empty_context in
   let%bind env =
     Interpreter.list_fold fun_declarations ~init:env ~f:(fun env decl ->
         eval_fun_decl decl ~env)
   in
-  eval_expr
-    (Expr.Application
-       ( Expr.Application (Expr.Variable Keyword.entry_point, [])
-       , [ Expr.Nil_evidence_vector ] ))
-    ~env
+  eval_expr entry_expr ~env
 ;;
