@@ -11,9 +11,10 @@ module EPS = Evidence_passing_syntax
    be lifted into the effect monad via [monadic_of_value] *)
 
 (** convert a value (an expression which cannot step, so is total) into a
-    monadic value (via `return`), in this case one with zero effects. *)
-let monadic_of_value : EPS.Expr.t -> EPS.Expr.t =
- fun v -> EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.pure, [ v ])
+    monadic term (via `return`), in this case one with zero effects. *)
+let monadic_of_value : EPS.Expr.t -> evv:EPS.Expr.t -> EPS.Expr.t =
+ (* TODO: nicer name, perhaps remove entirely? *)
+ fun v ~evv:_ -> EPS.Expr.Construct_pure v
 ;;
 
 let translate_literal (l : Expl.Literal.t) : EPS.Literal.t = l
@@ -27,98 +28,118 @@ let translate_effect_label (label : Effect.Label.t) : EPS.Expr.t =
   EPS.Expr.Effect_label label
 ;;
 
-(** [make_bind_into e ~f:(fun x -> e')] builds the expression
-    [e >>= fun x -> e'] *)
+(** [make_bind_into e ~evv ~f:(fun x ~evv -> e')] builds the expression
+    [(e, evv) >>= fun (x, evv) -> e'] *)
 let make_bind_into
-    :  EPS.Expr.t -> f:(EPS.Expr.t -> EPS.Expr.t Generation.t)
+    :  EPS.Expr.t -> evv:EPS.Expr.t
+    -> f:(EPS.Expr.t -> evv:EPS.Expr.t -> EPS.Expr.t Generation.t)
     -> EPS.Expr.t Generation.t
   =
- fun e ~f ->
+ fun e ~evv ~f ->
   let open Generation.Let_syntax in
-  let%map rhs = Generation.make_lambda_expr_1 (fun x -> f x) in
-  EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.bind, [ e; rhs ])
+  let%map rhs = Generation.make_lambda_expr_2 (fun x evv -> f x ~evv) in
+  EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.bind, [ e; evv; rhs ])
 ;;
 
 (** [make_map_into e ~f:(fun x -> e')] builds the expression
     [e >>= fun x -> pure e'] *)
 let make_map_into
-    :  EPS.Expr.t -> f:(EPS.Expr.t -> [ `Value of EPS.Expr.t ] Generation.t)
+    :  EPS.Expr.t -> evv:EPS.Expr.t
+    -> f:(EPS.Expr.t -> [ `Value of EPS.Expr.t ] Generation.t)
     -> EPS.Expr.t Generation.t
   =
- fun e ~f ->
+ fun e ~evv ~f ->
   let open Generation.Let_syntax in
   let%map rhs =
-    Generation.make_lambda_expr_1 (fun x ->
+    Generation.make_lambda_expr_2 (fun x _evv ->
         let%map (`Value v_y) = f x in
-        monadic_of_value v_y)
+        (* construct [Pure v_y] *)
+        EPS.Expr.Construct_pure v_y)
   in
-  EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.bind, [ e; rhs ])
+  EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.bind, [ e; evv; rhs ])
 ;;
 
-(** [make_bind_many_into \[e1;...;en\] ~f:(fun xs -> e')] builds the expression
-    [e1 >>= fun x1 -> e2 >>= fun x2 -> ... en >>= fun xn -> e'] *)
+(** [make_bind_many_into
+    \[(fun ~evv -> e1);...;(fun ~evv -> en)\] ~evv
+    ~f:(fun \[x1;...;xn\] ~evv -> e')]
+    builds the expression
+    [(e1, evv) >>= fun (x1, evv) -> (e2, evv) >>= fun (x2, evv) -> ... (en, evv) >>= fun xn -> e'] *)
 let make_bind_many_into
-    :  EPS.Expr.t list -> f:(EPS.Expr.t list -> EPS.Expr.t Generation.t)
+    :  (evv:EPS.Expr.t -> EPS.Expr.t Generation.t) list -> evv:EPS.Expr.t
+    -> f:(EPS.Expr.t list -> evv:EPS.Expr.t -> EPS.Expr.t Generation.t)
     -> EPS.Expr.t Generation.t
   =
-  let rec make_bind_many_into es ~xs_rev ~f =
-    match es with
+  let open Generation.Let_syntax in
+  let rec make_bind_many_into ts ~evv ~xs_rev ~f =
+    match ts with
     | [] ->
       let xs = List.rev xs_rev in
-      f xs
-    | e :: es' ->
-      make_bind_into e ~f:(fun x ->
-          make_bind_many_into es' ~xs_rev:(x :: xs_rev) ~f)
+      f xs ~evv
+    | t :: ts' ->
+      let%bind m = t ~evv in
+      make_bind_into m ~evv ~f:(fun x ~evv ->
+          make_bind_many_into ts' ~evv ~xs_rev:(x :: xs_rev) ~f)
   in
-  fun es ~f -> make_bind_many_into es ~xs_rev:[] ~f
+  fun ts ~evv ~f -> make_bind_many_into ts ~evv ~xs_rev:[] ~f
 ;;
 
-let rec translate_expr : Expl.Expr.t -> EPS.Expr.t Generation.t =
+(** [translate_expr e ~evv] translates [e : t | eff] into [e' : Ctl eff t] with
+    free variable [evv : Evv eff] *)
+let rec translate_expr
+    : Expl.Expr.t -> evv:EPS.Expr.t -> EPS.Expr.t Generation.t
+  =
   let open Generation.Let_syntax in
-  function
-  | Expl.Expr.Value v ->
-    let%map (`Value v') = translate_value v in
-    monadic_of_value v'
-  | Expl.Expr.Application (e_f, e_args) ->
-    (* `e_f(e_1, e_2, ..., e_n)` translates to: *)
-    (* `e_f >>= (\f. e_1 >>= (\x1. e_2 >>= (\x2. ... e_n >>= (\xn. f(x1, x2,
-       ..., xn) ))))` *)
-    let%bind m_f = translate_expr e_f in
-    let%bind (m_args : EPS.Expr.t list) =
-      List.map e_args ~f:(fun e_arg -> translate_expr e_arg) |> Generation.all
-    in
-    make_bind_into m_f ~f:(fun f ->
-        make_bind_many_into m_args ~f:(fun xs ->
-            EPS.Expr.Application (f, xs) |> return))
-  | Expl.Expr.Unary_operator (op, e) ->
-    let op' = translate_unary_operator op in
-    let%bind m_e = translate_expr e in
-    make_map_into m_e ~f:(fun x ->
-        `Value (EPS.Expr.Unary_operator (op', x)) |> return)
-  | Expl.Expr.Operator (e_left, op, e_right) ->
-    translate_operator ~e_left op ~e_right
-  | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
-    let%bind e_cond' = translate_expr e_cond in
-    make_bind_into e_cond' ~f:(fun cond ->
-        let%bind e_yes' = translate_expr e_yes in
-        let%map e_no' = translate_expr e_no in
-        EPS.Expr.If_then_else (cond, e_yes', e_no'))
-  | Expl.Expr.Let (x, v_subject, e_body) ->
-    let%bind (`Value subject') = translate_value v_subject in
-    let%map m_body = translate_expr e_body in
-    EPS.Expr.Let (EPS.Parameter.Variable x, subject', m_body)
-  | Expl.Expr.Let_mono (x, e_subject, e_body) ->
-    let%bind m_subject = translate_expr e_subject in
-    let%map m_body = translate_expr e_body in
-    let ps = [ EPS.Parameter.Variable x ] in
-    let lambda = ps, m_body in
-    EPS.Expr.Application
-      ( EPS.Expr.Variable Primitives.Names.bind
-      , [ m_subject; EPS.Expr.Lambda lambda ] )
-  | Expl.Expr.Seq (e1, e2) ->
-    let%bind e1' = translate_expr e1 in
-    make_bind_into e1' ~f:(fun _x1 -> translate_expr e2)
-  | Expl.Expr.Impure_built_in impure -> translate_impure_built_in impure
+  fun e ~evv ->
+    match e with
+    | Expl.Expr.Value v ->
+      let%map (`Value v') = translate_value v in
+      EPS.Expr.Construct_pure v'
+    | Expl.Expr.Application (e_f, e_args) ->
+      (* `e_f(e_1, e_2, ..., e_n)` translates to: *)
+      (* `(e_f,evv) >>= (\f evv. (e_1,evv) >>= (\x1 evv. (e_2,evv) >>= (\x2 evv.
+         ... (e_n, evv) >>= (\xn evv. f(x1, x2, ..., xn, evv) ))))` *)
+      let%bind m_f = translate_expr e_f ~evv in
+      make_bind_into m_f ~evv ~f:(fun f ~evv ->
+          let (translate_args
+                : (evv:EPS.Expr.t -> EPS.Expr.t Generation.t) list)
+            =
+            List.map e_args ~f:translate_expr
+          in
+          make_bind_many_into translate_args ~evv ~f:(fun xs ~evv ->
+              EPS.Expr.Application (f, xs @ [ evv ]) |> return))
+    | Expl.Expr.Unary_operator (op, e) ->
+      let op' = translate_unary_operator op in
+      let%bind m_e = translate_expr e ~evv in
+      make_map_into m_e ~evv ~f:(fun x ->
+          `Value (EPS.Expr.Unary_operator (op', x)) |> return)
+    | Expl.Expr.Operator (e_left, op, e_right) ->
+      translate_operator ~e_left op ~e_right
+    | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
+      let%bind e_cond' = translate_expr e_cond ~evv in
+      make_bind_into e_cond' ~evv ~f:(fun cond ~evv ->
+          let%bind e_yes' = translate_expr e_yes ~evv in
+          let%map e_no' = translate_expr e_no ~evv in
+          EPS.Expr.If_then_else (cond, e_yes', e_no'))
+    | Expl.Expr.Let (x, v_subject, e_body) ->
+      let%bind (`Value subject') = translate_value v_subject in
+      let%map m_body = translate_expr e_body ~evv in
+      EPS.Expr.Let (EPS.Parameter.Variable x, subject', m_body)
+    | Expl.Expr.Let_mono (x, e_subject, e_body) ->
+      (* `(e_subject, evv) >>= (\x evv'. e_body)` *)
+      let%bind m_subject = translate_expr e_subject ~evv in
+      (* can't just use [make_lambda], since [e_body] expects the name [x] *)
+      let%bind x_evv' = Generation.fresh_name in
+      let evv' = EPS.Expr.Variable x_evv' in
+      let%map m_body = translate_expr e_body ~evv:evv' in
+      let ps = [ EPS.Parameter.Variable x; EPS.Parameter.Variable x_evv' ] in
+      let lambda = ps, m_body in
+      EPS.Expr.Application
+        ( EPS.Expr.Variable Primitives.Names.bind
+        , [ m_subject; EPS.Expr.Lambda lambda ] )
+    | Expl.Expr.Seq (e1, e2) ->
+      let%bind e1' = translate_expr e1 ~evv in
+      make_bind_into e1' ~evv ~f:(fun _x1 ~evv -> translate_expr e2 ~evv)
+    | Expl.Expr.Impure_built_in impure -> translate_impure_built_in impure
 
 and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
   let open Generation.Let_syntax in
