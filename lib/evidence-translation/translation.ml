@@ -83,6 +83,20 @@ let make_bind_many_into
   fun ts ~evv ~f -> make_bind_many_into ts ~evv ~xs_rev:[] ~f
 ;;
 
+(** Translate a given term, also returning the variable it expects its evidence
+    vector to be in. Useful for effectful terms wrapped in lambdas *)
+let provide_evv
+    :  (evv:EPS.Expr.t -> EPS.Expr.t Generation.t)
+    -> (Variable.t * EPS.Expr.t) Generation.t
+  =
+ fun translate ->
+  let open Generation.Let_syntax in
+  let%bind x_evv = Generation.fresh_name in
+  let evv = EPS.Expr.Variable x_evv in
+  let%map m = translate ~evv in
+  x_evv, m
+;;
+
 (** [translate_expr e ~evv] translates [e : t | eff] into [e' : Ctl eff t] with
     free variable [evv : Evv eff] *)
 let rec translate_expr
@@ -128,10 +142,10 @@ let rec translate_expr
       (* `(e_subject, evv) >>= (\x evv'. e_body)` *)
       let%bind m_subject = translate_expr e_subject ~evv in
       (* can't just use [make_lambda], since [e_body] expects the name [x] *)
-      let%bind x_evv' = Generation.fresh_name in
-      let evv' = EPS.Expr.Variable x_evv' in
-      let%map m_body = translate_expr e_body ~evv:evv' in
-      let ps = [ EPS.Parameter.Variable x; EPS.Parameter.Variable x_evv' ] in
+      let%map x_evv_body, m_body = provide_evv (translate_expr e_body) in
+      let ps =
+        [ EPS.Parameter.Variable x; EPS.Parameter.Variable x_evv_body ]
+      in
       let lambda = ps, m_body in
       EPS.Expr.Application
         ( EPS.Expr.Variable Primitives.Names.bind
@@ -194,7 +208,8 @@ and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
 and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
  fun (ps, e_body) ->
   let open Generation.Let_syntax in
-  let%map m_body = translate_expr e_body in
+  let%map x_evv, m_body = provide_evv (translate_expr e_body) in
+  let ps = ps @ [ EPS.Parameter.Variable x_evv ] in
   ps, m_body
 
 and translate_fix_lambda
@@ -209,31 +224,31 @@ and translate_fix_lambda
     to allow short-circuiting for boolean operators *)
 and translate_operator
     :  e_left:Expl.Expr.t -> Expl.Operator.t -> e_right:Expl.Expr.t
-    -> EPS.Expr.t Generation.t
+    -> evv:EPS.Expr.t -> EPS.Expr.t Generation.t
   =
- fun ~e_left op ~e_right ->
+ fun ~e_left op ~e_right ~evv ->
   let open Generation.Let_syntax in
   match op with
   | Expl.Operator.Int iop ->
     let op = EPS.Operator.Int iop in
-    let%bind m_left = translate_expr e_left in
-    make_bind_into m_left ~f:(fun x_left ->
-        let%bind m_right = translate_expr e_right in
-        make_map_into m_right ~f:(fun x_right ->
+    let%bind m_left = translate_expr e_left ~evv in
+    make_bind_into m_left ~evv ~f:(fun x_left ~evv ->
+        let%bind m_right = translate_expr e_right ~evv in
+        make_map_into m_right ~evv ~f:(fun x_right ->
             `Value (EPS.Expr.Operator (x_left, op, x_right)) |> return))
   | Expl.Operator.Bool bop ->
-    let%bind m_left = translate_expr e_left in
-    make_bind_into m_left ~f:(fun x_left ->
-        let%map m_right = translate_expr e_right in
+    let%bind m_left = translate_expr e_left ~evv in
+    make_bind_into m_left ~evv ~f:(fun x_left ~evv ->
+        let%map m_right = translate_expr e_right ~evv in
         let lift_bool b =
-          monadic_of_value (EPS.Expr.Literal (EPS.Literal.Bool b))
+          EPS.Expr.Construct_pure (EPS.Expr.Literal (EPS.Literal.Bool b))
         in
         match bop with
         | Expl.Operator.Bool.Or ->
-          (* a || b == a ? pure True : b *)
+          (* a || b === a ? Pure True : b *)
           EPS.Expr.If_then_else (x_left, lift_bool true, m_right)
         | Expl.Operator.Bool.And ->
-          (* a && b == a ? b : pure False *)
+          (* a && b === a ? b : Pure False *)
           EPS.Expr.If_then_else (x_left, m_right, lift_bool false))
 
 and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
@@ -261,14 +276,21 @@ and translate_op_handler
   match shape with
   | Operation_shape.Control ->
     let resume = Expl.Keyword.resume in
-    let%map m_body = translate_expr op_body in
+    let%map x_evv, m_body = provide_evv (translate_expr op_body) in
     let clause =
-      EPS.Expr.Lambda ([ op_argument; EPS.Parameter.Variable resume ], m_body)
+      EPS.Expr.Lambda
+        ( [ op_argument
+          ; EPS.Parameter.Variable resume
+          ; EPS.Parameter.Variable x_evv
+          ]
+        , m_body )
     in
     EPS.Expr.Construct_op_normal clause
   | Operation_shape.Fun ->
-    let%map m_body = translate_expr op_body in
-    let clause = EPS.Expr.Lambda ([ op_argument ], m_body) in
+    let%map x_evv, m_body = provide_evv (translate_expr op_body) in
+    let clause =
+      EPS.Expr.Lambda ([ op_argument; EPS.Parameter.Variable x_evv ], m_body)
+    in
     EPS.Expr.Construct_op_tail clause
 
 and translate_impure_built_in
