@@ -16,11 +16,12 @@ val rewrite_program
 module Free_variables = Free_variables
 
 module Private : sig
-  (** apply the evidence passing translation on an expression. Note generated
-      names will not be unique across invocations *)
-  val translate_expr
-    :  Explicit_syntax.Expr.t
-    -> Evidence_passing_syntax.Expr.t Or_static_error.t
+  (** apply the evidence passing translation to a lambda, adding an evidence
+      vector as its final parameter. Note generated names will not be unique
+      across invocations *)
+  val translate_lambda
+    :  Explicit_syntax.Expr.lambda
+    -> Evidence_passing_syntax.Expr.lambda Generation.t
 
   (** apply the evidence-passing translation to a program, but don't prepend the
       prelude functions. *)
