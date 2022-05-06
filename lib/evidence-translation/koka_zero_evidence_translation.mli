@@ -21,7 +21,7 @@ module Private : sig
       across invocations *)
   val translate_lambda
     :  Explicit_syntax.Expr.lambda
-    -> Evidence_passing_syntax.Expr.lambda Generation.t
+    -> Evidence_passing_syntax.Expr.lambda Or_static_error.t
 
   (** apply the evidence-passing translation to a program, but don't prepend the
       prelude functions. *)
