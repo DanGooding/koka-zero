@@ -8,14 +8,7 @@ module Expl = Koka_zero_inference.Explicit_syntax
 module EPS = Evidence_passing_syntax
 
 (* [`Value e] indicates that expression [e] represents a pure term, which must
-   be lifted into the effect monad via [monadic_of_value] *)
-
-(** convert a value (an expression which cannot step, so is total) into a
-    monadic term (via `return`), in this case one with zero effects. *)
-let monadic_of_value : EPS.Expr.t -> evv:EPS.Expr.t -> EPS.Expr.t =
- (* TODO: nicer name, perhaps remove entirely? *)
- fun v ~evv:_ -> EPS.Expr.Construct_pure v
-;;
+   be lifted into the effect monad via [EPS.Expr.Construct_pure] *)
 
 let translate_literal (l : Expl.Literal.t) : EPS.Literal.t = l
 
@@ -127,7 +120,7 @@ let rec translate_expr
       make_map_into m_e ~evv ~f:(fun x ->
           `Value (EPS.Expr.Unary_operator (op', x)) |> return)
     | Expl.Expr.Operator (e_left, op, e_right) ->
-      translate_operator ~e_left op ~e_right
+      translate_operator ~e_left op ~e_right ~evv
     | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
       let%bind e_cond' = translate_expr e_cond ~evv in
       make_bind_into e_cond' ~evv ~f:(fun cond ~evv ->
@@ -153,7 +146,7 @@ let rec translate_expr
     | Expl.Expr.Seq (e1, e2) ->
       let%bind e1' = translate_expr e1 ~evv in
       make_bind_into e1' ~evv ~f:(fun _x1 ~evv -> translate_expr e2 ~evv)
-    | Expl.Expr.Impure_built_in impure -> translate_impure_built_in impure
+    | Expl.Expr.Impure_built_in impure -> translate_impure_built_in impure ~evv
 
 and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
   let open Generation.Let_syntax in
@@ -294,22 +287,21 @@ and translate_op_handler
     EPS.Expr.Construct_op_tail clause
 
 and translate_impure_built_in
-    : Expl.Expr.impure_built_in -> EPS.Expr.t Generation.t
+    : Expl.Expr.impure_built_in -> evv:EPS.Expr.t -> EPS.Expr.t Generation.t
   =
   let open Generation.Let_syntax in
-  function
-  | Expl.Expr.Impure_print_int e ->
-    let%bind e' = translate_expr e in
-    make_bind_into e' ~f:(fun x ->
-        EPS.Expr.Application
-          ( EPS.Expr.Variable Primitives.Names.pure
-          , [ EPS.Expr.Impure_built_in (EPS.Expr.Impure_print_int x) ] )
-        |> return)
-  | Expl.Expr.Impure_read_int ->
-    EPS.Expr.Application
-      ( EPS.Expr.Variable Primitives.Names.pure
-      , [ EPS.Expr.Impure_built_in EPS.Expr.Impure_read_int ] )
-    |> return
+  fun built_in ~evv ->
+    match built_in with
+    | Expl.Expr.Impure_print_int e ->
+      let%bind e' = translate_expr e ~evv in
+      make_map_into e' ~evv ~f:(fun x ->
+          (* `Value as in "won't Yield", does actually perform "real" effect! *)
+          `Value (EPS.Expr.Impure_built_in (EPS.Expr.Impure_print_int x))
+          |> return)
+    | Expl.Expr.Impure_read_int ->
+      EPS.Expr.Construct_pure
+        (EPS.Expr.Impure_built_in EPS.Expr.Impure_read_int)
+      |> return
 ;;
 
 let translate_fun_decl : Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t =
