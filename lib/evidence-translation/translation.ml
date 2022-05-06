@@ -144,7 +144,7 @@ let rec translate_expr
       let lambda = ps, m_body in
       EPS.Expr.Application
         ( EPS.Expr.Variable Primitives.Names.bind
-        , [ m_subject; EPS.Expr.Lambda lambda ] )
+        , [ m_subject; evv; EPS.Expr.Lambda lambda ] )
     | Expl.Expr.Seq (e1, e2) ->
       let%bind e1' = translate_expr e1 ~evv in
       make_bind_into e1' ~evv ~f:(fun _x1 ~evv -> translate_expr e2 ~evv)
@@ -164,29 +164,19 @@ and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
     let%map fix_lambda' = translate_fix_lambda fix_lambda in
     `Value (EPS.Expr.Fix_lambda fix_lambda')
   | Expl.Expr.Handler h ->
-    (* TODO: `Hnd perhaps isn't useful? indicates it is not a first class object
-       to the user *)
-    let%bind (`Hnd h') = translate_handler h in
+    let%map (`Value h') = translate_handler h in
     let { Expl.Expr.handled_effect = label; _ } = h in
-    let (label' : EPS.Expr.t) = translate_effect_label label in
-    (* [handler'] is not a value, although it steps to one without any effects,
-       therefore it must be wrapped in a lambda. The alternative is to
-       essentially inline the call to [Primitives.handler], or to lie and
-       pretend it is already value. *)
+    let label' : EPS.Expr.t = translate_effect_label label in
     let handler' =
       EPS.Expr.Application
         (EPS.Expr.Variable Primitives.Names.handler, [ label'; h' ])
     in
-    let%map wrapped_handler =
-      Generation.make_lambda_expr_1 (fun action ->
-          EPS.Expr.Application (handler', [ action ]) |> return)
-    in
-    `Value wrapped_handler
+    `Value handler'
   | Expl.Expr.Perform
       { Expl.Expr.operation = op_name; performed_effect = label } ->
-    let%bind selector =
+    let%map selector =
       Generation.make_lambda_expr_1 (fun h ->
-          (* TODO: think more about how to implement `select` *)
+          (* TODO: can we just carry indicies around, rather than select *)
           EPS.Expr.Select_operation (label, op_name, h) |> return)
     in
     let label' : EPS.Expr.t = translate_effect_label label in
@@ -194,11 +184,7 @@ and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
       EPS.Expr.Application
         (EPS.Expr.Variable Primitives.Names.perform, [ label'; selector ])
     in
-    let%map wrapped_perform =
-      Generation.make_lambda_expr_1 (fun argument ->
-          EPS.Expr.Application (perform', [ argument ]) |> return)
-    in
-    `Value wrapped_perform
+    `Value perform'
 
 and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
  fun (ps, e_body) ->
@@ -246,7 +232,8 @@ and translate_operator
           (* a && b === a ? b : Pure False *)
           EPS.Expr.If_then_else (x_left, m_right, lift_bool false))
 
-and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
+and translate_handler
+    : Expl.Expr.handler -> [ `Value of EPS.Expr.t ] Generation.t
   =
  fun handler ->
   let open Generation.Let_syntax in
@@ -261,7 +248,7 @@ and translate_handler : Expl.Expr.handler -> [ `Hnd of EPS.Expr.t ] Generation.t
     | None -> return ()
     | Some _ -> Generation.unsupported_feature_error "return clause in handler"
   in
-  `Hnd (EPS.Expr.Construct_handler { handled_effect; operation_clauses })
+  `Value (EPS.Expr.Construct_handler { handled_effect; operation_clauses })
 
 and translate_op_handler
     : Operation_shape.t -> Expl.Expr.op_handler -> EPS.Expr.t Generation.t
@@ -337,10 +324,10 @@ let translate_program { Expl.Program.declarations } ~include_prelude =
   let effect_declarations = List.rev effect_declarations_rev in
   let fun_declarations = List.rev fun_declarations_rev in
   let fun_declarations = prelude_declarations @ fun_declarations in
-  (* [entry_point()(runtime.nil_evidence_vector)] *)
+  (* [entry_point(nil_evidence_vector)] *)
   let entry_expr =
     EPS.Expr.Application
-      ( EPS.Expr.Application (EPS.Expr.Variable EPS.Keyword.entry_point, [])
+      ( EPS.Expr.Variable EPS.Keyword.entry_point
       , [ EPS.Expr.Nil_evidence_vector ] )
   in
   { EPS.Program.effect_declarations; fun_declarations; entry_expr }

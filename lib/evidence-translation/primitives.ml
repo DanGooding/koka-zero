@@ -46,7 +46,7 @@ let bind =
 let prompt =
   let open Generation.Let_syntax in
   map_name_lambda
-    ~name:Names.handler
+    ~name:Names.prompt
     (Generation.make_lambda_5 (fun label marker handler e vector ->
          let vector' =
            Expr.Cons_evidence_vector
@@ -102,7 +102,7 @@ let handler =
 let under =
   let open Generation.Let_syntax in
   map_name_lambda
-    ~name:Names.perform
+    ~name:Names.under
     (Generation.make_lambda_4 (fun label handler_site_vector x g ->
          let run_at_handler =
            Expr.Application (g, [ x; handler_site_vector ])
