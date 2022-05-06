@@ -95,6 +95,9 @@ module Program : sig
   type t =
     { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
+    ; entry_expr : Expr.t
+          (** expression to run the program: runs entry-point with an empty
+              evidence vector *)
     }
   [@@deriving sexp]
 end
