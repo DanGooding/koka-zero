@@ -94,6 +94,25 @@ let make_lambda_4 make_body =
   ps, body
 ;;
 
+let make_lambda_5 make_body =
+  let open Let_syntax in
+  let%bind x1 = fresh_name in
+  let%bind x2 = fresh_name in
+  let%bind x3 = fresh_name in
+  let%bind x4 = fresh_name in
+  let%bind x5 = fresh_name in
+  let%map body =
+    make_body
+      (E.Variable x1)
+      (E.Variable x2)
+      (E.Variable x3)
+      (E.Variable x4)
+      (E.Variable x5)
+  in
+  let ps = parameters_of_names [ x1; x2; x3; x4; x5 ] in
+  ps, body
+;;
+
 let expr_of_lambda lambda = E.Lambda lambda
 
 let make_lambda_expr_1 make_body =
@@ -110,6 +129,10 @@ let make_lambda_expr_3 make_body =
 
 let make_lambda_expr_4 make_body =
   make_lambda_4 make_body |> map ~f:expr_of_lambda
+;;
+
+let make_lambda_expr_5 make_body =
+  make_lambda_5 make_body |> map ~f:expr_of_lambda
 ;;
 
 let make_match_ctl subject ~pure ~yield =
