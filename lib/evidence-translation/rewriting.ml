@@ -1,4 +1,3 @@
-open Core
 open Import
 open Evidence_passing_syntax
 
@@ -9,20 +8,18 @@ let is_name : Expr.t -> Variable.t -> bool =
   | _ -> false
 ;;
 
-let require_is_name : Expr.t -> Variable.t -> unit option =
- fun e name -> if is_name e name then Some () else None
-;;
+(** apply the monad law [return e1 >>= (fun y -> e2)] --> [let y = e1 in e2]
 
-(** apply the monad law [return e1 >>= (fun y -> e2)] --> [let y = e1 in e2] *)
+    which in the uncurried form is [(Pure e1, evv) >>= (fun y evv' -> e2)] -->
+    [let y = e1 in let evv' = evv in e2] *)
 let left_unit : Expr.t -> Expr.t Modified.t =
   Modified.original_for_none (function [@warning "-4"]
       | Expr.Application
-          (bind, [ Expr.Application (pure, [ e1 ]); Expr.Lambda ([ y ], e2) ])
-        ->
-        let open Option.Let_syntax in
-        let%bind () = require_is_name bind Primitives.Names.bind in
-        let%map () = require_is_name pure Primitives.Names.pure in
-        Expr.Let (y, e1, e2)
+          ( bind
+          , [ Expr.Construct_pure e1; vector; Expr.Lambda ([ y; vector' ], e2) ]
+          )
+        when is_name bind Primitives.Names.bind ->
+        Expr.Let (y, e1, Expr.Let (vector', vector, e2)) |> Some
       | _ -> None)
 ;;
 
