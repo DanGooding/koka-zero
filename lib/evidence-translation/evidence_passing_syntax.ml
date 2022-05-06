@@ -93,6 +93,7 @@ module Program = struct
   type t =
     { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
+    ; entry_expr : Expr.t
     }
   [@@deriving sexp]
 end

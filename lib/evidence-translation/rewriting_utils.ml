@@ -158,11 +158,11 @@ and apply_everywhere_to_fix_lambda
 let apply_everywhere_to_program
     : rewrite:(Expr.t -> Expr.t Modified.t) -> Program.t -> Program.t Modified.t
   =
- fun ~rewrite { Program.effect_declarations; fun_declarations } ->
+ fun ~rewrite { Program.effect_declarations; fun_declarations; entry_expr } ->
   let open Modified.Let_syntax in
   let%map fun_declarations =
     List.map fun_declarations ~f:(apply_everywhere_to_fix_lambda ~rewrite)
     |> Modified.all
   in
-  { Program.effect_declarations; fun_declarations }
+  { Program.effect_declarations; fun_declarations; entry_expr }
 ;;

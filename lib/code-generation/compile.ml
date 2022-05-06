@@ -1152,7 +1152,7 @@ let compile_fun_decls
 ;;
 
 let compile_program : EPS.Program.t -> unit Codegen.t =
- fun { EPS.Program.effect_declarations; fun_declarations } ->
+ fun { EPS.Program.effect_declarations; fun_declarations; entry_expr } ->
   let open Codegen.Let_syntax in
   let%bind effect_reprs = compile_effect_decls effect_declarations in
   let%bind runtime = Runtime.declare in
@@ -1218,17 +1218,9 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
     |> Codegen.all_unit
   in
   let env = Context.Toplevel toplevel_closure in
-  (* compile a call to `entry_point` - or should this be kept as an expression
-     rather than a function? *)
-  (* [entry_point()(runtime.nil_evidence_vector)] *)
-  let invocation =
-    EPS.Expr.Application
-      ( EPS.Expr.Application (EPS.Expr.Variable EPS.Keyword.entry_point, [])
-      , [ EPS.Expr.Nil_evidence_vector ] )
-  in
   let%bind _unit =
     compile_expr
-      invocation
+      entry_expr
       ~env
       ~outer_symbol:Symbol_name.main
       ~runtime

@@ -337,7 +337,13 @@ let translate_program { Expl.Program.declarations } ~include_prelude =
   let effect_declarations = List.rev effect_declarations_rev in
   let fun_declarations = List.rev fun_declarations_rev in
   let fun_declarations = prelude_declarations @ fun_declarations in
-  { EPS.Program.effect_declarations; fun_declarations }
+  (* [entry_point()(runtime.nil_evidence_vector)] *)
+  let entry_expr =
+    EPS.Expr.Application
+      ( EPS.Expr.Application (EPS.Expr.Variable EPS.Keyword.entry_point, [])
+      , [ EPS.Expr.Nil_evidence_vector ] )
+  in
+  { EPS.Program.effect_declarations; fun_declarations; entry_expr }
 ;;
 
 let translate program = translate_program program ~include_prelude:true
