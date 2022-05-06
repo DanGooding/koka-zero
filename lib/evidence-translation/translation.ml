@@ -76,8 +76,8 @@ let make_bind_many_into
   fun ts ~evv ~f -> make_bind_many_into ts ~evv ~xs_rev:[] ~f
 ;;
 
-(** Translate a given term, also returning the variable it expects its evidence
-    vector to be in. Useful for effectful terms wrapped in lambdas *)
+(** Translate a given term, also returning the free variable it expects its
+    evidence vector in. Useful for effectful terms wrapped in lambdas *)
 let provide_evv
     :  (evv:EPS.Expr.t -> EPS.Expr.t Generation.t)
     -> (Variable.t * EPS.Expr.t) Generation.t
@@ -90,8 +90,10 @@ let provide_evv
   x_evv, m
 ;;
 
-(** [translate_expr e ~evv] translates [e : t | eff] into [e' : Ctl eff t] with
-    free variable [evv : Evv eff] *)
+(** [translate_expr e ~evv] translates effectful term [e] of type [t] and
+    effects [eff] into a term of type [Ctl eff t], with evidence vector passed
+    as a free variable [evv]. This is an uncurried form of the monad
+    [Mon eff t = Evv eff -> Ctl eff t]. *)
 let rec translate_expr
     : Expl.Expr.t -> evv:EPS.Expr.t -> EPS.Expr.t Generation.t
   =
