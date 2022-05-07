@@ -26,6 +26,8 @@ if [ -z "$DISABLE_GC" ]; then
     # GC enabled (default)
     GC=/home/dan/boehm/gc
     LL_C_FLAGS="$LL_C_FLAGS -DENABLE_GC -I$GC/include -L$GC/lib -lgc"
+else
+    echo "compiling without gargage collector"
 fi
 
 SOURCE="$1"
