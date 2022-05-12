@@ -22,6 +22,7 @@ fun filter(p, generate) {
 }
 
 
+// state (no module system yet)
 effect state-int {
   control get(_ : ()) : int;
   control set(i : int) : ();
@@ -44,14 +45,17 @@ fun modify(f) {
   get(()).f().set();
 }
 
+// state += 1
 fun increment() {
   modify fn(x) { x + 1 };
 }
 
+// state -= 1
 fun decrement() {
   modify fn(x) { x - 1 };
 }
 
+// apply `f` to every element
 fun map(f, generate) {
   with fun yield-int(x) {
     yield-int(f(x));
@@ -76,6 +80,7 @@ fun take(n, generate) {
   generate();
 }
 
+// yield elements until one doesn't satisfy `p` (exclusive)
 fun take-while(p, generate) {
   with control yield-int(x){
     if p(x) then {
@@ -88,6 +93,7 @@ fun take-while(p, generate) {
   generate();
 }
 
+// reduce a stream to a single value (a 'left' fold)
 fun fold(x0, f, generate) {
   with control yield-int(x) {
      // TODO: try the state trick for tail-recursion
@@ -115,6 +121,7 @@ fun any(p, generate) {
 fun is-prime(n) {
   if n <= 1 then False
   else {
+    // a very inefficient test
     with all(fn(d) { n % d != 0 });
     with take-while(fn(d) { d < n });
     integers-from(2);
@@ -130,6 +137,7 @@ fun print-yielded(generate) {
 }
 
 fun main() {
+  // print primes up to 30:
   with print-yielded;
   with take-while(fn(x) { x < 30 });
   with filter(is-prime);
