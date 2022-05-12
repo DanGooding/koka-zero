@@ -285,7 +285,7 @@ declarations:
 
 (* %type <toplevel_declaration list> topdecls *)
 topdecls:
-  | ts = semi_terminated_list(topdecl)
+  | ts = list(topdecl)
     { ts }
   ;
 (* TODO: error recovery? [(topdecl | error) semi+] *)
@@ -321,12 +321,14 @@ effectdecl:
     id = varid;
     type_parameters = typeparams;
     kind = kannot;
-    operations = opdecls
+    operations = opdecls;
+    semi*
     { { id; type_parameters; kind; operations } }
   | EFFECT;
     type_parameters = typeparams;
     kind = kannot;
-    operation = operation
+    operation = operation;
+    semi+
     {
       let { id; _ } : operation_declaration = operation in
       let operations = [operation] in
@@ -431,9 +433,9 @@ operation:
 ----------------------------------------------------------*)
 (* %type <pure_declaration> puredecl *)
 puredecl:
-  | VAL; binder = binder; "="; body = blockexpr
+  | VAL; binder = binder; "="; body = blockexpr; semi+
     { Top_val(binder, body) }
-  | FUN; f = fundecl
+  | FUN; f = fundecl; semi*
     { Top_fun f }
   ;
 
