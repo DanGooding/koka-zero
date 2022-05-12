@@ -2,14 +2,14 @@
 effect control yield-int(x : int) : ();
 
 // yield n, n+1, n+2, ...
-fun naturals-from(n) {
+fun integers-from(n) {
   yield-int(n);
-  naturals-from(n + 1);
+  integers-from(n + 1);
 };
 
 // yield 0, 1, 2, ...
 fun naturals() {
-  naturals-from(0);
+  integers-from(0);
 };
 
 // yield elements satisfying `p` only
@@ -110,7 +110,7 @@ fun is-prime(n) {
   else {
     with all(fn(d) { n % d != 0 });
     with take-while(fn(d) { d < n });
-    naturals-from(2);
+    integers-from(2);
   };
 };
 
