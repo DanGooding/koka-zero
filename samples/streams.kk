@@ -5,12 +5,12 @@ effect control yield-int(x : int) : ();
 fun integers-from(n) {
   yield-int(n);
   integers-from(n + 1);
-};
+}
 
 // yield 0, 1, 2, ...
 fun naturals() {
   integers-from(0);
-};
+}
 
 // yield elements satisfying `p` only
 fun filter(p, generate) {
@@ -19,13 +19,13 @@ fun filter(p, generate) {
     resume(());
   };
   generate();
-};
+}
 
 
 effect state-int {
   control get(_ : ()) : int;
   control set(i : int) : ();
-};
+}
 
 fun state(init, action) {
   fun thread-state() {
@@ -37,20 +37,27 @@ fun state(init, action) {
     fn(s) { x };
   };
   thread-state()(init);
-};
+}
 
 // apply f to state
 fun modify(f) {
   get(()).f().set();
-};
+}
 
 fun increment() {
   modify fn(x) { x + 1 };
-};
+}
 
 fun decrement() {
   modify fn(x) { x - 1 };
-};
+}
+
+fun map(f, generate) {
+  with fun yield-int(x) {
+    yield-int(f(x));
+  };
+  generate();
+}
 
 // yield the first `n` elements only
 fun take(n, generate) {
@@ -67,7 +74,7 @@ fun take(n, generate) {
     }
   };
   generate();
-};
+}
 
 fun take-while(p, generate) {
   with control yield-int(x){
@@ -79,7 +86,7 @@ fun take-while(p, generate) {
     };
   };
   generate();
-};
+}
 
 fun fold(x0, f, generate) {
   with control yield-int(x) {
@@ -87,7 +94,7 @@ fun fold(x0, f, generate) {
      f(x0, resume(()));
   };
   generate();
-};
+}
 
 // is `p` true for every element?
 fun all(p, generate) {
@@ -98,12 +105,12 @@ fun all(p, generate) {
   };
   generate();
   True;
-};
+}
 
 // is `p` true for any element?
 fun any(p, generate) {
   !all(fn(x) { !p(x); }, generate);
-};
+}
 
 fun is-prime(n) {
   if n <= 1 then False
@@ -112,7 +119,7 @@ fun is-prime(n) {
     with take-while(fn(d) { d < n });
     integers-from(2);
   };
-};
+}
 
 fun print-yielded(generate) {
   with control yield-int(x) {
@@ -120,13 +127,13 @@ fun print-yielded(generate) {
       resume(());
     };
   generate();
-};
+}
 
 fun main() {
   with print-yielded;
   with take-while(fn(x) { x < 30 });
   with filter(is-prime);
   naturals();
-};
+}
 
 

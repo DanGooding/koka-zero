@@ -1,7 +1,7 @@
 
 effect read {
   control ask(_ : ()) : int;
-};
+}
 
 fun const(x, action) {
   with handler {
@@ -10,7 +10,7 @@ fun const(x, action) {
     };
   };
   action();
-};
+}
 
 fun increment(action) {
   with handler {
@@ -19,7 +19,7 @@ fun increment(action) {
     };
   };
   action()
-};
+}
 
 fun main() {
   with const(0);
@@ -27,4 +27,4 @@ fun main() {
   with increment;
   with increment;
   ask(()).print-int();
-};
+}

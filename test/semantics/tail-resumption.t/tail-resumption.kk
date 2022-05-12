@@ -1,7 +1,7 @@
 
 effect read-A {
   fun ask-A(_ : ()) : int;
-};
+}
 
 fun answer-A-const(x, action) {
   with handler {
@@ -10,11 +10,11 @@ fun answer-A-const(x, action) {
     };
   };
   action();
-};
+}
 
 effect read-B {
   fun ask-B(_ : ()) : int;
-};
+}
 
 fun answer-B-double-A(action) {
   with handler {
@@ -23,13 +23,13 @@ fun answer-B-double-A(action) {
     };
   };
   action();
-};
+}
 
 fun main() {
   with answer-A-const(5);
   with answer-B-double-A;
   with answer-A-const(7);
   print-int(ask-B(())); // 2 * 5 = 10
-};
+}
 
 

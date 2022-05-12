@@ -2,7 +2,7 @@
 effect state {
   control get(_ : ()) : int;
   control set(x : int) : ();
-};
+}
 
 fun main() {
   val h = handler {
@@ -11,4 +11,4 @@ fun main() {
     };
   };
   ()
-};
+}

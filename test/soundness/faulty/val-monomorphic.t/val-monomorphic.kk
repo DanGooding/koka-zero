@@ -5,5 +5,5 @@ fun main() {
   id(3);
   id(True);
   id(());
-};
+}
 

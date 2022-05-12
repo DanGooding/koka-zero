@@ -3,11 +3,11 @@ fun const(x) {
   fn(_) {
     x
   }
-};
+}
 
 effect read {
   control ask(_ : ()) : int;
-};
+}
 
 fun main() {
   with handler {
@@ -17,4 +17,4 @@ fun main() {
   };
   val unit = const(())(3);
   ask(()) + ask(unit)
-};
+}

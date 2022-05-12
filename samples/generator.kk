@@ -8,7 +8,7 @@ fun fibs() {
     fibs-from(next, current + next);
   };
   fibs-from(0, 1);
-};
+}
 
 fun main() {
   with control yield-int(n) {
@@ -19,5 +19,5 @@ fun main() {
     }else ();
   };
   fibs();
-};
+}
 

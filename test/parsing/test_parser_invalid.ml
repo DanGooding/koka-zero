@@ -2,7 +2,7 @@ let%expect_test "function without parameters" =
   let code = {|
 fun compute-the-answer {
   42;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -66,7 +66,7 @@ let%expect_test "lambda as operand" =
   let code = {|
 fun op-trailing-lambda-example() {
   5 * fn() 3 + 4;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect

@@ -5,8 +5,8 @@ fun fib(n) {
   elif n == 1
   then 1
   else fib(n - 1) + fib(n - 2);
-};
+}
 
 fun main() {
   print-int(fib(12));
-};
+}

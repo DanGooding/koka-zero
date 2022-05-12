@@ -23,7 +23,7 @@ let%expect_test "single expression function" =
   let code = {|
 fun main() {
   0;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -50,7 +50,7 @@ fun main() {
   print(x);
   val y = foo(x);
   y * 2;
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -103,7 +103,7 @@ fun wrapper() {
   val x-y-z = 1;
   val number3-letter = 2;
   ();
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -146,7 +146,7 @@ let%expect_test "hex literals" =
   let code = {|
 fun wrapper() {
   0x1234ABCD;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -174,7 +174,7 @@ fun wrapper() {
   val f' = diff(f);
   val f'' = diff(f');
   ();
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -258,13 +258,13 @@ fun hypotenuse(a, b) {
   val c-squared = a * a + b * b;
   val c = isqrt(c-squared);
   c;
-};
+}
 
 fun main() {
   val all = 12 + 33 * 44 - 36 / 4 + 91 % 7 + 11;
   val inside = 0 <= x && x < 7 || 100 < x && x >= 9000;
   ();
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -397,7 +397,7 @@ let%expect_test "negative integer literals" =
   let code = {|
 fun wrapper() {
   val minus-fourty = -40;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -414,7 +414,7 @@ let%expect_test "boolean literals" =
 fun wrapper() {
   val t = True;
   val f = False;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -438,7 +438,7 @@ fun if-example() {
     -1
   else
     1 + 1;
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -517,7 +517,7 @@ fun i() {
     if b then
       c
   else d;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -567,7 +567,7 @@ fun i() {
     ccc();
     ddd();
   };
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -623,7 +623,7 @@ let%expect_test "dot application" =
   let code = {|
 fun dot-application() {
   x.best.fst.pow(3).print;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -666,7 +666,7 @@ fun trailing-lambda() {
   for(1, 10) fn(i) { println(i * i) };
   f(x,y,z) { alpha } fn(b) {beta} {gamma};
   a.g(1).h(2) { zzz };
-};
+}
   |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -760,7 +760,7 @@ fun one(aa, bb, cc, dd) {
   with cc(3);
   with x <- dd(5);
   println(x);
-};
+}
   |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -865,7 +865,7 @@ let%expect_test "single line comments" =
 // and this is another
 fun get-speed() {// they can go after declarations too!
   100;
-}; // and here
+} // and here
 
 fun documented() {
   // comments
@@ -874,7 +874,7 @@ fun documented() {
     + 3; // go on lines within expressions!
   x * x; // after them
   // and even at the end of blocks
-};
+}
 // multiline comments do not start within them! /*
 fun not-commented-out() { True; };
 // // /// ////
@@ -948,7 +948,7 @@ fun main() {
 
   val y = x * /* can be within expressions! */ 5;
   ()
-};
+}
 
 |}
   in
@@ -993,7 +993,7 @@ let%expect_test "" =
     {|
 fun op-trailing-lambda-example() {
   5 * a fn() 3 + 4 * 5;
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1040,7 +1040,7 @@ let%expect_test "trailing and single line lambda" =
   let code = {|
 fun trailing-lambdas() {
   fn(a) a fn(b) b fn(c) c;
-};
+}
 |} in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
@@ -1108,7 +1108,7 @@ fun app-after-trailing-lambda() {
   xs.foo fn(x) {x} (y, z).bar();
   // desugars to:
   // bar(foo(xs, fn(x) {x})(y, z));
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1160,7 +1160,7 @@ effect my-effect {
   fun get(dummy : ()) : int;
   fun set(x : int) : bool;
   control raise(x : int) : ();
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1233,7 +1233,7 @@ effect my-effect {
   fun get(dummy : ()) : int;
   fun set(x : int) : bool;
   except raise(x : int) : ();
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1288,7 +1288,7 @@ effect my-effect<a :: V> {
   fun get() : a;
   fun set(x : a) : bool;
   except raise(x : a) : b;
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1381,7 +1381,7 @@ fun fail-to-default(default, action) {
     return(x) x;
   };
   action();
-};
+}
 fun many-operations() {
   val h = handler {
     control choose(x, y) {
@@ -1396,11 +1396,11 @@ fun many-operations() {
     except raise(x) { println(x) };
   };
   h;
-};
+}
 fun one-operation() {
   with val depth = depth + 1;
   subject();
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1517,7 +1517,7 @@ fun handle-example(action) {
   handle (action) {
     fun scramble(x) x * x + x;
   }
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1576,10 +1576,10 @@ let%expect_test "type annotations" =
     {|
 fun sqrt(x : int) : exn int {
   raise();
-};
+}
 fun square(x : int) : <> int {
   x * x;
-};
+}
   |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1628,13 +1628,13 @@ let%expect_test "effect annotations" =
     {|
 fun compose(f : a -> e b, g : b -> e c) : (a -> e c) {
   fn(a) g(f(a));
-};
+}
 fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
   with handler {
     except fail() x;
   };
   action();
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
@@ -1802,7 +1802,7 @@ let%expect_test "kind annotations" =
     {|
 effect eff<a :: X, b :: X, c :: E, d :: V> {
   control foo(_ : d) : (() -> <a, b | c>);
-};
+}
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in

@@ -1,7 +1,7 @@
 
 effect read {
   control ask(_ : ()) : int;
-};
+}
 
 effect control scramble(x : int) : int;
 
@@ -26,4 +26,4 @@ fun main() {
   if ask(()) < 0
   then throw(())
   else scramble(ask(())).print-int();
-};
+}

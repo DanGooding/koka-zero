@@ -9,7 +9,7 @@ fun choose-const(n, action) {
     };
   };
   action();
-};
+}
 
 fun choose-user(action) {
   with handler {
@@ -19,7 +19,7 @@ fun choose-user(action) {
     };
   };
   action();
-};
+}
 
 fun for(start, stop, action) {
   if start >= stop
@@ -28,7 +28,7 @@ fun for(start, stop, action) {
     action(start);
     for(start + 1, stop, action)
   };
-};
+}
 
 fun choose-any(action) {
   with handler {
@@ -39,11 +39,11 @@ fun choose-any(action) {
     };
   };
   action();
-};
+}
 
 fun is-triple(a, b, c) {
   a * a + b * b == c * c;
-};
+}
 
 fun find-triple(n) {
   val c = choose-up-to(n);
@@ -52,11 +52,11 @@ fun find-triple(n) {
   if is-triple(a, b, c)
   then { print-int(a); print-int(b); print-int(c); }
   else ();
-};
+}
 
 fun main() {
   val limit = 20;
   with choose-any();
   find-triple(limit);
-};
+}
 

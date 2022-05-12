@@ -1,10 +1,10 @@
 effect ask {
   fun ask(x : ()) : int;
-};
+}
 
 effect fail {
   control fail(x : ()) : ();
-};
+}
 
 fun main() {
   with handler {
@@ -25,4 +25,4 @@ fun main() {
   // perform ask(())
   ask(());
   ();
-};
+}

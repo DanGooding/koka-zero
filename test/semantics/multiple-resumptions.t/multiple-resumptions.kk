@@ -1,7 +1,7 @@
 
 fun int-of-bool(b) {
   if b then 1 else 0;
-};
+}
 
 effect control flip(_ : ()) : bool;
 
@@ -12,7 +12,7 @@ fun flip-either(action) {
     };
   };
   action();
-};
+}
 
 fun three-digit() {
   val x = flip(());
@@ -20,15 +20,15 @@ fun three-digit() {
   val z = flip(());
 
   100 * int-of-bool(x) + 10 * int-of-bool(y) + int-of-bool(z);
-};
+}
 
 fun find-satisfying(pred) {
   with flip-either;
   val n = three-digit();
   print-int(n);
   pred(n);
-};
+}
 
 fun main() {
   find-satisfying(fn(x) x == 111).int-of-bool.print-int();
-};
+}

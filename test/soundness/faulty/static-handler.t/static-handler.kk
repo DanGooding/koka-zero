@@ -11,11 +11,11 @@ fun f() {
     // defined under a handler
     exn(())
   }
-};
+}
 
 fun main() {
   val g = f();
   // not executed under a handler
   g()
-};
+}
 
