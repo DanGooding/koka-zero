@@ -11,14 +11,12 @@ fun fibs() {
 };
 
 fun main() {
-  with handler {
-    control yield-int(n) {
-      if n <= 100
-      then {
-        print-int(n);
-        resume(());
-      }else ();
-    };
+  with control yield-int(n) {
+    if n <= 100
+    then {
+      print-int(n);
+      resume(());
+    }else ();
   };
   fibs();
 };
