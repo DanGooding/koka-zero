@@ -34,8 +34,8 @@ let make_bind_into
   EPS.Expr.Application (EPS.Expr.Variable Primitives.Names.bind, [ e; evv; rhs ])
 ;;
 
-(** [make_map_into e ~f:(fun x -> e')] builds the expression
-    [e >>= fun x -> pure e'] *)
+(** [make_map_into e ~evv ~f:(fun x -> `Value e')] builds the expression
+    [(e, evv) >>= fun (x, _) -> Pure e'] *)
 let make_map_into
     :  EPS.Expr.t -> evv:EPS.Expr.t
     -> f:(EPS.Expr.t -> [ `Value of EPS.Expr.t ] Generation.t)
