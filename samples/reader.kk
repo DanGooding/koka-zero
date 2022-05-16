@@ -1,6 +1,6 @@
 
 effect read {
-  control ask(_ : ()) : int;
+  fun ask(_ : ()) : int;
 }
 
 fun add-twice() {
@@ -9,9 +9,7 @@ fun add-twice() {
 
 fun main() {
   with handler {
-    control ask(_) {
-      resume(21);
-    };
+    fun ask(_) { 21 };
   };
   print-int(add-twice());
 }
