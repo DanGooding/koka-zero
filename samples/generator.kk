@@ -11,8 +11,9 @@ fun fibs() {
 }
 
 fun main() {
+  val limit = read-int(());
   with control yield-int(n) {
-    if n <= 100
+    if n <= limit
     then {
       print-int(n);
       resume(());
