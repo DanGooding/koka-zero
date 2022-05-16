@@ -26,5 +26,5 @@ fun main() {
   with increment;
   with increment;
   with increment;
-  ask(()).print-int();
+  ask(()).println-int();
 }

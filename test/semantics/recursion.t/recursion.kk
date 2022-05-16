@@ -8,5 +8,5 @@ fun fib(n) {
 }
 
 fun main() {
-  print-int(fib(12));
+  println-int(fib(12));
 }

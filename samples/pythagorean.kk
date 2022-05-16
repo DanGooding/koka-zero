@@ -14,7 +14,7 @@ fun choose-const(n, action) {
 fun choose-user(action) {
   with handler {
     control choose-up-to(m) {
-      print-int(m);
+      println-int(m);
       resume(read-int(()));
     };
   };
@@ -50,7 +50,7 @@ fun find-triple(n) {
   val b = choose-up-to(c);
   val a = choose-up-to(b);
   if is-triple(a, b, c)
-  then { print-int(a); print-int(b); print-int(c); }
+  then { print-int(a); print-int(b); println-int(c); }
   else ();
 }
 

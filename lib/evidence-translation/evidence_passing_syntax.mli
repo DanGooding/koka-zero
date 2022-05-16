@@ -74,7 +74,11 @@ module Expr : sig
 
   (** interaction with the outside world *)
   and impure_built_in =
-    | Impure_print_int of t
+    | Impure_println
+    | Impure_print_int of
+        { value : t
+        ; newline : bool
+        }
     | Impure_read_int
   [@@deriving sexp]
 end

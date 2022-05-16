@@ -1,6 +1,6 @@
 
 fun print-and-return(n, b) {
-  print-int(n);
+  println-int(n);
   b;
 }
 

@@ -15,7 +15,7 @@ fun main() {
   with control yield-int(n) {
     if n <= limit
     then {
-      print-int(n);
+      println-int(n);
       resume(());
     }else ();
   };

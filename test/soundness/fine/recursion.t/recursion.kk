@@ -6,5 +6,5 @@ fun fact(n) {
 }
 
 fun main() {
-  print-int(fact(5));
+  println-int(fact(5));
 }

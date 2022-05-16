@@ -298,10 +298,13 @@ and eval_impure_built_in
  fun impure ~env ->
   let open Interpreter.Let_syntax in
   match impure with
-  | Expr.Impure_print_int e ->
+  | Expr.Impure_println ->
+    printf "\n";
+    Value.Primitive Value.Unit |> return
+  | Expr.Impure_print_int { value = e; newline } ->
     let%bind v = eval_expr e ~env in
     let%map i = Typecast.int_of_value v in
-    printf "%d\n" i;
+    if newline then printf "%d\n" i else printf "%d " i;
     Value.Primitive Value.Unit
   | Expr.Impure_read_int ->
     let%map i =

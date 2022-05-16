@@ -11,5 +11,5 @@ fun main() {
   with handler {
     fun ask(_) { 21 };
   };
-  print-int(add-twice());
+  println-int(add-twice());
 }

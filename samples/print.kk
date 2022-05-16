@@ -1,7 +1,7 @@
 
 fun main() {
-  print-int(3);
+  println-int(3);
   val x = read-int(());
-  print-int(x * x);
+  println-int(x * x);
 }
 

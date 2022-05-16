@@ -122,7 +122,11 @@ module Expr : sig
       operation handlers wrapping `main()`. They notably do not have the side
       effect of the operation they perform *)
   and impure_built_in =
-    | Impure_print_int of t
+    | Impure_println
+    | Impure_print_int of
+        { value : t
+        ; newline : bool
+        }
     | Impure_read_int
   [@@deriving sexp]
 end

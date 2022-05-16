@@ -131,9 +131,10 @@ and apply_everywhere_to_impure_built_in
  fun ~rewrite impure ->
   let open Modified.Let_syntax in
   match impure with
-  | Expr.Impure_print_int e ->
-    let%map e = apply_everywhere ~rewrite e in
-    Expr.Impure_print_int e
+  | Expr.Impure_println -> Modified.original impure
+  | Expr.Impure_print_int { value; newline } ->
+    let%map value = apply_everywhere ~rewrite value in
+    Expr.Impure_print_int { value; newline }
   | Expr.Impure_read_int -> Modified.original impure
 
 and apply_everywhere_to_lambda

@@ -62,7 +62,7 @@ typedef struct {
 } evidence_t;
 
 typedef struct vector_t {
-  uint8_t is_nil;
+  uint8_t is_nil;  // not bool_t since this isn't a Koka value
   label_t label;
   evidence_t *evidence;
   struct vector_t *tail;
@@ -129,8 +129,13 @@ opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr e) {
   return (opaque_ptr)(evidence->handler_site_vector);
 }
 
-void kkr_print_int(int_t i) {
-  printf("%ld\n", i);
+void kkr_println(void) {
+  printf("\n");
+}
+
+void kkr_print_int(int_t i, uint8_t newline) {
+  if (newline) printf("%ld\n", i);
+  else printf("%ld ", i);
 }
 
 int_t kkr_read_int(void) {

@@ -45,6 +45,6 @@ fun int-of-bool(b) {
 
 fun main() {
   val success = try-choose(101);
-  print-int(int-of-bool(success));
+  println-int(int-of-bool(success));
 }
 

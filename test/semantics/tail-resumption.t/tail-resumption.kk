@@ -29,7 +29,7 @@ fun main() {
   with answer-A-const(5);
   with answer-B-double-A;
   with answer-A-const(7);
-  print-int(ask-B(())); // 2 * 5 = 10
+  println-int(ask-B(())); // 2 * 5 = 10
 }
 
 
