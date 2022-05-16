@@ -281,11 +281,16 @@ and translate_impure_built_in
   let open Generation.Let_syntax in
   fun built_in ~evv ->
     match built_in with
-    | Expl.Expr.Impure_print_int e ->
+    | Expl.Expr.Impure_println ->
+      EPS.Expr.Construct_pure (EPS.Expr.Impure_built_in EPS.Expr.Impure_println)
+      |> return
+    | Expl.Expr.Impure_print_int { value = e; newline } ->
       let%bind e' = translate_expr e ~evv in
       make_map_into e' ~evv ~f:(fun x ->
           (* `Value as in "won't Yield", does actually perform "real" effect! *)
-          `Value (EPS.Expr.Impure_built_in (EPS.Expr.Impure_print_int x))
+          `Value
+            (EPS.Expr.Impure_built_in
+               (EPS.Expr.Impure_print_int { value = x; newline }))
           |> return)
     | Expl.Expr.Impure_read_int ->
       EPS.Expr.Construct_pure

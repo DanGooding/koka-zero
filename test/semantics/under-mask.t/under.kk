@@ -9,7 +9,7 @@ effect fail {
 fun main() {
   with handler {
     control fail(_) { // fail must be handled here
-      print-int(1)
+      println-int(1)
     };
   };
   with handler {
@@ -19,7 +19,7 @@ fun main() {
   };
   with handler {
     control fail(_) { // fail must not be handled here
-      print-int(0);
+      println-int(0);
     };
   };
   // perform ask(())

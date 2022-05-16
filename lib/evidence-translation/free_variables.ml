@@ -93,6 +93,7 @@ and free_in_fix_lambda : Expr.fix_lambda -> Variable.Set.t =
   Set.remove lambda_free name
 
 and free_in_impure_built_in : Expr.impure_built_in -> Variable.Set.t = function
-  | Expr.Impure_print_int e -> free_in_expr e
+  | Expr.Impure_println -> Variable.Set.empty
+  | Expr.Impure_print_int { value; newline = _ } -> free_in_expr value
   | Expr.Impure_read_int -> Variable.Set.empty
 ;;

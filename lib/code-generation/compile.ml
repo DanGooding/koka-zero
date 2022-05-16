@@ -1047,12 +1047,21 @@ and compile_impure_built_in
  fun impure ~env ~runtime ~effect_reprs ~outer_symbol ->
   let open Codegen.Let_syntax in
   match impure with
-  | EPS.Expr.Impure_print_int e ->
+  | EPS.Expr.Impure_println ->
+    let { Runtime.println; _ } = runtime in
+    let%bind _void =
+      Codegen.use_builder (Llvm.build_call println (Array.of_list []) "")
+    in
+    Helpers.heap_store_unit ~runtime
+  | EPS.Expr.Impure_print_int { value = e; newline } ->
     let%bind v = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
     let%bind i = Helpers.dereference_int v in
+    let%bind i8_type = Codegen.use_context Llvm.i8_type in
+    let newline = Llvm.const_int i8_type (Bool.to_int newline) in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
-      Codegen.use_builder (Llvm.build_call print_int (Array.of_list [ i ]) "")
+      Codegen.use_builder
+        (Llvm.build_call print_int (Array.of_list [ i; newline ]) "")
     in
     Helpers.heap_store_unit ~runtime
   | EPS.Expr.Impure_read_int ->

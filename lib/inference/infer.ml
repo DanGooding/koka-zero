@@ -338,13 +338,18 @@ and infer_impure_built_in
  fun impure ~env ~effect_env ->
   let open Inference.Let_syntax in
   match impure with
-  | Min.Expr.Impure_print_int expr_arg ->
+  | Min.Expr.Impure_println ->
+    let t_result = Type.Mono.Primitive Type.Primitive.Unit in
+    let%map eff = Inference.fresh_effect_metavariable in
+    let eff = Effect.Metavariable eff in
+    t_result, eff, Expl.Expr.Impure_println
+  | Min.Expr.Impure_print_int { value = expr_arg; newline } ->
     let%bind t_arg, eff_arg, expr_arg' = infer ~env ~effect_env expr_arg in
     let%map () =
       Inference.unify t_arg (Type.Mono.Primitive Type.Primitive.Int)
     in
     let t_result = Type.Mono.Primitive Type.Primitive.Unit in
-    t_result, eff_arg, Expl.Expr.Impure_print_int expr_arg'
+    t_result, eff_arg, Expl.Expr.Impure_print_int { value = expr_arg'; newline }
   | Min.Expr.Impure_read_int ->
     let t_result = Type.Mono.Primitive Type.Primitive.Int in
     let%map eff = Inference.fresh_effect_metavariable in

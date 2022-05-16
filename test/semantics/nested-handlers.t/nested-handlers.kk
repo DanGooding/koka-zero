@@ -25,5 +25,5 @@ fun main() {
   };
   if ask(()) < 0
   then throw(())
-  else scramble(ask(())).print-int();
+  else scramble(ask(())).println-int();
 }

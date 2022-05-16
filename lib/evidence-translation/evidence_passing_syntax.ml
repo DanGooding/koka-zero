@@ -69,7 +69,11 @@ module Expr = struct
     and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
     and impure_built_in =
-      | Impure_print_int of t
+      | Impure_println
+      | Impure_print_int of
+          { value : t
+          ; newline : bool
+          }
       | Impure_read_int
     [@@deriving sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]

@@ -49,7 +49,10 @@ opaque_ptr kkr_get_evidence_handler(opaque_ptr);
 // access the [handler_site_vector] field of an evidence entry
 opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr);
 
-// write the given integer (plus a newline) to stdout
-void kkr_print_int(int_t);
+// write a newline to stdout
+void kkr_println(void);
+// write the given integer to stdout
+// followed by '\n' if `newline` is truthy, otherwise ' '
+void kkr_print_int(int_t i, uint8_t newline);
 // read and parse an integer from stdin, exits on failure
 int_t kkr_read_int(void);

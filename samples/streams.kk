@@ -130,7 +130,7 @@ fun is-prime(n) {
 
 fun print-yielded(generate) {
   with control yield-int(x) {
-      print-int(x);
+      println-int(x);
       resume(());
     };
   generate();

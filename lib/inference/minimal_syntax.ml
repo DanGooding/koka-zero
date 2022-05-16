@@ -75,6 +75,8 @@ module Keyword = struct
   let main = Variable.of_user "main"
   let entry_point = Variable.of_language_internal "main"
   let console_effect = Effect.Label.of_string "console"
+  let println = Variable.of_user "println"
+  let println_int = Variable.of_user "println-int"
   let print_int = Variable.of_user "print-int"
   let read_int = Variable.of_user "read-int"
 end
@@ -129,7 +131,11 @@ module Expr = struct
     [@@deriving sexp]
 
     and impure_built_in =
-      | Impure_print_int of t
+      | Impure_println
+      | Impure_print_int of
+          { value : t
+          ; newline : bool
+          }
       | Impure_read_int
     [@@deriving sexp]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
@@ -157,7 +163,17 @@ module Decl = struct
     let console =
       let name = Effect.Label.of_string "console" in
       let operations =
-        [ ( Variable.of_user "print-int"
+        [ ( Variable.of_user "println"
+          , { Operation.shape = Operation_shape.Fun
+            ; argument = Type.Mono.Primitive Type.Primitive.Unit
+            ; answer = Type.Mono.Primitive Type.Primitive.Unit
+            } )
+        ; ( Variable.of_user "println-int"
+          , { Operation.shape = Operation_shape.Fun
+            ; argument = Type.Mono.Primitive Type.Primitive.Int
+            ; answer = Type.Mono.Primitive Type.Primitive.Unit
+            } )
+        ; ( Variable.of_user "print-int"
           , { Operation.shape = Operation_shape.Fun
             ; argument = Type.Mono.Primitive Type.Primitive.Int
             ; answer = Type.Mono.Primitive Type.Primitive.Unit
@@ -194,13 +210,10 @@ module Program = struct
   (** {[
         fun entry_point() {
           with handler {
-            control print-int(x) {
-              impure_print_int(x);
-              resume(());
-            };
-            control read-int(_) {
-              resume(impure_read_int());
-            };
+            fun println(_)     { impure_println(); };
+            fun println-int(x) { impure_print_int(x, newline=true); };
+            fun print-int(x)   { impure_print_int(x, newline=false); };
+            fun read-int(_)    { impure_read_int(); };
           };
           main();
           ()
@@ -208,23 +221,38 @@ module Program = struct
       ]} *)
   let entry_point =
     let console_handler =
-      let print_int_clause =
-        (* TODO: use a name source for uniqueness? *)
+      let println_clause =
+        { Expr.op_argument = Parameter.Wildcard
+        ; op_body = Expr.Impure_built_in Expr.Impure_println
+        }
+      in
+      let println_int_clause =
         let arg = Variable.of_language_internal "x" in
+        let value = Expr.Value (Expr.Variable arg) in
+        let newline = true in
         { Expr.op_argument = Parameter.Variable arg
         ; op_body =
-            Expr.Impure_built_in
-              (Expr.Impure_print_int (Expr.Value (Expr.Variable arg)))
+            Expr.Impure_built_in (Expr.Impure_print_int { value; newline })
+        }
+      in
+      let print_int_clause =
+        let arg = Variable.of_language_internal "x" in
+        let value = Expr.Value (Expr.Variable arg) in
+        let newline = false in
+        { Expr.op_argument = Parameter.Variable arg
+        ; op_body =
+            Expr.Impure_built_in (Expr.Impure_print_int { value; newline })
         }
       in
       let read_int_clause =
-        let arg = Variable.of_language_internal "_unit" in
-        { Expr.op_argument = Parameter.Variable arg
+        { Expr.op_argument = Parameter.Wildcard
         ; op_body = Expr.Impure_built_in Expr.Impure_read_int
         }
       in
       let operations =
-        [ Keyword.print_int, (Operation_shape.Fun, print_int_clause)
+        [ Keyword.println, (Operation_shape.Fun, println_clause)
+        ; Keyword.println_int, (Operation_shape.Fun, println_int_clause)
+        ; Keyword.print_int, (Operation_shape.Fun, print_int_clause)
         ; Keyword.read_int, (Operation_shape.Fun, read_int_clause)
         ]
         |> Variable.Map.of_alist_exn

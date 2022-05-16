@@ -11,6 +11,7 @@ type t =
   ; get_evidence_marker : Llvm.llvalue
   ; get_evidence_handler : Llvm.llvalue
   ; get_evidence_handler_site_vector : Llvm.llvalue
+  ; println : Llvm.llvalue
   ; print_int : Llvm.llvalue
   ; read_int : Llvm.llvalue
   }
@@ -96,9 +97,13 @@ let declare =
     in
     declare_function name opaque_pointer_type [ opaque_pointer_type ]
   in
+  let%bind println =
+    let name = Symbol_name.of_runtime_exn "kkr_println" in
+    declare_function name void_type []
+  in
   let%bind print_int =
     let name = Symbol_name.of_runtime_exn "kkr_print_int" in
-    declare_function name void_type [ int_type ]
+    declare_function name void_type [ int_type (* value *); i8 (* newline? *) ]
   in
   let%map read_int =
     let name = Symbol_name.of_runtime_exn "kkr_read_int" in
@@ -116,6 +121,7 @@ let declare =
   ; get_evidence_marker
   ; get_evidence_handler
   ; get_evidence_handler_site_vector
+  ; println
   ; print_int
   ; read_int
   }

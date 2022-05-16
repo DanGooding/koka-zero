@@ -25,10 +25,10 @@ fun three-digit() {
 fun find-satisfying(pred) {
   with flip-either;
   val n = three-digit();
-  print-int(n);
+  println-int(n);
   pred(n);
 }
 
 fun main() {
-  find-satisfying(fn(x) x == 111).int-of-bool.print-int();
+  find-satisfying(fn(x) x == 111).int-of-bool.println-int();
 }
