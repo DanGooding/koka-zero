@@ -23,4 +23,5 @@
    ;; disable:
    ;; 4 [fragile-match] since menhir parsers have hundreds of these
    ;; 70 [missing-mli] since lexers don't neeed these
-   (:standard -w +A-48-42-44-4-70 -warn-error +A-3))))
+   ;; 40 [name-out-of-scope] since generated sexp conv uses type-directed resolution
+   (:standard -w +A-48-42-44-4-70-40 -warn-error +A-3))))
