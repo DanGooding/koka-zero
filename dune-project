@@ -23,7 +23,9 @@
   (llvm (= 18-static))
   ppx_jane
   (ppx_expect :with-test)
-  (odoc :with-doc)))
+  (odoc :with-doc)
+  (ocaml-lsp-server :build)
+  (ocamlformat :build)))
 
 (using menhir 2.0)
 
