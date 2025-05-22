@@ -82,7 +82,7 @@ val total : t
 val is_total : t -> bool option
 
 (** build a row by adding [labels] to either an existing effect, or just a tail *)
-val cons_row : labels:Label.Multiset.Non_empty.t -> effect:t -> Row.t
+val cons_row : labels:Label.Multiset.Non_empty.t -> effect_:t -> Row.t
 
 val of_row_tail : Row.Tail.t -> t
 

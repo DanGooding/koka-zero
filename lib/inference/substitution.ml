@@ -46,16 +46,16 @@ let extend t ~var ~type_ =
   map_type_subst_or_duplicate t ~f:(Map.add ~key:var ~data:type_)
 ;;
 
-let extend_effect t ~var ~effect =
-  map_effect_subst_or_duplicate t ~f:(Map.add ~key:var ~data:effect)
+let extend_effect t ~var ~effect_ =
+  map_effect_subst_or_duplicate t ~f:(Map.add ~key:var ~data:effect_)
 ;;
 
 let extend_exn t ~var ~type_ =
   map_type_subst t ~f:(Map.add_exn ~key:var ~data:type_)
 ;;
 
-let extend_effect_exn t ~var ~effect =
-  map_effect_subst t ~f:(Map.add_exn ~key:var ~data:effect)
+let extend_effect_exn t ~var ~effect_ =
+  map_effect_subst t ~f:(Map.add_exn ~key:var ~data:effect_)
 ;;
 
 (** merge two maps, as long as there are no common keys. Returns [ `Duplicate ]
@@ -123,7 +123,7 @@ and apply_to_effect_row t row =
   | Effect.Row.Open (labels, Effect.Row.Tail.Metavariable v) ->
     (match lookup_effect t v with
     | None -> row
-    | Some tail_effect -> Effect.cons_row ~labels ~effect:tail_effect)
+    | Some tail_effect -> Effect.cons_row ~labels ~effect_:tail_effect)
 ;;
 
 let rec lookup t (var : Type.Metavariable.t) =

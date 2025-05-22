@@ -123,9 +123,9 @@ let substitute_meta_exn ~var ~type_ =
       | `Ok substitution -> substitution)
 ;;
 
-let substitute_effect_meta_exn ~var ~effect =
+let substitute_effect_meta_exn ~var ~effect_ =
   map_substitution (fun substitution ->
-      match Substitution.extend_effect substitution ~var ~effect with
+      match Substitution.extend_effect substitution ~var ~effect_ with
       | `Duplicate ->
         raise_s [%message "effect metavariable already has a type"]
       | `Ok substitution -> substitution)
@@ -243,11 +243,11 @@ and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t 
         (* [b] has been substituted for, unify with that *)
         | Some tb -> unify_effect_with_meta a tb
         | None ->
-          substitute_effect_meta_exn ~var:a ~effect:(Effect.Metavariable b))
+          substitute_effect_meta_exn ~var:a ~effect_:(Effect.Metavariable b))
     | Effect.Row _ | Effect.Variable _ ->
       if occurs_effect a ~in_:e2
       then unification_error_effect (Effect.Metavariable a) e2
-      else substitute_effect_meta_exn ~var:a ~effect:e2)
+      else substitute_effect_meta_exn ~var:a ~effect_:e2)
 ;;
 
 let occurs (v : Type.Metavariable.t) ~in_:(t : Type.Mono.t) =

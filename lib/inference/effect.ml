@@ -144,8 +144,8 @@ let is_total = function
   | Row r -> Row.is_total r |> Some
 ;;
 
-let cons_row ~labels ~effect =
-  match effect with
+let cons_row ~labels ~effect_ =
+  match effect_ with
   | Metavariable v ->
     let tail = Row.Tail.Metavariable v in
     Row.Open (labels, tail)

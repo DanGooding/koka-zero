@@ -52,14 +52,14 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
   match t with
   | Syntax.Arrow (Syntax.Parameters_or_tuple ps, result) ->
     let%bind ps = List.map ps ~f:simplify_parameter_type |> Result.all in
-    let%map effect, t_result = simplify_type_result result in
+    let%map effect_, t_result = simplify_type_result result in
     let parameter_names, t_args = List.unzip ps in
     ignore (parameter_names : Variable.t option list);
-    Type.Mono.Arrow (t_args, effect, t_result)
+    Type.Mono.Arrow (t_args, effect_, t_result)
   | Syntax.Arrow (t_arg, result) ->
     let%bind t_arg = simplify_type_as_type t_arg in
-    let%map effect, t_result = simplify_type_result result in
-    Type.Mono.Arrow ([ t_arg ], effect, t_result)
+    let%map effect_, t_result = simplify_type_result result in
+    Type.Mono.Arrow ([ t_arg ], effect_, t_result)
   | Syntax.Parameters_or_tuple ps ->
     let%bind ps = List.map ps ~f:simplify_parameter_type |> Result.all in
     let parameter_names, ts = List.unzip ps in
@@ -118,7 +118,7 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
     in
     let labels = Effect.Label.Multiset.Non_empty.of_non_empty_list labels in
     let%map tail_effect = simplify_type_as_effect tail in
-    Effect.cons_row ~labels ~effect:tail_effect |> Effect.Row
+    Effect.cons_row ~labels ~effect_:tail_effect |> Effect.Row
   | Syntax.Type_atom { constructor; arguments } ->
     let%bind () =
       restrict_to_empty arguments ~description:"parameterised types"
@@ -196,13 +196,13 @@ and simplify_parameter_type { Syntax.parameter_id; type_ }
   let%map t = simplify_type_as_type type_ in
   id, t
 
-and simplify_type_result { Syntax.effect; result }
+and simplify_type_result { Syntax.effect_; result }
     : (Effect.t * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
-  let%bind effect = simplify_type_as_effect effect in
+  let%bind effect_ = simplify_type_as_effect effect_ in
   let%map t_result = simplify_type_as_type result in
-  effect, t_result
+  effect_, t_result
 ;;
 
 let simplify_literal (lit : Syntax.literal) : Min.Literal.t =

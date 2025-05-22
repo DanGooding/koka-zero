@@ -63,12 +63,12 @@ module Mono = struct
       Metavariable.Set.singleton v, Effect.Metavariable.Set.empty
     | Variable _ -> Metavariable.Set.empty, Effect.Metavariable.Set.empty
     | Primitive p -> Primitive.metavariables p
-    | Arrow (t_args, effect, t_result) ->
+    | Arrow (t_args, effect_, t_result) ->
       let arg_metas, arg_effect_metas =
         List.map t_args ~f:metavariables |> List.unzip
       in
       let result_meta, result_effect_meta = metavariables t_result in
-      let effect_meta = Effect.metavariables effect in
+      let effect_meta = Effect.metavariables effect_ in
       ( Metavariable.Set.union_list (result_meta :: arg_metas)
       , Effect.Metavariable.Set.union_list
           (effect_meta :: result_effect_meta :: arg_effect_metas) )

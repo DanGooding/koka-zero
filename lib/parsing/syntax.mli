@@ -90,7 +90,7 @@ and parameter_type =
     if a result type is given, the effect must be given too, or it defaults to
     total (<>) *)
 and type_result =
-  { effect : type_
+  { effect_ : type_
   ; result : type_
   }
 [@@deriving sexp]

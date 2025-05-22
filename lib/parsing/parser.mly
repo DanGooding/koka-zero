@@ -1233,11 +1233,11 @@ tarrow:
 (* %type <type_result> tresult *)
 tresult:
   (* effect and result type *)
-  | effect = tatomic; result = tbasic
-    { { effect; result } }
+  | effect_ = tatomic; result = tbasic
+    { { effect_; result } }
   (* just a result type (with a default total effect) *)
   | result = tatomic
-    { { effect = Effect_row total_effect_row; result } }
+    { { effect_ = Effect_row total_effect_row; result } }
   ;
 
 (* %type <type_> tatomic *)

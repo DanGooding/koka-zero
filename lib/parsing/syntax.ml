@@ -84,7 +84,7 @@ and parameter_type =
 [@@deriving sexp]
 
 and type_result =
-  { effect : type_
+  { effect_ : type_
   ; result : type_
   }
 [@@deriving sexp]

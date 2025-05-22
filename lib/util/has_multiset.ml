@@ -16,7 +16,7 @@ struct
 
       (** restore the invariant that only items 'in' the multiset are keys in
           the map *)
-      let remove_zeros xs = Element.Map.filter xs ~f:(fun n -> n > 0)
+      let remove_zeros xs = Map.filter xs ~f:(fun n -> n > 0)
 
       let of_list xs =
         List.map xs ~f:(fun x -> x, 1)
@@ -24,14 +24,14 @@ struct
       ;;
 
       let to_list xs =
-        Element.Map.fold xs ~init:[] ~f:(fun ~key:element ~data:n acc ->
+        Map.fold xs ~init:[] ~f:(fun ~key:element ~data:n acc ->
             List.init n ~f:(fun _i -> element) @ acc)
       ;;
 
       let empty = Element.Map.empty
 
       let add xs x =
-        Element.Map.update xs x ~f:(fun n -> Option.value n ~default:0 + 1)
+        Map.update xs x ~f:(fun n -> Option.value n ~default:0 + 1)
       ;;
 
       let union xs ys =
@@ -50,12 +50,12 @@ struct
 
       let diff xs ys =
         Map.mapi xs ~f:(fun ~key:element ~data:nx ->
-            let ny = Element.Map.find ys element |> Option.value ~default:0 in
+            let ny = Map.find ys element |> Option.value ~default:0 in
             max (nx - ny) 0)
         |> remove_zeros
       ;;
 
-      let is_empty xs = Element.Map.is_empty xs
+      let is_empty xs = Map.is_empty xs
     end
 
     module Non_empty = struct

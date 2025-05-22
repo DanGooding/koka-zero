@@ -20,7 +20,7 @@ val extend
 val extend_effect
   :  t
   -> var:Effect.Metavariable.t
-  -> effect:Effect.t
+  -> effect_:Effect.t
   -> [ `Ok of t | `Duplicate ]
 
 (** add a metavariable and its type, raising an exception if it already exists
@@ -29,7 +29,7 @@ val extend_exn : t -> var:Type.Metavariable.t -> type_:Type.Mono.t -> t
 
 (** add an effect metavariable and its effect, raising an exception if it
     already exists in the substitution*)
-val extend_effect_exn : t -> var:Effect.Metavariable.t -> effect:Effect.t -> t
+val extend_effect_exn : t -> var:Effect.Metavariable.t -> effect_:Effect.t -> t
 
 (** add multiple new metavariable -> type mappings, returning [`Duplicate] if
     any of the metavariables already exist *)

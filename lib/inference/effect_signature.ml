@@ -11,7 +11,7 @@ end
 
 include Signature
 
-let t_of_map m = Variable.Map.key_set m
+let t_of_map m = Core.Map.key_set m
 let t_of_handler { Minimal_syntax.Expr.operations; _ } = t_of_map operations
 
 module Context = struct
@@ -25,8 +25,8 @@ module Context = struct
   let empty = Signature.Map.empty
 
   let extend t ~label ~operation_shapes =
-    let signature = Variable.Map.key_set operation_shapes in
-    Map.add t ~key:signature ~data:(label, operation_shapes)
+    let signature = Core.Map.key_set operation_shapes in
+    Core.Map.add t ~key:signature ~data:(label, operation_shapes)
   ;;
 
   let extend_decl t { Minimal_syntax.Decl.Effect.name; operations } =
@@ -38,5 +38,5 @@ module Context = struct
     extend t ~label:name ~operation_shapes
   ;;
 
-  let find t s = Map.find t s
+  let find t s = Core.Map.find t s
 end

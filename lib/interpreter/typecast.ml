@@ -28,7 +28,7 @@ let effect_label_of_value =
   let open Interpreter.Let_syntax in
   function
   | Value.Effect_label l -> return l
-  | v -> Interpreter.type_error ~expected:"effect label" Value.sexp_of_t v
+  | v -> Interpreter.type_error ~expected:"effect_ label" Value.sexp_of_t v
   (* disable "fragile match" warning *) [@@warning "-4"]
 ;;
 

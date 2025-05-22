@@ -68,7 +68,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
   let open Interpreter.Let_syntax in
   match expr with
   | Expr.Variable name ->
-    (match Variable.Map.find env name with
+    (match Map.find env name with
     | Some v -> return v
     | None ->
       let message =
