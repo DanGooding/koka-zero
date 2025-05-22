@@ -10,7 +10,7 @@
 (maintainers
   "Dan Gooding")
 
-(generate_opam_files false)
+(generate_opam_files true)
 
 (package
  (name koka-zero)
