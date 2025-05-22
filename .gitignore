@@ -5,6 +5,9 @@ _build/
 # Merlin configuring file for Vim and Emacs
 .merlin
 
+# VSCode
+.VSCode/
+
 # Local OPAM switch
 _opam/
 
