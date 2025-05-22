@@ -5,9 +5,7 @@
  (libraries core menhirLib str koka_zero_util koka_zero_inference)
  (preprocess
   (per_module
-   ((pps ppx_jane) syntax simplification koka_zero_parsing)
-   ;; disable this check for generated code
-   ((pps ppx_jane -allow-unannotated-ignores) parser)
+   ((pps ppx_jane) syntax simplification koka_zero_parsing parser)
   )))
 
 (ocamllex
