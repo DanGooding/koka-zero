@@ -18,7 +18,10 @@
  (description "Reimplementatin of core Koka, compiling to LLVM-IR, for my dissertation")
  (depends
   (ocaml (>= 4.08.0))
+  core
   dune
+  (llvm (= 18-static))
+  ppx_jane
   (ppx_expect :with-test)
   (odoc :with-doc)))
 
