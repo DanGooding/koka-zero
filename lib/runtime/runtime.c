@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #ifdef ENABLE_GC
 #include "gc.h"
 #endif
@@ -33,7 +34,7 @@ opaque_ptr kkr_malloc(uint64_t size) {
   #endif
   if (p == NULL) {
     snprintf(malloc_error_message, MALLOC_ERROR_MESSAGE_CAPACITY,
-             "failed to malloc %ld bytes", size);
+             "failed to malloc %" PRIu64 " bytes", size);
     kkr_exit_with_message((uint8_t *)malloc_error_message);
   }
   return p;
@@ -134,8 +135,8 @@ void kkr_println(void) {
 }
 
 void kkr_print_int(int_t i, uint8_t newline) {
-  if (newline) printf("%ld\n", i);
-  else printf("%ld ", i);
+  if (newline) printf("%" PRId64 "\n", i);
+  else printf("%" PRId64 " " , i);
 }
 
 int_t kkr_read_int(void) {
@@ -148,7 +149,7 @@ int_t kkr_read_int(void) {
     free(line);
     kkr_exit_with_message((uint8_t *)"failed to read input line");
   }
-  if (sscanf(line, "%ld\n", &result) != 1) {
+  if (sscanf(line, "%" SCNd64 "\n", &result) != 1) {
     free(line);
     kkr_exit_with_message((uint8_t *)"failed to parse int");
   }
