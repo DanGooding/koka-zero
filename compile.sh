@@ -24,8 +24,8 @@ RUNTIME=$PROJECT_ROOT/lib/runtime/runtime.c
 # set DISABLE_GC to run without any deallocator (e.g. for debugging)
 if [ -z "$DISABLE_GC" ]; then
     # GC enabled (default)
-    GC=/opt/homebrew/Cellar/bdw-gc/8.2.8
-    LL_C_FLAGS="$LL_C_FLAGS -DENABLE_GC -I$GC/include -L$GC/lib -lgc"
+    GC_PATH=${GC_PATH:-/opt/homebrew/Cellar/bdw-gc/8.2.8}
+    LL_C_FLAGS="$LL_C_FLAGS -DENABLE_GC -I$GC_PATH/include -L$GC_PATH/lib -lgc"
 else
     echo "compiling without gargage collector"
 fi
