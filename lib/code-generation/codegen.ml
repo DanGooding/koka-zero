@@ -72,9 +72,8 @@ let run ~module_id (t : unit t) : unit Or_codegen_error.t =
     Out_channel.flush Out_channel.stderr);
   let state = State.initial in
   let result = t mstate state in
-  let { Mutable_state.context; module_; builder = _ } = mstate in
+  let { Mutable_state.module_; builder = _; context = _ } = mstate in
   Llvm.dispose_module module_;
-  Llvm.dispose_context context;
   let%map.Result (), _state = result in
   ()
 ;;
