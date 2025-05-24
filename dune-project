@@ -19,6 +19,7 @@
  (depends
   (ocaml (>= 4.08.0))
   core
+  core_unix
   dune
   (llvm (= 18-static))
   ppx_jane

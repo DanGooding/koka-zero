@@ -1,19 +1,29 @@
+module Function = struct
+  type t =
+    { function_ : Llvm.llvalue (** callable function *)
+    ; type_ : Llvm.lltype
+    }
+  
+  let build_call { type_; function_ } ~args name = 
+    Codegen.use_builder (Llvm.build_call type_ function_ args name)
+end
+
 type t =
-  { init : Llvm.llvalue
-  ; exit : Llvm.llvalue
-  ; exit_with_message : Llvm.llvalue
-  ; malloc : Llvm.llvalue
-  ; fresh_marker : Llvm.llvalue
-  ; markers_equal : Llvm.llvalue
-  ; nil_evidence_vector : Llvm.llvalue
-  ; cons_evidence_vector : Llvm.llvalue
-  ; evidence_vector_lookup : Llvm.llvalue
-  ; get_evidence_marker : Llvm.llvalue
-  ; get_evidence_handler : Llvm.llvalue
-  ; get_evidence_handler_site_vector : Llvm.llvalue
-  ; println : Llvm.llvalue
-  ; print_int : Llvm.llvalue
-  ; read_int : Llvm.llvalue
+  { init : Function.t
+  ; exit : Function.t
+  ; exit_with_message : Function.t
+  ; malloc : Function.t
+  ; fresh_marker : Function.t
+  ; markers_equal : Function.t
+  ; nil_evidence_vector : Function.t
+  ; cons_evidence_vector : Function.t
+  ; evidence_vector_lookup : Function.t
+  ; get_evidence_marker : Function.t
+  ; get_evidence_handler : Function.t
+  ; get_evidence_handler_site_vector : Function.t
+  ; println : Function.t
+  ; print_int : Function.t
+  ; read_int : Function.t
   }
 
 let declare_function symbol return_type argument_types =
@@ -22,16 +32,16 @@ let declare_function symbol return_type argument_types =
   let type_ = Llvm.function_type return_type (Array.of_list argument_types) in
   let%map function_ = Codegen.use_module (Llvm.declare_function name type_) in
   Llvm.set_function_call_conv Llvm.CallConv.c function_;
-  function_
+  { Function.function_; type_ }
 ;;
 
 let declare =
   let open Codegen.Let_syntax in
   let%bind void_type = Codegen.use_context Llvm.void_type in
   let%bind i8 = Codegen.use_context Llvm.i8_type in
-  let i8_ptr = Llvm.pointer_type i8 in
+  let%bind ptr = Types.pointer in
   let%bind i64 = Codegen.use_context Llvm.i64_type in
-  let%bind opaque_pointer_type = Types.opaque_pointer in
+  let%bind pointer_type = Types.pointer in
   let%bind bool_type = Types.bool in
   let%bind int_type = Types.int in
   let%bind marker_type = Types.marker in
@@ -46,11 +56,11 @@ let declare =
   in
   let%bind exit_with_message =
     let name = Symbol_name.of_runtime_exn "kkr_exit_with_message" in
-    declare_function name void_type [ i8_ptr ]
+    declare_function name void_type [ ptr ]
   in
   let%bind malloc =
     let name = Symbol_name.of_runtime_exn "kkr_malloc" in
-    declare_function name opaque_pointer_type [ i64 ]
+    declare_function name pointer_type [ i64 ]
   in
   let%bind fresh_marker =
     let name = Symbol_name.of_runtime_exn "kkr_fresh_marker" in
@@ -62,40 +72,40 @@ let declare =
   in
   let%bind nil_evidence_vector =
     let name = Symbol_name.of_runtime_exn "kkr_nil_evidence_vector" in
-    declare_function name opaque_pointer_type []
+    declare_function name pointer_type []
   in
   let%bind cons_evidence_vector =
     let name = Symbol_name.of_runtime_exn "kkr_cons_evidence_vector" in
     declare_function
       name
-      opaque_pointer_type
+      pointer_type
       [ label_type
       ; marker_type
-      ; opaque_pointer_type (* handler *)
-      ; opaque_pointer_type (* handler site vector *)
-      ; opaque_pointer_type (* vector tail *)
+      ; pointer_type (* handler *)
+      ; pointer_type (* handler site vector *)
+      ; pointer_type (* vector tail *)
       ]
   in
   let%bind evidence_vector_lookup =
     let name = Symbol_name.of_runtime_exn "kkr_evidence_vector_lookup" in
     declare_function
       name
-      opaque_pointer_type
-      [ opaque_pointer_type; label_type ]
+      pointer_type
+      [ pointer_type; label_type ]
   in
   let%bind get_evidence_marker =
     let name = Symbol_name.of_runtime_exn "kkr_get_evidence_marker" in
-    declare_function name marker_type [ opaque_pointer_type ]
+    declare_function name marker_type [ pointer_type ]
   in
   let%bind get_evidence_handler =
     let name = Symbol_name.of_runtime_exn "kkr_get_evidence_handler" in
-    declare_function name opaque_pointer_type [ opaque_pointer_type ]
+    declare_function name pointer_type [ pointer_type ]
   in
   let%bind get_evidence_handler_site_vector =
     let name =
       Symbol_name.of_runtime_exn "kkr_get_evidence_handler_site_vector"
     in
-    declare_function name opaque_pointer_type [ opaque_pointer_type ]
+    declare_function name pointer_type [ pointer_type ]
   in
   let%bind println =
     let name = Symbol_name.of_runtime_exn "kkr_println" in

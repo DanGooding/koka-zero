@@ -48,36 +48,29 @@ module Closure = struct
     let%bind closure_ptr =
       Helpers.heap_allocate closure_type "extended_closure" ~runtime
     in
-    let%bind opaque_pointer = Types.opaque_pointer in
-    let%bind parent_opaque_pointer =
-      Codegen.use_builder
-        (Llvm.build_bitcast closure opaque_pointer "parent_ptr")
-    in
+    let%bind pointer_type = Types.pointer in
     let num_vars = List.length named_vars in
-    let vars_type = Llvm.array_type opaque_pointer num_vars in
+    let vars_type = Llvm.array_type pointer_type num_vars in
     let%bind vars_ptr = Helpers.heap_allocate vars_type "vars" ~runtime in
     let var_values_and_register_names =
       List.map named_vars ~f:(fun (name, value) ->
           value, Helpers.register_name_of_variable name)
     in
+    let array_type = Llvm.array_type pointer_type num_vars in
     let%bind () =
-      (* vars_ptr has type [opaque_pointer value num_vars]*, we can fill in the
-         elements in the same way as a struct *)
-      Helpers.compile_populate_array vars_ptr var_values_and_register_names
+      Helpers.compile_populate_array vars_ptr var_values_and_register_names ~array_type
     in
     let%bind i64 = Codegen.use_context Llvm.i64_type in
     let num_vars_value = Llvm.const_int i64 num_vars in
-    let opaque_pointer_ptr = Llvm.pointer_type opaque_pointer in
-    let%bind vars_ptr =
-      Codegen.use_builder
-        (Llvm.build_bitcast vars_ptr opaque_pointer_ptr "vars")
-    in
+    let%bind closure_type = Types.closure in
     let%map () =
+      (* TODO: a first-class concept of a struct with populate+accessors *)
       Helpers.compile_populate_struct
+        ~struct_type:closure_type
         closure_ptr
         [ num_vars_value, "num_vars"
         ; vars_ptr, "vars"
-        ; parent_opaque_pointer, "parent"
+        ; closure, "parent"
         ]
     in
     closure_ptr
@@ -93,8 +86,8 @@ module Closure = struct
 
   let compile_make_toplevel names_and_code ~runtime =
     let open Codegen.Let_syntax in
-    let%bind opaque_pointer = Types.opaque_pointer in
-    let parent_closure = Llvm.const_pointer_null opaque_pointer in
+    let%bind pointer_type = Types.pointer in
+    let parent_closure = Llvm.const_pointer_null pointer_type in
     let%map closure =
       compile_extend_closure parent_closure names_and_code ~runtime
     in
@@ -104,19 +97,21 @@ module Closure = struct
   ;;
 
   (** compile accessing [ closure->vars\[i\] ] *)
-  let compile_get_var (i : int) (closure : Llvm.llvalue) name =
+  let compile_get_var (closure : Llvm.llvalue) ~(i : int) name =
     let open Codegen.Let_syntax in
-    let%bind vars_ptr =
-      Codegen.use_builder (Llvm.build_struct_gep closure 1 "vars_field")
+    let%bind closure_type = Types.closure in
+    let%bind vars =
+      Helpers.compile_access_field closure ~struct_type:closure_type ~i:1 "vars"
     in
-    let%bind vars = Codegen.use_builder (Llvm.build_load vars_ptr "vars") in
     let%bind i64 = Codegen.use_context Llvm.i64_type in
     let index = Llvm.const_int i64 i in
+    let%bind pointer_type = Types.pointer in
     let%bind var_ptr =
       Codegen.use_builder
-        (Llvm.build_gep vars (Array.of_list [ index ]) (name ^ "_ptr"))
+        (Llvm.build_gep pointer_type vars (Array.of_list [ index ]) (name ^ "_ptr"))
     in
-    Codegen.use_builder (Llvm.build_load var_ptr name)
+    (* treat all values as pointer types, even potential immediates *)
+    Codegen.use_builder (Llvm.build_load pointer_type var_ptr name)
   ;;
 
   let index_of_variable vs v =
@@ -131,7 +126,7 @@ module Closure = struct
     | Shape.Toplevel vs ->
       (match index_of_variable vs v with
       | Some i ->
-        compile_get_var i closure (Helpers.register_name_of_variable v)
+        compile_get_var closure ~i (Helpers.register_name_of_variable v)
       | None ->
         let message =
           sprintf
@@ -142,23 +137,15 @@ module Closure = struct
     | Shape.Level (vs, parent_shape) ->
       (match index_of_variable vs v with
       | Some i ->
-        compile_get_var i closure (Helpers.register_name_of_variable v)
+        compile_get_var closure ~i (Helpers.register_name_of_variable v)
       | None ->
         (* compile accessing closure->parent *)
-        let%bind parent_field_ptr =
-          Codegen.use_builder (Llvm.build_struct_gep closure 2 "parent_field")
-        in
-        let%bind parent_opaque_ptr =
-          Codegen.use_builder (Llvm.build_load parent_field_ptr "parent_opaque")
-        in
         let%bind closure_type = Types.closure in
-        let closure_ptr_type = Llvm.pointer_type closure_type in
-        let%bind parent =
-          Codegen.use_builder
-            (Llvm.build_bitcast parent_opaque_ptr closure_ptr_type "parent")
+        let%bind parent_ptr =
+          Helpers.compile_access_field closure ~struct_type:closure_type ~i:2 "parent"
         in
         (* recurse on that *)
-        let parent_closure = { closure = parent; shape = parent_shape } in
+        let parent_closure = { closure = parent_ptr; shape = parent_shape } in
         compile_get parent_closure v)
   ;;
 end

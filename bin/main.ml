@@ -1,4 +1,4 @@
-open Core
+open! Core 
 
 (** print the given message to stderr and exit the process with a nonzero return
     code (failure) *)
@@ -107,4 +107,4 @@ let command =
     ]
 ;;
 
-let () = Command.run command
+let () = Command_unix.run command

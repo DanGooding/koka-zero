@@ -1,7 +1,7 @@
 (executable
  (name main)
  (public_name koka-zero)
- (libraries koka-zero)
+ (libraries core core_unix.command_unix koka-zero)
  (preprocess
   (pps ppx_jane))
  (modes byte exe))

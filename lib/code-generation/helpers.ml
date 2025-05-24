@@ -70,24 +70,17 @@ let bool_of_i1 b =
   Codegen.use_builder (Llvm.build_zext b bool "bool")
 ;;
 
-let heap_allocate t name ~runtime =
-  let open Codegen.Let_syntax in
-  let size = Llvm.size_of t in
+let heap_allocate type_ name ~runtime =
+  let size = Llvm.size_of type_ in
   let { Runtime.malloc; _ } = runtime in
-  let%bind heap_ptr =
-    Codegen.use_builder
-      (Llvm.build_call malloc (Array.of_list [ size ]) "heap_ptr")
-  in
-  let t_ptr_type = Llvm.pointer_type t in
-  Codegen.use_builder (Llvm.build_bitcast heap_ptr t_ptr_type (name ^ "_ptr"))
+  Runtime.Function.build_call malloc ~args:(Array.of_list [ size ]) name
 ;;
 
-let heap_store t v name ~runtime =
+let heap_store type_ v name ~runtime =
   let open Codegen.Let_syntax in
-  let%bind t_ptr = heap_allocate t name ~runtime in
-  let%bind _store = Codegen.use_builder (Llvm.build_store v t_ptr) in
-  let%bind opaque_pointer = Types.opaque_pointer in
-  Codegen.use_builder (Llvm.build_bitcast t_ptr opaque_pointer "heap_ptr")
+  let%bind ptr = heap_allocate type_ name ~runtime in
+  let%map _store = Codegen.use_builder (Llvm.build_store v ptr) in
+  ptr
 ;;
 
 let heap_store_aux
@@ -113,13 +106,8 @@ let heap_store_unit ~runtime =
 let heap_store_marker = heap_store_aux Types.marker "marker"
 let heap_store_label = heap_store_aux Types.label "label"
 
-let dereference ptr t name =
-  let open Codegen.Let_syntax in
-  let t_ptr_type = Llvm.pointer_type t in
-  let%bind t_ptr =
-    Codegen.use_builder (Llvm.build_bitcast ptr t_ptr_type (name ^ "ptr"))
-  in
-  Codegen.use_builder (Llvm.build_load t_ptr name)
+let dereference ptr type_ name =
+  Codegen.use_builder (Llvm.build_load type_ ptr name)
 ;;
 
 let dereference_aux
@@ -137,21 +125,21 @@ let dereference_marker = dereference_aux Types.marker "marker"
 let dereference_label = dereference_aux Types.label "label"
 
 let compile_populate_struct
-    : Llvm.llvalue -> (Llvm.llvalue * string) list -> unit Codegen.t
+    : struct_type:Llvm.lltype -> Llvm.llvalue -> (Llvm.llvalue * string) list -> unit Codegen.t
   =
- fun struct_ptr members ->
+ fun ~struct_type struct_ptr members ->
   let open Codegen.Let_syntax in
   List.mapi members ~f:(fun i (x, name) ->
       let%bind member_ptr =
         Codegen.use_builder
-          (Llvm.build_struct_gep struct_ptr i (name ^ "_field_ptr"))
+          (Llvm.build_struct_gep struct_type struct_ptr i (name ^ "_field_ptr"))
       in
       let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
       ())
   |> Codegen.all_unit
 ;;
 
-let compile_populate_array array_ptr elements =
+let compile_populate_array ~array_type array_ptr elements =
   let open Codegen.Let_syntax in
   let%bind i64 = Codegen.use_context Llvm.i64_type in
   List.mapi elements ~f:(fun i (x, name) ->
@@ -161,18 +149,19 @@ let compile_populate_array array_ptr elements =
         List.map [ 0; i ] ~f:(Llvm.const_int i64) |> Array.of_list
       in
       let%bind element_ptr =
-        Codegen.use_builder (Llvm.build_gep array_ptr indices name)
+        Codegen.use_builder (Llvm.build_gep array_type array_ptr indices name)
       in
       let%map _store = Codegen.use_builder (Llvm.build_store x element_ptr) in
       ())
   |> Codegen.all_unit
 ;;
 
-let compile_access_field struct_ptr index name =
+let compile_access_field struct_ptr ~struct_type ~i name =
   let open Codegen.Let_syntax in
   let%bind field_ptr =
     Codegen.use_builder
-      (Llvm.build_struct_gep struct_ptr index (name ^ "_field_ptr"))
+      (Llvm.build_struct_gep struct_type struct_ptr i (name ^ "_field_ptr"))
   in
-  Codegen.use_builder (Llvm.build_load field_ptr name)
+  let field_type = (Llvm.struct_element_types struct_type).(i) in
+  Codegen.use_builder (Llvm.build_load field_type field_ptr name)
 ;;

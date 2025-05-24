@@ -9,11 +9,14 @@ license: "MIT"
 depends: [
   "ocaml" {>= "4.08.0"}
   "core"
+  "core_unix"
   "dune" {>= "2.8"}
   "llvm" {= "18-static"}
   "ppx_jane"
   "ppx_expect" {with-test}
   "odoc" {with-doc}
+  "ocaml-lsp-server" {build}
+  "ocamlformat" {build}
 ]
 build: [
   ["dune" "subst"] {dev}

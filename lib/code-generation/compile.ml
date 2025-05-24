@@ -116,20 +116,14 @@ let compile_construct_pure
  fun x ~runtime ->
   let open Codegen.Let_syntax in
   let%bind ctl_type = Types.ctl in
+  let%bind ctl_pure_type = Types.ctl_pure in
   (* always allocate a [ctl], then cast, to be sure of correct alignment *)
   let%bind ctl_ptr = Helpers.heap_allocate ctl_type "ctl" ~runtime in
-  let%bind ctl_pure_type = Types.ctl_pure in
-  let ctl_pure_ptr_type = Llvm.pointer_type ctl_pure_type in
-  let%bind ctl_pure_ptr =
-    Codegen.use_builder
-      (Llvm.build_bitcast ctl_ptr ctl_pure_ptr_type "ctl_pure_ptr")
-  in
   let%bind tag = Helpers.const_ctl_pure_tag in
-  let%bind () =
-    Helpers.compile_populate_struct ctl_pure_ptr [ tag, "tag"; x, "value" ]
+  let%map () =
+    Helpers.compile_populate_struct ctl_ptr ~struct_type:ctl_pure_type [ tag, "tag"; x, "value" ]
   in
-  let%bind opaque_ptr = Types.opaque_pointer in
-  Codegen.use_builder (Llvm.build_bitcast ctl_pure_ptr opaque_ptr "ptr")
+  ctl_ptr
 ;;
 
 (** [compile_construct_yield ~marker ~op_clause ~resumption ~runtime] produces
@@ -142,26 +136,20 @@ let compile_construct_yield
  fun ~marker ~op_clause ~resumption ~runtime ->
   let open Codegen.Let_syntax in
   let%bind ctl_type = Types.ctl in
-  let%bind ctl_ptr = Helpers.heap_allocate ctl_type "ctl" ~runtime in
   let%bind ctl_yield_type = Types.ctl_yield in
-  let ctl_yield_ptr_type = Llvm.pointer_type ctl_yield_type in
-  let%bind ctl_yield_ptr =
-    Codegen.use_builder
-      (Llvm.build_bitcast ctl_ptr ctl_yield_ptr_type "ctl_yield_ptr")
-  in
+  let%bind ctl_ptr = Helpers.heap_allocate ctl_type "ctl" ~runtime in
   let%bind tag = Helpers.const_ctl_yield_tag in
-  let%bind () =
+  let%map () =
     Helpers.compile_populate_struct
-      ctl_yield_ptr
+      ctl_ptr
+      ~struct_type:ctl_yield_type
       [ tag, "tag"
       ; marker, "marker"
       ; op_clause, "op_clause"
       ; resumption, "resumption"
       ]
   in
-  let%bind opaque_ptr = Types.opaque_pointer in
-  Codegen.use_builder (Llvm.build_bitcast ctl_yield_ptr opaque_ptr "ptr")
-;;
+  ctl_ptr;;
 
 (** [compile_construct_op variant clause ...] generates code to allocate a
     [Types.op] and populate it with the given [variant] and operation [clause] *)
@@ -178,28 +166,23 @@ let compile_construct_op
     | `Normal -> Helpers.const_op_normal_tag
     | `Tail -> Helpers.const_op_tail_tag
   in
-  let%bind () =
-    Helpers.compile_populate_struct op_ptr [ tag, "tag"; clause, "clause" ]
+  let%map () =
+    Helpers.compile_populate_struct op_ptr ~struct_type:op_type [ tag, "tag"; clause, "clause" ]
   in
-  let%bind opaque_pointer = Types.opaque_pointer in
-  Codegen.use_builder (Llvm.build_bitcast op_ptr opaque_pointer "ptr")
+  op_ptr
 ;;
 
 (** [compile_select_operation label ~op_name v ~effect_reprs] generates code
     which selects the operation clause for [op_name] from [v] (a handler for the
-    effect [label] of type [Types.opaque_pointer]) *)
+    effect [label]) *)
 let compile_select_operation
     :  Effect_label.t -> op_name:Variable.t -> Llvm.llvalue
     -> effect_reprs:Effect_repr.t Effect_label.Map.t -> Llvm.llvalue Codegen.t
   =
- fun label ~op_name handler_ptr ~effect_reprs ->
+ fun label ~op_name handler ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind repr = lookup_effect_repr effect_reprs label in
   let { Effect_repr.hnd_type; operations; _ } = repr in
-  let hnd_ptr_type = Llvm.pointer_type hnd_type in
-  let%bind handler =
-    Codegen.use_builder (Llvm.build_bitcast handler_ptr hnd_ptr_type "hnd_ptr")
-  in
   let%bind op_index =
     match
       List.findi operations ~f:(fun _i op_name' ->
@@ -218,9 +201,10 @@ let compile_select_operation
   (* pointer into the struct - of type [op_clause**] *)
   let%bind op_clause_field_ptr =
     Codegen.use_builder
-      (Llvm.build_struct_gep handler op_index "op_clause_field_ptr")
+      (Llvm.build_struct_gep hnd_type handler op_index "op_clause_field_ptr")
   in
-  Codegen.use_builder (Llvm.build_load op_clause_field_ptr "op_clause")
+  let%bind pointer_type = Types.pointer in
+  Codegen.use_builder (Llvm.build_load pointer_type op_clause_field_ptr "op_clause")
 ;;
 
 (** [compile_construct_function_object code_address ~is_recursive ~captured_closure ...]
@@ -237,22 +221,17 @@ let compile_construct_function_object
   let%bind function_ptr =
     Helpers.heap_allocate function_object_type "function" ~runtime
   in
-  let%bind opaque_pointer = Types.opaque_pointer in
-  let%bind function_code_opaque_ptr =
-    Codegen.use_builder
-      (Llvm.build_bitcast code_address opaque_pointer "code_address_opaque_ptr")
-  in
+
   let%bind i1 = Codegen.use_context Llvm.i1_type in
   let is_recursive = Llvm.const_int i1 (if is_recursive then 1 else 0) in
   let fields =
-    [ function_code_opaque_ptr, "code"
+    [ code_address, "code"
     ; captured_closure, "closure"
     ; is_recursive, "is_recursive"
     ]
   in
-  let%bind () = Helpers.compile_populate_struct function_ptr fields in
-  Codegen.use_builder
-    (Llvm.build_bitcast function_ptr opaque_pointer "function_opaque")
+  let%map () = Helpers.compile_populate_struct function_ptr ~struct_type:function_object_type fields in
+  function_ptr
 ;;
 
 (** [compile_conditional cond ~compile_true ~compile_false] generates a branch
@@ -372,10 +351,10 @@ let compile_match_corrupted_tag ~runtime () =
   let open Codegen.Let_syntax in
   let { Runtime.exit; _ } = runtime in
   let%bind _void =
-    Codegen.use_builder (Llvm.build_call exit (Array.of_list []) "")
+    Runtime.Function.build_call exit ~args:(Array.of_list []) ""
   in
-  let%map opaque_pointer = Types.opaque_pointer in
-  Llvm.const_null opaque_pointer
+  let%map pointer_type = Types.pointer in
+  Llvm.const_null pointer_type
 ;;
 
 (** produces code to evaluate the given expression and store its value to the
@@ -472,8 +451,7 @@ let rec compile_expr
   | EPS.Expr.Fresh_marker ->
     let { Runtime.fresh_marker; _ } = runtime in
     let%bind m =
-      Codegen.use_builder
-        (Llvm.build_call fresh_marker (Array.of_list []) "fresh_marker")
+      Runtime.Function.build_call fresh_marker ~args:(Array.of_list []) "fresh_marker"
     in
     Helpers.heap_store_marker m ~runtime
   | EPS.Expr.Markers_equal (e1, e2) ->
@@ -487,11 +465,10 @@ let rec compile_expr
     let%bind marker2 = Helpers.dereference_marker marker2_ptr in
     let { Runtime.markers_equal; _ } = runtime in
     let%bind eq =
-      Codegen.use_builder
-        (Llvm.build_call
-           markers_equal
-           (Array.of_list [ marker1; marker2 ])
-           "markers_equal")
+      Runtime.Function.build_call
+        markers_equal
+        ~args:(Array.of_list [ marker1; marker2 ])
+        "markers_equal"
     in
     Helpers.heap_store_bool eq ~runtime
   | EPS.Expr.Effect_label label ->
@@ -537,8 +514,7 @@ let rec compile_expr
     compile_select_operation label ~op_name handler_ptr ~effect_reprs
   | EPS.Expr.Nil_evidence_vector ->
     let { Runtime.nil_evidence_vector; _ } = runtime in
-    Codegen.use_builder
-      (Llvm.build_call nil_evidence_vector (Array.of_list []) "nil_vector")
+      Runtime.Function.build_call nil_evidence_vector ~args:(Array.of_list []) "nil_vector"
   | EPS.Expr.Cons_evidence_vector
       { label = e_label
       ; marker = e_marker
@@ -572,8 +548,7 @@ let rec compile_expr
     let args =
       Array.of_list [ label; marker; handler; handler_site_vector; vector_tail ]
     in
-    Codegen.use_builder
-      (Llvm.build_call cons_evidence_vector args "extended_vector")
+      Runtime.Function.build_call cons_evidence_vector ~args "extended_vector"
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
     let%bind label_ptr =
       compile_expr e_label ~env ~runtime ~effect_reprs ~outer_symbol
@@ -584,18 +559,17 @@ let rec compile_expr
     in
     let { Runtime.evidence_vector_lookup; _ } = runtime in
     let args = Array.of_list [ vector; label ] in
-    Codegen.use_builder (Llvm.build_call evidence_vector_lookup args "evidence")
+    Runtime.Function.build_call evidence_vector_lookup ~args "evidence"
   | EPS.Expr.Get_evidence_marker e ->
     let%bind evidence =
       compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.get_evidence_marker; _ } = runtime in
     let%bind marker =
-      Codegen.use_builder
-        (Llvm.build_call
-           get_evidence_marker
-           (Array.of_list [ evidence ])
-           "marker")
+      Runtime.Function.build_call
+        get_evidence_marker
+        ~args:(Array.of_list [ evidence ])
+        "marker"
     in
     Helpers.heap_store_marker marker ~runtime
   | EPS.Expr.Get_evidence_handler e ->
@@ -603,21 +577,19 @@ let rec compile_expr
       compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.get_evidence_handler; _ } = runtime in
-    Codegen.use_builder
-      (Llvm.build_call
-         get_evidence_handler
-         (Array.of_list [ evidence ])
-         "handler")
+      Runtime.Function.build_call
+        get_evidence_handler
+        ~args:(Array.of_list [ evidence ])
+        "handler"
   | EPS.Expr.Get_evidence_handler_site_vector e ->
     let%bind evidence =
       compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.get_evidence_handler_site_vector; _ } = runtime in
-    Codegen.use_builder
-      (Llvm.build_call
-         get_evidence_handler_site_vector
-         (Array.of_list [ evidence ])
-         "handler_site_vector")
+    Runtime.Function.build_call
+      get_evidence_handler_site_vector
+      ~args:(Array.of_list [ evidence ])
+      "handler_site_vector"
   | EPS.Expr.Impure_built_in impure ->
     compile_impure_built_in impure ~env ~runtime ~effect_reprs ~outer_symbol
 
@@ -641,25 +613,17 @@ and compile_match_ctl
      ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind ctl_type = Types.ctl in
-  let ctl_ptr_type = Llvm.pointer_type ctl_type in
-  let%bind ctl_ptr =
-    Codegen.use_builder (Llvm.build_bitcast subject ctl_ptr_type "ctl_ptr")
-  in
-  let%bind tag = Helpers.compile_access_field ctl_ptr 0 "tag" in
+  let%bind tag = Helpers.compile_access_field subject ~struct_type:ctl_type ~i:0 "tag" in
   let%bind pure_tag = Helpers.const_ctl_pure_tag in
   let%bind yield_tag = Helpers.const_ctl_yield_tag in
   let compile_pure () =
     let%bind ctl_pure_type = Types.ctl_pure in
-    let ctl_pure_ptr_type = Llvm.pointer_type ctl_pure_type in
-    let%bind ctl_pure_ptr =
-      Codegen.use_builder
-        (Llvm.build_bitcast subject ctl_pure_ptr_type "ctl_pure_ptr")
-    in
     let x_value, body = pure_branch in
     let%bind value =
       Helpers.compile_access_field
-        ctl_pure_ptr
-        1
+        subject
+        ~struct_type:ctl_pure_type
+        ~i:1
         (Helpers.register_name_of_variable x_value)
     in
     let env' = Context.add_local_exn env ~name:x_value ~value in
@@ -667,28 +631,26 @@ and compile_match_ctl
   in
   let compile_yield () =
     let%bind ctl_yield_type = Types.ctl_yield in
-    let ctl_yield_ptr_type = Llvm.pointer_type ctl_yield_type in
-    let%bind ctl_yield_ptr =
-      Codegen.use_builder
-        (Llvm.build_bitcast subject ctl_yield_ptr_type "ctl_yield_ptr")
-    in
     let x_marker, x_op_clause, x_resumption, body = yield_branch in
     let%bind marker =
       Helpers.compile_access_field
-        ctl_yield_ptr
-        1
+        subject
+        ~struct_type:ctl_yield_type
+        ~i:1
         (Helpers.register_name_of_variable x_marker)
     in
     let%bind op_clause =
       Helpers.compile_access_field
-        ctl_yield_ptr
-        2
+        subject
+        ~struct_type:ctl_yield_type
+        ~i:2
         (Helpers.register_name_of_variable x_op_clause)
     in
     let%bind resumption =
       Helpers.compile_access_field
-        ctl_yield_ptr
-        3
+        subject
+        ~struct_type:ctl_yield_type
+        ~i:3
         (Helpers.register_name_of_variable x_resumption)
     in
     let env' =
@@ -725,19 +687,16 @@ and compile_match_op
      ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind op_type = Types.op in
-  let op_ptr_type = Llvm.pointer_type op_type in
-  let%bind op_ptr =
-    Codegen.use_builder (Llvm.build_bitcast subject op_ptr_type "op_ptr")
-  in
-  let%bind tag = Helpers.compile_access_field op_ptr 0 "tag" in
+  let%bind tag = Helpers.compile_access_field subject ~struct_type:op_type ~i:0 "tag" in
   let%bind normal_tag = Helpers.const_op_normal_tag in
   let%bind tail_tag = Helpers.const_op_tail_tag in
   let make_compile_branch branch () =
     let x, body = branch in
     let%bind clause =
       Helpers.compile_access_field
-        op_ptr
-        1
+        subject
+        ~struct_type:op_type
+        ~i:1
         (Helpers.register_name_of_variable x)
     in
     let env' = Context.add_local_exn env ~name:x ~value:clause in
@@ -763,7 +722,7 @@ and compile_if_then_else
   let open Codegen.Let_syntax in
   let%bind cond_i1 = Helpers.i1_of_bool cond in
   compile_conditional
-    cond_i1
+    cond_i1 
     ~compile_true:(fun () ->
       compile_expr e_yes ~env ~runtime ~effect_reprs ~outer_symbol)
     ~compile_false:(fun () ->
@@ -809,23 +768,15 @@ and compile_function
             raise_s
               [%message "function type has unexpected number of parameters"]
         in
-        let%bind opaque_pointer = Types.opaque_pointer in
-        let%bind (parameters : (EPS.Parameter.t * Llvm.llvalue) list) =
+        let (parameters : (EPS.Parameter.t * Llvm.llvalue) list) =
           match rec_name with
           | Some rec_name ->
-            let%map f_self_param =
-              Codegen.use_builder
-                (Llvm.build_bitcast
-                   f_self_param
-                   opaque_pointer
-                   (Helpers.register_name_of_variable rec_name))
-            in
             let rec_p = EPS.Parameter.Variable rec_name in
             List.zip_exn (rec_p :: ps) (f_self_param :: params)
           | None ->
             Llvm.set_value_name "null" f_self_param;
             ignore (f_self_param : Llvm.llvalue);
-            List.zip_exn ps params |> return
+            List.zip_exn ps params
         in
         (* parameters available via variables in the the body*)
         let (env_locals : Context.Locals.t) =
@@ -958,7 +909,7 @@ and compile_fix_lambda
     ~effect_reprs
 
 (** [compile_application f args] generates code to 'call' the function object
-    pointed to by [Types.opaque_pointer]:[f], with the given arguments. *)
+    pointed to by [f], with the given arguments. *)
 and compile_application
     : Llvm.llvalue -> Llvm.llvalue list -> Llvm.llvalue Codegen.t
   =
@@ -966,37 +917,25 @@ and compile_application
   let open Codegen.Let_syntax in
   (* cast v_f to function type *)
   let%bind function_object_type = Types.function_object in
-  let function_object_ptr_type = Llvm.pointer_type function_object_type in
-  let%bind f_ptr =
-    Codegen.use_builder
-      (Llvm.build_bitcast f_ptr function_object_ptr_type "function_ptr")
-  in
   (* extract fields of f *)
-  let%bind code_address_opaque =
-    Helpers.compile_access_field f_ptr 0 "code_address"
+  let%bind code_address =
+    Helpers.compile_access_field f_ptr ~struct_type:function_object_type ~i:0 "code_address"
   in
-  let%bind closure_ptr = Helpers.compile_access_field f_ptr 1 "closure" in
-  let%bind is_recursive = Helpers.compile_access_field f_ptr 2 "is_recursive" in
+  let%bind closure_ptr = Helpers.compile_access_field f_ptr ~struct_type:function_object_type ~i:1 "closure" in
+  let%bind is_recursive = Helpers.compile_access_field f_ptr ~struct_type:function_object_type ~i:2 "is_recursive" in
   (* the number of arguments passed in the evidence passing representation *)
   let num_eps_args = List.length arg_ptrs in
+  let%bind pointer_type = Types.pointer in
   let%bind generated_function_type = Types.function_code num_eps_args in
-  let generated_function_ptr_type = Llvm.pointer_type generated_function_type in
   (* pass either [f_ptr] or [null] depending on whether the function is
      recursive *)
-  let null_function = Llvm.const_pointer_null function_object_ptr_type in
+  let null_function = Llvm.const_pointer_null pointer_type in
   let%bind f_self =
     Codegen.use_builder
       (Llvm.build_select is_recursive f_ptr null_function "f_self")
   in
   let args = Array.of_list (f_self :: closure_ptr :: arg_ptrs) in
-  let%bind typed_code_address =
-    Codegen.use_builder
-      (Llvm.build_bitcast
-         code_address_opaque
-         generated_function_ptr_type
-         "typed_code_address")
-  in
-  Codegen.use_builder (Llvm.build_call typed_code_address args "result")
+  Codegen.use_builder (Llvm.build_call generated_function_type code_address args "result")
 
 and compile_construct_handler
     :  Effect_label.t -> EPS.Expr.t Variable.Map.t -> env:Context.t
@@ -1033,11 +972,10 @@ and compile_construct_handler
     |> Codegen.all
   in
   let%bind handler_ptr = Helpers.heap_allocate hnd_type "hnd" ~runtime in
-  let%bind () =
-    Helpers.compile_populate_struct handler_ptr operation_clauses_and_names
+  let%map () =
+    Helpers.compile_populate_struct ~struct_type:hnd_type handler_ptr operation_clauses_and_names
   in
-  let%bind opaque_pointer = Types.opaque_pointer in
-  Codegen.use_builder (Llvm.build_bitcast handler_ptr opaque_pointer "hnd_ptr")
+  handler_ptr
 
 and compile_impure_built_in
     :  EPS.Expr.impure_built_in -> env:Context.t -> runtime:Runtime.t
@@ -1050,7 +988,7 @@ and compile_impure_built_in
   | EPS.Expr.Impure_println ->
     let { Runtime.println; _ } = runtime in
     let%bind _void =
-      Codegen.use_builder (Llvm.build_call println (Array.of_list []) "")
+      Runtime.Function.build_call println ~args:(Array.of_list []) ""
     in
     Helpers.heap_store_unit ~runtime
   | EPS.Expr.Impure_print_int { value = e; newline } ->
@@ -1060,14 +998,13 @@ and compile_impure_built_in
     let newline = Llvm.const_int i8_type (Bool.to_int newline) in
     let { Runtime.print_int; _ } = runtime in
     let%bind _void =
-      Codegen.use_builder
-        (Llvm.build_call print_int (Array.of_list [ i; newline ]) "")
+      Runtime.Function.build_call print_int ~args:(Array.of_list [ i; newline ]) ""
     in
     Helpers.heap_store_unit ~runtime
   | EPS.Expr.Impure_read_int ->
     let { Runtime.read_int; _ } = runtime in
     let%bind i =
-      Codegen.use_builder (Llvm.build_call read_int (Array.of_list []) "i")
+      Runtime.Function.build_call read_int ~args:(Array.of_list []) "i"
     in
     Helpers.heap_store_int i ~runtime
 ;;
@@ -1085,8 +1022,8 @@ let compile_effect_decl
   let operations =
     Set.to_list operations |> List.sort ~compare:Variable.compare
   in
-  let%bind opaque_pointer = Types.opaque_pointer in
-  let fields = Array.of_list_map operations ~f:(fun _op -> opaque_pointer) in
+  let%bind pointer_type = Types.pointer in
+  let fields = Array.of_list_map operations ~f:(fun _op -> pointer_type) in
   let%map hnd_type =
     Codegen.use_context (fun context -> Llvm.struct_type context fields)
   in
@@ -1179,13 +1116,12 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
   let%bind () = Codegen.use_builder (Llvm.position_at_end main_start_block) in
   let { Runtime.init; _ } = runtime in
   let%bind _void =
-    Codegen.use_builder (Llvm.build_call init (Array.of_list []) "")
+    Runtime.Function.build_call init ~args:(Array.of_list []) ""
   in
   (* build a function object for each toplevel function *)
   (* putting [null] for the parent for now *)
-  let%bind closure_type = Types.closure in
-  let closure_ptr_type = Llvm.pointer_type closure_type in
-  let null_closure = Llvm.const_pointer_null closure_ptr_type in
+  let%bind pointer_type = Types.pointer in
+  let null_closure = Llvm.const_pointer_null pointer_type in
   let%bind named_function_objects =
     List.map named_code_addresses ~f:(fun (name, code) ->
         let%map f =
@@ -1205,19 +1141,11 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
   in
   (* now update each function object to point back to the closure *)
   let%bind () =
-    List.map named_function_objects ~f:(fun (_name, f_opaque) ->
+    List.map named_function_objects ~f:(fun (_name, f) ->
         let%bind function_object_type = Types.function_object in
-        let function_object_ptr_type = Llvm.pointer_type function_object_type in
-        let%bind f =
-          Codegen.use_builder
-            (Llvm.build_bitcast
-               f_opaque
-               function_object_ptr_type
-               "function_object_ptr")
-        in
         (* currently pointing at null - update it *)
         let%bind closure_field_ptr =
-          Codegen.use_builder (Llvm.build_struct_gep f 1 "closure_field_ptr")
+          Codegen.use_builder (Llvm.build_struct_gep function_object_type f 1 "closure_field_ptr")
         in
         let { Context.Closure.closure; _ } = toplevel_closure in
         let%map _store =

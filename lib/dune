@@ -1,12 +1,13 @@
 (library
-  (name koka_zero)
-  (public_name koka-zero)
-  (libraries
-     core
-     koka-zero.util
-     koka-zero.parsing
-     koka-zero.inference
-     koka-zero.evidence-translation
-     koka-zero.interpreter
-     koka-zero.code-generation)
-  (preprocess (pps ppx_jane)))
+ (name koka_zero)
+ (public_name koka-zero)
+ (libraries
+  core
+  koka-zero.util
+  koka-zero.parsing
+  koka-zero.inference
+  koka-zero.evidence-translation
+  koka-zero.interpreter
+  koka-zero.code-generation)
+ (preprocess
+  (pps ppx_jane)))

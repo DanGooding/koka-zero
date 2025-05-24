@@ -1,10 +1,7 @@
-(** pointer to an arbitrary runtime value. Not related to in-development LLVM
-    opaque pointers. *)
-val opaque_pointer : Llvm.lltype Codegen.t
-
 val bool : Llvm.lltype Codegen.t
 val int : Llvm.lltype Codegen.t
 val unit : Llvm.lltype Codegen.t
+val pointer : Llvm.lltype Codegen.t
 
 (** prompt marker *)
 val marker : Llvm.lltype Codegen.t
@@ -48,10 +45,10 @@ val function_object : Llvm.lltype Codegen.t
     requires a pointer to the function object itself for recursion, and a
     closure. [null] should be passed for the former if it is not a recursive
     function. The type is:
-    [opaque_pointer (
+    [ptr (
         function_object *f_self,
         closure *closure,
-        opaque_pointer arg_1, ... opaque_pointer arg_n)
+        ptr arg_1, ... ptr arg_n)
     ] *)
 val function_code : int -> Llvm.lltype Codegen.t
 
