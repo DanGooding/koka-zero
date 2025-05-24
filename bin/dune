@@ -4,4 +4,4 @@
  (libraries core core_unix.command_unix koka-zero)
  (preprocess
   (pps ppx_jane))
- (modes byte exe))
+ (modes exe))
