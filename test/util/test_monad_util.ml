@@ -56,7 +56,8 @@ let%expect_test "list_fold gives the same order as List.fold" =
   let xs = [ 1; 2; 3; 4; 5 ] in
   let f () x = printf "%d\n" x in
   List.fold xs ~init:() ~f;
-  [%expect {|
+  [%expect
+    {|
     1
     2
     3
@@ -69,7 +70,8 @@ let%expect_test "list_fold gives the same order as List.fold" =
   in
   let action = Writer.list_fold xs ~init:() ~f:f' in
   let (), written = Writer.collect action in
-  [%expect {|
+  [%expect
+    {|
     1
     2
     3

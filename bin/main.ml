@@ -1,4 +1,4 @@
-open! Core 
+open! Core
 
 (** print the given message to stderr and exit the process with a nonzero return
     code (failure) *)
@@ -38,9 +38,9 @@ let compile ~in_filename ~optimise ~print_eps ~out_filename =
          ~module_name:in_filename
          ~filename:out_filename
      with
-    | Error error ->
-      Koka_zero.Codegen_error.string_of_t error |> exit_with_error_messsage
-    | Ok () -> ())
+     | Error error ->
+       Koka_zero.Codegen_error.string_of_t error |> exit_with_error_messsage
+     | Ok () -> ())
 ;;
 
 let interpret_eps filename =
@@ -49,11 +49,11 @@ let interpret_eps filename =
     Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program ->
     (match Koka_zero.interpret_program program with
-    | Error error ->
-      Koka_zero.Runtime_error.string_of_t error
-      |> Koka_zero.Util.String_utils.limit_length ~limit:1000
-      |> eprintf "runtime error: %s\n"
-    | Ok _unit -> ())
+     | Error error ->
+       Koka_zero.Runtime_error.string_of_t error
+       |> Koka_zero.Util.String_utils.limit_length ~limit:1000
+       |> eprintf "runtime error: %s\n"
+     | Ok _unit -> ())
 ;;
 
 let typecheck filename =

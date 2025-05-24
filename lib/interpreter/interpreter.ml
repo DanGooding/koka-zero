@@ -45,10 +45,10 @@ let run (m : 'a t) : 'a Or_runtime_error.t =
 ;;
 
 let type_error
-    ~(expected : string)
-    (sexp_of_actual : 'a -> Sexp.t)
-    (actual : 'a)
-    (_ : State.t)
+      ~(expected : string)
+      (sexp_of_actual : 'a -> Sexp.t)
+      (actual : 'a)
+      (_ : State.t)
   =
   let message =
     sprintf

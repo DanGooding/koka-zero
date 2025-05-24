@@ -83,9 +83,9 @@ let empty = Variable.Map.empty
 
 let apply_substitution t subst =
   Map.map t ~f:(fun entry ->
-      let { Entry.binding; _ } = entry in
-      let binding = Binding.apply_substitution binding subst in
-      { entry with Entry.binding })
+    let { Entry.binding; _ } = entry in
+    let binding = Binding.apply_substitution binding subst in
+    { entry with Entry.binding })
 ;;
 
 let metavariables t =

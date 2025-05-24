@@ -25,12 +25,12 @@ module Expr : sig
         { subject : t
         ; pure_branch : Variable.t * t (* gets one argument *)
         ; yield_branch : Variable.t * Variable.t * Variable.t * t
-              (* gets one argument per field in Yield *)
+          (* gets one argument per field in Yield *)
         }
     | Fresh_marker (** evaluates to a new unique marker *)
     | Markers_equal of t * t
     | Effect_label of Effect.Label.t
-        (** literal effect label - passed to [handler]/[perform] *)
+    (** literal effect label - passed to [handler]/[perform] *)
     | Construct_op_normal of t (** constructor for an operation *)
     | Construct_op_tail of t (** constructor for a tail resumptive operation *)
     | Match_op of
@@ -43,8 +43,8 @@ module Expr : sig
         ; operation_clauses : t Variable.Map.t
         } (** constructor for a `Hnd`, passed to [handler] *)
     | Select_operation of Effect.Label.t * Variable.t * t
-        (** primitive to get an operation from a handler's runtime
-            representation **)
+    (** primitive to get an operation from a handler's runtime
+        representation **)
     (* TODO: note evidence vectors are not first class - can have more sensible
        primitives if desired *)
     | Nil_evidence_vector
@@ -53,8 +53,8 @@ module Expr : sig
         ; marker : t
         ; handler : t
         ; handler_site_vector : t
-              (** evidence vector at handler - used for evaluating tail
-                  resumptive operations in-place *)
+          (** evidence vector at handler - used for evaluating tail
+              resumptive operations in-place *)
         ; vector_tail : t
         }
     | Lookup_evidence of
@@ -69,7 +69,6 @@ module Expr : sig
   [@@deriving sexp]
 
   and lambda = Parameter.t list * t [@@deriving sexp]
-
   and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
   (** interaction with the outside world *)
@@ -100,8 +99,8 @@ module Program : sig
     { effect_declarations : Effect_decl.t list
     ; fun_declarations : Fun_decl.t list
     ; entry_expr : Expr.t
-          (** expression to run the program: runs entry-point with an empty
-              evidence vector *)
+      (** expression to run the program: runs entry-point with an empty
+          evidence vector *)
     }
   [@@deriving sexp]
 end

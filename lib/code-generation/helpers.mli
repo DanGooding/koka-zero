@@ -85,7 +85,7 @@ val dereference_label : Llvm.llvalue -> Llvm.llvalue Codegen.t
 (** [compile_populate_struct p members] generates code to populate the struct
     pointed to by [p], with the field values (and tmp names) [members] *)
 val compile_populate_struct
-  : struct_type:Llvm.lltype 
+  :  struct_type:Llvm.lltype
   -> Llvm.llvalue
   -> (Llvm.llvalue * string) list
   -> unit Codegen.t
@@ -94,7 +94,7 @@ val compile_populate_struct
     pointed to by [p] (which must be an array pointer!), with the elements (and
     tmp names) [elements] *)
 val compile_populate_array
-  : array_type:Llvm.lltype  
+  :  array_type:Llvm.lltype
   -> Llvm.llvalue
   -> (Llvm.llvalue * string) list
   -> unit Codegen.t

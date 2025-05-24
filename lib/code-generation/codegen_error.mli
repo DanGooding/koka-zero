@@ -11,7 +11,8 @@ val impossible_error : string -> t
 (** reports an error due to trying to compile an unimplemented construct *)
 val unsupported_feature_error : string -> t
 
-(** reports an invaid function/module, with a validation report as its message *)
+(** reports an invaid function/module, with a validation report as its message
+*)
 val verifier_error : string -> t
 
 val string_of_t : t -> string

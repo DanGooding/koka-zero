@@ -17,9 +17,7 @@ let print_simplification_result syntax =
     let minimal_syntax = Private.simplify syntax in
     [%sexp
       (minimal_syntax
-        : ( Koka_zero_inference.Minimal_syntax.Program.t
-          , Static_error.t )
-          Result.t)]
+       : (Koka_zero_inference.Minimal_syntax.Program.t, Static_error.t) Result.t)]
     |> Sexp.to_string_hum
     |> print_endline
 ;;

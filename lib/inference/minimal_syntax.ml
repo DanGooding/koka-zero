@@ -115,7 +115,6 @@ module Expr = struct
     [@@deriving sexp]
 
     and lambda = Parameter.t list * t [@@deriving sexp]
-
     and fix_lambda = Variable.t * lambda [@@deriving sexp]
 
     and handler =

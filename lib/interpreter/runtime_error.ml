@@ -4,7 +4,7 @@ module Kind = struct
   module T = struct
     type t =
       | Impossible_error
-          (** type errors should be impossible after the type inference phase *)
+      (** type errors should be impossible after the type inference phase *)
       | Unsupported_feature_error (** features not yet implemented *)
       | IO_error (** errors performing built-in io operations *)
     [@@deriving sexp]

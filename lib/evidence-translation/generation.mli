@@ -13,7 +13,8 @@ include Monad_utils.S with type 'a t := 'a t
 (** perform a generation computation using the default internal name source *)
 val run : 'a t -> 'a Or_static_error.t
 
-(** fail due to attempting to translate a feature which is not yet implemented *)
+(** fail due to attempting to translate a feature which is not yet implemented
+*)
 val unsupported_feature_error : string -> 'a t
 
 (** create a globally unique variable *)
@@ -32,8 +33,9 @@ val make_lambda_1 : (E.t -> E.t t) -> E.lambda t
 val make_lambda_2 : (E.t -> E.t -> E.t t) -> E.lambda t
 
 (** [make_lambda_n f] builds an [n] argument lambda, whose arguments are
-    [ \[x1; ...; xn\] ], and whose body is
-    [f (E.Variable x1) ... (E.Variable xn)] for some fresh names [x1] ... [xn] *)
+    [ [x1; ...; xn] ], and whose body is
+    [f (E.Variable x1) ... (E.Variable xn)] for some fresh names [x1] ... [xn]
+*)
 val make_lambda_3 : (E.t -> E.t -> E.t -> E.t t) -> E.lambda t
 
 val make_lambda_4 : (E.t -> E.t -> E.t -> E.t -> E.t t) -> E.lambda t

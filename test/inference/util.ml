@@ -24,9 +24,9 @@ let print_expr_inference_result ?(declarations = []) expr =
   let result = Private.infer_expr_toplevel expr ~declarations in
   [%sexp
     (result
-      : ( Type.Mono.t * Effect.t * Explicit_syntax.Expr.t
-        , Static_error.t )
-        Result.t)]
+     : ( Type.Mono.t * Effect.t * Explicit_syntax.Expr.t
+         , Static_error.t )
+         Result.t)]
   |> Sexp.to_string_hum
   |> print_endline
 ;;
@@ -126,11 +126,11 @@ module Expr = struct
   ;;
 
   let singleton_handler
-      ~(op_name : Variable.t)
-      ~(op_argument : M.Parameter.t)
-      ~(op_body : E.t)
-      ~(shape : Operation_shape.t)
-      : E.handler
+        ~(op_name : Variable.t)
+        ~(op_argument : M.Parameter.t)
+        ~(op_body : E.t)
+        ~(shape : Operation_shape.t)
+    : E.handler
     =
     let clause = { E.op_argument; op_body } in
     let operations = Variable.Map.singleton op_name (shape, clause) in

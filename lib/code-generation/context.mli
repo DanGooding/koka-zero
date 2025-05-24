@@ -17,12 +17,12 @@ module Closure : sig
     (** describes the statically known shape and contents of a closure *)
     type t =
       | Level of Variable.t list * t
-          (** a list of all the variables added to the closure at one nesting
-              depth, and the parent closure's shape *)
+      (** a list of all the variables added to the closure at one nesting
+          depth, and the parent closure's shape *)
       | Toplevel of Variable.t list
-          (** names in scope from the current enclosing toplevel function, in
-              the _single_ toplevel closure. These are unique, so searching in
-              either order is guaranteed to work *)
+      (** names in scope from the current enclosing toplevel function, in
+          the _single_ toplevel closure. These are unique, so searching in
+          either order is guaranteed to work *)
     [@@deriving sexp]
   end
 

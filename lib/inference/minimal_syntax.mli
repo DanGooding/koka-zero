@@ -66,17 +66,17 @@ module Expr : sig
   type t =
     | Value of value
     | Let of Variable.t * value * t
-        (** [Let] provides polymorphic binding over total terms, although I
-            currently restrict this to values for the evidence translation step
-            (this may be unnecessary) *)
+    (** [Let] provides polymorphic binding over total terms, although I
+        currently restrict this to values for the evidence translation step
+        (this may be unnecessary) *)
     | Let_mono of Variable.t * t * t
-        (** [Let_mono] provides monomorphic binding, [Let_mono(x, e_x, e)] is
-            equivalent to [(fun x -> e) e_x], but can be implemented more
-            efficiently. There is no value restriction of [e_x], since it is not
-            generalised *)
+    (** [Let_mono] provides monomorphic binding, [Let_mono(x, e_x, e)] is
+        equivalent to [(fun x -> e) e_x], but can be implemented more
+        efficiently. There is no value restriction of [e_x], since it is not
+        generalised *)
     | Application of t * t list
     | Seq of t * t
-        (** evaluates first expression, then second. both may be of any type *)
+    (** evaluates first expression, then second. both may be of any type *)
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
@@ -90,7 +90,7 @@ module Expr : sig
     | Fix_lambda of fix_lambda
     | Literal of Literal.t
     | Handler of handler
-        (** takes a nullary funciton to be called under this handler *)
+    (** takes a nullary funciton to be called under this handler *)
   [@@deriving sexp]
 
   (** monomorphic binding *)
@@ -109,10 +109,10 @@ module Expr : sig
   (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
     { op_argument : Parameter.t
-          (* TODO: extend to multiple args (requires checking against
-             declaration, and makes translation harder - each operation in an
-             effect needs to pass a differnt amount of arguments through
-             yield) *)
+      (* TODO: extend to multiple args (requires checking against
+         declaration, and makes translation harder - each operation in an
+         effect needs to pass a differnt amount of arguments through
+         yield) *)
     ; op_body : t
     }
   [@@deriving sexp]

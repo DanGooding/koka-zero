@@ -217,7 +217,7 @@ type expr =
   | Handle of
       { subject : expr (** this expression evaluates to a 0 argument function *)
       ; handler : effect_handler
-            (** which is called under this effect handler *)
+        (** which is called under this effect handler *)
       }
   | Fn of fn
   | Binary_op of expr * binary_operator * expr
@@ -242,7 +242,8 @@ and block =
   }
 [@@deriving sexp]
 
-(** a function, either anonymous or named, but the name must be held elsewhere *)
+(** a function, either anonymous or named, but the name must be held elsewhere
+*)
 and fn =
   { type_parameters : type_parameter list
   ; parameters : pattern_parameter list

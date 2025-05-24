@@ -45,11 +45,8 @@ val function_object : Llvm.lltype Codegen.t
     requires a pointer to the function object itself for recursion, and a
     closure. [null] should be passed for the former if it is not a recursive
     function. The type is:
-    [ptr (
-        function_object *f_self,
-        closure *closure,
-        ptr arg_1, ... ptr arg_n)
-    ] *)
+    [ptr ( function_object *f_self, closure *closure, ptr arg_1, ... ptr arg_n) ]
+*)
 val function_code : int -> Llvm.lltype Codegen.t
 
 (** type of the binary's entry point: [i32 main()] *)

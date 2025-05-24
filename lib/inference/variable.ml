@@ -3,13 +3,13 @@ open Core
 module T = struct
   type t =
     | User of string
-        (** user code can contain all possible names (except keywords), so we
-            namespace them separately from internally used names *)
+    (** user code can contain all possible names (except keywords), so we
+        namespace them separately from internally used names *)
     | Language of string
-        (** meaningful names internal to the language implementation *)
+    (** meaningful names internal to the language implementation *)
     | Generated of string
-        (** sequentially generated names. Each generator is excepted to use a
-            unique prefix *)
+    (** sequentially generated names. Each generator is excepted to use a
+        unique prefix *)
   [@@deriving compare, sexp]
 
   let of_generated_name s = Generated s

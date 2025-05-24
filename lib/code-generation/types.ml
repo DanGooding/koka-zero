@@ -12,7 +12,6 @@ let marker = Codegen.use_context Llvm.i64_type
 let label = Codegen.use_context Llvm.i64_type
 let variant_tag = Codegen.use_context Llvm.i8_type
 let padding = Codegen.use_context Llvm.i8_type
-
 let pointer = Codegen.use_context Llvm.pointer_type
 
 let ctl_yield =
@@ -24,7 +23,7 @@ let ctl_yield =
   let resumption = pointer in
   let fields = [ variant_tag; marker; op_clause; resumption ] in
   Codegen.use_context (fun context ->
-      Llvm.struct_type context (Array.of_list fields))
+    Llvm.struct_type context (Array.of_list fields))
 ;;
 
 let ctl_pure =
@@ -34,7 +33,7 @@ let ctl_pure =
   let value = pointer in
   let fields = [ variant_tag; value ] in
   Codegen.use_context (fun context ->
-      Llvm.struct_type context (Array.of_list fields))
+    Llvm.struct_type context (Array.of_list fields))
 ;;
 
 let ctl =
@@ -44,7 +43,7 @@ let ctl =
   let padding_array = Llvm.array_type padding (7 + (8 * 3)) in
   let fields = [ variant_tag; padding_array ] in
   Codegen.use_context (fun context ->
-      Llvm.struct_type context (Array.of_list fields))
+    Llvm.struct_type context (Array.of_list fields))
 ;;
 
 let op =
@@ -54,7 +53,7 @@ let op =
   let clause = pointer in
   let fields = [ variant_tag; clause ] in
   Codegen.use_context (fun context ->
-      Llvm.struct_type context (Array.of_list fields))
+    Llvm.struct_type context (Array.of_list fields))
 ;;
 
 let closure =
@@ -65,7 +64,7 @@ let closure =
   let parent_closure = pointer in
   let fields = [ num_vars; variable_array; parent_closure ] in
   Codegen.use_context (fun context ->
-      Llvm.struct_type context (Array.of_list fields))
+    Llvm.struct_type context (Array.of_list fields))
 ;;
 
 let function_object =
@@ -76,7 +75,7 @@ let function_object =
   let%bind is_recursive = Codegen.use_context Llvm.i1_type in
   let fields = [ code_address; closure_ptr; is_recursive ] in
   Codegen.use_context (fun context ->
-      Llvm.struct_type context (Array.of_list fields))
+    Llvm.struct_type context (Array.of_list fields))
 ;;
 
 let function_code num_args =

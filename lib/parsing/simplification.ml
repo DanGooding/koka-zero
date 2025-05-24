@@ -10,7 +10,7 @@ let restrict_to_none ~description = function
   | Some _ -> Static_error.unsupported_feature description |> Result.Error
 ;;
 
-(** assert that the argument is [ \[\] ], otherwise returns an 'unsupported
+(** assert that the argument is [ [] ], otherwise returns an 'unsupported
     syntax' error with the given [message] *)
 let restrict_to_empty ~description = function
   | [] -> Result.Ok ()
@@ -47,7 +47,7 @@ let simplify_identifier (x : Syntax.Identifier.t) : Variable.t =
     [Effect.t] or [Effect.Label.t], or if it doesn't represent a valid
     [Type.Mono.t] *)
 let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
- fun t ->
+  fun t ->
   let open Result.Let_syntax in
   match t with
   | Syntax.Arrow (Syntax.Parameters_or_tuple ps, result) ->
@@ -90,19 +90,20 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
       restrict_to_empty arguments ~description:"parameterised types"
     in
     (match constructor with
-    (* variables / wildcards require closing over in a Type.Poly *)
-    | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
-      Static_error.unsupported_feature "wildcards/names/variables in types"
-      |> Result.Error
-    | Syntax.Type_int -> Type.Mono.Primitive Type.Primitive.Int |> Result.Ok
-    | Syntax.Type_bool -> Type.Mono.Primitive Type.Primitive.Bool |> Result.Ok)
+     (* variables / wildcards require closing over in a Type.Poly *)
+     | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
+       Static_error.unsupported_feature "wildcards/names/variables in types"
+       |> Result.Error
+     | Syntax.Type_int -> Type.Mono.Primitive Type.Primitive.Int |> Result.Ok
+     | Syntax.Type_bool -> Type.Mono.Primitive Type.Primitive.Bool |> Result.Ok)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_feature "kind annotation on type" |> Result.Error
 
 (** convert a [Syntax.type_], to an [Effect.t] failing if it is actually a
-    [Type.t] or [Effect.Label.t], or if it doesn't represent a valid [Effect.t] *)
+    [Type.t] or [Effect.Label.t], or if it doesn't represent a valid [Effect.t]
+*)
 and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
- fun t ->
+  fun t ->
   let open Result.Let_syntax in
   match t with
   | Syntax.Effect_row (Syntax.Closed labels) ->
@@ -124,18 +125,18 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
       restrict_to_empty arguments ~description:"parameterised types"
     in
     (match constructor with
-    (* variables / wildcards require closing over in a Type.Poly *)
-    | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
-      (* TODO: this will need to be supported *)
-      Static_error.unsupported_feature "wildcards/names/variables in effects"
-      |> Result.Error
-    | Syntax.Type_int | Syntax.Type_bool ->
-      let message =
-        sprintf
-          "expected effect, found type %s"
-          (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
-      in
-      Static_error.syntax_error message |> Result.Error)
+     (* variables / wildcards require closing over in a Type.Poly *)
+     | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
+       (* TODO: this will need to be supported *)
+       Static_error.unsupported_feature "wildcards/names/variables in effects"
+       |> Result.Error
+     | Syntax.Type_int | Syntax.Type_bool ->
+       let message =
+         sprintf
+           "expected effect, found type %s"
+           (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
+       in
+       Static_error.syntax_error message |> Result.Error)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_feature "kind annotation on type" |> Result.Error
   | Syntax.Arrow (_, _) | Syntax.Scheme _ | Syntax.Parameters_or_tuple _ ->
@@ -147,9 +148,9 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
     Static_error.syntax_error message |> Result.Error
 
 and simplify_type_as_effect_label
-    : Syntax.type_ -> Effect.Label.t Or_static_error.t
+  : Syntax.type_ -> Effect.Label.t Or_static_error.t
   =
- fun t ->
+  fun t ->
   let open Result.Let_syntax in
   match t with
   | Syntax.Type_atom { constructor; arguments } ->
@@ -157,21 +158,21 @@ and simplify_type_as_effect_label
       restrict_to_empty arguments ~description:"parameterised effects"
     in
     (match constructor with
-    | Syntax.Variable_or_name l ->
-      (* for now, assume always is a name, real rules are based on binding /
-         whether the name is a single letter *)
-      simplify_var_id_to_effect_label l |> Result.Ok
-    | Syntax.Type_wildcard _ ->
-      Static_error.syntax_error
-        "polymorphism over effect labels is not permitted"
-      |> Result.Error
-    | Syntax.Type_int | Syntax.Type_bool ->
-      let message =
-        sprintf
-          "expected effect label, found type %s"
-          (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
-      in
-      Static_error.syntax_error message |> Result.Error)
+     | Syntax.Variable_or_name l ->
+       (* for now, assume always is a name, real rules are based on binding /
+          whether the name is a single letter *)
+       simplify_var_id_to_effect_label l |> Result.Ok
+     | Syntax.Type_wildcard _ ->
+       Static_error.syntax_error
+         "polymorphism over effect labels is not permitted"
+       |> Result.Error
+     | Syntax.Type_int | Syntax.Type_bool ->
+       let message =
+         sprintf
+           "expected effect label, found type %s"
+           (Syntax.sexp_of_type_constructor constructor |> Sexp.to_string_hum)
+       in
+       Static_error.syntax_error message |> Result.Error)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_feature "kind annotation on type" |> Result.Error
   | Syntax.Arrow (_, _)
@@ -184,12 +185,12 @@ and simplify_type_as_effect_label
     Static_error.syntax_error message |> Result.Error
 
 and simplify_type_scheme { Syntax.forall_quantified = _; body = _ }
-    : Type.Poly.t Or_static_error.t
+  : Type.Poly.t Or_static_error.t
   =
   Static_error.unsupported_feature "type scheme" |> Result.Error
 
 and simplify_parameter_type { Syntax.parameter_id; type_ }
-    : (Variable.t option * Type.Mono.t) Or_static_error.t
+  : (Variable.t option * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let id = Option.map parameter_id ~f:simplify_identifier in
@@ -197,7 +198,7 @@ and simplify_parameter_type { Syntax.parameter_id; type_ }
   id, t
 
 and simplify_type_result { Syntax.effect_; result }
-    : (Effect.t * Type.Mono.t) Or_static_error.t
+  : (Effect.t * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind effect_ = simplify_type_as_effect effect_ in
@@ -218,9 +219,9 @@ let simplify_parameter_id : Syntax.parameter_id -> Min.Parameter.t = function
 ;;
 
 let simplify_parameter
-    : Syntax.parameter -> (Min.Parameter.t * Type.Mono.t) Or_static_error.t
+  : Syntax.parameter -> (Min.Parameter.t * Type.Mono.t) Or_static_error.t
   =
- fun { Syntax.id; type_ } ->
+  fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
   let p = simplify_parameter_id id in
   let%map t = simplify_type_as_type type_ in
@@ -233,7 +234,7 @@ let simplify_pattern : Syntax.pattern -> Min.Parameter.t = function
 ;;
 
 let simplify_annotated_pattern { Syntax.pattern; scheme }
-    : Min.Parameter.t Or_static_error.t
+  : Min.Parameter.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let p = simplify_pattern pattern in
@@ -245,7 +246,7 @@ let simplify_annotated_pattern { Syntax.pattern; scheme }
 ;;
 
 let simplify_pattern_parameter { Syntax.pattern; type_ }
-    : (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
+  : (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
   =
   let open Result.Let_syntax in
   let p = simplify_pattern pattern in
@@ -256,10 +257,10 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
 ;;
 
 let simplify_operation_parameter
-    :  Syntax.operation_parameter
-    -> (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
+  :  Syntax.operation_parameter
+  -> (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
   =
- fun { Syntax.id; type_ } ->
+  fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
   let p' = simplify_parameter_id id in
   let%map type_' =
@@ -269,7 +270,7 @@ let simplify_operation_parameter
 ;;
 
 let simplify_binary_operator (op : Syntax.binary_operator)
-    : Min.Operator.t Or_static_error.t
+  : Min.Operator.t Or_static_error.t
   =
   match op with
   | Syntax.Plus -> Result.Ok Min.Operator.(Int Int.Plus)
@@ -290,7 +291,7 @@ let simplify_binary_operator (op : Syntax.binary_operator)
 ;;
 
 let simplify_unary_operator (op : Syntax.unary_operator)
-    : Min.Operator.Unary.t Or_static_error.t
+  : Min.Operator.Unary.t Or_static_error.t
   =
   match op with
   | Syntax.Exclamation -> Result.Ok Min.Operator.(Unary.Bool Bool.Unary.Not)
@@ -342,7 +343,7 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     |> Result.Error
 
 and simplify_fun_declaration { Syntax.id; fn }
-    : Min.Decl.Fun.t Or_static_error.t
+  : Min.Decl.Fun.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let%map lambda = simplify_fn fn in
@@ -350,9 +351,9 @@ and simplify_fun_declaration { Syntax.id; fn }
   f_name, lambda
 
 and simplify_declaration_preceding
-    : Syntax.declaration -> Min.Expr.t -> Min.Expr.t Or_static_error.t
+  : Syntax.declaration -> Min.Expr.t -> Min.Expr.t Or_static_error.t
   =
- fun declaration e ->
+  fun declaration e ->
   let open Result.Let_syntax in
   match declaration with
   | Syntax.Fun f ->
@@ -364,15 +365,15 @@ and simplify_declaration_preceding
     let%bind p = simplify_annotated_pattern pattern in
     let%map e_x = simplify_block block in
     (match p with
-    | Min.Parameter.Variable x -> Min.Expr.Let_mono (x, e_x, e)
-    | Min.Parameter.Wildcard -> Min.Expr.Seq (e_x, e))
+     | Min.Parameter.Variable x -> Min.Expr.Let_mono (x, e_x, e)
+     | Min.Parameter.Wildcard -> Min.Expr.Seq (e_x, e))
 
 (** given the simplification of the tail of a block, and a statement (its head)
     produce the resulting expression *)
 and simplify_statement_preceding
-    : Syntax.statement -> Min.Expr.t -> Min.Expr.t Or_static_error.t
+  : Syntax.statement -> Min.Expr.t -> Min.Expr.t Or_static_error.t
   =
- fun statement e ->
+  fun statement e ->
   let open Result.Let_syntax in
   match statement with
   | Syntax.Declaration d -> simplify_declaration_preceding d e
@@ -384,10 +385,10 @@ and simplify_block { Syntax.statements; last } : Min.Expr.t Or_static_error.t =
   let open Result.Let_syntax in
   let%bind last = simplify_expr last in
   Static_error.list_fold_right statements ~init:last ~f:(fun statement e ->
-      simplify_statement_preceding statement e)
+    simplify_statement_preceding statement e)
 
 and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
-    : Min.Expr.lambda Or_static_error.t
+  : Min.Expr.lambda Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind () =
@@ -407,7 +408,7 @@ and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
   names, body'
 
 and simplify_effect_handler (Syntax.Effect_handler op_handlers)
-    : Min.Expr.handler Or_static_error.t
+  : Min.Expr.handler Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind named_op_handers =
@@ -415,9 +416,9 @@ and simplify_effect_handler (Syntax.Effect_handler op_handlers)
   in
   let named_op_handers, return_handlers =
     List.partition_map named_op_handers ~f:(fun (name, op_handler) ->
-        match name with
-        | `Op (name, shape) -> Either.First (name, (shape, op_handler))
-        | `Return -> Either.Second op_handler)
+      match name with
+      | `Op (name, shape) -> Either.First (name, (shape, op_handler))
+      | `Return -> Either.Second op_handler)
   in
   let%bind operations =
     match Variable.Map.of_alist named_op_handers with
@@ -442,9 +443,8 @@ and simplify_effect_handler (Syntax.Effect_handler op_handlers)
   { Min.Expr.operations; return_clause }
 
 and simplify_operation_handler
-    :  Syntax.operation_handler
-    -> ([ `Op of Variable.t * Operation_shape.t | `Return ]
-       * Min.Expr.op_handler)
+  :  Syntax.operation_handler
+  -> ([ `Op of Variable.t * Operation_shape.t | `Return ] * Min.Expr.op_handler)
        Or_static_error.t
   =
   let open Result.Let_syntax in
@@ -497,7 +497,7 @@ and simplify_operation_handler
 ;;
 
 let simplify_operation_declaration { Syntax.id; type_parameters; shape }
-    : (Variable.t * Min.Decl.Effect.Operation.t) Or_static_error.t
+  : (Variable.t * Min.Decl.Effect.Operation.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind shape, parameters, t_answer =
@@ -533,7 +533,7 @@ let simplify_operation_declaration { Syntax.id; type_parameters; shape }
 ;;
 
 let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
-    : Min.Decl.Effect.t Or_static_error.t
+  : Min.Decl.Effect.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let name = simplify_var_id_to_effect_label id in
@@ -563,7 +563,7 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
 ;;
 
 let simplify_pure_declaration
-    : Syntax.pure_declaration -> Min.Decl.t Or_static_error.t
+  : Syntax.pure_declaration -> Min.Decl.t Or_static_error.t
   = function
   | Syntax.Top_val _ ->
     Static_error.unsupported_feature "toplevel val binding" |> Result.Error
@@ -573,7 +573,7 @@ let simplify_pure_declaration
 ;;
 
 let simplify_type_declaration
-    : Syntax.type_declaration -> Min.Decl.t Or_static_error.t
+  : Syntax.type_declaration -> Min.Decl.t Or_static_error.t
   = function
   | Syntax.Effect_declaration declaration ->
     let%map.Result declaration = simplify_effect_declaration declaration in
@@ -581,14 +581,14 @@ let simplify_type_declaration
 ;;
 
 let simplify_toplevel_declaration
-    : Syntax.toplevel_declaration -> Min.Decl.t Or_static_error.t
+  : Syntax.toplevel_declaration -> Min.Decl.t Or_static_error.t
   = function
   | Syntax.Pure_declaration declaration -> simplify_pure_declaration declaration
   | Syntax.Type_declaration declaration -> simplify_type_declaration declaration
 ;;
 
 let simplify_program (Syntax.Program declarations)
-    : Min.Program.t Or_static_error.t
+  : Min.Program.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let%map declarations =

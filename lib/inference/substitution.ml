@@ -61,21 +61,22 @@ let extend_effect_exn t ~var ~effect_ =
 (** merge two maps, as long as there are no common keys. Returns [ `Duplicate ]
     if there are *)
 let merge_subst
-    :  ('a, 'cmp, 'b) Map.t -> ('a, 'cmp, 'b) Map.t
-    -> ('a, 'cmp, 'b) Map.t Map_intf.Or_duplicate.t
+  :  ('a, 'cmp, 'b) Map.t
+  -> ('a, 'cmp, 'b) Map.t
+  -> ('a, 'cmp, 'b) Map.t Map_intf.Or_duplicate.t
   =
- fun a b ->
+  fun a b ->
   let duplicate_keys = Set.inter (Map.key_set a) (Map.key_set b) in
   if not (Set.is_empty duplicate_keys)
   then `Duplicate
   else
     `Ok
       (Map.merge a b ~f:(fun ~key:_ data ->
-           match data with
-           | `Left t | `Right t -> Some t
-           (* this approach is slower than just catching the duplicate here, but
-              it is easier than getting this failure value to outside the map *)
-           | `Both (_, _) -> assert false))
+         match data with
+         | `Left t | `Right t -> Some t
+         (* this approach is slower than just catching the duplicate here, but
+            it is easier than getting this failure value to outside the map *)
+         | `Both (_, _) -> assert false))
 ;;
 
 let merge_subst_exn subst vars =
@@ -88,22 +89,22 @@ let merge_subst_exn subst vars =
 
 let extend_many t meta_to_type =
   map_type_subst_or_duplicate t ~f:(fun type_subst ->
-      merge_subst type_subst meta_to_type)
+    merge_subst type_subst meta_to_type)
 ;;
 
 let extend_many_effect t meta_to_effect =
   map_effect_subst_or_duplicate t ~f:(fun effect_subst ->
-      merge_subst effect_subst meta_to_effect)
+    merge_subst effect_subst meta_to_effect)
 ;;
 
 let extend_many_exn t meta_to_type =
   map_type_subst t ~f:(fun type_subst ->
-      merge_subst_exn type_subst meta_to_type)
+    merge_subst_exn type_subst meta_to_type)
 ;;
 
 let extend_many_effect_exn t meta_to_effect =
   map_effect_subst t ~f:(fun effect_subst ->
-      merge_subst_exn effect_subst meta_to_effect)
+    merge_subst_exn effect_subst meta_to_effect)
 ;;
 
 let rec lookup_effect t (var : Effect.Metavariable.t) =
@@ -122,8 +123,8 @@ and apply_to_effect_row t row =
   | Effect.Row.Open (_labels, Effect.Row.Tail.Variable _v) -> row
   | Effect.Row.Open (labels, Effect.Row.Tail.Metavariable v) ->
     (match lookup_effect t v with
-    | None -> row
-    | Some tail_effect -> Effect.cons_row ~labels ~effect_:tail_effect)
+     | None -> row
+     | Some tail_effect -> Effect.cons_row ~labels ~effect_:tail_effect)
 ;;
 
 let rec lookup t (var : Type.Metavariable.t) =

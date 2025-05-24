@@ -133,7 +133,7 @@ type binder =
 [@@deriving sexp]
 
 let pattern_parameter_of_binder : binder -> pattern_parameter =
- fun binder ->
+  fun binder ->
   let ({ id; type_ } : binder) = binder in
   { pattern = Pattern_id id; type_ }
 ;;
@@ -307,11 +307,12 @@ let block_cons s block =
 ;;
 
 let anonymous_of_block : block -> fn =
- fun body -> { type_parameters = []; parameters = []; result_type = None; body }
+  fun body ->
+  { type_parameters = []; parameters = []; result_type = None; body }
 ;;
 
 let anonymous_of_bound_block : binder:binder -> block:block -> fn =
- fun ~binder ~block ->
+  fun ~binder ~block ->
   let parameter = pattern_parameter_of_binder binder in
   { type_parameters = []
   ; parameters = [ parameter ]
@@ -321,7 +322,7 @@ let anonymous_of_bound_block : binder:binder -> block:block -> fn =
 ;;
 
 let insert_with_callback : callback:fn -> expr -> expr =
- fun ~callback e ->
+  fun ~callback e ->
   match e with
   | Application (f, args) -> Application (f, args @ [ Fn callback ])
   (* note: technically, [Annotated(e, scheme)] should be possible if [e] is an

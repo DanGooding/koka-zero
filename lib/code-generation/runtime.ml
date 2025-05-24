@@ -3,9 +3,10 @@ module Function = struct
     { function_ : Llvm.llvalue (** callable function *)
     ; type_ : Llvm.lltype
     }
-  
-  let build_call { type_; function_ } ~args name = 
+
+  let build_call { type_; function_ } ~args name =
     Codegen.use_builder (Llvm.build_call type_ function_ args name)
+  ;;
 end
 
 type t =
@@ -88,10 +89,7 @@ let declare =
   in
   let%bind evidence_vector_lookup =
     let name = Symbol_name.of_runtime_exn "kkr_evidence_vector_lookup" in
-    declare_function
-      name
-      pointer_type
-      [ pointer_type; label_type ]
+    declare_function name pointer_type [ pointer_type; label_type ]
   in
   let%bind get_evidence_marker =
     let name = Symbol_name.of_runtime_exn "kkr_get_evidence_marker" in

@@ -8,10 +8,10 @@ module Expr : sig
     | Value of value
     | Let of Variable.t * value * t (** [Let] provides polymorphic binding *)
     | Let_mono of Variable.t * t * t
-        (** [Let_mono] provides monomorphic binding *)
+    (** [Let_mono] provides monomorphic binding *)
     | Application of t * t list
     | Seq of t * t
-        (** evaluates first expression, then second. both may be of any type *)
+    (** evaluates first expression, then second. both may be of any type *)
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
@@ -20,13 +20,13 @@ module Expr : sig
 
   and value =
     | Variable of Variable.t
-        (** guaranteed to stand for a value, not an operation name *)
+    (** guaranteed to stand for a value, not an operation name *)
     | Lambda of lambda
     | Fix_lambda of fix_lambda
     | Literal of Literal.t
     | Perform of perform
     | Handler of handler
-        (** takes a nullary funciton to be called under this handler *)
+    (** takes a nullary funciton to be called under this handler *)
   [@@deriving sexp]
 
   (** monomorphic binding *)

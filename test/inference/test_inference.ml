@@ -313,7 +313,8 @@ let%expect_test "handled effects reflected in subject's effect" =
 let%expect_test "return clause is typed correctly" =
   let declarations = [ M.Decl.Effect Util.Expr.decl_query ] in
   let query_handler =
-    (* {[ handler { fun test(x){ x == 3 }; return(b) { if b then () else () } }
+    (* {[
+         handler { fun test(x){ x == 3 }; return(b) { if b then () else () } }
        ]} *)
     let test_clause =
       let op_argument = Variable.of_user "x" in
@@ -457,7 +458,8 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
   in
   let body = E.Value (E.Handler choose_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((Arrow
        ((Arrow () (Row (Open (Non_empty ((choose 1))) (Metavariable e0)))

@@ -108,7 +108,8 @@ let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
   in
   let body = E.Value (E.Handler read_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {|
+  [%expect
+    {|
     (Error
      ((kind Type_error)
       (message
@@ -130,7 +131,8 @@ let%expect_test "`fun` clause cannot use `resume`" =
   in
   let body = E.Value (E.Handler read_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {|
+  [%expect
+    {|
     (Error
      ((kind Type_error) (message "unbound variable: resume") (location ()))) |}]
 ;;

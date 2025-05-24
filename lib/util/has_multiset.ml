@@ -2,10 +2,10 @@ open Core
 include Has_multiset_intf
 
 module Make (Element : sig
-  type t [@@deriving sexp]
+    type t [@@deriving sexp]
 
-  include Comparable.S with type t := t
-end) =
+    include Comparable.S with type t := t
+  end) =
 struct
   module Multiset = struct
     module Multiset = struct
@@ -25,33 +25,30 @@ struct
 
       let to_list xs =
         Map.fold xs ~init:[] ~f:(fun ~key:element ~data:n acc ->
-            List.init n ~f:(fun _i -> element) @ acc)
+          List.init n ~f:(fun _i -> element) @ acc)
       ;;
 
       let empty = Element.Map.empty
-
-      let add xs x =
-        Map.update xs x ~f:(fun n -> Option.value n ~default:0 + 1)
-      ;;
+      let add xs x = Map.update xs x ~f:(fun n -> Option.value n ~default:0 + 1)
 
       let union xs ys =
         Map.merge xs ys ~f:(fun ~key:_ data ->
-            match data with
-            | `Left n | `Right n -> Some n
-            | `Both (m, n) -> Some (m + n))
+          match data with
+          | `Left n | `Right n -> Some n
+          | `Both (m, n) -> Some (m + n))
       ;;
 
       let inter xs ys =
         Map.merge xs ys ~f:(fun ~key:_ data ->
-            match data with
-            | `Left _ | `Right _ -> None
-            | `Both (m, n) -> Some (min m n))
+          match data with
+          | `Left _ | `Right _ -> None
+          | `Both (m, n) -> Some (min m n))
       ;;
 
       let diff xs ys =
         Map.mapi xs ~f:(fun ~key:element ~data:nx ->
-            let ny = Map.find ys element |> Option.value ~default:0 in
-            max (nx - ny) 0)
+          let ny = Map.find ys element |> Option.value ~default:0 in
+          max (nx - ny) 0)
         |> remove_zeros
       ;;
 

@@ -10,7 +10,7 @@ let register_name_of_variable = function
 ;;
 
 let const_int : int -> Llvm.llvalue Codegen.t =
- fun i ->
+  fun i ->
   let open Codegen.Let_syntax in
   let%map int_type = Types.int in
   Llvm.const_int int_type i
@@ -30,7 +30,7 @@ let const_true : Llvm.llvalue Codegen.t =
 ;;
 
 let const_bool : bool -> Llvm.llvalue Codegen.t =
- fun b -> if b then const_true else const_false
+  fun b -> if b then const_true else const_false
 ;;
 
 (* unit carries no information, so is only kept for uniformity *)
@@ -84,10 +84,13 @@ let heap_store type_ v name ~runtime =
 ;;
 
 let heap_store_aux
-    :  Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> runtime:Runtime.t
-    -> Llvm.llvalue Codegen.t
+  :  Llvm.lltype Codegen.t
+  -> string
+  -> Llvm.llvalue
+  -> runtime:Runtime.t
+  -> Llvm.llvalue Codegen.t
   =
- fun t name v ~runtime ->
+  fun t name v ~runtime ->
   let open Codegen.Let_syntax in
   let%bind t = t in
   heap_store t v name ~runtime
@@ -111,9 +114,9 @@ let dereference ptr type_ name =
 ;;
 
 let dereference_aux
-    : Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> Llvm.llvalue Codegen.t
+  : Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> Llvm.llvalue Codegen.t
   =
- fun t name ptr ->
+  fun t name ptr ->
   let open Codegen.Let_syntax in
   let%bind t = t in
   dereference ptr t name
@@ -125,17 +128,20 @@ let dereference_marker = dereference_aux Types.marker "marker"
 let dereference_label = dereference_aux Types.label "label"
 
 let compile_populate_struct
-    : struct_type:Llvm.lltype -> Llvm.llvalue -> (Llvm.llvalue * string) list -> unit Codegen.t
+  :  struct_type:Llvm.lltype
+  -> Llvm.llvalue
+  -> (Llvm.llvalue * string) list
+  -> unit Codegen.t
   =
- fun ~struct_type struct_ptr members ->
+  fun ~struct_type struct_ptr members ->
   let open Codegen.Let_syntax in
   List.mapi members ~f:(fun i (x, name) ->
-      let%bind member_ptr =
-        Codegen.use_builder
-          (Llvm.build_struct_gep struct_type struct_ptr i (name ^ "_field_ptr"))
-      in
-      let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
-      ())
+    let%bind member_ptr =
+      Codegen.use_builder
+        (Llvm.build_struct_gep struct_type struct_ptr i (name ^ "_field_ptr"))
+    in
+    let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
+    ())
   |> Codegen.all_unit
 ;;
 
@@ -143,16 +149,14 @@ let compile_populate_array ~array_type array_ptr elements =
   let open Codegen.Let_syntax in
   let%bind i64 = Codegen.use_context Llvm.i64_type in
   List.mapi elements ~f:(fun i (x, name) ->
-      (* first zero is because we require an array pointer, rather than an
-         element pointer *)
-      let indices =
-        List.map [ 0; i ] ~f:(Llvm.const_int i64) |> Array.of_list
-      in
-      let%bind element_ptr =
-        Codegen.use_builder (Llvm.build_gep array_type array_ptr indices name)
-      in
-      let%map _store = Codegen.use_builder (Llvm.build_store x element_ptr) in
-      ())
+    (* first zero is because we require an array pointer, rather than an
+       element pointer *)
+    let indices = List.map [ 0; i ] ~f:(Llvm.const_int i64) |> Array.of_list in
+    let%bind element_ptr =
+      Codegen.use_builder (Llvm.build_gep array_type array_ptr indices name)
+    in
+    let%map _store = Codegen.use_builder (Llvm.build_store x element_ptr) in
+    ())
   |> Codegen.all_unit
 ;;
 

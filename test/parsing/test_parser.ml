@@ -1,7 +1,9 @@
 let%expect_test "toplevel value declaration" =
-  let code = {|
+  let code =
+    {|
   val number : int = 1729;
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -20,11 +22,13 @@ let%expect_test "toplevel value declaration" =
 ;;
 
 let%expect_test "single expression function" =
-  let code = {|
+  let code =
+    {|
 fun main() {
   0;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -143,11 +147,13 @@ fun wrapper() {
 ;;
 
 let%expect_test "hex literals" =
-  let code = {|
+  let code =
+    {|
 fun wrapper() {
   0x1234ABCD;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -218,9 +224,11 @@ fun wrapper() {
 ;;
 
 let%expect_test "wildcard parameter" =
-  let code = {|
+  let code =
+    {|
 fun foo(_a, b, _c, _, e, _f) { () };
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -394,11 +402,13 @@ fun main() {
 ;;
 
 let%expect_test "negative integer literals" =
-  let code = {|
+  let code =
+    {|
 fun wrapper() {
   val minus-fourty = -40;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -410,12 +420,14 @@ fun wrapper() {
 ;;
 
 let%expect_test "boolean literals" =
-  let code = {|
+  let code =
+    {|
 fun wrapper() {
   val t = True;
   val f = False;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -511,14 +523,16 @@ let%expect_test "nested if statements" =
      associates to the innermost `if`. This may be unintuitive and perhaps
      should be changed. see koka's layout algorithm, which warns when
      indentation doesn't match the parse *)
-  let code = {|
+  let code =
+    {|
 fun i() {
   if a then
     if b then
       c
   else d;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -620,11 +634,13 @@ fun i() {
 ;;
 
 let%expect_test "dot application" =
-  let code = {|
+  let code =
+    {|
 fun dot-application() {
   x.best.fst.pow(3).print;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -1037,11 +1053,13 @@ fun op-trailing-lambda-example() {
 ;;
 
 let%expect_test "trailing and single line lambda" =
-  let code = {|
+  let code =
+    {|
 fun trailing-lambdas() {
   fn(a) a fn(b) b fn(c) c;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -1341,9 +1359,11 @@ effect my-effect<a :: V> {
 ;;
 
 let%expect_test "shorthand effect declaration" =
-  let code = {|
+  let code =
+    {|
 effect control yield(x : int) : bool;
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|

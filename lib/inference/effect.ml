@@ -50,8 +50,8 @@ module Row = struct
       | Metavariable v -> Metavariable v
       | Variable v ->
         (match Map.find var_to_meta v with
-        | Some m -> Metavariable m
-        | None -> Variable v)
+         | Some m -> Metavariable m
+         | None -> Variable v)
     ;;
   end
 
@@ -131,8 +131,8 @@ let instantiate_as t ~var_to_meta =
   match t with
   | Variable v ->
     (match Map.find var_to_meta v with
-    | Some m -> Metavariable m
-    | None -> Variable v)
+     | Some m -> Metavariable m
+     | None -> Variable v)
   | Metavariable a -> Metavariable a
   | Row r -> Row (Row.instantiate_as r ~var_to_meta)
 ;;
@@ -155,16 +155,16 @@ let cons_row ~labels ~effect_ =
   (* if the tail itself is a row, flatten into a single row *)
   | Row r ->
     (match r with
-    | Row.Closed labels' ->
-      let labels'' =
-        Label.Multiset.union
-          (Label.Multiset.Non_empty.to_multiset labels)
-          labels'
-      in
-      Row.Closed labels''
-    | Row.Open (labels', tail) ->
-      let labels'' = Label.Multiset.Non_empty.union labels labels' in
-      Row.Open (labels'', tail))
+     | Row.Closed labels' ->
+       let labels'' =
+         Label.Multiset.union
+           (Label.Multiset.Non_empty.to_multiset labels)
+           labels'
+       in
+       Row.Closed labels''
+     | Row.Open (labels', tail) ->
+       let labels'' = Label.Multiset.Non_empty.union labels labels' in
+       Row.Open (labels'', tail))
 ;;
 
 let of_row_tail = function
@@ -178,8 +178,8 @@ let row_subtract row labels =
     let row_labels = Label.Multiset.Non_empty.to_multiset row_labels in
     let diff = Label.Multiset.diff row_labels labels in
     (match Label.Multiset.Non_empty.of_multiset_verbose diff with
-    | `Empty -> of_row_tail tail
-    | `Non_empty row_labels' -> Row.Open (row_labels', tail) |> Row)
+     | `Empty -> of_row_tail tail
+     | `Non_empty row_labels' -> Row.Open (row_labels', tail) |> Row)
   | Row.Closed row_labels ->
     let row_labels' = Label.Multiset.diff row_labels labels in
     Row.Closed row_labels' |> Row

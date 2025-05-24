@@ -4,9 +4,9 @@ open Evidence_passing_syntax
 (** apply the given rewrite at every node. This performs one iteration of non
     overlapping rewrites, so should be repeated until no change is observed *)
 let rec apply_everywhere
-    : rewrite:(Expr.t -> Expr.t Modified.t) -> Expr.t -> Expr.t Modified.t
+  : rewrite:(Expr.t -> Expr.t Modified.t) -> Expr.t -> Expr.t Modified.t
   =
- fun ~rewrite e ->
+  fun ~rewrite e ->
   match Modified.inspect (rewrite e) with
   | `Modified e' -> Modified.modified e'
   | `Unchanged ->
@@ -15,9 +15,9 @@ let rec apply_everywhere
 
 (** apply rewrite everywhere in the given expression except the root *)
 and apply_everywhere_below
-    : rewrite:(Expr.t -> Expr.t Modified.t) -> Expr.t -> Expr.t Modified.t
+  : rewrite:(Expr.t -> Expr.t Modified.t) -> Expr.t -> Expr.t Modified.t
   =
- fun ~rewrite e ->
+  fun ~rewrite e ->
   let open Modified.Let_syntax in
   match e with
   | Expr.Variable _ ->
@@ -125,10 +125,11 @@ and apply_everywhere_below
     Expr.Impure_built_in impure
 
 and apply_everywhere_to_impure_built_in
-    :  rewrite:(Expr.t -> Expr.t Modified.t) -> Expr.impure_built_in
-    -> Expr.impure_built_in Modified.t
+  :  rewrite:(Expr.t -> Expr.t Modified.t)
+  -> Expr.impure_built_in
+  -> Expr.impure_built_in Modified.t
   =
- fun ~rewrite impure ->
+  fun ~rewrite impure ->
   let open Modified.Let_syntax in
   match impure with
   | Expr.Impure_println -> Modified.original impure
@@ -138,28 +139,30 @@ and apply_everywhere_to_impure_built_in
   | Expr.Impure_read_int -> Modified.original impure
 
 and apply_everywhere_to_lambda
-    :  rewrite:(Expr.t -> Expr.t Modified.t) -> Expr.lambda
-    -> Expr.lambda Modified.t
+  :  rewrite:(Expr.t -> Expr.t Modified.t)
+  -> Expr.lambda
+  -> Expr.lambda Modified.t
   =
- fun ~rewrite (ps, body) ->
+  fun ~rewrite (ps, body) ->
   let open Modified.Let_syntax in
   let%map body = apply_everywhere ~rewrite body in
   ps, body
 
 and apply_everywhere_to_fix_lambda
-    :  rewrite:(Expr.t -> Expr.t Modified.t) -> Expr.fix_lambda
-    -> Expr.fix_lambda Modified.t
+  :  rewrite:(Expr.t -> Expr.t Modified.t)
+  -> Expr.fix_lambda
+  -> Expr.fix_lambda Modified.t
   =
- fun ~rewrite (f, lambda) ->
+  fun ~rewrite (f, lambda) ->
   let open Modified.Let_syntax in
   let%map lambda = apply_everywhere_to_lambda ~rewrite lambda in
   f, lambda
 ;;
 
 let apply_everywhere_to_program
-    : rewrite:(Expr.t -> Expr.t Modified.t) -> Program.t -> Program.t Modified.t
+  : rewrite:(Expr.t -> Expr.t Modified.t) -> Program.t -> Program.t Modified.t
   =
- fun ~rewrite { Program.effect_declarations; fun_declarations; entry_expr } ->
+  fun ~rewrite { Program.effect_declarations; fun_declarations; entry_expr } ->
   let open Modified.Let_syntax in
   let%map fun_declarations =
     List.map fun_declarations ~f:(apply_everywhere_to_fix_lambda ~rewrite)

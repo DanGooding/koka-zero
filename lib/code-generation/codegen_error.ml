@@ -4,8 +4,8 @@ module Kind = struct
   module T = struct
     type t =
       | Impossible_error
-          (** type error which should have been caught at the type inference
-              phase - essentially a nicer [assert_false] *)
+      (** type error which should have been caught at the type inference
+          phase - essentially a nicer [assert_false] *)
       | Unsupported_feature_error (** features not yet implemented *)
       | Verifier_error (** error reported by llvm verifier *)
     [@@deriving sexp]

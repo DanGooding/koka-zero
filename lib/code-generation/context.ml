@@ -6,7 +6,7 @@ module Locals = struct
 
   let find t v =
     List.find_map t ~f:(fun (v', value) ->
-        Option.some_if Variable.(v = v') value)
+      Option.some_if Variable.(v = v') value)
   ;;
 
   let add t ~name ~value = (name, value) :: t
@@ -39,10 +39,12 @@ module Closure = struct
       closure with the specified values (which should all be
       [Types.opaque_pointer]), and the given parent *)
   let compile_extend_closure
-      :  Llvm.llvalue -> (Variable.t * Llvm.llvalue) list -> runtime:Runtime.t
-      -> Llvm.llvalue Codegen.t
+    :  Llvm.llvalue
+    -> (Variable.t * Llvm.llvalue) list
+    -> runtime:Runtime.t
+    -> Llvm.llvalue Codegen.t
     =
-   fun closure named_vars ~runtime ->
+    fun closure named_vars ~runtime ->
     let open Codegen.Let_syntax in
     let%bind closure_type = Types.closure in
     let%bind closure_ptr =
@@ -54,11 +56,14 @@ module Closure = struct
     let%bind vars_ptr = Helpers.heap_allocate vars_type "vars" ~runtime in
     let var_values_and_register_names =
       List.map named_vars ~f:(fun (name, value) ->
-          value, Helpers.register_name_of_variable name)
+        value, Helpers.register_name_of_variable name)
     in
     let array_type = Llvm.array_type pointer_type num_vars in
     let%bind () =
-      Helpers.compile_populate_array vars_ptr var_values_and_register_names ~array_type
+      Helpers.compile_populate_array
+        vars_ptr
+        var_values_and_register_names
+        ~array_type
     in
     let%bind i64 = Codegen.use_context Llvm.i64_type in
     let num_vars_value = Llvm.const_int i64 num_vars in
@@ -68,13 +73,10 @@ module Closure = struct
       Helpers.compile_populate_struct
         ~struct_type:closure_type
         closure_ptr
-        [ num_vars_value, "num_vars"
-        ; vars_ptr, "vars"
-        ; closure, "parent"
-        ]
+        [ num_vars_value, "num_vars"; vars_ptr, "vars"; closure, "parent" ]
     in
     closure_ptr
- ;;
+  ;;
 
   let compile_extend { closure = parent; shape } locals ~runtime =
     let open Codegen.Let_syntax in
@@ -96,7 +98,7 @@ module Closure = struct
     { closure; shape }
   ;;
 
-  (** compile accessing [ closure->vars\[i\] ] *)
+  (** compile accessing [ closure->vars[i] ] *)
   let compile_get_var (closure : Llvm.llvalue) ~(i : int) name =
     let open Codegen.Let_syntax in
     let%bind closure_type = Types.closure in
@@ -108,7 +110,11 @@ module Closure = struct
     let%bind pointer_type = Types.pointer in
     let%bind var_ptr =
       Codegen.use_builder
-        (Llvm.build_gep pointer_type vars (Array.of_list [ index ]) (name ^ "_ptr"))
+        (Llvm.build_gep
+           pointer_type
+           vars
+           (Array.of_list [ index ])
+           (name ^ "_ptr"))
     in
     (* treat all values as pointer types, even potential immediates *)
     Codegen.use_builder (Llvm.build_load pointer_type var_ptr name)
@@ -125,28 +131,32 @@ module Closure = struct
     match shape with
     | Shape.Toplevel vs ->
       (match index_of_variable vs v with
-      | Some i ->
-        compile_get_var closure ~i (Helpers.register_name_of_variable v)
-      | None ->
-        let message =
-          sprintf
-            "variable not found in closure: %s"
-            (Variable.to_string_user v)
-        in
-        Codegen.impossible_error message)
+       | Some i ->
+         compile_get_var closure ~i (Helpers.register_name_of_variable v)
+       | None ->
+         let message =
+           sprintf
+             "variable not found in closure: %s"
+             (Variable.to_string_user v)
+         in
+         Codegen.impossible_error message)
     | Shape.Level (vs, parent_shape) ->
       (match index_of_variable vs v with
-      | Some i ->
-        compile_get_var closure ~i (Helpers.register_name_of_variable v)
-      | None ->
-        (* compile accessing closure->parent *)
-        let%bind closure_type = Types.closure in
-        let%bind parent_ptr =
-          Helpers.compile_access_field closure ~struct_type:closure_type ~i:2 "parent"
-        in
-        (* recurse on that *)
-        let parent_closure = { closure = parent_ptr; shape = parent_shape } in
-        compile_get parent_closure v)
+       | Some i ->
+         compile_get_var closure ~i (Helpers.register_name_of_variable v)
+       | None ->
+         (* compile accessing closure->parent *)
+         let%bind closure_type = Types.closure in
+         let%bind parent_ptr =
+           Helpers.compile_access_field
+             closure
+             ~struct_type:closure_type
+             ~i:2
+             "parent"
+         in
+         (* recurse on that *)
+         let parent_closure = { closure = parent_ptr; shape = parent_shape } in
+         compile_get parent_closure v)
   ;;
 end
 
@@ -163,10 +173,11 @@ let compile_capture t ~free ~runtime =
   | Local { locals; closure } ->
     (* TODO: check all [free] are in [locals] or [closure]? *)
     (match Locals.inter_names locals free with
-    (* don't allocate at all unless adding free variables! *)
-    | [] -> Codegen.return closure
-    (* closures are chained *)
-    | escaping_locals -> Closure.compile_extend closure escaping_locals ~runtime)
+     (* don't allocate at all unless adding free variables! *)
+     | [] -> Codegen.return closure
+     (* closures are chained *)
+     | escaping_locals ->
+       Closure.compile_extend closure escaping_locals ~runtime)
 ;;
 
 let compile_get t v =
@@ -174,8 +185,8 @@ let compile_get t v =
   match t with
   | Local { locals; closure } ->
     (match Locals.find locals v with
-    | Some value -> return value
-    | None -> Closure.compile_get closure v)
+     | Some value -> return value
+     | None -> Closure.compile_get closure v)
   | Toplevel closure -> Closure.compile_get closure v
 ;;
 

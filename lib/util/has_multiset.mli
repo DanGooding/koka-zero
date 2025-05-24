@@ -31,7 +31,7 @@ module type S = S
       end
     ]} *)
 module Make (Element : sig
-  type t [@@deriving sexp]
+    type t [@@deriving sexp]
 
-  include Comparable.S with type t := t
-end) : S with type t := Element.t
+    include Comparable.S with type t := t
+  end) : S with type t := Element.t

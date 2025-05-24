@@ -4,8 +4,8 @@ open Koka_zero_util
 module State = struct
   type t =
     { substitution : Substitution.t
-          (** 'values' of metavariables, these are replaced 'on-demand' in
-              [unify] rather than ever propagating over a whole type *)
+      (** 'values' of metavariables, these are replaced 'on-demand' in
+          [unify] rather than ever propagating over a whole type *)
     ; variable_source : Type.Variable.Name_source.t
     ; metavariable_source : Type.Metavariable.Name_source.t
     ; effect_variable_source : Effect.Variable.Name_source.t
@@ -103,7 +103,7 @@ let lookup_effect_meta a s =
 
 (** pass the current global substitution as an argument to a pure function *)
 let use_substitution : (Substitution.t -> 'a) -> 'a t =
- fun f s ->
+  fun f s ->
   let { State.substitution; _ } = s in
   Result.Ok (f substitution, s)
 ;;
@@ -118,17 +118,16 @@ let map_substitution (f : Substitution.t -> Substitution.t) s =
 
 let substitute_meta_exn ~var ~type_ =
   map_substitution (fun substitution ->
-      match Substitution.extend substitution ~var ~type_ with
-      | `Duplicate -> raise_s [%message "metavariable already has a type"]
-      | `Ok substitution -> substitution)
+    match Substitution.extend substitution ~var ~type_ with
+    | `Duplicate -> raise_s [%message "metavariable already has a type"]
+    | `Ok substitution -> substitution)
 ;;
 
 let substitute_effect_meta_exn ~var ~effect_ =
   map_substitution (fun substitution ->
-      match Substitution.extend_effect substitution ~var ~effect_ with
-      | `Duplicate ->
-        raise_s [%message "effect metavariable already has a type"]
-      | `Ok substitution -> substitution)
+    match Substitution.extend_effect substitution ~var ~effect_ with
+    | `Duplicate -> raise_s [%message "effect metavariable already has a type"]
+    | `Ok substitution -> substitution)
 ;;
 
 let with_any_effect t =
@@ -221,8 +220,9 @@ and unify_effect_rows r1 r2 =
     (* <ls> !~ _  as only non-shared labels remain *)
   | ( Effect.Row (Effect.Row.Closed labels1)
     , Effect.Row (Effect.Row.Closed labels2) ) ->
-    if Effect.Label.Multiset.is_empty labels1
-       && Effect.Label.Multiset.is_empty labels2
+    if
+      Effect.Label.Multiset.is_empty labels1
+      && Effect.Label.Multiset.is_empty labels2
     then return ()
     else unification_error_effect e1 e2
   | Effect.Row (Effect.Row.Closed _), _ | _, Effect.Row (Effect.Row.Closed _) ->
@@ -235,19 +235,19 @@ and unify_effect_with_meta (a : Effect.Metavariable.t) (e2 : Effect.t) : unit t 
   | None ->
     (* [a] has not been substitued for yet... *)
     (match e2 with
-    | Effect.Metavariable b ->
-      if Effect.Metavariable.(a = b)
-      then return ()
-      else (
-        match%bind lookup_effect_meta b with
-        (* [b] has been substituted for, unify with that *)
-        | Some tb -> unify_effect_with_meta a tb
-        | None ->
-          substitute_effect_meta_exn ~var:a ~effect_:(Effect.Metavariable b))
-    | Effect.Row _ | Effect.Variable _ ->
-      if occurs_effect a ~in_:e2
-      then unification_error_effect (Effect.Metavariable a) e2
-      else substitute_effect_meta_exn ~var:a ~effect_:e2)
+     | Effect.Metavariable b ->
+       if Effect.Metavariable.(a = b)
+       then return ()
+       else (
+         match%bind lookup_effect_meta b with
+         (* [b] has been substituted for, unify with that *)
+         | Some tb -> unify_effect_with_meta a tb
+         | None ->
+           substitute_effect_meta_exn ~var:a ~effect_:(Effect.Metavariable b))
+     | Effect.Row _ | Effect.Variable _ ->
+       if occurs_effect a ~in_:e2
+       then unification_error_effect (Effect.Metavariable a) e2
+       else substitute_effect_meta_exn ~var:a ~effect_:e2)
 ;;
 
 let occurs (v : Type.Metavariable.t) ~in_:(t : Type.Mono.t) =
@@ -272,15 +272,15 @@ let rec unify t1 t2 =
   | ( Type.Mono.Arrow (t1_args, eff1, t1_result)
     , Type.Mono.Arrow (t2_args, eff2, t2_result) ) ->
     (match List.zip t1_args t2_args with
-    | List.Or_unequal_lengths.Unequal_lengths ->
-      unification_error_of [%sexp_of: Type.Mono.t list] t1_args t2_args
-    | List.Or_unequal_lengths.Ok zipped_args ->
-      let%bind () =
-        List.map zipped_args ~f:(fun (t1_arg, t2_arg) -> unify t1_arg t2_arg)
-        |> all_unit
-      in
-      let%bind () = unify_effects eff1 eff2 in
-      unify t1_result t2_result)
+     | List.Or_unequal_lengths.Unequal_lengths ->
+       unification_error_of [%sexp_of: Type.Mono.t list] t1_args t2_args
+     | List.Or_unequal_lengths.Ok zipped_args ->
+       let%bind () =
+         List.map zipped_args ~f:(fun (t1_arg, t2_arg) -> unify t1_arg t2_arg)
+         |> all_unit
+       in
+       let%bind () = unify_effects eff1 eff2 in
+       unify t1_result t2_result)
   | Type.Mono.Primitive p1, Type.Mono.Primitive p2 -> unify_primitives p1 p2
   | Type.Mono.(Arrow (_, _, _) | Primitive _), _ -> unification_error_mono t1 t2
 
@@ -291,19 +291,19 @@ and unify_with_meta (a : Type.Metavariable.t) (t2 : Type.Mono.t) : unit t =
   | None ->
     (* [a] has not been substitued for yet... *)
     (match t2 with
-    | Type.Mono.Variable a -> raise_for_unexpected_variable a
-    | Type.Mono.Metavariable b ->
-      if Type.Metavariable.(a = b)
-      then return ()
-      else (
-        match%bind lookup_meta b with
-        (* [b] has been substituted for, unify with that *)
-        | Some tb -> unify_with_meta a tb
-        | None -> substitute_meta_exn ~var:a ~type_:(Type.Mono.Metavariable b))
-    | Type.Mono.(Arrow (_, _, _) | Primitive _) ->
-      if occurs a ~in_:t2
-      then unification_error_mono (Type.Mono.Metavariable a) t2
-      else substitute_meta_exn ~var:a ~type_:t2)
+     | Type.Mono.Variable a -> raise_for_unexpected_variable a
+     | Type.Mono.Metavariable b ->
+       if Type.Metavariable.(a = b)
+       then return ()
+       else (
+         match%bind lookup_meta b with
+         (* [b] has been substituted for, unify with that *)
+         | Some tb -> unify_with_meta a tb
+         | None -> substitute_meta_exn ~var:a ~type_:(Type.Mono.Metavariable b))
+     | Type.Mono.(Arrow (_, _, _) | Primitive _) ->
+       if occurs a ~in_:t2
+       then unification_error_mono (Type.Mono.Metavariable a) t2
+       else substitute_meta_exn ~var:a ~type_:t2)
 ;;
 
 let instantiate (poly : Type.Poly.t) : Type.Mono.t t =
@@ -327,7 +327,7 @@ let instantiate_type : Type.t -> Type.Mono.t t =
 ;;
 
 let generalise_total : Type.Mono.t -> env:Context.t -> Type.Poly.t t =
- fun t ~env ->
+  fun t ~env ->
   let open Let_syntax in
   let%bind t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
   let%bind env = use_substitution (Context.apply_substitution env) in
@@ -352,11 +352,11 @@ let generalise_total : Type.Mono.t -> env:Context.t -> Type.Poly.t t =
   in
   let%bind () =
     map_substitution (fun substitution ->
-        (* TODO: labelled parameters would make this much nicer *)
-        let substitution =
-          Substitution.extend_many_exn substitution meta_to_mono
-        in
-        Substitution.extend_many_effect_exn substitution effect_meta_to_effect)
+      (* TODO: labelled parameters would make this much nicer *)
+      let substitution =
+        Substitution.extend_many_exn substitution meta_to_mono
+      in
+      Substitution.extend_many_effect_exn substitution effect_meta_to_effect)
   in
   (* actually replace the free metavariables with variables *)
   let%map t = use_substitution (fun s -> Substitution.apply_to_mono s t) in
@@ -369,7 +369,7 @@ let generalise_total : Type.Mono.t -> env:Context.t -> Type.Poly.t t =
 ;;
 
 let generalise : Type.Mono.t -> Effect.t -> env:Context.t -> Type.Poly.t t =
- fun t e ~env ->
+  fun t e ~env ->
   let open Let_syntax in
   let%bind () = unify_effects e Effect.total in
   generalise_total t ~env

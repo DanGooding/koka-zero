@@ -1,10 +1,14 @@
 module Function : sig
-  type t = 
+  type t =
     { function_ : Llvm.llvalue
     ; type_ : Llvm.lltype
     }
 
-  val build_call : t -> args:Llvm.llvalue array -> string -> Llvm.llvalue Codegen.t
+  val build_call
+    :  t
+    -> args:Llvm.llvalue array
+    -> string
+    -> Llvm.llvalue Codegen.t
 end
 
 (** declarations of runtime's functions *)

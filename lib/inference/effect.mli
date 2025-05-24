@@ -44,7 +44,8 @@ module Row : sig
     val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
   end
 
-  (** An effect row - a multiset of labels, possibly with a variable in the tail *)
+  (** An effect row - a multiset of labels, possibly with a variable in the tail
+  *)
   type t =
     | Open of Label.Multiset.Non_empty.t * Tail.t
     | Closed of Label.Multiset.t
@@ -81,7 +82,8 @@ val total : t
     metavariables are unknown. *)
 val is_total : t -> bool option
 
-(** build a row by adding [labels] to either an existing effect, or just a tail *)
+(** build a row by adding [labels] to either an existing effect, or just a tail
+*)
 val cons_row : labels:Label.Multiset.Non_empty.t -> effect_:t -> Row.t
 
 val of_row_tail : Row.Tail.t -> t

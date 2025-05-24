@@ -63,32 +63,33 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
   | Expr.Impure_built_in impure -> free_in_impure_built_in impure
 
 and free_in_exprs : Expr.t list -> Variable.Set.t =
- fun es -> List.map es ~f:free_in_expr |> Variable.Set.union_list
+  fun es -> List.map es ~f:free_in_expr |> Variable.Set.union_list
 
-(** [free_in_bindings vs e] gives the free varaibles of [e] which aren't in [vs] *)
+(** [free_in_bindings vs e] gives the free varaibles of [e] which aren't in [vs]
+*)
 and free_in_bindings : Variable.t list -> Expr.t -> Variable.Set.t =
- fun vs e ->
+  fun vs e ->
   let e_free = free_in_expr e in
   let vs = Variable.Set.of_list vs in
   Set.diff e_free vs
 
 (** [free_in_binding v e] gives the free varaibles of [e] except for [v] *)
 and free_in_binding : Variable.t -> Expr.t -> Variable.Set.t =
- fun v e ->
+  fun v e ->
   let e_free = free_in_expr e in
   Set.remove e_free v
 
 and free_in_lambda : Expr.lambda -> Variable.Set.t =
- fun (params, body) ->
+  fun (params, body) ->
   let param_names =
     List.filter_map params ~f:(function
-        | Parameter.Variable v -> Some v
-        | Parameter.Wildcard -> None)
+      | Parameter.Variable v -> Some v
+      | Parameter.Wildcard -> None)
   in
   free_in_bindings param_names body
 
 and free_in_fix_lambda : Expr.fix_lambda -> Variable.Set.t =
- fun (name, lambda) ->
+  fun (name, lambda) ->
   let lambda_free = free_in_lambda lambda in
   Set.remove lambda_free name
 

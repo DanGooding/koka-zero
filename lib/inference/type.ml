@@ -78,8 +78,8 @@ module Mono = struct
     match t with
     | Variable v ->
       (match Map.find var_to_meta v with
-      | Some m -> Metavariable m
-      | None -> Variable v)
+       | Some m -> Metavariable m
+       | None -> Variable v)
     | Metavariable m -> Metavariable m
     | Arrow (t_args, eff, t_result) ->
       Arrow

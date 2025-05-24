@@ -49,7 +49,7 @@ module T = struct
   and hnd =
     { handled_effect : Effect_label.t
     ; operation_clauses : op Variable.Map.t
-          (* TODO: return_clause omitted for now *)
+      (* TODO: return_clause omitted for now *)
     }
   [@@deriving sexp]
 

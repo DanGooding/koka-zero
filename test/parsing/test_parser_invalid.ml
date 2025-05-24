@@ -1,9 +1,11 @@
 let%expect_test "function without parameters" =
-  let code = {|
+  let code =
+    {|
 fun compute-the-answer {
   42;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -15,9 +17,11 @@ fun compute-the-answer {
 ;;
 
 let%expect_test "dash before number in identifier" =
-  let code = {|
+  let code =
+    {|
 val n-3 = n - 3;
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -31,9 +35,11 @@ val n-3 = n - 3;
 ;;
 
 let%expect_test "dash at end of identifier" =
-  let code = {|
+  let code =
+    {|
 val n- = n;
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -47,9 +53,11 @@ val n- = n;
 ;;
 
 let%expect_test "dash at start of identifier" =
-  let code = {|
+  let code =
+    {|
   val -n = 0 - n;
-  |} in
+  |}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
@@ -63,11 +71,13 @@ let%expect_test "dash at start of identifier" =
 let%expect_test "lambda as operand" =
   (* Koka forbids this - presumably applying an operator to a function like this
      is rare *)
-  let code = {|
+  let code =
+    {|
 fun op-trailing-lambda-example() {
   5 * fn() 3 + 4;
 }
-|} in
+|}
+  in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|

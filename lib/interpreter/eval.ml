@@ -9,41 +9,40 @@ let eval_literal : Literal.t -> Value.primitive = function
 ;;
 
 let eval_op_expr
-    :  left:Value.t -> Operator.t -> right:Value.t
-    -> Value.primitive Interpreter.t
+  : left:Value.t -> Operator.t -> right:Value.t -> Value.primitive Interpreter.t
   =
- fun ~left op ~right ->
+  fun ~left op ~right ->
   let open Interpreter.Let_syntax in
   match op with
   | Operator.Int op ->
     let%bind left = Typecast.int_of_value left in
     let%map right = Typecast.int_of_value right in
     (match op with
-    | Operator.Int.Plus -> left + right |> Value.Int
-    | Operator.Int.Minus -> left - right |> Value.Int
-    | Operator.Int.Times -> left * right |> Value.Int
-    | Operator.Int.Divide -> left / right |> Value.Int
-    | Operator.Int.Modulo ->
-      left % right |> Value.Int
-      (* TODO: don't inherit OCaml's behaviour for modulo of a negative *)
-    | Operator.Int.Equals -> left = right |> Value.Bool
-    | Operator.Int.Not_equal -> left <> right |> Value.Bool
-    | Operator.Int.Less_than -> left < right |> Value.Bool
-    | Operator.Int.Less_equal -> left <= right |> Value.Bool
-    | Operator.Int.Greater_equal -> left >= right |> Value.Bool
-    | Operator.Int.Greater_than -> left > right |> Value.Bool)
+     | Operator.Int.Plus -> left + right |> Value.Int
+     | Operator.Int.Minus -> left - right |> Value.Int
+     | Operator.Int.Times -> left * right |> Value.Int
+     | Operator.Int.Divide -> left / right |> Value.Int
+     | Operator.Int.Modulo ->
+       left % right |> Value.Int
+       (* TODO: don't inherit OCaml's behaviour for modulo of a negative *)
+     | Operator.Int.Equals -> left = right |> Value.Bool
+     | Operator.Int.Not_equal -> left <> right |> Value.Bool
+     | Operator.Int.Less_than -> left < right |> Value.Bool
+     | Operator.Int.Less_equal -> left <= right |> Value.Bool
+     | Operator.Int.Greater_equal -> left >= right |> Value.Bool
+     | Operator.Int.Greater_than -> left > right |> Value.Bool)
   | Operator.Bool op ->
     let%bind left = Typecast.bool_of_value left in
     let%map right = Typecast.bool_of_value right in
     (match op with
-    | Operator.Bool.And -> (left && right) |> Value.Bool
-    | Operator.Bool.Or -> (left || right) |> Value.Bool)
+     | Operator.Bool.And -> (left && right) |> Value.Bool
+     | Operator.Bool.Or -> (left || right) |> Value.Bool)
 ;;
 
 let eval_unary_op_expr
-    : Operator.Unary.t -> Value.t -> Value.primitive Interpreter.t
+  : Operator.Unary.t -> Value.t -> Value.primitive Interpreter.t
   =
- fun op v ->
+  fun op v ->
   let open Interpreter.Let_syntax in
   match op with
   | Operator.Unary.Bool Operator.Bool.Unary.Not ->
@@ -52,9 +51,9 @@ let eval_unary_op_expr
 ;;
 
 let rec lookup_evidence
-    : Value.evidence_vector -> Effect_label.t -> Value.evidence option
+  : Value.evidence_vector -> Effect_label.t -> Value.evidence option
   =
- fun vector label ->
+  fun vector label ->
   match vector with
   | Value.Evv_nil -> None
   | Value.Evv_cons { label = label'; evidence; tail } ->
@@ -64,17 +63,17 @@ let rec lookup_evidence
 ;;
 
 let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
- fun expr ~env ->
+  fun expr ~env ->
   let open Interpreter.Let_syntax in
   match expr with
   | Expr.Variable name ->
     (match Map.find env name with
-    | Some v -> return v
-    | None ->
-      let message =
-        sprintf "unbound variable `%s`" (Variable.to_string_user name)
-      in
-      Interpreter.impossible_error message)
+     | Some v -> return v
+     | None ->
+       let message =
+         sprintf "unbound variable `%s`" (Variable.to_string_user name)
+       in
+       Interpreter.impossible_error message)
   | Expr.Let (p, e_subject, e_body) ->
     let%bind v_subject = eval_expr e_subject ~env in
     let env' =
@@ -145,7 +144,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     in
     let env' =
       List.fold bindings ~init:env ~f:(fun env (x, v) ->
-          Map.set env ~key:x ~data:v)
+        Map.set env ~key:x ~data:v)
     in
     eval_expr body ~env:env'
   | Expr.Fresh_marker ->
@@ -180,8 +179,8 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
   | Expr.Construct_handler { handled_effect; operation_clauses } ->
     let%map operation_clauses =
       Map.map operation_clauses ~f:(fun op_clause ->
-          let%bind v_op_clause = eval_expr op_clause ~env in
-          Typecast.op_of_value v_op_clause)
+        let%bind v_op_clause = eval_expr op_clause ~env in
+        Typecast.op_of_value v_op_clause)
       |> Interpreter.all_map
     in
     Value.Hnd { Value.handled_effect; operation_clauses }
@@ -210,14 +209,14 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     let%bind vector = eval_expr vector ~env in
     let%bind vector = Typecast.evidence_vector_of_value vector in
     (match lookup_evidence vector label with
-    | None ->
-      let message =
-        sprintf
-          "effect label `%s` not found in vector"
-          (Effect_label.to_string label)
-      in
-      Interpreter.impossible_error message
-    | Some evidence -> Value.Evidence evidence |> return)
+     | None ->
+       let message =
+         sprintf
+           "effect label `%s` not found in vector"
+           (Effect_label.to_string label)
+       in
+       Interpreter.impossible_error message
+     | Some evidence -> Value.Evidence evidence |> return)
   | Expr.Get_evidence_marker e ->
     let%bind v = eval_expr e ~env in
     let%map { Value.marker; _ } = Typecast.evidence_of_value v in
@@ -262,40 +261,43 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
   | Expr.Impure_built_in impure -> eval_impure_built_in impure ~env
 
 and eval_lambda
-    : Expr.lambda -> env:Value.context -> Value.closure Interpreter.t
+  : Expr.lambda -> env:Value.context -> Value.closure Interpreter.t
   =
- fun lambda ~env ->
+  fun lambda ~env ->
   let open Interpreter.Let_syntax in
   (* TODO: capturing the entire environment like this, and creating a new map
      upon every binding (rather than sharing tails) is hideously inefficient *)
   (Value.Lambda lambda, env) |> return
 
 and eval_fix_lambda
-    : Expr.fix_lambda -> env:Value.context -> Value.closure Interpreter.t
+  : Expr.fix_lambda -> env:Value.context -> Value.closure Interpreter.t
   =
- fun fix_lambda ~env ->
+  fun fix_lambda ~env ->
   let open Interpreter.Let_syntax in
   (Value.Fix_lambda fix_lambda, env) |> return
 
 and eval_call
-    :  f_env:Value.context -> params:Parameter.t list -> e_body:Expr.t
-    -> v_args:Value.t list -> Value.t Interpreter.t
+  :  f_env:Value.context
+  -> params:Parameter.t list
+  -> e_body:Expr.t
+  -> v_args:Value.t list
+  -> Value.t Interpreter.t
   =
- fun ~f_env ~params ~e_body ~v_args ->
+  fun ~f_env ~params ~e_body ~v_args ->
   let open Interpreter.Let_syntax in
   let%bind params_to_args = Typecast.zip_arguments ~params ~args:v_args in
   let f_body_env =
     List.fold params_to_args ~init:f_env ~f:(fun f_body_env (p, v) ->
-        match p with
-        | Parameter.Variable x -> Map.set f_body_env ~key:x ~data:v
-        | Parameter.Wildcard -> f_body_env)
+      match p with
+      | Parameter.Variable x -> Map.set f_body_env ~key:x ~data:v
+      | Parameter.Wildcard -> f_body_env)
   in
   eval_expr e_body ~env:f_body_env
 
 and eval_impure_built_in
-    : Expr.impure_built_in -> env:Value.context -> Value.t Interpreter.t
+  : Expr.impure_built_in -> env:Value.context -> Value.t Interpreter.t
   =
- fun impure ~env ->
+  fun impure ~env ->
   let open Interpreter.Let_syntax in
   match impure with
   | Expr.Impure_println ->
@@ -309,19 +311,19 @@ and eval_impure_built_in
   | Expr.Impure_read_int ->
     let%map i =
       Interpreter.try_io_with ~message:"failed to read int" (fun () ->
-          printf "input> ";
-          Out_channel.flush Out_channel.stdout;
-          let line = In_channel.input_line_exn In_channel.stdin in
-          Int.of_string (String.strip line))
+        printf "input> ";
+        Out_channel.flush Out_channel.stdout;
+        let line = In_channel.input_line_exn In_channel.stdin in
+        Int.of_string (String.strip line))
     in
     Value.Primitive (Value.Int i)
 ;;
 
 (** evaluate a function declaration, adding it to the context *)
 let eval_fun_decl
-    : Program.Fun_decl.t -> env:Value.context -> Value.context Interpreter.t
+  : Program.Fun_decl.t -> env:Value.context -> Value.context Interpreter.t
   =
- fun f ~env ->
+  fun f ~env ->
   let open Interpreter.Let_syntax in
   let%map v_f = eval_fix_lambda f ~env in
   let f_name, _ = f in
@@ -329,12 +331,12 @@ let eval_fun_decl
 ;;
 
 let eval_program : Program.t -> Value.t Interpreter.t =
- fun { Program.effect_declarations = _; fun_declarations; entry_expr } ->
+  fun { Program.effect_declarations = _; fun_declarations; entry_expr } ->
   let open Interpreter.Let_syntax in
   let env = Value.empty_context in
   let%bind env =
     Interpreter.list_fold fun_declarations ~init:env ~f:(fun env decl ->
-        eval_fun_decl decl ~env)
+      eval_fun_decl decl ~env)
   in
   eval_expr entry_expr ~env
 ;;
