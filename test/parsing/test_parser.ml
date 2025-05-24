@@ -1616,7 +1616,7 @@ fun square(x : int) : <> int {
              (((pattern (Pattern_id (Var x)))
                (type_ ((Type_atom (constructor Type_int) (arguments ())))))))
             (result_type
-             (((effect
+             (((effect_
                 (Type_atom (constructor (Variable_or_name exn)) (arguments ())))
                (result (Type_atom (constructor Type_int) (arguments ()))))))
             (body
@@ -1630,11 +1630,12 @@ fun square(x : int) : <> int {
              (((pattern (Pattern_id (Var x)))
                (type_ ((Type_atom (constructor Type_int) (arguments ())))))))
             (result_type
-             (((effect (Effect_row (Closed ())))
+             (((effect_ (Effect_row (Closed ())))
                (result (Type_atom (constructor Type_int) (arguments ()))))))
             (body
              ((statements ())
-              (last (Binary_op (Identifier (Var x)) Times (Identifier (Var x)))))))))))))) |}];
+              (last (Binary_op (Identifier (Var x)) Times (Identifier (Var x))))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -1672,7 +1673,7 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                (type_
                 ((Arrow
                   (Type_atom (constructor (Variable_or_name a)) (arguments ()))
-                  ((effect
+                  ((effect_
                     (Type_atom (constructor (Variable_or_name e)) (arguments ())))
                    (result
                     (Type_atom (constructor (Variable_or_name b)) (arguments ()))))))))
@@ -1680,12 +1681,12 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                (type_
                 ((Arrow
                   (Type_atom (constructor (Variable_or_name b)) (arguments ()))
-                  ((effect
+                  ((effect_
                     (Type_atom (constructor (Variable_or_name e)) (arguments ())))
                    (result
                     (Type_atom (constructor (Variable_or_name c)) (arguments ()))))))))))
             (result_type
-             (((effect (Effect_row (Closed ())))
+             (((effect_ (Effect_row (Closed ())))
                (result
                 (Parameters_or_tuple
                  (((parameter_id ())
@@ -1693,7 +1694,7 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                     (Arrow
                      (Type_atom (constructor (Variable_or_name a))
                       (arguments ()))
-                     ((effect
+                     ((effect_
                        (Type_atom (constructor (Variable_or_name e))
                         (arguments ())))
                       (result
@@ -1723,7 +1724,7 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
               ((pattern (Pattern_id (Var action)))
                (type_
                 ((Arrow (Parameters_or_tuple ())
-                  ((effect
+                  ((effect_
                     (Effect_row
                      (Open
                       (Cons
@@ -1735,7 +1736,7 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                    (result
                     (Type_atom (constructor (Variable_or_name a)) (arguments ()))))))))))
             (result_type
-             (((effect
+             (((effect_
                 (Type_atom (constructor (Variable_or_name e)) (arguments ())))
                (result
                 (Type_atom (constructor (Variable_or_name a)) (arguments ()))))))
@@ -1751,7 +1752,8 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                   ((type_parameters ()) (parameters ()) (result_type ())
                    (body
                     ((statements ())
-                     (last (Application (Identifier (Var action)) ()))))))))))))))))))) |}];
+                     (last (Application (Identifier (Var action)) ())))))))))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -1796,19 +1798,20 @@ effect control f(x : int) : ( ((x : int, y : int)) -> (() -> (int)) );
                           ((parameter_id ((Var y)))
                            (type_
                             (Type_atom (constructor Type_int) (arguments ()))))))))))
-                    ((effect (Effect_row (Closed ())))
+                    ((effect_ (Effect_row (Closed ())))
                      (result
                       (Parameters_or_tuple
                        (((parameter_id ())
                          (type_
                           (Arrow (Parameters_or_tuple ())
-                           ((effect (Effect_row (Closed ())))
+                           ((effect_ (Effect_row (Closed ())))
                             (result
                              (Parameters_or_tuple
                               (((parameter_id ())
                                 (type_
                                  (Type_atom (constructor Type_int)
-                                  (arguments ()))))))))))))))))))))))))))))))) |}];
+                                  (arguments ())))))))))))))))))))))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -1850,7 +1853,7 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
                 (((parameter_id ())
                   (type_
                    (Arrow (Parameters_or_tuple ())
-                    ((effect (Effect_row (Closed ())))
+                    ((effect_ (Effect_row (Closed ())))
                      (result
                       (Effect_row
                        (Open
@@ -1860,7 +1863,8 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
                          ((Type_atom (constructor (Variable_or_name b))
                            (arguments ()))))
                         (Type_atom (constructor (Variable_or_name c))
-                         (arguments ())))))))))))))))))))))) |}];
+                         (arguments ()))))))))))))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
