@@ -20,20 +20,23 @@ end
 
 module Closure = struct
   module Shape = struct
-    module T = struct
-      type t =
-        | Level of Variable.t list * t
-        | Toplevel of Variable.t list
-      [@@deriving sexp]
-    end (* disable "fragile-match" for generated code *) [@warning "-4"]
+    type t = Variable.t list list [@@deriving sexp]
 
-    include T
+    let empty = []
   end
 
   type t =
-    { closure : Llvm.llvalue (** of type [closure *] *)
+    { closure : Llvm.llvalue
     ; shape : Shape.t
     }
+
+  let empty =
+    let open Codegen.Let_syntax in
+    let%map pointer_type = Types.pointer in
+    let closure = Llvm.const_pointer_null pointer_type in
+    let shape = Shape.empty in
+    { closure; shape }
+  ;;
 
   (** [compile_extend_closure closure names_and_values ~runtime] creates a new
       closure with the specified values (which should all be
@@ -81,21 +84,9 @@ module Closure = struct
   let compile_extend { closure = parent; shape } locals ~runtime =
     let open Codegen.Let_syntax in
     let var_names = List.map locals ~f:(fun (name, _value) -> name) in
-    let shape = Shape.Level (var_names, shape) in
+    let shape = var_names :: shape in
     let%map closure_ptr = compile_extend_closure parent locals ~runtime in
     { closure = closure_ptr; shape }
-  ;;
-
-  let compile_make_toplevel names_and_code ~runtime =
-    let open Codegen.Let_syntax in
-    let%bind pointer_type = Types.pointer in
-    let parent_closure = Llvm.const_pointer_null pointer_type in
-    let%map closure =
-      compile_extend_closure parent_closure names_and_code ~runtime
-    in
-    let names = List.map names_and_code ~f:(fun (name, _code) -> name) in
-    let shape = Shape.Toplevel names in
-    { closure; shape }
   ;;
 
   (** compile accessing [ closure->vars[i] ] *)
@@ -126,21 +117,20 @@ module Closure = struct
     | None -> None
   ;;
 
+  let mem { shape; _ } v =
+    List.exists shape ~f:(fun vars ->
+      List.mem vars v ~equal:[%equal: Variable.t])
+  ;;
+
   let rec compile_get { closure; shape } v =
     let open Codegen.Let_syntax in
     match shape with
-    | Shape.Toplevel vs ->
-      (match index_of_variable vs v with
-       | Some i ->
-         compile_get_var closure ~i (Helpers.register_name_of_variable v)
-       | None ->
-         let message =
-           sprintf
-             "variable not found in closure: %s"
-             (Variable.to_string_user v)
-         in
-         Codegen.impossible_error message)
-    | Shape.Level (vs, parent_shape) ->
+    | [] ->
+      let message =
+        sprintf "variable not found in closure: %s" (Variable.to_string_user v)
+      in
+      Codegen.impossible_error message
+    | vs :: parent_shape ->
       (match index_of_variable vs v with
        | Some i ->
          compile_get_var closure ~i (Helpers.register_name_of_variable v)
@@ -160,40 +150,61 @@ module Closure = struct
   ;;
 end
 
-type t =
-  | Local of
-      { locals : Locals.t
-      ; closure : Closure.t
-      }
-  | Toplevel of Closure.t
+module Toplevel = struct
+  type t = Function_repr.Callable.t Variable.Map.t
 
-let compile_capture t ~free ~runtime =
-  match t with
-  | Toplevel closure -> Codegen.return closure
-  | Local { locals; closure } ->
-    (* TODO: check all [free] are in [locals] or [closure]? *)
-    (match Locals.inter_names locals free with
-     (* don't allocate at all unless adding free variables! *)
-     | [] -> Codegen.return closure
-     (* closures are chained *)
-     | escaping_locals ->
-       Closure.compile_extend closure escaping_locals ~runtime)
+  let of_ordered_alist alist : t =
+    Variable.Map.of_alist_multi alist |> Map.map ~f:List.last_exn
+  ;;
+
+  let find t v =
+    Map.find t v
+  end
+
+type t =
+  { locals : Locals.t
+  ; closure : Closure.t
+  ; toplevel : Toplevel.t
+  }
+
+let create_toplevel toplevel =
+  let open Codegen.Let_syntax in
+  let locals = [] in
+  let%map closure = Closure.empty in
+  { locals; closure; toplevel }
 ;;
 
-let compile_get t v =
+let compile_capture { locals; closure; toplevel = _ } ~free ~runtime =
+  match Locals.inter_names locals free with
+  | [] ->
+    (* we don't need to capture anything *)
+    Codegen.return closure
+  | escaping_locals ->
+    (* these locals need to be captured *)
+    Closure.compile_extend closure escaping_locals ~runtime
+;;
+
+let compile_get { locals; closure; toplevel } v =
   let open Codegen.Let_syntax in
-  match t with
-  | Local { locals; closure } ->
-    (match Locals.find locals v with
-     | Some value -> return value
-     | None -> Closure.compile_get closure v)
-  | Toplevel closure -> Closure.compile_get closure v
+  match Locals.find locals v with
+  | Some value -> return value
+  | None ->
+    (match Closure.mem closure v with
+     | true -> Closure.compile_get closure v
+     | false ->
+       (match Toplevel.find toplevel v with
+        | Some callable ->
+          Function_repr.compile_wrap_callable callable
+        | None ->
+          let message =
+            sprintf
+              "variable not found in scope: %s"
+              (Variable.to_string_user v)
+          in
+          Codegen.impossible_error message))
 ;;
 
 let add_local_exn t ~name ~value =
-  match t with
-  | Toplevel _ -> raise_s [%message "attempt to add a local at toplevel"]
-  | Local { locals; closure } ->
-    let locals = Locals.add locals ~name ~value in
-    Local { locals; closure }
+  let locals = Locals.add t.locals ~name ~value in
+  { t with locals }
 ;;

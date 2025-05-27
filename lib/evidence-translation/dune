@@ -2,5 +2,6 @@
  (name koka_zero_evidence_translation)
  (public_name koka-zero.evidence-translation)
  (libraries core koka_zero_inference koka_zero_util)
+ (inline_tests)
  (preprocess
   (pps ppx_jane)))
