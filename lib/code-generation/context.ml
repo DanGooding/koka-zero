@@ -11,7 +11,7 @@ module Locals = struct
 
   let add t ~name ~value = (name, value) :: t
 
-  let inter_names t names =
+  let intersect_names t names =
     List.filter t ~f:(fun (name, _) -> Set.mem names name)
   ;;
 
@@ -23,6 +23,13 @@ module Closure = struct
     type t = Variable.t list list [@@deriving sexp]
 
     let empty = []
+
+    let is_empty = function
+      | [] -> true
+      | _ -> false
+    ;;
+
+    let names t = List.concat t |> Variable.Set.of_list
   end
 
   type t =
@@ -37,6 +44,9 @@ module Closure = struct
     let shape = Shape.empty in
     { closure; shape }
   ;;
+
+  let is_empty { shape; _ } = Shape.is_empty shape
+  let names { shape; _ } = Shape.names shape
 
   (** [compile_extend_closure closure names_and_values ~runtime] creates a new
       closure with the specified values (which should all be
@@ -157,9 +167,8 @@ module Toplevel = struct
     Variable.Map.of_alist_multi alist |> Map.map ~f:List.last_exn
   ;;
 
-  let find t v =
-    Map.find t v
-  end
+  let find t v = Map.find t v
+end
 
 type t =
   { locals : Locals.t
@@ -175,10 +184,16 @@ let create_toplevel toplevel =
 ;;
 
 let compile_capture { locals; closure; toplevel = _ } ~free ~runtime =
-  match Locals.inter_names locals free with
+  let open Codegen.Let_syntax in
+  match Locals.intersect_names locals free with
   | [] ->
     (* we don't need to capture anything *)
-    Codegen.return closure
+    let used_names_from_closure = Set.inter (Closure.names closure) free in
+    (match Set.is_empty used_names_from_closure with
+     | true ->
+       (* don't need the closure at all *)
+       Closure.empty
+     | false -> (* existing parent closure has required names *) return closure)
   | escaping_locals ->
     (* these locals need to be captured *)
     Closure.compile_extend closure escaping_locals ~runtime
@@ -193,8 +208,7 @@ let compile_get { locals; closure; toplevel } v =
      | true -> Closure.compile_get closure v
      | false ->
        (match Toplevel.find toplevel v with
-        | Some callable ->
-          Function_repr.compile_wrap_callable callable
+        | Some callable -> Function_repr.compile_wrap_callable callable
         | None ->
           let message =
             sprintf

@@ -5,12 +5,6 @@ module Locals : sig
   (** maps the current function's locals and parameters to their [llvalues]. The
       first name is the innermost, so must search in forward order *)
   type t = (Variable.t * Llvm.llvalue) list
-
-  val find : t -> Variable.t -> Llvm.llvalue option
-  val add : t -> name:Variable.t -> value:Llvm.llvalue -> t
-
-  (** remove all names not in the given set *)
-  val inter_names : t -> Variable.Set.t -> t
 end
 
 module Closure : sig
@@ -30,9 +24,7 @@ module Closure : sig
     }
 
   val empty : t Codegen.t
-
-  (** produce code to cons locals on the front, producing a child closure *)
-  val compile_extend : t -> Locals.t -> runtime:Runtime.t -> t Codegen.t
+  val is_empty : t -> bool
 
   (** generate code to retrieve a varaible from a closure, failing with a
       codegen_eror if it is not present. *)

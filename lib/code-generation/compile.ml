@@ -843,11 +843,18 @@ and compile_lambda_like
       ~runtime
       ~effect_reprs
   in
-  compile_construct_function_object
-    function_code
-    ~is_recursive
-    ~captured_closure:escaping_closure
-    ~runtime
+  match Context.Closure.is_empty escaping with
+  | true ->
+    (* functions with no free variables are simply code pointers,
+      with no heap allocation required *)
+    Function_repr.compile_wrap_callable (Code_pointer function_code)
+  | false ->
+    (* closures are allocated on the heap *)
+    compile_construct_function_object
+      function_code
+      ~is_recursive
+      ~captured_closure:escaping_closure
+      ~runtime
 
 (** [compile_lambda lambda ...] compiles a lambda as a function, and generates
     code to construct a function object of it in the given [env]. The result is
