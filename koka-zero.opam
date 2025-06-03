@@ -7,12 +7,13 @@ maintainer: ["Dan Gooding"]
 authors: ["Dan Gooding"]
 license: "MIT"
 depends: [
-  "ocaml" {>= "4.08.0"}
-  "core"
-  "core_unix"
+  "ocaml" {>= "5.3.0"}
+  "core" {>= "v0.17" & < "v.0.18"}
+  "core_unix" {>= "v0.17" & < "v.0.18"}
   "dune" {>= "2.8"}
   "llvm" {= "18-static"}
-  "ppx_jane"
+  "menhir" {>= "20240715" & < "20250101"}
+  "ppx_jane" {>= "v0.17" & < "v.0.18"}
   "ppx_expect" {with-test}
   "odoc" {with-doc}
   "ocaml-lsp-server" {build}
