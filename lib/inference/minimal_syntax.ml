@@ -90,6 +90,11 @@ module Parameter = struct
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
+
+  let variable_opt = function
+    | Variable v -> Some v
+    | Wildcard -> None
+  ;;
 end
 
 module Expr = struct

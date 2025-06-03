@@ -10,8 +10,8 @@ type 'a t
 include Monad.S with type 'a t := 'a t
 include Monad_utils.S with type 'a t := 'a t
 
-(** perform a generation computation using the default internal name source *)
-val run : 'a t -> 'a Or_static_error.t
+(** perform a generation computation with names using a specifed prefix *)
+val run : ?name_prefix:string -> 'a t -> 'a Or_static_error.t
 
 (** fail due to attempting to translate a feature which is not yet implemented
 *)

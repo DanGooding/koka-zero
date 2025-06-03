@@ -23,8 +23,9 @@ let left_unit : Expr.t -> Expr.t Modified.t =
     | _ -> None)
 ;;
 
-let rewrite_program : Program.t -> Program.t =
-  fun program ->
+let rewrite_program (program : Program.t) =
+  let open Generation.Let_syntax in
+  let%map program = Bind_inlining.rewrite_program program in
   Modified.apply_while_changes
     ~f:(Rewriting_utils.apply_everywhere_to_program ~rewrite:left_unit)
     program

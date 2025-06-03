@@ -1,0 +1,10 @@
+(library
+ (name koka_zero_test_rewriting)
+ (libraries
+  core
+  koka-zero.evidence-translation
+  koka-zero.inference
+  koka-zero.util)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane)))

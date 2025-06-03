@@ -1,5 +1,10 @@
 open Koka_zero_inference
 
+val translate_expr
+  :  Explicit_syntax.Expr.t
+  -> evv:Evidence_passing_syntax.Expr.t
+  -> Evidence_passing_syntax.Expr.t Generation.t
+
 val translate_lambda
   :  Explicit_syntax.Expr.lambda
   -> Evidence_passing_syntax.Expr.lambda Generation.t

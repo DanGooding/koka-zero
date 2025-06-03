@@ -9,11 +9,14 @@ val translate
 
 (** apply optimising transformations *)
 val rewrite_program
-  (* TODO: perhaps always use this? *)
   :  Evidence_passing_syntax.Program.t
-  -> Evidence_passing_syntax.Program.t
+  -> Evidence_passing_syntax.Program.t Or_static_error.t
 
 module Free_variables = Free_variables
+
+module Primitives : sig
+  module Names = Primitives.Names
+end
 
 module Private : sig
   (** apply the evidence passing translation to a lambda, adding an evidence
@@ -28,4 +31,18 @@ module Private : sig
   val translate_no_prelude
     :  Explicit_syntax.Program.t
     -> Evidence_passing_syntax.Program.t Or_static_error.t
+
+  val translate_expr
+    :  Explicit_syntax.Expr.t
+    -> evv:Evidence_passing_syntax.Expr.t
+    -> Evidence_passing_syntax.Expr.t Or_static_error.t
+
+  module Rewriting : sig
+    val apply_bind_inlining
+      :  Evidence_passing_syntax.Expr.t
+      -> toplevel:Variable.Set.t
+      -> (Evidence_passing_syntax.Expr.t
+         * Evidence_passing_syntax.Program.Fun_decl.t list)
+           Or_static_error.t
+  end
 end

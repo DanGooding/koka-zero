@@ -7,7 +7,7 @@ module E = EPS.Expr
 module State = struct
   type t = Variable.Name_source.t [@@deriving sexp]
 
-  let initial : t = Variable.Name_source.fresh ~prefix:"mon_" ()
+  let initial ?(prefix = "mon_") () : t = Variable.Name_source.fresh ~prefix ()
 end
 
 module T = struct
@@ -38,8 +38,9 @@ end
 include T'
 include Monad_utils.Make (T')
 
-let run (t : 'a t) : 'a Or_static_error.t =
-  let%map.Result x, _final = t State.initial in
+let run ?name_prefix (t : 'a t) : 'a Or_static_error.t =
+  let state = State.initial ?prefix:name_prefix () in
+  let%map.Result x, _final = t state in
   x
 ;;
 

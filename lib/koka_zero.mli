@@ -36,7 +36,7 @@ val translate
 
 val rewrite_program
   :  Evidence_passing_syntax.Program.t
-  -> Evidence_passing_syntax.Program.t
+  -> Evidence_passing_syntax.Program.t Or_static_error.t
 
 val interpret_program
   :  Evidence_passing_syntax.Program.t

@@ -6,3 +6,5 @@ val free_in_lambda : Expr.lambda -> Variable.Set.t
 
 (** a [fix_lambda]'s free varaibles *)
 val free_in_fix_lambda : Expr.fix_lambda -> Variable.Set.t
+
+val free_in_expr : Expr.t -> Variable.Set.t

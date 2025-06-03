@@ -60,6 +60,8 @@ module Parameter : sig
     | Variable of Variable.t
     | Wildcard
   [@@deriving sexp]
+
+  val variable_opt : t -> Variable.t option
 end
 
 module Expr : sig

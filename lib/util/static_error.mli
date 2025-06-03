@@ -2,7 +2,9 @@
 type t [@@deriving sexp]
 
 module Or_static_error : sig
-  type nonrec 'a t = ('a, t) Result.t
+  type nonrec 'a t = ('a, t) Result.t [@@deriving sexp]
+
+  val ok_exn : 'a t -> 'a
 end
 
 val syntax_error : ?at:Source_location.t -> string -> t

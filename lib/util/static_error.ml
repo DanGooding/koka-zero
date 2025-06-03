@@ -27,8 +27,19 @@ type t =
   }
 [@@deriving sexp]
 
+let raise { kind; message; location } =
+  let kind = Kind.string_of_t kind in
+  raise_s [%message kind message (location : Source_location.t option)]
+;;
+
 module Or_static_error = struct
-  type nonrec 'a t = ('a, t) Result.t
+  type nonrec 'a t = ('a, t) Result.t [@@deriving sexp]
+
+  let ok_exn t =
+    match t with
+    | Ok x -> x
+    | Error err -> raise err
+  ;;
 end
 
 let error_of_kind kind ?at message = { kind; message; location = at }

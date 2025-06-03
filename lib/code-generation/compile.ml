@@ -846,7 +846,7 @@ and compile_lambda_like
   match Context.Closure.is_empty escaping with
   | true ->
     (* functions with no free variables are simply code pointers,
-      with no heap allocation required *)
+       with no heap allocation required *)
     Function_repr.compile_wrap_callable (Code_pointer function_code)
   | false ->
     (* closures are allocated on the heap *)

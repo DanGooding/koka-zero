@@ -19,8 +19,8 @@ let typecheck_and_compile_to_expl filename =
 let compile_to_eps ~optimise filename =
   let open Result.Let_syntax in
   let%bind program_explicit = typecheck_and_compile_to_expl filename in
-  let%map program_eps = Koka_zero.translate program_explicit in
-  if optimise then Koka_zero.rewrite_program program_eps else program_eps
+  let%bind program_eps = Koka_zero.translate program_explicit in
+  if optimise then Koka_zero.rewrite_program program_eps else return program_eps
 ;;
 
 let compile ~in_filename ~optimise ~print_eps ~out_filename =
