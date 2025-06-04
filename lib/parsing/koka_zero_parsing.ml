@@ -1,6 +1,5 @@
 open Core
-open Lexing
-open Koka_zero_util
+open Import
 module LexerUtil = MenhirLib.LexerUtil
 
 let set_filename ?filename lexbuf =

@@ -12,11 +12,11 @@ module Identifier = struct
     (* | Wildcard of Wildcard_id.t *)
     (* | Operator of Operator_id.t *)
     (* | Constructor of Constructor_id.t *)
-    [@@deriving compare, sexp]
-  end (* disable "fragile-match" for generated code *) [@warning "-4"]
+    [@@deriving compare, sexp_of]
+  end
 
   include T
-  include Comparable.Make (T)
+  include Comparable.Make_plain (T)
 end
 
 let resume_keyword = Identifier.Var (Var_id.of_string "resume")
@@ -27,12 +27,12 @@ type kind_atom =
   | Kind_effect_type
   | Kind_effect_row
   | Kind_value
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type kind =
   | Kind_arrow of kind list * kind
   | Kind_atom of kind_atom
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 (* types and effects: *)
 
@@ -40,7 +40,7 @@ type type_parameter =
   { id : Var_id.t
   ; kind : kind option
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 (* note: typechecker will remove the nonsensical cases based on kind checking
 
@@ -61,13 +61,13 @@ type type_ =
       ; kind : kind
       }
   | Parameters_or_tuple of parameter_type list
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and type_scheme =
   { forall_quantified : type_parameter list
   ; body : type_
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and type_constructor =
   | Variable_or_name of Var_id.t
@@ -75,24 +75,24 @@ and type_constructor =
   (* builtin types *)
   | Type_int
   | Type_bool
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and parameter_type =
   { parameter_id : Identifier.t option
   ; type_ : type_
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and type_result =
   { effect_ : type_
   ; result : type_
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and effect_row =
   | Closed of type_ list
   | Open of type_ Non_empty_list.t * type_
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 let total_effect_row : effect_row = Closed []
 
@@ -101,36 +101,36 @@ let total_effect_row : effect_row = Closed []
 type parameter_id =
   | Parameter_id of Identifier.t
   | Parameter_wildcard
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type parameter =
   { id : parameter_id
   ; type_ : type_
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type pattern =
   | Pattern_id of Identifier.t
   | Pattern_wildcard
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type annotated_pattern =
   { pattern : pattern
   ; scheme : type_scheme option
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type pattern_parameter =
   { pattern : pattern
   ; type_ : type_ option
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type binder =
   { id : Identifier.t
   ; type_ : type_ option
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 let pattern_parameter_of_binder : binder -> pattern_parameter =
   fun binder ->
@@ -147,14 +147,14 @@ type operation_shape =
   | Shape_fun of parameter list * type_
   | Shape_except of parameter list * type_
   | Shape_control of parameter list * type_
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type operation_declaration =
   { id : Var_id.t
   ; type_parameters : type_parameter list
   ; shape : operation_shape
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type effect_declaration =
   { id : Var_id.t
@@ -162,19 +162,19 @@ type effect_declaration =
   ; kind : kind option
   ; operations : operation_declaration list
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type type_declaration =
   (* TODO: records/Effect.t *)
   | Effect_declaration of effect_declaration
 (* | Type *)
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type operation_parameter =
   { id : parameter_id
   ; type_ : type_ option
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 (* expressions: *)
 
@@ -182,9 +182,9 @@ type literal =
   | Unit
   | Int of int
   | Bool of bool
-[@@deriving sexp]
+[@@deriving sexp_of]
 
-type unary_operator = Exclamation [@@deriving sexp]
+type unary_operator = Exclamation [@@deriving sexp_of]
 
 type binary_operator =
   | Plus
@@ -200,7 +200,7 @@ type binary_operator =
   | Less_equal
   | Greater_than
   | Greater_equal
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type expr =
   | Return of expr
@@ -222,19 +222,19 @@ type expr =
   (* | Tuple of expr list *)
   (* | List of expr list *)
   | Annotated_expr of expr * type_scheme
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and statement =
   | Declaration of declaration
   (* note this may be a return expression! *)
   | Expr of expr
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and block =
   { statements : statement list
   ; last : expr
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and fn =
   { type_parameters : type_parameter list
@@ -242,18 +242,18 @@ and fn =
   ; result_type : type_result option
   ; body : block
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and declaration =
   | Fun of fun_declaration
   | Val of annotated_pattern * block
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and fun_declaration =
   { id : Identifier.t
   ; fn : fn
   }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and operation_handler =
   | Op_val of
@@ -281,22 +281,22 @@ and operation_handler =
       { parameter : operation_parameter
       ; body : block
       }
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 and effect_handler = Effect_handler of operation_handler list
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type pure_declaration =
   | Top_val of binder * block
   | Top_fun of fun_declaration
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 type toplevel_declaration =
   | Pure_declaration of pure_declaration
   | Type_declaration of type_declaration
-[@@deriving sexp]
+[@@deriving sexp_of]
 
-type program = Program of toplevel_declaration list [@@deriving sexp]
+type program = Program of toplevel_declaration list [@@deriving sexp_of]
 
 let singleton_block last = { statements = []; last }
 

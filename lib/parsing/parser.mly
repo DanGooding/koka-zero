@@ -98,8 +98,9 @@
 
 %{
 
+open Core
+open Import
 open Syntax
-open Koka_zero_util
 
 (** an intermediate type for desugaring function application *)
 type partial_appexpr =

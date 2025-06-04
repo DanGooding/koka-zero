@@ -1,4 +1,5 @@
-open Koka_zero_util
+open! Core
+open Import
 
 (** convert a progam into [Koka_zero_inference.Minimal_syntax.t] representation,
     performing some desugaring and returning a [Static_error.t] for currently

@@ -2,7 +2,13 @@
  (name koka_zero_parsing)
  (public_name koka-zero.parsing)
  ;; note the forward dependency on the next pipeline stage (inference)
- (libraries core menhirLib str koka_zero_util koka_zero_inference)
+ (libraries
+  core
+  menhirLib
+  str
+  koka_zero_util
+  koka_zero_inference
+  koka_zero_ir_full_syntax)
  (preprocess
   (per_module
    ((pps ppx_jane)
@@ -25,4 +31,4 @@
    ;; 4 [fragile-match] since menhir parsers have hundreds of these
    ;; 70 [missing-mli] since lexers don't neeed these
    ;; 40 [name-out-of-scope] since generated sexp conv uses type-directed resolution
-   (:standard -w +A-48-42-44-4-70-40 -warn-error +A-3))))
+   (:standard -w +A-48-42-44-4-70-40-66 -warn-error +A-3))))

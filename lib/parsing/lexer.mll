@@ -11,6 +11,7 @@
 *)
 
 {
+open Core
 open Parser
 module LexerUtil = MenhirLib.LexerUtil
 
@@ -21,10 +22,9 @@ let bad_dash = Str.regexp "[^A-Za-z0-9]-\\|^-\\|-[^A-Za-z]\\|-$"
 (** An identifier is well formed if dashes are unambiguously not
     subtraction signs. *)
 let well_formed identifier =
-  let position =
-    try Some (Str.search_forward bad_dash identifier 0) with
-      Not_found -> None
-  in Option.is_none position
+  match Str.search_forward bad_dash identifier 0 with
+  | _position -> false
+  | exception _exn -> true
 ;;
 
 (** Return the matched identifier from the lexbuf,

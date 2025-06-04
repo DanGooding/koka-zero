@@ -2,6 +2,7 @@ open Core
 open Koka_zero_util
 open Koka_zero_inference
 module Min = Minimal_syntax
+module Syntax = Koka_zero_ir_full_syntax.Syntax
 
 (** assert that the argument is [None], otherwise returns an 'unsupported
     syntax' error with the given [description] *)
