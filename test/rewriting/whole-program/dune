@@ -1,0 +1,8 @@
+(cram
+ (applies_to :whole_subtree)
+ (deps
+  compile.sh
+  ../../../compile.sh
+  %{bin:koka-zero}
+  ../../../lib/runtime/runtime.c
+  ../../../lib/runtime/runtime.h))

@@ -16,6 +16,12 @@ else
     KOKA_OPT_FLAG=""
 fi
 
+if [ -z ${DUMP_EPS+x} ]; then
+    DUMP_EPS_FLAG=""
+else
+    DUMP_EPS_FLAG="-dump-eps"
+fi
+
 # intentionally rely on clang to know the system's target triple
 LL_C_FLAGS="-Wall -Wno-override-module -O$OPT_LEVEL"
 
@@ -42,6 +48,6 @@ if [[ "$BINARY" = "$SOURCE" ]]; then
     BINARY="$BINARY.exe"
 fi
 
-$KOKA_COMPILER compile $SOURCE -o $IR $KOKA_OPT_FLAG
+$KOKA_COMPILER compile $SOURCE -o $IR $KOKA_OPT_FLAG $DUMP_EPS_FLAG
 $LL_C_COMPILER $LL_C_FLAGS $IR $RUNTIME -o $BINARY
 

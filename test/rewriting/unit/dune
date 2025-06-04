@@ -1,5 +1,5 @@
 (library
- (name koka_zero_test_rewriting)
+ (name koka_zero_unit_test_rewriting)
  (libraries
   core
   koka-zero.evidence-translation

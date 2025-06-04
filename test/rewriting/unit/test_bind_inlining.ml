@@ -1,8 +1,9 @@
 open! Core
 open Import
 
-let%expect_test "bind inlining" =
+let%expect_test "bind inlining - simple expression" =
   let translated =
+    (* f() + g() *)
     Koka_zero_evidence_translation.Private.translate_expr
       (Operator
          ( Application (Value (Variable (Variable.of_user "f")), [])
