@@ -79,7 +79,6 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
   | Application
       (bind, [ expr_a; vector_a; Lambda ([ param_a; param_vector_a ], inner_a) ])
     when is_name bind Primitives.Names.bind ->
-    (* TODO: apply to expr_a too *)
     let inner_a_free = Free_variables.free_in_expr inner_a in
     let inner_a_free = Set.diff inner_a_free toplevel in
     let inner_a_free_excluding_a =
