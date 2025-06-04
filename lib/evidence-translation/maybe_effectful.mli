@@ -1,8 +1,6 @@
 open! Core
 module EPS = Evidence_passing_syntax
 
-(*  TODO: consider a GADT where [Pure e : Expr.t t] and [Effectful e : (evv:Expr.t -> Expr.t) t]
-    it would be nice to enforce that Pure code won't accidentally use [evv] *)
 type t =
   | Pure of EPS.Expr.t
   | Effectful of EPS.Expr.t

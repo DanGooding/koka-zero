@@ -7,7 +7,7 @@ module Expl = Koka_zero_inference.Explicit_syntax
 (** target syntax *)
 module EPS = Evidence_passing_syntax
 
-(* [`Value e] indicates that expression [e] represents a pure term, which must
+(* [`Pure e] indicates that expression [e] represents a pure term, which must
    be lifted into the effect monad via [EPS.Expr.Construct_pure] *)
 
 let translate_literal (l : Expl.Literal.t) : EPS.Literal.t = l
@@ -46,7 +46,7 @@ let rec translate_expr
   fun e ~evv ->
     match e with
     | Expl.Expr.Value v ->
-      let%map (`Value v') = translate_value v in
+      let%map (`Pure v') = translate_value v in
       Maybe_effectful.Pure v'
     | Expl.Expr.Application (e_f, e_args) ->
       (* `e_f(e_1, e_2, ..., e_n)` translates to: *)
@@ -81,7 +81,7 @@ let rec translate_expr
         Maybe_effectful.combine e_yes' e_no' ~f:(fun e_yes' e_no' ->
           EPS.Expr.If_then_else (cond, e_yes', e_no')))
     | Expl.Expr.Let (x, v_subject, e_body) ->
-      let%bind (`Value subject') = translate_value v_subject in
+      let%bind (`Pure subject') = translate_value v_subject in
       let%map m_body = translate_expr e_body ~evv in
       Maybe_effectful.map m_body ~f:(fun m_body ->
         EPS.Expr.Let (EPS.Parameter.Variable x, subject', m_body))
@@ -98,28 +98,28 @@ let rec translate_expr
         translate_expr e2 ~evv)
     | Expl.Expr.Impure_built_in impure -> translate_impure_built_in impure ~evv
 
-and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
+and translate_value : Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t =
   let open Generation.Let_syntax in
   function
-  | Expl.Expr.Variable v -> `Value (EPS.Expr.Variable v) |> return
+  | Expl.Expr.Variable v -> `Pure (EPS.Expr.Variable v) |> return
   | Expl.Expr.Literal lit ->
     let lit' = translate_literal lit in
-    `Value (EPS.Expr.Literal lit') |> return
+    `Pure (EPS.Expr.Literal lit') |> return
   | Expl.Expr.Lambda lambda ->
     let%map lambda' = translate_lambda lambda in
-    `Value (EPS.Expr.Lambda lambda')
+    `Pure (EPS.Expr.Lambda lambda')
   | Expl.Expr.Fix_lambda fix_lambda ->
     let%map fix_lambda' = translate_fix_lambda fix_lambda in
-    `Value (EPS.Expr.Fix_lambda fix_lambda')
+    `Pure (EPS.Expr.Fix_lambda fix_lambda')
   | Expl.Expr.Handler h ->
-    let%map (`Value h') = translate_handler h in
+    let%map (`Pure h') = translate_handler h in
     let { Expl.Expr.handled_effect = label; _ } = h in
     let label' : EPS.Expr.t = translate_effect_label label in
     let handler' =
       EPS.Expr.Application
         (EPS.Expr.Variable Primitives.Names.handler, [ label'; h' ])
     in
-    `Value handler'
+    `Pure handler'
   | Expl.Expr.Perform
       { Expl.Expr.operation = op_name; performed_effect = label } ->
     let%map selector =
@@ -132,7 +132,7 @@ and translate_value : Expl.Expr.value -> [ `Value of EPS.Expr.t ] Generation.t =
       EPS.Expr.Application
         (EPS.Expr.Variable Primitives.Names.perform, [ label'; selector ])
     in
-    `Value perform'
+    `Pure perform'
 
 and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
   fun (ps, e_body) ->
@@ -190,7 +190,7 @@ and translate_operator
             EPS.Expr.If_then_else (x_left, m_right, m_false)))
 
 and translate_handler
-  : Expl.Expr.handler -> [ `Value of EPS.Expr.t ] Generation.t
+  : Expl.Expr.handler -> [ `Pure of EPS.Expr.t ] Generation.t
   =
   fun handler ->
   let open Generation.Let_syntax in
@@ -205,7 +205,7 @@ and translate_handler
     | None -> return ()
     | Some _ -> Generation.unsupported_feature_error "return clause in handler"
   in
-  `Value (EPS.Expr.Construct_handler { handled_effect; operation_clauses })
+  `Pure (EPS.Expr.Construct_handler { handled_effect; operation_clauses })
 
 and translate_op_handler
   : Operation_shape.t -> Expl.Expr.op_handler -> EPS.Expr.t Generation.t
