@@ -82,7 +82,10 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
             ([ param_a; param_vector_a ], inner_result.transformed_slow_path) )
       )
     in
-    let fun_decls = inner_result.fun_decls @ [ join_decl ] in
+    let%bind expr_a_result = rewrite_aux expr_a ~toplevel in
+    let fun_decls =
+      expr_a_result.fun_decls @ inner_result.fun_decls @ [ join_decl ]
+    in
     let%bind transformed_fast_path =
       (*
          match expr_a with
@@ -91,7 +94,7 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
          let param_vector_a = vector_a in
          transformed_inner_a_fast_path
       *)
-      let subject = expr_a in
+      let subject = expr_a_result.transformed_fast_path in
       let%bind pure_branch =
         let%map var_a =
           match (param_a : Parameter.t) with
@@ -131,7 +134,11 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
          (expr_a, vector_a) >>= join_a (<free(Inner_a) - a>)
       *)
       Expr.Application
-        (bind, [ expr_a; vector_a; Application (Variable join_name, join_args) ])
+        ( bind
+        , [ expr_a_result.transformed_slow_path
+          ; vector_a
+          ; Application (Variable join_name, join_args)
+          ] )
     in
     return
       { Rewrite_result.transformed_fast_path; transformed_slow_path; fun_decls }

@@ -440,6 +440,47 @@ Then show with bind-inlining and other rewriting applied
                (Lookup_evidence (label (Variable (Generated mon_35)))
                 (vector (Variable (Generated mon_38)))))
               (Variable (Generated mon_37)) (Variable (Generated mon_44)))))))))))
+     ((Generated opt_9)
+      (((Variable (Generated mon_46)))
+       (Lambda
+        (((Variable (Generated mon_49)) (Variable (Generated mon_50)))
+         (Application (Variable (Generated mon_46))
+          ((Variable (Generated mon_49)) (Variable (Generated mon_50))))))))
+     ((Generated opt_8)
+      (()
+       (Lambda
+        (((Variable (Generated mon_51)) (Variable (Generated mon_52)))
+         (Construct_pure
+          (Let (Variable (Generated mon_53)) (Literal (Int 0))
+           (Operator (Variable (Generated mon_51)) (Int Greater_than)
+            (Variable (Generated mon_53)))))))))
+     ((Generated opt_7)
+      (((Variable (User h)))
+       (Lambda
+        (((Variable (Generated mon_54)) (Variable (Generated mon_55)))
+         (If_then_else (Variable (Generated mon_54))
+          (Application (Variable (Language bind))
+           ((Let (Variable (Generated mon_56)) (Variable (User h))
+             (Let (Variable (Generated mon_57)) (Literal (Int 0))
+              (Application (Variable (Generated mon_56))
+               ((Variable (Generated mon_57)) (Variable (Generated mon_55))))))
+            (Variable (Generated mon_55))
+            (Lambda
+             (((Variable (Generated mon_58)) (Variable (Generated mon_59)))
+              (Let (Variable (Generated mon_60)) (Literal (Int 1))
+               (Application (Variable (Generated mon_58))
+                ((Variable (Generated mon_60)) (Variable (Generated mon_59)))))))))
+          (Application (Variable (Language bind))
+           ((Let (Variable (Generated mon_61)) (Variable (User h))
+             (Let (Variable (Generated mon_62)) (Literal (Int 1))
+              (Application (Variable (Generated mon_61))
+               ((Variable (Generated mon_62)) (Variable (Generated mon_55))))))
+            (Variable (Generated mon_55))
+            (Lambda
+             (((Variable (Generated mon_63)) (Variable (Generated mon_64)))
+              (Let (Variable (Generated mon_65)) (Literal (Int 0))
+               (Application (Variable (Generated mon_63))
+                ((Variable (Generated mon_65)) (Variable (Generated mon_64))))))))))))))
      ((Generated opt_0)
       (((Variable (User z)))
        (Lambda
@@ -464,31 +505,63 @@ Then show with bind-inlining and other rewriting applied
         (Variable (User x)) (Variable (Generated mon_45)))
        (Match_ctl
         (subject
-         (Application (Variable (Language bind))
-          ((Application (Variable (Language bind))
-            ((Let (Variable (Generated mon_46)) (Variable (User f))
-              (Application (Variable (Language bind))
-               ((Let (Variable (Generated mon_47)) (Variable (User g))
+         (Match_ctl
+          (subject
+           (Match_ctl
+            (subject
+             (Let (Variable (Generated mon_46)) (Variable (User f))
+              (Match_ctl
+               (subject
+                (Let (Variable (Generated mon_47)) (Variable (User g))
                  (Let (Variable (Generated mon_48)) (Variable (User x))
                   (Application (Variable (Generated mon_47))
                    ((Variable (Generated mon_48))
-                    (Variable (Generated mon_45))))))
-                (Variable (Generated mon_45))
-                (Lambda
-                 (((Variable (Generated mon_49)) (Variable (Generated mon_50)))
+                    (Variable (Generated mon_45)))))))
+               (pure_branch
+                ((Generated mon_49)
+                 (Let (Variable (Generated mon_50))
+                  (Variable (Generated mon_45))
                   (Application (Variable (Generated mon_46))
                    ((Variable (Generated mon_49))
-                    (Variable (Generated mon_50)))))))))
-             (Variable (Generated mon_45))
-             (Lambda
-              (((Variable (Generated mon_51)) (Variable (Generated mon_52)))
+                    (Variable (Generated mon_50)))))))
+               (yield_branch
+                ((Generated opt_10) (Generated opt_11) (Generated opt_12)
+                 (Construct_yield (marker (Variable (Generated opt_10)))
+                  (op_clause (Variable (Generated opt_11)))
+                  (resumption
+                   (Lambda
+                    (((Variable (Generated opt_13))
+                      (Variable (Generated opt_14)))
+                     (Application (Variable (Language bind))
+                      ((Application (Variable (Generated opt_12))
+                        ((Variable (Generated opt_13))
+                         (Variable (Generated opt_14))))
+                       (Variable (Generated opt_14))
+                       (Application (Variable (Generated opt_9))
+                        ((Variable (Generated mon_46)))))))))))))))
+            (pure_branch
+             ((Generated mon_51)
+              (Let (Variable (Generated mon_52)) (Variable (Generated mon_45))
                (Construct_pure
                 (Let (Variable (Generated mon_53)) (Literal (Int 0))
                  (Operator (Variable (Generated mon_51)) (Int Greater_than)
-                  (Variable (Generated mon_53)))))))))
-           (Variable (Generated mon_45))
-           (Lambda
-            (((Variable (Generated mon_54)) (Variable (Generated mon_55)))
+                  (Variable (Generated mon_53))))))))
+            (yield_branch
+             ((Generated opt_15) (Generated opt_16) (Generated opt_17)
+              (Construct_yield (marker (Variable (Generated opt_15)))
+               (op_clause (Variable (Generated opt_16)))
+               (resumption
+                (Lambda
+                 (((Variable (Generated opt_18)) (Variable (Generated opt_19)))
+                  (Application (Variable (Language bind))
+                   ((Application (Variable (Generated opt_17))
+                     ((Variable (Generated opt_18))
+                      (Variable (Generated opt_19))))
+                    (Variable (Generated opt_19))
+                    (Application (Variable (Generated opt_8)) ())))))))))))
+          (pure_branch
+           ((Generated mon_54)
+            (Let (Variable (Generated mon_55)) (Variable (Generated mon_45))
              (If_then_else (Variable (Generated mon_54))
               (Application (Variable (Language bind))
                ((Let (Variable (Generated mon_56)) (Variable (User h))
@@ -515,7 +588,21 @@ Then show with bind-inlining and other rewriting applied
                   (Let (Variable (Generated mon_65)) (Literal (Int 0))
                    (Application (Variable (Generated mon_63))
                     ((Variable (Generated mon_65))
-                     (Variable (Generated mon_64)))))))))))))))
+                     (Variable (Generated mon_64)))))))))))))
+          (yield_branch
+           ((Generated opt_20) (Generated opt_21) (Generated opt_22)
+            (Construct_yield (marker (Variable (Generated opt_20)))
+             (op_clause (Variable (Generated opt_21)))
+             (resumption
+              (Lambda
+               (((Variable (Generated opt_23)) (Variable (Generated opt_24)))
+                (Application (Variable (Language bind))
+                 ((Application (Variable (Generated opt_22))
+                   ((Variable (Generated opt_23))
+                    (Variable (Generated opt_24))))
+                  (Variable (Generated opt_24))
+                  (Application (Variable (Generated opt_7))
+                   ((Variable (User h))))))))))))))
         (pure_branch
          ((Generated mon_66)
           (Let (Variable (Generated mon_67)) (Variable (Generated mon_45))
@@ -547,19 +634,19 @@ Then show with bind-inlining and other rewriting applied
                      (Application (Variable (Generated opt_0))
                       ((Variable (User z)))))))))))))))))
         (yield_branch
-         ((Generated opt_7) (Generated opt_8) (Generated opt_9)
-          (Construct_yield (marker (Variable (Generated opt_7)))
-           (op_clause (Variable (Generated opt_8)))
+         ((Generated opt_25) (Generated opt_26) (Generated opt_27)
+          (Construct_yield (marker (Variable (Generated opt_25)))
+           (op_clause (Variable (Generated opt_26)))
            (resumption
             (Lambda
-             (((Variable (Generated opt_10)) (Variable (Generated opt_11)))
+             (((Variable (Generated opt_28)) (Variable (Generated opt_29)))
               (Application (Variable (Language bind))
-               ((Application (Variable (Generated opt_9))
-                 ((Variable (Generated opt_10)) (Variable (Generated opt_11))))
-                (Variable (Generated opt_11))
+               ((Application (Variable (Generated opt_27))
+                 ((Variable (Generated opt_28)) (Variable (Generated opt_29))))
+                (Variable (Generated opt_29))
                 (Application (Variable (Generated opt_6))
                  ((Variable (User h)))))))))))))))
-     ((Generated opt_12)
+     ((Generated opt_30)
       (((Variable (Generated mon_75)))
        (Lambda
         (((Variable (Generated mon_91)) (Variable (Generated mon_92)))
@@ -615,19 +702,19 @@ Then show with bind-inlining and other rewriting applied
             (Application (Variable (Generated mon_75))
              ((Variable (Generated mon_91)) (Variable (Generated mon_92)))))))
          (yield_branch
-          ((Generated opt_13) (Generated opt_14) (Generated opt_15)
-           (Construct_yield (marker (Variable (Generated opt_13)))
-            (op_clause (Variable (Generated opt_14)))
+          ((Generated opt_31) (Generated opt_32) (Generated opt_33)
+           (Construct_yield (marker (Variable (Generated opt_31)))
+            (op_clause (Variable (Generated opt_32)))
             (resumption
              (Lambda
-              (((Variable (Generated opt_16)) (Variable (Generated opt_17)))
+              (((Variable (Generated opt_34)) (Variable (Generated opt_35)))
                (Application (Variable (Language bind))
-                ((Application (Variable (Generated opt_15))
-                  ((Variable (Generated opt_16)) (Variable (Generated opt_17))))
-                 (Variable (Generated opt_17))
-                 (Application (Variable (Generated opt_12))
+                ((Application (Variable (Generated opt_33))
+                  ((Variable (Generated opt_34)) (Variable (Generated opt_35))))
+                 (Variable (Generated opt_35))
+                 (Application (Variable (Generated opt_30))
                   ((Variable (Generated mon_75))))))))))))))))
-     ((Generated opt_18)
+     ((Generated opt_36)
       (()
        (Lambda
         (((Variable (Generated mon_102)) (Variable (Generated mon_103)))
@@ -677,15 +764,15 @@ Then show with bind-inlining and other rewriting applied
           (Let (Variable (Generated mon_103)) (Variable (Generated mon_93))
            (Construct_pure (Literal Unit)))))
         (yield_branch
-         ((Generated opt_19) (Generated opt_20) (Generated opt_21)
-          (Construct_yield (marker (Variable (Generated opt_19)))
-           (op_clause (Variable (Generated opt_20)))
+         ((Generated opt_37) (Generated opt_38) (Generated opt_39)
+          (Construct_yield (marker (Variable (Generated opt_37)))
+           (op_clause (Variable (Generated opt_38)))
            (resumption
             (Lambda
-             (((Variable (Generated opt_22)) (Variable (Generated opt_23)))
+             (((Variable (Generated opt_40)) (Variable (Generated opt_41)))
               (Application (Variable (Language bind))
-               ((Application (Variable (Generated opt_21))
-                 ((Variable (Generated opt_22)) (Variable (Generated opt_23))))
-                (Variable (Generated opt_23))
-                (Application (Variable (Generated opt_18)) ()))))))))))))))
+               ((Application (Variable (Generated opt_39))
+                 ((Variable (Generated opt_40)) (Variable (Generated opt_41))))
+                (Variable (Generated opt_41))
+                (Application (Variable (Generated opt_36)) ()))))))))))))))
    (entry_expr (Application (Variable (Language main)) (Nil_evidence_vector))))
