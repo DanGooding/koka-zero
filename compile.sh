@@ -25,7 +25,7 @@ fi
 # intentionally rely on clang to know the system's target triple
 LL_C_FLAGS="-Wall -Wno-override-module -O$OPT_LEVEL"
 
-RUNTIME=$PROJECT_ROOT/lib/runtime/runtime.c
+RUNTIME=$PROJECT_ROOT/lib/execution/runtime/runtime.c
 
 # set DISABLE_GC to run without any deallocator (e.g. for debugging)
 if [ -z "$DISABLE_GC" ]; then

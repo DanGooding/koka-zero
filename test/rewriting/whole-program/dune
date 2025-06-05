@@ -4,5 +4,5 @@
   compile.sh
   ../../../compile.sh
   %{bin:koka-zero}
-  ../../../lib/runtime/runtime.c
-  ../../../lib/runtime/runtime.h))
+  ../../../lib/execution/runtime/runtime.c
+  ../../../lib/execution/runtime/runtime.h))
