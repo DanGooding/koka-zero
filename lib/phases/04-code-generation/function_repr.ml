@@ -39,7 +39,7 @@ let compile_use_callable
       Codegen.use_builder (Llvm.build_icmp Eq tag_bit tag "tag_is_set")
     in
     Helpers.compile_conditional
-      tag_is_set
+      ~cond_i1:tag_is_set
       ~compile_true:(fun () ->
         let%bind code_pointer =
           Codegen.use_builder

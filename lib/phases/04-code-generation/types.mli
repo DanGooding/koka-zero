@@ -1,6 +1,5 @@
 val bool : Llvm.lltype Codegen.t
 val int : Llvm.lltype Codegen.t
-val unit : Llvm.lltype Codegen.t
 val pointer : Llvm.lltype Codegen.t
 
 (** prompt marker *)

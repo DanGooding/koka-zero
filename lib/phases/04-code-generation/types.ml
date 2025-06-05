@@ -7,7 +7,6 @@ let bool =
 ;;
 
 let int = Codegen.use_context Llvm.i64_type
-let unit = Codegen.use_context Llvm.i8_type
 let marker = Codegen.use_context Llvm.i64_type
 let label = Codegen.use_context Llvm.i64_type
 let variant_tag = Codegen.use_context Llvm.i8_type

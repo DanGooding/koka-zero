@@ -9,37 +9,6 @@ let register_name_of_variable = function
   | Variable.Generated s -> "g_" ^ s ^ "_"
 ;;
 
-let const_int : int -> Llvm.llvalue Codegen.t =
-  fun i ->
-  let open Codegen.Let_syntax in
-  let%map int_type = Types.int in
-  Llvm.const_int int_type i
-;;
-
-let const_false : Llvm.llvalue Codegen.t =
-  let open Codegen.Let_syntax in
-  let%map bool_type = Types.bool in
-  (* all zeros *)
-  Llvm.const_null bool_type
-;;
-
-let const_true : Llvm.llvalue Codegen.t =
-  let open Codegen.Let_syntax in
-  let%map bool_type = Types.bool in
-  Llvm.const_int bool_type 1
-;;
-
-let const_bool : bool -> Llvm.llvalue Codegen.t =
-  fun b -> if b then const_true else const_false
-;;
-
-(* unit carries no information, so is only kept for uniformity *)
-let const_unit =
-  let open Codegen.Let_syntax in
-  let%map unit_type = Types.unit in
-  Llvm.const_null unit_type
-;;
-
 let const_tag i =
   let open Codegen.Let_syntax in
   let%map tag_type = Types.variant_tag in
@@ -55,19 +24,6 @@ let const_label i =
   let open Codegen.Let_syntax in
   let%map label_type = Types.label in
   Llvm.const_int label_type i
-;;
-
-let i1_of_bool b =
-  let open Codegen.Let_syntax in
-  let%bind i1 = Codegen.use_context Llvm.i1_type in
-  (* expects only [const_true]/[const_false] *)
-  Codegen.use_builder (Llvm.build_trunc b i1 "bool_bit")
-;;
-
-let bool_of_i1 b =
-  let open Codegen.Let_syntax in
-  let%bind bool = Types.bool in
-  Codegen.use_builder (Llvm.build_zext b bool "bool")
 ;;
 
 let heap_allocate type_ name ~runtime =
@@ -96,16 +52,6 @@ let heap_store_aux
   heap_store t v name ~runtime
 ;;
 
-let heap_store_int = heap_store_aux Types.int "int"
-let heap_store_bool = heap_store_aux Types.bool "bool"
-
-let heap_store_unit ~runtime =
-  let open Codegen.Let_syntax in
-  let%bind u = const_unit in
-  let%bind type_unit = Types.unit in
-  heap_store type_unit u "unit" ~runtime
-;;
-
 let heap_store_marker = heap_store_aux Types.marker "marker"
 let heap_store_label = heap_store_aux Types.label "label"
 
@@ -122,8 +68,6 @@ let dereference_aux
   dereference ptr t name
 ;;
 
-let dereference_int = dereference_aux Types.int "int"
-let dereference_bool = dereference_aux Types.bool "bool"
 let dereference_marker = dereference_aux Types.marker "marker"
 let dereference_label = dereference_aux Types.label "label"
 
@@ -170,7 +114,7 @@ let compile_access_field struct_ptr ~struct_type ~i name =
   Codegen.use_builder (Llvm.build_load field_type field_ptr name)
 ;;
 
-let compile_conditional cond ~compile_true ~compile_false =
+let compile_conditional ~cond_i1 ~compile_true ~compile_false =
   let open Codegen.Let_syntax in
   let%bind if_start_block = Codegen.insertion_block_exn in
   let current_function = Llvm.block_parent if_start_block in
@@ -188,7 +132,7 @@ let compile_conditional cond ~compile_true ~compile_false =
   in
   let%bind _branch =
     Codegen.use_builder
-      (Llvm.build_cond_br cond true_start_block false_start_block)
+      (Llvm.build_cond_br cond_i1 true_start_block false_start_block)
   in
   (* compile yes branch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end true_start_block) in
