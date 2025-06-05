@@ -3,7 +3,6 @@
  (public_name koka-zero.evidence-translation)
  (libraries
   core
-  koka_zero_inference
   koka_zero_util
   koka_zero_ir_common
   koka_zero_ir_explicit_syntax

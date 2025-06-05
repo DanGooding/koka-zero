@@ -8,8 +8,6 @@ let rewrite_program program =
   Generation.run (Rewriting.rewrite_program program) ~name_prefix:"opt_"
 ;;
 
-module Free_variables = Free_variables
-
 module Private = struct
   let translate_expr expr ~evv =
     Generation.run (Translation.translate_expr expr ~evv)

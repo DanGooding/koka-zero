@@ -12,8 +12,6 @@ val rewrite_program
   :  Evidence_passing_syntax.Program.t
   -> Evidence_passing_syntax.Program.t Or_static_error.t
 
-module Free_variables = Free_variables
-
 module Private : sig
   (** apply the evidence passing translation to a lambda, adding an evidence
       vector as its final parameter. Note generated names will not be unique

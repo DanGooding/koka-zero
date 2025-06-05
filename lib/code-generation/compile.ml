@@ -1,7 +1,6 @@
 open Core
 open Import
-module EPS = Koka_zero_evidence_translation.Evidence_passing_syntax
-module Free_variables = Koka_zero_evidence_translation.Free_variables
+module EPS = Evidence_passing_syntax
 
 (* TODO: need a type system for telling when llvalues are
    pointers(opaque/typed)/values/*)

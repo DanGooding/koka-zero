@@ -1,3 +1,5 @@
+open! Core
+open! Import
 module Codegen_error = Codegen_error
 
 let compile_then_write_program = Compile.compile_then_write_program

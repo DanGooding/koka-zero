@@ -1,6 +1,6 @@
 open! Core
 open! Import
-open Koka_zero_evidence_translation.Evidence_passing_syntax
+open Evidence_passing_syntax
 
 let eval_literal : Literal.t -> Value.primitive = function
   | Literal.Int i -> Value.Int i

@@ -1,5 +1,6 @@
-open Import
-module EPS = Koka_zero_evidence_translation.Evidence_passing_syntax
+open! Core
+open! Import
+module EPS = Evidence_passing_syntax
 
 (** compile a program, then write the resulting module as textual `.ll` code to
     a file *)

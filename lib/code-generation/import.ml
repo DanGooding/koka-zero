@@ -10,5 +10,8 @@ include struct
   module Effect_label = Effect.Label
 end
 
-module Evidence_passing_syntax =
-  Koka_zero_ir_evidence_passing_syntax.Evidence_passing_syntax
+include struct
+  open Koka_zero_ir_evidence_passing_syntax
+  module Evidence_passing_syntax = Evidence_passing_syntax
+  module Free_variables = Free_variables
+end

@@ -18,4 +18,5 @@ include struct
   open Koka_zero_ir_evidence_passing_syntax
   module Evidence_passing_syntax = Evidence_passing_syntax
   module Primitive_names = Primitive_names
+  module Free_variables = Free_variables
 end

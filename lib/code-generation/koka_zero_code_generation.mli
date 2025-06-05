@@ -1,5 +1,5 @@
-open Import
-open Koka_zero_evidence_translation
+open! Core
+open! Import
 module Codegen_error = Codegen_error
 
 (** compile a program, then write the resulting module as textual `.ll` code to
