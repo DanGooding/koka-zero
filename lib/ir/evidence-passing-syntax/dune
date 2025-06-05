@@ -1,0 +1,6 @@
+(library
+ (name koka_zero_ir_evidence_passing_syntax)
+ (public_name koka-zero.ir.evidence-passing)
+ (libraries core koka_zero_util koka_zero_ir_common)
+ (preprocess
+  (pps ppx_jane)))

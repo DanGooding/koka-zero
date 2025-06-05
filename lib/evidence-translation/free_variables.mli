@@ -1,3 +1,4 @@
+open! Core
 open Import
 open Evidence_passing_syntax
 

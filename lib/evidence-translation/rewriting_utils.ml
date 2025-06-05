@@ -1,4 +1,5 @@
-open Core
+open! Core
+open! Import
 open Evidence_passing_syntax
 
 (** apply the given rewrite at every node. This performs one iteration of non

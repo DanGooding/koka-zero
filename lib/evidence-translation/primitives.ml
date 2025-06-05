@@ -1,14 +1,6 @@
 open Core
-open Evidence_passing_syntax
 open Import
-
-module Names = struct
-  let bind = Variable.of_language_internal "bind"
-  let prompt = Variable.of_language_internal "prompt"
-  let handler = Variable.of_language_internal "handler"
-  let under = Variable.of_language_internal "under"
-  let perform = Variable.of_language_internal "perform"
-end
+open Evidence_passing_syntax
 
 let map_name_lambda ~(name : Variable.t) (lambda : Expr.lambda Generation.t)
   : Expr.fix_lambda Generation.t
@@ -22,7 +14,7 @@ let map_name_lambda ~(name : Variable.t) (lambda : Expr.lambda Generation.t)
 let bind =
   let open Generation.Let_syntax in
   map_name_lambda
-    ~name:Names.bind
+    ~name:Primitive_names.bind
     (Generation.make_lambda_3 (fun e w g ->
        Generation.make_match_ctl
          e
@@ -34,7 +26,7 @@ let bind =
              Generation.make_lambda_expr_2 (fun x w ->
                (* \x w. (resume(x w), w) >>= g *)
                Expr.Application
-                 ( Expr.Variable Names.bind
+                 ( Expr.Variable Primitive_names.bind
                  , [ Expr.Application (resumption, [ x; w ]); w; g ] )
                |> Generation.return)
            in
@@ -46,7 +38,7 @@ let bind =
 let prompt =
   let open Generation.Let_syntax in
   map_name_lambda
-    ~name:Names.prompt
+    ~name:Primitive_names.prompt
     (Generation.make_lambda_5 (fun label marker handler e vector ->
        let vector' =
          Expr.Cons_evidence_vector
@@ -70,7 +62,7 @@ let prompt =
                    |> Generation.return)
                in
                Expr.Application
-                 ( Expr.Variable Names.prompt
+                 ( Expr.Variable Primitive_names.prompt
                  , [ label; marker; handler; resume_with_x; vector ] ))
            in
            let handle_here =
@@ -86,11 +78,11 @@ let prompt =
 (** handler : (label, hnd<label,e,a>) -> (evv<label|e> ->) *)
 let handler =
   map_name_lambda
-    ~name:Names.handler
+    ~name:Primitive_names.handler
     (Generation.make_lambda_2 (fun label handler ->
        Generation.make_lambda_expr_2 (fun action vector ->
          Expr.Application
-           ( Expr.Variable Names.prompt
+           ( Expr.Variable Primitive_names.prompt
              (* TODO: this has a side effect - is it correctly ordered? *)
            , [ label; Expr.Fresh_marker; handler; action; vector ] )
          |> Generation.return)))
@@ -100,7 +92,7 @@ let handler =
 let under =
   let open Generation.Let_syntax in
   map_name_lambda
-    ~name:Names.under
+    ~name:Primitive_names.under
     (Generation.make_lambda_4 (fun label handler_site_vector x g ->
        let run_at_handler = Expr.Application (g, [ x; handler_site_vector ]) in
        Generation.make_match_ctl
@@ -115,7 +107,7 @@ let under =
                  Expr.Get_evidence_handler_site_vector evidence
                in
                Expr.Application
-                 ( Expr.Variable Names.under
+                 ( Expr.Variable Primitive_names.under
                  , [ label; handler_site_vector; x; resumption ] )
                |> Generation.return)
            in
@@ -127,7 +119,7 @@ let under =
 let perform =
   let open Generation.Let_syntax in
   map_name_lambda
-    ~name:Names.perform
+    ~name:Primitive_names.perform
     (Generation.make_lambda_2 (fun label select ->
        Generation.make_lambda_expr_2 (fun arg vector ->
          let evidence = Expr.Lookup_evidence { label; vector } in
@@ -154,7 +146,7 @@ let perform =
                Expr.Get_evidence_handler_site_vector evidence
              in
              Expr.Application
-               ( Expr.Variable Names.under
+               ( Expr.Variable Primitive_names.under
                , [ label; handler_site_vector; arg; op_clause ] )
              |> Generation.return))))
 ;;

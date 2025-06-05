@@ -1,3 +1,5 @@
+open! Core
+
 let%expect_test "toplevel value declaration" =
   let code =
     {|

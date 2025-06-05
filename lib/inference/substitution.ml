@@ -1,14 +1,11 @@
-open Core
+open! Core
+open! Import
 
-module T = struct
-  type t =
-    { type_subst : Type.Mono.t Type.Metavariable.Map.t
-    ; effect_subst : Effect.t Effect.Metavariable.Map.t
-    }
-  [@@deriving sexp]
-end (* disable "fragile-match" for generated code *) [@warning "-4"]
-
-include T
+type t =
+  { type_subst : Type.Mono.t Type.Metavariable.Map.t
+  ; effect_subst : Effect.t Effect.Metavariable.Map.t
+  }
+[@@deriving sexp_of]
 
 let identity =
   let type_subst = Type.Metavariable.Map.empty in

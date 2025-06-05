@@ -1,5 +1,5 @@
-open Core
-open Koka_zero_util
+open! Core
+open! Import
 
 (* TODO: having both [Infer] and [Inference] is terrible naming! *)
 

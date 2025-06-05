@@ -1,14 +1,11 @@
-open Core
+open! Core
+open! Import
 
 module Binding = struct
-  module T = struct
-    type t =
-      | Value of Type.t
-      | Operation of Effect.Label.t * Type.t
-    [@@deriving sexp]
-  end (* disable "fragile-match" for generated code *) [@warning "-4"]
-
-  include T
+  type t =
+    | Value of Type.t
+    | Operation of Effect.Label.t * Type.t
+  [@@deriving sexp_of]
 
   let apply_substitution t subst =
     match t with
@@ -27,7 +24,7 @@ module Entry = struct
     { binding : Binding.t
     ; shadowable : bool
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 module Or_cannot_shadow = struct
@@ -35,10 +32,10 @@ module Or_cannot_shadow = struct
     [ `Ok of 'a
     | `Cannot_shadow
     ]
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
-type t = Entry.t Variable.Map.t [@@deriving sexp]
+type t = Entry.t Variable.Map.t [@@deriving sexp_of]
 
 let can_bind t var =
   match Map.find t var with

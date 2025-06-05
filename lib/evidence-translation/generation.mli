@@ -1,5 +1,4 @@
 open Core
-open Koka_zero_util
 open Import
 module EPS = Evidence_passing_syntax
 module E = EPS.Expr

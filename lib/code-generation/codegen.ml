@@ -1,6 +1,5 @@
-open Core
-open Koka_zero_util
-open Import
+open! Core
+open! Import
 
 module Mutable_state = struct
   type t =

@@ -1,6 +1,5 @@
 open Core
-open Koka_zero_util
-open Koka_zero_inference
+open! Import
 module Min = Minimal_syntax
 module Syntax = Koka_zero_ir_full_syntax.Syntax
 
@@ -207,20 +206,20 @@ and simplify_type_result { Syntax.effect_; result }
   effect_, t_result
 ;;
 
-let simplify_literal (lit : Syntax.literal) : Min.Literal.t =
+let simplify_literal (lit : Syntax.literal) : Literal.t =
   match lit with
-  | Syntax.Unit -> Min.Literal.Unit
-  | Syntax.Int i -> Min.Literal.Int i
-  | Syntax.Bool b -> Min.Literal.Bool b
+  | Syntax.Unit -> Literal.Unit
+  | Syntax.Int i -> Literal.Int i
+  | Syntax.Bool b -> Literal.Bool b
 ;;
 
-let simplify_parameter_id : Syntax.parameter_id -> Min.Parameter.t = function
-  | Syntax.Parameter_id x -> simplify_identifier x |> Min.Parameter.Variable
-  | Syntax.Parameter_wildcard -> Min.Parameter.Wildcard
+let simplify_parameter_id : Syntax.parameter_id -> Parameter.t = function
+  | Syntax.Parameter_id x -> simplify_identifier x |> Parameter.Variable
+  | Syntax.Parameter_wildcard -> Parameter.Wildcard
 ;;
 
 let simplify_parameter
-  : Syntax.parameter -> (Min.Parameter.t * Type.Mono.t) Or_static_error.t
+  : Syntax.parameter -> (Parameter.t * Type.Mono.t) Or_static_error.t
   =
   fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
@@ -229,13 +228,13 @@ let simplify_parameter
   p, t
 ;;
 
-let simplify_pattern : Syntax.pattern -> Min.Parameter.t = function
-  | Syntax.Pattern_id x -> simplify_identifier x |> Min.Parameter.Variable
-  | Syntax.Pattern_wildcard -> Min.Parameter.Wildcard
+let simplify_pattern : Syntax.pattern -> Parameter.t = function
+  | Syntax.Pattern_id x -> simplify_identifier x |> Parameter.Variable
+  | Syntax.Pattern_wildcard -> Parameter.Wildcard
 ;;
 
 let simplify_annotated_pattern { Syntax.pattern; scheme }
-  : Min.Parameter.t Or_static_error.t
+  : Parameter.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let p = simplify_pattern pattern in
@@ -247,7 +246,7 @@ let simplify_annotated_pattern { Syntax.pattern; scheme }
 ;;
 
 let simplify_pattern_parameter { Syntax.pattern; type_ }
-  : (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
+  : (Parameter.t * Type.Mono.t option) Or_static_error.t
   =
   let open Result.Let_syntax in
   let p = simplify_pattern pattern in
@@ -259,7 +258,7 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
 
 let simplify_operation_parameter
   :  Syntax.operation_parameter
-  -> (Min.Parameter.t * Type.Mono.t option) Or_static_error.t
+  -> (Parameter.t * Type.Mono.t option) Or_static_error.t
   =
   fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
@@ -271,31 +270,31 @@ let simplify_operation_parameter
 ;;
 
 let simplify_binary_operator (op : Syntax.binary_operator)
-  : Min.Operator.t Or_static_error.t
+  : Operator.t Or_static_error.t
   =
   match op with
-  | Syntax.Plus -> Result.Ok Min.Operator.(Int Int.Plus)
-  | Syntax.Minus -> Result.Ok Min.Operator.(Int Int.Minus)
-  | Syntax.Times -> Result.Ok Min.Operator.(Int Int.Times)
-  | Syntax.Divide -> Result.Ok Min.Operator.(Int Int.Divide)
-  | Syntax.Modulo -> Result.Ok Min.Operator.(Int Int.Modulo)
-  | Syntax.And -> Result.Ok Min.Operator.(Bool Bool.And)
-  | Syntax.Or -> Result.Ok Min.Operator.(Bool Bool.Or)
+  | Syntax.Plus -> Result.Ok Operator.(Int Int.Plus)
+  | Syntax.Minus -> Result.Ok Operator.(Int Int.Minus)
+  | Syntax.Times -> Result.Ok Operator.(Int Int.Times)
+  | Syntax.Divide -> Result.Ok Operator.(Int Int.Divide)
+  | Syntax.Modulo -> Result.Ok Operator.(Int Int.Modulo)
+  | Syntax.And -> Result.Ok Operator.(Bool Bool.And)
+  | Syntax.Or -> Result.Ok Operator.(Bool Bool.Or)
   (* to avoid worrying about overloading, only supporting integer equality tests
      for now *)
-  | Syntax.Equals -> Result.Ok Min.Operator.(Int Int.Equals)
-  | Syntax.Not_equal -> Result.Ok Min.Operator.(Int Int.Not_equal)
-  | Syntax.Less_than -> Result.Ok Min.Operator.(Int Int.Less_than)
-  | Syntax.Less_equal -> Result.Ok Min.Operator.(Int Int.Less_equal)
-  | Syntax.Greater_than -> Result.Ok Min.Operator.(Int Int.Greater_than)
-  | Syntax.Greater_equal -> Result.Ok Min.Operator.(Int Int.Greater_equal)
+  | Syntax.Equals -> Result.Ok Operator.(Int Int.Equals)
+  | Syntax.Not_equal -> Result.Ok Operator.(Int Int.Not_equal)
+  | Syntax.Less_than -> Result.Ok Operator.(Int Int.Less_than)
+  | Syntax.Less_equal -> Result.Ok Operator.(Int Int.Less_equal)
+  | Syntax.Greater_than -> Result.Ok Operator.(Int Int.Greater_than)
+  | Syntax.Greater_equal -> Result.Ok Operator.(Int Int.Greater_equal)
 ;;
 
 let simplify_unary_operator (op : Syntax.unary_operator)
-  : Min.Operator.Unary.t Or_static_error.t
+  : Operator.Unary.t Or_static_error.t
   =
   match op with
-  | Syntax.Exclamation -> Result.Ok Min.Operator.(Unary.Bool Bool.Unary.Not)
+  | Syntax.Exclamation -> Result.Ok Operator.(Unary.Bool Bool.Unary.Not)
 ;;
 
 let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
@@ -366,8 +365,8 @@ and simplify_declaration_preceding
     let%bind p = simplify_annotated_pattern pattern in
     let%map e_x = simplify_block block in
     (match p with
-     | Min.Parameter.Variable x -> Min.Expr.Let_mono (x, e_x, e)
-     | Min.Parameter.Wildcard -> Min.Expr.Seq (e_x, e))
+     | Parameter.Variable x -> Min.Expr.Let_mono (x, e_x, e)
+     | Parameter.Wildcard -> Min.Expr.Seq (e_x, e))
 
 (** given the simplification of the tail of a block, and a statement (its head)
     produce the resulting expression *)
@@ -498,7 +497,7 @@ and simplify_operation_handler
 ;;
 
 let simplify_operation_declaration { Syntax.id; type_parameters; shape }
-  : (Variable.t * Min.Decl.Effect.Operation.t) Or_static_error.t
+  : (Variable.t * Effect_decl.Operation.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind shape, parameters, t_answer =
@@ -527,14 +526,12 @@ let simplify_operation_declaration { Syntax.id; type_parameters; shape }
   in
   let%map t_answer' = simplify_type_as_type t_answer in
   ( id'
-  , { Min.Decl.Effect.Operation.shape
-    ; argument = t_parameter
-    ; answer = t_answer'
-    } )
+  , { Effect_decl.Operation.shape; argument = t_parameter; answer = t_answer' }
+  )
 ;;
 
 let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
-  : Min.Decl.Effect.t Or_static_error.t
+  : Effect_decl.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let name = simplify_var_id_to_effect_label id in
@@ -560,7 +557,7 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
       Static_error.syntax_error message |> Result.Error
     | `Ok operations' -> Result.Ok operations'
   in
-  { Min.Decl.Effect.name; operations = operations' }
+  { Effect_decl.name; operations = operations' }
 ;;
 
 let simplify_pure_declaration

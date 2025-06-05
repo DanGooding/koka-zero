@@ -5,9 +5,9 @@ open Core
 
 module Variable : sig
   (** a variable standing for a type, either free, or quantified in a [Poly.t]*)
-  type t [@@deriving sexp]
+  type t [@@deriving sexp_of]
 
-  include Comparable.S with type t := t
+  include Comparable.S_plain with type t := t
 
   module Name_source : sig
     include Name_source.S with type Name.t := t
@@ -17,9 +17,9 @@ end
 module Metavariable : sig
   (** a placeholder variable introduced during unification, a type will be
       substituted for this *)
-  type t [@@deriving sexp]
+  type t [@@deriving sexp_of]
 
-  include Comparable.S with type t := t
+  include Comparable.S_plain with type t := t
 
   module Name_source : sig
     include Name_source.S with type Name.t := t
@@ -31,7 +31,7 @@ module Primitive : sig
     | Int
     | Bool
     | Unit
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 
@@ -52,7 +52,7 @@ module Mono : sig
     | Variable of Variable.t
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 
@@ -72,7 +72,7 @@ module Poly : sig
     ; forall_bound_effects : Effect.Variable.Set.t
     ; monotype : Mono.t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 end
@@ -81,7 +81,7 @@ end
 type t =
   | Mono of Mono.t
   | Poly of Poly.t
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 (** find all the metavariables in this type *)
 val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t

@@ -1,3 +1,5 @@
+open! Core
+open! Import
 open Evidence_passing_syntax
 
 (** apply optimising tree transformations to a program *)

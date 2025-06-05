@@ -4,7 +4,8 @@
   core
   koka-zero.evidence-translation
   koka-zero.inference
-  koka-zero.util)
+  koka-zero.util
+  koka-zero.ir.common)
  (inline_tests)
  (preprocess
   (pps ppx_jane)))

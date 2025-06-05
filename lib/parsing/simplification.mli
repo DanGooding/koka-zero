@@ -6,8 +6,6 @@ open Import
     unsupported koka syntax *)
 val simplify_program
   :  Syntax.program
-  -> Koka_zero_inference.Minimal_syntax.Program.t Or_static_error.t
+  -> Minimal_syntax.Program.t Or_static_error.t
 
-val simplify_expr
-  :  Syntax.expr
-  -> Koka_zero_inference.Minimal_syntax.Expr.t Or_static_error.t
+val simplify_expr : Syntax.expr -> Minimal_syntax.Expr.t Or_static_error.t

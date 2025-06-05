@@ -1,5 +1,5 @@
-open Koka_zero_evidence_translation
-open Import
+open! Core
+open! Import
 module Runtime_error = Runtime_error
 module Value = Value
 

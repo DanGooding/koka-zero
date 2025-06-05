@@ -1,3 +1,5 @@
+open! Core
+open! Import
 module Evidence_passing_syntax = Evidence_passing_syntax
 
 let translate program = Generation.run (Translation.translate program)
@@ -7,7 +9,6 @@ let rewrite_program program =
 ;;
 
 module Free_variables = Free_variables
-module Primitives = Primitives
 
 module Private = struct
   let translate_expr expr ~evv =

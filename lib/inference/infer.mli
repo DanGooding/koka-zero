@@ -1,4 +1,5 @@
-open Koka_zero_util
+open! Core
+open! Import
 
 (** typecheck a program, converting to a form with necessary types/effects made
     explicit. And add a toplevel entry point to call main(). Returns a

@@ -1,3 +1,5 @@
+open! Core
+
 let%expect_test "function without parameters" =
   let code =
     {|

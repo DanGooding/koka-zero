@@ -1,6 +1,11 @@
 (library
  (name koka_zero_inference)
  (public_name koka-zero.inference)
- (libraries core koka_zero_util)
+ (libraries
+  core
+  koka_zero_util
+  koka_zero_ir_common
+  koka_zero_ir_minimal_syntax
+  koka_zero_ir_explicit_syntax)
  (preprocess
   (pps ppx_jane)))

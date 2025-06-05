@@ -1,4 +1,5 @@
 open! Core
+open! Import
 module EPS = Evidence_passing_syntax
 
 type t =
@@ -49,7 +50,7 @@ let make_bind_or_let
         to_effectful result)
     in
     Effectful
-      (EPS.Expr.Application (Variable Primitives.Names.bind, [ expr; evv; rhs ]))
+      (EPS.Expr.Application (Variable Primitive_names.bind, [ expr; evv; rhs ]))
 ;;
 
 let make_map_or_let t ~evv ~f =

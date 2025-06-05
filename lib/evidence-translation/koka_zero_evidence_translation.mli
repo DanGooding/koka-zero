@@ -1,5 +1,5 @@
-open Koka_zero_inference
-open Koka_zero_util
+open! Core
+open! Import
 module Evidence_passing_syntax = Evidence_passing_syntax
 
 (** apply the evidence-passing translation to a program *)
@@ -13,10 +13,6 @@ val rewrite_program
   -> Evidence_passing_syntax.Program.t Or_static_error.t
 
 module Free_variables = Free_variables
-
-module Primitives : sig
-  module Names = Primitives.Names
-end
 
 module Private : sig
   (** apply the evidence passing translation to a lambda, adding an evidence

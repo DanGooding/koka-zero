@@ -1,4 +1,5 @@
-open Import
+open! Core
+open! Import
 open Evidence_passing_syntax
 
 let is_name : Expr.t -> Variable.t -> bool =
@@ -18,7 +19,7 @@ let left_unit : Expr.t -> Expr.t Modified.t =
         ( bind
         , [ Expr.Construct_pure e1; vector; Expr.Lambda ([ y; vector' ], e2) ]
         )
-      when is_name bind Primitives.Names.bind ->
+      when is_name bind Primitive_names.bind ->
       Expr.Let (y, e1, Expr.Let (vector', vector, e2)) |> Some
     | _ -> None)
 ;;

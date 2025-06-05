@@ -1,9 +1,5 @@
 open Core
 open Import
-module Literal = Koka_zero_inference.Minimal_syntax.Literal
-module Operator = Koka_zero_inference.Minimal_syntax.Operator
-module Keyword = Koka_zero_inference.Minimal_syntax.Keyword
-module Parameter = Koka_zero_inference.Minimal_syntax.Parameter
 
 module Expr = struct
   module T = struct
@@ -62,10 +58,10 @@ module Expr = struct
       | Get_evidence_handler of t
       | Get_evidence_handler_site_vector of t
       | Impure_built_in of impure_built_in
-    [@@deriving sexp]
+    [@@deriving sexp_of]
 
-    and lambda = Parameter.t list * t [@@deriving sexp]
-    and fix_lambda = Variable.t * lambda [@@deriving sexp]
+    and lambda = Parameter.t list * t [@@deriving sexp_of]
+    and fix_lambda = Variable.t * lambda [@@deriving sexp_of]
 
     and impure_built_in =
       | Impure_println
@@ -74,7 +70,7 @@ module Expr = struct
           ; newline : bool
           }
       | Impure_read_int
-    [@@deriving sexp]
+    [@@deriving sexp_of]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
@@ -86,11 +82,11 @@ module Program = struct
       { name : Effect.Label.t
       ; operations : Variable.Set.t
       }
-    [@@deriving sexp]
+    [@@deriving sexp_of]
   end
 
   module Fun_decl = struct
-    type t = Expr.fix_lambda [@@deriving sexp]
+    type t = Expr.fix_lambda [@@deriving sexp_of]
   end
 
   type t =
@@ -98,5 +94,5 @@ module Program = struct
     ; fun_declarations : Fun_decl.t list
     ; entry_expr : Expr.t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end

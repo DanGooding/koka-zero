@@ -28,7 +28,7 @@ module Primitive = struct
       | Int
       | Bool
       | Unit
-    [@@deriving sexp]
+    [@@deriving sexp_of]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
@@ -53,7 +53,7 @@ module Mono = struct
       | Variable of Variable.t
       | Metavariable of Metavariable.t
       | Primitive of Primitive.t
-    [@@deriving sexp]
+    [@@deriving sexp_of]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
@@ -91,15 +91,13 @@ module Mono = struct
   ;;
 end
 
-(* TODO: probably deserves its own module *)
 module Poly = struct
   type t =
-    { (* TODO: make these private *)
-      forall_bound : Variable.Set.t
+    { forall_bound : Variable.Set.t
     ; forall_bound_effects : Effect.Variable.Set.t
     ; monotype : Mono.t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   let metavariables t =
     let { monotype; _ } = t in
@@ -107,14 +105,10 @@ module Poly = struct
   ;;
 end
 
-module T = struct
-  type t =
-    | Mono of Mono.t
-    | Poly of Poly.t
-  [@@deriving sexp]
-end (* disable "fragile-match" for generated code *) [@warning "-4"]
-
-include T
+type t =
+  | Mono of Mono.t
+  | Poly of Poly.t
+[@@deriving sexp_of]
 
 let metavariables = function
   | Poly p -> Poly.metavariables p

@@ -12,7 +12,7 @@ module Closure : sig
     (** describes the statically known shape and contents of a closure.
         the outer list stores the closure, then it's parent, then grandparent etc.
         the inner list stores the list of variables at one level, in order *)
-    type t = Variable.t list list [@@deriving sexp]
+    type t = Variable.t list list [@@deriving sexp_of]
 
     val empty : t
   end

@@ -1,6 +1,5 @@
-open Koka_zero_inference
-module M = Minimal_syntax
-module E = M.Expr
+open! Core
+open! Import
 
 val print_check_program_result : M.Program.t -> unit
 val print_check_program_without_main_result : M.Program.t -> unit
@@ -11,8 +10,10 @@ val print_expr_inference_result
   -> unit
 
 module Parameter : sig
-  val var : string -> M.Parameter.t
-  val wildcard : M.Parameter.t
+  include module type of Parameter
+
+  val var : string -> Parameter.t
+  val wildcard : Parameter.t
 end
 
 module Expr : sig
@@ -22,15 +23,15 @@ module Expr : sig
   val lit_unit : E.t
   val decl_main : M.Decl.t
   val make_handle_expr : E.handler -> E.t -> E.t
-  val decl_read : M.Decl.Effect.t
-  val decl_exn : M.Decl.Effect.t
-  val decl_query : M.Decl.Effect.t
-  val decl_state : M.Decl.Effect.t
-  val decl_choose : M.Decl.Effect.t
+  val decl_read : Effect_decl.t
+  val decl_exn : Effect_decl.t
+  val decl_query : Effect_decl.t
+  val decl_state : Effect_decl.t
+  val decl_choose : Effect_decl.t
 
   val singleton_handler
     :  op_name:Variable.t
-    -> op_argument:M.Parameter.t
+    -> op_argument:Parameter.t
     -> op_body:E.t
     -> shape:Operation_shape.t
     -> E.handler

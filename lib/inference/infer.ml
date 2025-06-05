@@ -1,26 +1,25 @@
-open Core
-open Koka_zero_util
+open! Core
+open! Import
 module Min = Minimal_syntax
 module Expl = Explicit_syntax
 
-let infer_literal : Min.Literal.t -> Type.Primitive.t * Expl.Literal.t
-  = function
-  | Min.Literal.Int i -> Type.Primitive.Int, Expl.Literal.Int i
-  | Min.Literal.Bool b -> Type.Primitive.Bool, Expl.Literal.Bool b
-  | Min.Literal.Unit -> Type.Primitive.Unit, Expl.Literal.Unit
+let literal_type : Literal.t -> Type.Primitive.t = function
+  | Literal.Int _ -> Type.Primitive.Int
+  | Literal.Bool _ -> Type.Primitive.Bool
+  | Literal.Unit -> Type.Primitive.Unit
 ;;
 
-let operand_type : Min.Operator.t -> Type.Primitive.t = function
-  | Min.Operator.Int _ -> Type.Primitive.Int
-  | Min.Operator.Bool _ -> Type.Primitive.Bool
+let operand_type : Operator.t -> Type.Primitive.t = function
+  | Operator.Int _ -> Type.Primitive.Int
+  | Operator.Bool _ -> Type.Primitive.Bool
 ;;
 
-let operator_result_type : Min.Operator.t -> Type.Primitive.t = function
-  | Min.Operator.Bool Min.Operator.Bool.(And | Or) -> Type.Primitive.Bool
-  | Min.Operator.Int Min.Operator.Int.(Plus | Minus | Times | Divide | Modulo)
-    -> Type.Primitive.Int
-  | Min.Operator.Int
-      Min.Operator.Int.(
+let operator_result_type : Operator.t -> Type.Primitive.t = function
+  | Operator.Bool Operator.Bool.(And | Or) -> Type.Primitive.Bool
+  | Operator.Int Operator.Int.(Plus | Minus | Times | Divide | Modulo) ->
+    Type.Primitive.Int
+  | Operator.Int
+      Operator.Int.(
         ( Equals
         | Not_equal
         | Less_than
@@ -29,19 +28,12 @@ let operator_result_type : Min.Operator.t -> Type.Primitive.t = function
         | Greater_equal )) -> Type.Primitive.Bool
 ;;
 
-let convert_operator : Min.Operator.t -> Expl.Operator.t = fun op -> op
-
-let unary_operand_type : Min.Operator.Unary.t -> Type.Primitive.t = function
-  | Min.Operator.Unary.Bool Min.Operator.Bool.Unary.Not -> Type.Primitive.Bool
+let unary_operand_type : Operator.Unary.t -> Type.Primitive.t = function
+  | Operator.Unary.Bool Operator.Bool.Unary.Not -> Type.Primitive.Bool
 ;;
 
-let unary_operator_result_type : Min.Operator.Unary.t -> Type.Primitive.t
-  = function
-  | Min.Operator.Unary.Bool Min.Operator.Bool.Unary.Not -> Type.Primitive.Bool
-;;
-
-let convert_unary_operator : Min.Operator.Unary.t -> Expl.Operator.Unary.t =
-  fun op -> op
+let unary_operator_result_type : Operator.Unary.t -> Type.Primitive.t = function
+  | Operator.Unary.Bool Operator.Bool.Unary.Not -> Type.Primitive.Bool
 ;;
 
 let lookup_effect_for_handler
@@ -195,20 +187,18 @@ let rec infer
   | Min.Expr.Operator (expr_l, op, expr_r) ->
     let%bind t_l, eff_l, expr_l' = infer ~env ~effect_env expr_l in
     let%bind t_r, eff_r, expr_r' = infer ~env ~effect_env expr_r in
-    let op' = convert_operator op in
     let t_operand = operand_type op |> Type.Mono.Primitive in
     let t_result = operator_result_type op |> Type.Mono.Primitive in
     let%bind () = Inference.unify t_l t_operand in
     let%bind () = Inference.unify t_r t_operand in
     let%map () = Inference.unify_effects eff_l eff_r in
-    t_result, eff_l, Expl.Expr.Operator (expr_l', op', expr_r')
+    t_result, eff_l, Expl.Expr.Operator (expr_l', op, expr_r')
   | Min.Expr.Unary_operator (uop, expr_arg) ->
     let%bind t_argument, eff_arg, expr_arg' = infer ~env ~effect_env expr_arg in
-    let uop' = convert_unary_operator uop in
     let t_operand = unary_operand_type uop |> Type.Mono.Primitive in
     let t_result = unary_operator_result_type uop |> Type.Mono.Primitive in
     let%map () = Inference.unify t_operand t_argument in
-    t_result, eff_arg, Expl.Expr.Unary_operator (uop', expr_arg')
+    t_result, eff_arg, Expl.Expr.Unary_operator (uop, expr_arg')
   | Min.Expr.Impure_built_in impure ->
     let%map t, eff, impure' = infer_impure_built_in ~env ~effect_env impure in
     t, eff, Expl.Expr.Impure_built_in impure'
@@ -225,8 +215,8 @@ and infer_value
   let open Inference.Let_syntax in
   match v with
   | Min.Expr.Literal lit ->
-    let t, lit' = infer_literal lit in
-    return (Type.Mono.Primitive t, Expl.Expr.Literal lit')
+    let t = literal_type lit in
+    return (Type.Mono.Primitive t, Expl.Expr.Literal lit)
   | Min.Expr.Variable var ->
     (match Context.find env var with
      | None ->
@@ -261,7 +251,7 @@ and infer_lambda
   =
   fun (ps, expr_body) ~env ~effect_env ->
   let open Inference.Let_syntax in
-  let%bind (ps_to_ts : (Min.Parameter.t * Type.Mono.t) list) =
+  let%bind (ps_to_ts : (Parameter.t * Type.Mono.t) list) =
     List.map ps ~f:(fun p ->
       let%map t_p = Inference.fresh_metavariable in
       let t_p = Type.Mono.Metavariable t_p in
@@ -272,8 +262,8 @@ and infer_lambda
   let (xs_to_ts : (Variable.t * Type.Mono.t) list) =
     List.filter_map ps_to_ts ~f:(fun (p, t) ->
       match p with
-      | Min.Parameter.Wildcard -> None
-      | Min.Parameter.Variable x -> Some (x, t))
+      | Parameter.Wildcard -> None
+      | Parameter.Variable x -> Some (x, t))
   in
   let%bind () =
     match Variable.Map.of_alist xs_to_ts with
@@ -309,8 +299,8 @@ and infer_fix_lambda
   let%bind () =
     let vs =
       List.filter_map ps ~f:(function
-        | Min.Parameter.Variable v -> Some v
-        | Min.Parameter.Wildcard -> None)
+        | Parameter.Variable v -> Some v
+        | Parameter.Wildcard -> None)
     in
     if List.mem vs f ~equal:Variable.equal
     then (
@@ -505,7 +495,7 @@ and infer_operation
       Type.Mono (Type.Mono.Arrow ([ t_answer ], eff_rest, t_handler_result))
     in
     let env_with_resume =
-      match Context.extend env ~var:Min.Keyword.resume ~type_:t_resume with
+      match Context.extend env ~var:Keyword.resume ~type_:t_resume with
       | `Ok env_with_resume -> env_with_resume
       | `Cannot_shadow ->
         raise_s [%message "`resume` must be shadowable - can nest handlers"]
@@ -537,9 +527,9 @@ and infer_operation_clause
   let { Min.Expr.op_argument; op_body } = op_handler in
   let%bind env' =
     match op_argument with
-    | Min.Parameter.Variable var ->
+    | Parameter.Variable var ->
       add_binding ~env ~var ~type_:(Type.Mono t_argument)
-    | Min.Parameter.Wildcard -> return env
+    | Parameter.Wildcard -> return env
   in
   let%bind t_result, eff_result, op_body' =
     infer ~env:env' ~effect_env op_body
@@ -554,13 +544,13 @@ and infer_operation_clause
 
 (** add an effect's operations to the context *)
 let bind_operations
-  : Context.t -> declaration:Min.Decl.Effect.t -> Context.t Inference.t
+  : Context.t -> declaration:Effect_decl.t -> Context.t Inference.t
   =
   fun env ~declaration ->
   let open Inference.Let_syntax in
-  let { Min.Decl.Effect.name = label; operations } = declaration in
+  let { Effect_decl.name = label; operations } = declaration in
   Inference.map_fold operations ~init:env ~f:(fun ~key:op_name ~data:op env ->
-    let { Min.Decl.Effect.Operation.shape = _; argument; answer } = op in
+    let { Effect_decl.Operation.shape = _; argument; answer } = op in
     (* `forall eff_rest. argument -> <label|eff_rest> answer` *)
     let%bind eff_rest = Inference.fresh_effect_variable in
     let tail = Effect.Row.Tail.Variable eff_rest in
@@ -586,7 +576,7 @@ let bind_operations
 (** add an effect's signature to the effect environment *)
 let bind_effect_signature
   :  Effect_signature.Context.t
-  -> declaration:Min.Decl.Effect.t
+  -> declaration:Effect_decl.t
   -> Effect_signature.Context.t Inference.t
   =
   fun effect_env ~declaration ->
@@ -594,24 +584,20 @@ let bind_effect_signature
   match Effect_signature.Context.extend_decl effect_env declaration with
   | `Ok effect_env -> return effect_env
   | `Duplicate ->
-    let { Min.Decl.Effect.name; _ } = declaration in
+    let { Effect_decl.name; _ } = declaration in
     let message =
       sprintf "effect '%s' is already defined" (Effect.Label.to_string name)
     in
     Inference.type_error message
 ;;
 
-let convert_effect_decl : Min.Decl.Effect.t -> Expl.Decl.Effect.t =
-  fun decl -> decl
-;;
-
 (** check an effect declaration, adding its signature and operations to the
     contexts if correct *)
 let infer_effect_decl
-  :  Min.Decl.Effect.t
+  :  Effect_decl.t
   -> env:Context.t
   -> effect_env:Effect_signature.Context.t
-  -> (Context.t * Effect_signature.Context.t * Expl.Decl.Effect.t) Inference.t
+  -> (Context.t * Effect_signature.Context.t * Effect_decl.t) Inference.t
   =
   fun declaration ~env ~effect_env ->
   let open Inference.Let_syntax in
@@ -620,8 +606,7 @@ let infer_effect_decl
     bind_operations env ~declaration
   in
   let%map effect_env = bind_effect_signature effect_env ~declaration in
-  let declaration' = convert_effect_decl declaration in
-  env, effect_env, declaration'
+  env, effect_env, declaration
 ;;
 
 (** run inference on a function declaration, adding it (generalised) to the
@@ -653,7 +638,7 @@ let infer_decl
   | Min.Decl.Fun f ->
     let%map env', f' = infer_fun_decl f ~env ~effect_env in
     env', effect_env, Expl.Decl.Fun f'
-  | Min.Decl.Effect e ->
+  | Effect e ->
     let%map env', effect_env', e' = infer_effect_decl e ~env ~effect_env in
     env', effect_env', Expl.Decl.Effect e'
 ;;
@@ -686,7 +671,7 @@ let infer_decls
 let check_entry_point : Context.t -> unit Inference.t =
   fun env ->
   let open Inference.Let_syntax in
-  match Context.find env Min.Keyword.entry_point with
+  match Context.find env Keyword.entry_point with
   | None -> return ()
   | Some (Context.Binding.Operation _) ->
     raise_s [%message "entry point shadowed by operation"]
@@ -724,7 +709,7 @@ let infer_program : Min.Program.t -> Explicit_syntax.Program.t Or_static_error.t
   =
   fun { Min.Program.declarations } ->
   let declarations =
-    [ Min.Decl.Effect Minimal_syntax.Decl.Effect.console ]
+    [ Min.Decl.Effect Effect_decl.console ]
     @ declarations
     @ [ Min.Decl.Fun Min.Program.entry_point ]
   in

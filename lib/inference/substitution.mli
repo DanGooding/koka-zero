@@ -1,9 +1,13 @@
+open! Core
+open! Import
+
 (* TODO: this isn't really a substitution anymore - more like a metavariable
    context *)
+
 (** a substitution maps type metavariables to monotypes, and effect
     metavaraiables to effects, which may themselves contain more metavariables
 *)
-type t [@@deriving sexp]
+type t [@@deriving sexp_of]
 
 (** the empty substitution *)
 val identity : t

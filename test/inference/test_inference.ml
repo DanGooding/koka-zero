@@ -1,7 +1,5 @@
 open Core
-open Koka_zero_inference
-module M = Minimal_syntax
-module E = M.Expr
+open! Import
 module UE = Util.Expr
 module UP = Util.Parameter
 
@@ -57,9 +55,9 @@ let%expect_test "wildcard parameters affect type" =
     (* fn (_, y, _) y *)
     E.Value
       (E.Lambda
-         ( [ M.Parameter.Wildcard
-           ; M.Parameter.Variable (Variable.of_user "y")
-           ; M.Parameter.Wildcard
+         ( [ Parameter.Wildcard
+           ; Parameter.Variable (Variable.of_user "y")
+           ; Parameter.Wildcard
            ]
          , UE.var "x" ))
   in
@@ -91,21 +89,21 @@ let%expect_test "literal int" =
 
 let%expect_test "int operators" =
   let i n = UE.lit_int n in
-  let oi o = M.Operator.Int o in
+  let oi o = Operator.Int o in
   let expr =
     E.Operator
       ( i 1
-      , oi M.Operator.Int.Plus
+      , oi Operator.Int.Plus
       , E.Operator
           ( i 2
-          , oi M.Operator.Int.Minus
+          , oi Operator.Int.Minus
           , E.Operator
               ( i 3
-              , oi M.Operator.Int.Times
+              , oi Operator.Int.Times
               , E.Operator
                   ( i 4
-                  , oi M.Operator.Int.Divide
-                  , E.Operator (i 5, oi M.Operator.Int.Modulo, i 7) ) ) ) )
+                  , oi Operator.Int.Divide
+                  , E.Operator (i 5, oi Operator.Int.Modulo, i 7) ) ) ) )
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -122,16 +120,16 @@ let%expect_test "int operators" =
 
 let%expect_test "comparsion operators" =
   let i n = UE.lit_int n in
-  let oi o = M.Operator.Int o in
-  let ob o = M.Operator.Bool o in
+  let oi o = Operator.Int o in
+  let ob o = Operator.Bool o in
   let expr =
     E.Operator
       ( E.Operator
-          ( E.Operator (i 3, oi M.Operator.Int.Less_than, i 5)
-          , ob M.Operator.Bool.Or
-          , E.Operator (i 3, oi M.Operator.Int.Greater_than, i 5) )
-      , ob M.Operator.Bool.Or
-      , E.Operator (i 3, oi M.Operator.Int.Equals, i 5) )
+          ( E.Operator (i 3, oi Operator.Int.Less_than, i 5)
+          , ob Operator.Bool.Or
+          , E.Operator (i 3, oi Operator.Int.Greater_than, i 5) )
+      , ob Operator.Bool.Or
+      , E.Operator (i 3, oi Operator.Int.Equals, i 5) )
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -321,10 +319,10 @@ let%expect_test "return clause is typed correctly" =
       let op_body =
         E.Operator
           ( E.Value (E.Variable op_argument)
-          , M.Operator.Int M.Operator.Int.Equals
+          , Operator.Int Operator.Int.Equals
           , UE.lit_int 3 )
       in
-      let op_argument = M.Parameter.Variable op_argument in
+      let op_argument = Parameter.Variable op_argument in
       { E.op_argument; op_body }
     in
     let return_clause =
@@ -333,7 +331,7 @@ let%expect_test "return clause is typed correctly" =
         E.If_then_else
           (E.Value (E.Variable op_argument), UE.lit_unit, UE.lit_unit)
       in
-      let op_argument = M.Parameter.Variable op_argument in
+      let op_argument = Parameter.Variable op_argument in
       Some { E.op_argument; op_body }
     in
     let operations =
@@ -384,11 +382,11 @@ let%expect_test "handlers can delegate to outer handlers" =
   (* { fun ask(unit) { ask(()) + 1 } } *)
   let inner_handler =
     let op_name = Variable.of_user "ask" in
-    let op_argument = M.Parameter.Wildcard in
+    let op_argument = Parameter.Wildcard in
     let op_body =
       E.Operator
         ( E.Application (UE.var "ask", [ UE.lit_unit ])
-        , M.Operator.Int M.Operator.Int.Plus
+        , Operator.Int Operator.Int.Plus
         , UE.lit_int 1 )
     in
     Util.Expr.singleton_handler
@@ -452,8 +450,8 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
   let choose_handler =
     Util.Expr.singleton_handler
       ~op_name:(Variable.of_user "choose")
-      ~op_argument:M.Parameter.Wildcard
-      ~op_body:(E.Value (E.Literal (M.Literal.Bool true)))
+      ~op_argument:Parameter.Wildcard
+      ~op_body:(E.Value (E.Literal (Literal.Bool true)))
       ~shape:Operation_shape.Fun
   in
   let body = E.Value (E.Handler choose_handler) in

@@ -26,19 +26,17 @@ let lookup_effect_repr
 
 (** compile a literal into code which returns a pointer to a new heap allocation
     (as a [Types.opaque_pointer]) containing that literal *)
-let compile_literal
-  : EPS.Literal.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
-  =
+let compile_literal : Literal.t -> runtime:Runtime.t -> Llvm.llvalue Codegen.t =
   fun lit ~runtime ->
   let open Codegen.Let_syntax in
   match lit with
-  | EPS.Literal.Int i ->
+  | Literal.Int i ->
     let%bind v = Helpers.const_int i in
     Helpers.heap_store_int v ~runtime
-  | EPS.Literal.Bool b ->
+  | Literal.Bool b ->
     let%bind v = Helpers.const_bool b in
     Helpers.heap_store_bool v ~runtime
-  | EPS.Literal.Unit -> Helpers.heap_store_unit ~runtime
+  | Literal.Unit -> Helpers.heap_store_unit ~runtime
 ;;
 
 (** takes values which are [Types.opaque_pointer]s to the evaluated operands,
@@ -46,7 +44,7 @@ let compile_literal
     heap. *)
 let compile_binary_operator
   :  left:Llvm.llvalue
-  -> EPS.Operator.t
+  -> Operator.t
   -> right:Llvm.llvalue
   -> runtime:Runtime.t
   -> Llvm.llvalue Codegen.t
@@ -54,38 +52,36 @@ let compile_binary_operator
   fun ~left op ~right ~runtime ->
   let open Codegen.Let_syntax in
   match op with
-  | EPS.Operator.Bool bool_op ->
+  | Operator.Bool bool_op ->
     let%bind x = Helpers.dereference_bool left in
     let%bind y = Helpers.dereference_bool right in
     let%bind z =
       (* [and]/[or] work directly on bools, don't need to convert to [i1] and
          back *)
       match bool_op with
-      | EPS.Operator.Bool.And ->
-        Codegen.use_builder (Llvm.build_and x y "bool_and")
-      | EPS.Operator.Bool.Or ->
-        Codegen.use_builder (Llvm.build_or x y "bool_or")
+      | Operator.Bool.And -> Codegen.use_builder (Llvm.build_and x y "bool_and")
+      | Operator.Bool.Or -> Codegen.use_builder (Llvm.build_or x y "bool_or")
     in
     Helpers.heap_store_bool z ~runtime
-  | EPS.Operator.Int int_op ->
+  | Operator.Int int_op ->
     let%bind x = Helpers.dereference_int left in
     let%bind y = Helpers.dereference_int right in
     let operation =
       match int_op with
-      | EPS.Operator.Int.Plus -> `Int Llvm.build_add
-      | EPS.Operator.Int.Minus -> `Int Llvm.build_sub
-      | EPS.Operator.Int.Times -> `Int Llvm.build_mul
+      | Operator.Int.Plus -> `Int Llvm.build_add
+      | Operator.Int.Minus -> `Int Llvm.build_sub
+      | Operator.Int.Times -> `Int Llvm.build_mul
       (* TODO: these both have undefined behaviour for division/modulo by zero!
          would prefer to exit or raise a koka exn *)
-      | EPS.Operator.Int.Divide -> `Int Llvm.build_sdiv
+      | Operator.Int.Divide -> `Int Llvm.build_sdiv
       (* TODO: good behaviour for modulo of a negative *)
-      | EPS.Operator.Int.Modulo -> `Int Llvm.build_srem
-      | EPS.Operator.Int.Equals -> `Bool Llvm.Icmp.Eq
-      | EPS.Operator.Int.Not_equal -> `Bool Llvm.Icmp.Ne
-      | EPS.Operator.Int.Less_than -> `Bool Llvm.Icmp.Slt
-      | EPS.Operator.Int.Less_equal -> `Bool Llvm.Icmp.Sle
-      | EPS.Operator.Int.Greater_equal -> `Bool Llvm.Icmp.Sge
-      | EPS.Operator.Int.Greater_than -> `Bool Llvm.Icmp.Sgt
+      | Operator.Int.Modulo -> `Int Llvm.build_srem
+      | Operator.Int.Equals -> `Bool Llvm.Icmp.Eq
+      | Operator.Int.Not_equal -> `Bool Llvm.Icmp.Ne
+      | Operator.Int.Less_than -> `Bool Llvm.Icmp.Slt
+      | Operator.Int.Less_equal -> `Bool Llvm.Icmp.Sle
+      | Operator.Int.Greater_equal -> `Bool Llvm.Icmp.Sge
+      | Operator.Int.Greater_than -> `Bool Llvm.Icmp.Sgt
     in
     (match operation with
      | `Int build ->
@@ -99,14 +95,14 @@ let compile_binary_operator
 
 let compile_unary_operator
   :  Llvm.llvalue
-  -> EPS.Operator.Unary.t
+  -> Operator.Unary.t
   -> runtime:Runtime.t
   -> Llvm.llvalue Codegen.t
   =
   fun arg op ~runtime ->
   let open Codegen.Let_syntax in
   match op with
-  | EPS.Operator.Unary.Bool EPS.Operator.Bool.Unary.Not ->
+  | Operator.Unary.Bool Operator.Bool.Unary.Not ->
     let%bind b = Helpers.dereference_bool arg in
     let%bind true_ = Helpers.const_true in
     let%bind not_b = Codegen.use_builder (Llvm.build_xor b true_ "not") in
@@ -301,9 +297,8 @@ let rec compile_expr
     in
     let env' =
       match p with
-      | EPS.Parameter.Wildcard -> env
-      | EPS.Parameter.Variable v ->
-        Context.add_local_exn env ~name:v ~value:subject
+      | Parameter.Wildcard -> env
+      | Parameter.Variable v -> Context.add_local_exn env ~name:v ~value:subject
     in
     compile_expr e_body ~env:env' ~runtime ~effect_reprs ~outer_symbol
   | EPS.Expr.Lambda lambda ->
@@ -681,7 +676,7 @@ and compile_if_then_else
 and compile_function
   :  symbol_name:Symbol_name.t
   -> rec_name:Variable.t option
-  -> EPS.Parameter.t list
+  -> Parameter.t list
   -> EPS.Expr.t
   -> captured_shape:Context.Closure.Shape.t
   -> toplevel:Context.Toplevel.t
@@ -719,10 +714,10 @@ and compile_function
           (* this is a programmer error not a data error *)
           raise_s [%message "function type has unexpected number of parameters"]
       in
-      let (parameters : (EPS.Parameter.t * Llvm.llvalue) list) =
+      let (parameters : (Parameter.t * Llvm.llvalue) list) =
         match rec_name with
         | Some rec_name ->
-          let rec_p = EPS.Parameter.Variable rec_name in
+          let rec_p = Parameter.Variable rec_name in
           List.zip_exn (rec_p :: ps) (f_self_param :: params)
         | None ->
           Llvm.set_value_name "null" f_self_param;
@@ -733,10 +728,10 @@ and compile_function
       let (env_locals : Context.Locals.t) =
         List.filter_map parameters ~f:(fun (p, value) ->
           match p with
-          | EPS.Parameter.Variable name ->
+          | Parameter.Variable name ->
             Llvm.set_value_name (Helpers.register_name_of_variable name) value;
             Some (name, value)
-          | EPS.Parameter.Wildcard ->
+          | Parameter.Wildcard ->
             Llvm.set_value_name "_" value;
             None)
       in
@@ -763,7 +758,7 @@ and compile_function
     based on the containing function's name ([outer_symbol]) *)
 and compile_local_function
   :  rec_name:Variable.t option
-  -> EPS.Parameter.t list
+  -> Parameter.t list
   -> EPS.Expr.t
   -> captured_shape:Context.Closure.Shape.t
   -> toplevel:Context.Toplevel.t

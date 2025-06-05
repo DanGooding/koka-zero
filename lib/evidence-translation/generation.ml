@@ -1,11 +1,10 @@
 open Core
-open Koka_zero_util
 open Import
 module EPS = Evidence_passing_syntax
 module E = EPS.Expr
 
 module State = struct
-  type t = Variable.Name_source.t [@@deriving sexp]
+  type t = Variable.Name_source.t [@@deriving sexp_of]
 
   let initial ?(prefix = "mon_") () : t = Variable.Name_source.fresh ~prefix ()
 end
@@ -49,7 +48,7 @@ let unsupported_feature_error message _s =
 ;;
 
 let fresh_name s = Variable.Name_source.next_name s |> Result.Ok
-let parameters_of_names xs = List.map xs ~f:(fun x -> EPS.Parameter.Variable x)
+let parameters_of_names xs = List.map xs ~f:(fun x -> Parameter.Variable x)
 
 let make_lambda_1 make_body =
   let open Let_syntax in

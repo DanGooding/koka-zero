@@ -1,12 +1,12 @@
-open Core
-open Koka_zero_util
+open! Core
+open! Import
 
 module Variable : sig
   (** a variable standing for an effect, either free, or quantified in a
       [Type.Poly.t] *)
-  type t [@@deriving sexp]
+  type t [@@deriving sexp_of]
 
-  include Comparable.S with type t := t
+  include Comparable.S_plain with type t := t
 
   module Name_source : sig
     include Name_source.S with type Name.t := t
@@ -16,9 +16,9 @@ end
 module Metavariable : sig
   (** a placeholder variable introduced during unification, an effect will be
       substituted for this *)
-  type t [@@deriving sexp]
+  type t [@@deriving sexp_of]
 
-  include Comparable.S with type t := t
+  include Comparable.S_plain with type t := t
 
   module Name_source : sig
     include Name_source.S with type Name.t := t
@@ -38,7 +38,7 @@ module Row : sig
     type t =
       | Variable of Variable.t
       | Metavariable of Metavariable.t
-    [@@deriving sexp]
+    [@@deriving sexp_of]
 
     val metavariables : t -> Metavariable.Set.t
     val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
@@ -49,7 +49,7 @@ module Row : sig
   type t =
     | Open of Label.Multiset.Non_empty.t * Tail.t
     | Closed of Label.Multiset.t
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   val total : t
   val closed_singleton : Label.t -> t
@@ -68,7 +68,7 @@ type t =
   | Metavariable of Metavariable.t
   | Variable of Variable.t
   | Row of Row.t
-[@@deriving sexp]
+[@@deriving sexp_of]
 
 val metavariables : t -> Metavariable.Set.t
 val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t

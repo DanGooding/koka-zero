@@ -1,5 +1,5 @@
-open Core
-open Koka_zero_util
+open! Core
+open! Import
 
 module State = struct
   type t =
@@ -11,7 +11,7 @@ module State = struct
     ; effect_variable_source : Effect.Variable.Name_source.t
     ; effect_metavariable_source : Effect.Metavariable.Name_source.t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   let initial : t =
     { substitution = Substitution.identity

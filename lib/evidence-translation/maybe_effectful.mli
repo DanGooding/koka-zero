@@ -1,4 +1,5 @@
 open! Core
+open! Import
 module EPS = Evidence_passing_syntax
 
 type t =
@@ -41,6 +42,6 @@ val make_bind_or_let_many
   -> t Generation.t
 
 (** given arguments and a body, build a lambda with effectful return type *)
-val make_lambda : EPS.Parameter.t list -> t -> EPS.Expr.lambda
+val make_lambda : Parameter.t list -> t -> EPS.Expr.lambda
 
-val make_lambda_expr : EPS.Parameter.t list -> t -> EPS.Expr.t
+val make_lambda_expr : Parameter.t list -> t -> EPS.Expr.t

@@ -1,6 +1,5 @@
-open Koka_zero_inference
-module M = Minimal_syntax
-module E = M.Expr
+open! Core
+open! Import
 module UE = Util.Expr
 module UP = Util.Parameter
 
@@ -99,11 +98,11 @@ let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
   let read_handler =
     Util.Expr.singleton_handler
       ~op_name:(Variable.of_user "ask")
-      ~op_argument:M.Parameter.Wildcard
+      ~op_argument:Parameter.Wildcard
       ~op_body:
         (E.Application
-           ( E.Value (E.Variable M.Keyword.resume)
-           , [ E.Value (E.Literal (M.Literal.Int 3)) ] ))
+           ( E.Value (E.Variable Keyword.resume)
+           , [ E.Value (E.Literal (Literal.Int 3)) ] ))
       ~shape:Operation_shape.Control
   in
   let body = E.Value (E.Handler read_handler) in
@@ -122,11 +121,11 @@ let%expect_test "`fun` clause cannot use `resume`" =
   let read_handler =
     Util.Expr.singleton_handler
       ~op_name:(Variable.of_user "ask")
-      ~op_argument:M.Parameter.Wildcard
+      ~op_argument:Parameter.Wildcard
       ~op_body:
         (E.Application
-           ( E.Value (E.Variable M.Keyword.resume)
-           , [ E.Value (E.Literal (M.Literal.Int 3)) ] ))
+           ( E.Value (E.Variable Keyword.resume)
+           , [ E.Value (E.Literal (Literal.Int 3)) ] ))
       ~shape:Operation_shape.Fun
   in
   let body = E.Value (E.Handler read_handler) in

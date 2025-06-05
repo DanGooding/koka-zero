@@ -35,7 +35,7 @@ module Row = struct
       type t =
         | Variable of Variable.t
         | Metavariable of Metavariable.t
-      [@@deriving sexp]
+      [@@deriving sexp_of]
     end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
     include T
@@ -55,16 +55,12 @@ module Row = struct
     ;;
   end
 
-  module T = struct
-    (** An effect row - a multiset of labels, possibly with a variable in the
-        tail *)
-    type t =
-      | Open of Label.Multiset.Non_empty.t * Tail.t
-      | Closed of Label.Multiset.t
-    [@@deriving sexp]
-  end (* disable "fragile-match" for generated code *) [@warning "-4"]
-
-  include T
+  (** An effect row - a multiset of labels, possibly with a variable in the
+      tail *)
+  type t =
+    | Open of Label.Multiset.Non_empty.t * Tail.t
+    | Closed of Label.Multiset.t
+  [@@deriving sexp_of]
 
   let total =
     let labels = Label.Multiset.empty in
@@ -111,15 +107,11 @@ module Row = struct
   ;;
 end
 
-module T = struct
-  type t =
-    | Metavariable of Metavariable.t
-    | Variable of Variable.t
-    | Row of Row.t
-  [@@deriving sexp]
-end (* disable "fragile-match" for generated code *) [@warning "-4"]
-
-include T
+type t =
+  | Metavariable of Metavariable.t
+  | Variable of Variable.t
+  | Row of Row.t
+[@@deriving sexp_of]
 
 let metavariables = function
   | Variable _ -> Metavariable.Set.empty

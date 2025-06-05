@@ -1,7 +1,5 @@
-module Literal = Minimal_syntax.Literal
-module Operator = Minimal_syntax.Operator
-module Keyword = Minimal_syntax.Keyword
-module Parameter = Minimal_syntax.Parameter
+open! Core
+open! Import
 
 module Expr : sig
   type t =
@@ -16,7 +14,7 @@ module Expr : sig
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
     | Impure_built_in of impure_built_in
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   and value =
     | Variable of Variable.t
@@ -27,20 +25,20 @@ module Expr : sig
     | Perform of perform
     | Handler of handler
     (** takes a nullary funciton to be called under this handler *)
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** monomorphic binding *)
-  and lambda = Parameter.t list * t [@@deriving sexp]
+  and lambda = Parameter.t list * t [@@deriving sexp_of]
 
   (** lambda which knows its own name *)
-  and fix_lambda = Variable.t * lambda [@@deriving sexp]
+  and fix_lambda = Variable.t * lambda [@@deriving sexp_of]
 
   (** awaits one argument then performs the specified operation *)
   and perform =
     { operation : Variable.t
     ; performed_effect : Effect.Label.t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** an effect handler *)
   and handler =
@@ -48,14 +46,14 @@ module Expr : sig
     ; operations : (Operation_shape.t * op_handler) Variable.Map.t
     ; return_clause : op_handler option
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
     { op_argument : Parameter.t
     ; op_body : t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** interaction with the outside world *)
   and impure_built_in =
@@ -65,23 +63,21 @@ module Expr : sig
         ; newline : bool
         }
     | Impure_read_int
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 module Decl : sig
-  module Effect = Minimal_syntax.Decl.Effect
-
   module Fun : sig
     (** toplevel function - implicitly generalised *)
-    type t = Expr.fix_lambda [@@deriving sexp]
+    type t = Expr.fix_lambda [@@deriving sexp_of]
   end
 
   type t =
     | Fun of Fun.t
-    | Effect of Effect.t
-  [@@deriving sexp]
+    | Effect of Effect_decl.t
+  [@@deriving sexp_of]
 end
 
 module Program : sig
-  type t = { declarations : Decl.t list } [@@deriving sexp]
+  type t = { declarations : Decl.t list } [@@deriving sexp_of]
 end

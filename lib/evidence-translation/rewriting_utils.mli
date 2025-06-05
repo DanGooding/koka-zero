@@ -1,3 +1,5 @@
+open! Core
+open! Import
 open Evidence_passing_syntax
 
 (** apply the given rewrite at every expression node in this expression

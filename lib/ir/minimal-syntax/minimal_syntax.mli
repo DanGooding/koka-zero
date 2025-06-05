@@ -1,68 +1,5 @@
-module Literal : sig
-  type t =
-    | Int of int
-    | Bool of bool
-    | Unit
-  [@@deriving sexp]
-end
-
-module Operator : sig
-  module Int : sig
-    type t =
-      | Plus
-      | Minus
-      | Times
-      | Divide
-      | Modulo
-      | Equals
-      | Not_equal
-      | Less_than
-      | Less_equal
-      | Greater_than
-      | Greater_equal
-    [@@deriving sexp]
-  end
-
-  module Bool : sig
-    module Unary : sig
-      type t = Not [@@deriving sexp]
-    end
-
-    type t =
-      | And
-      | Or
-    [@@deriving sexp]
-  end
-
-  module Unary : sig
-    type t = Bool of Bool.Unary.t [@@deriving sexp]
-  end
-
-  type t =
-    | Int of Int.t
-    | Bool of Bool.t
-  [@@deriving sexp]
-end
-
-(** names which aren't reserved, but have significance *)
-module Keyword : sig
-  val resume : Variable.t
-  val main : Variable.t
-  val entry_point : Variable.t
-  val console_effect : Effect.Label.t
-  val print_int : Variable.t
-  val read_int : Variable.t
-end
-
-module Parameter : sig
-  (** a binding of value to name, or ignoring with a wildcard *)
-  type t =
-    | Variable of Variable.t
-    | Wildcard
-  [@@deriving sexp]
-
-  val variable_opt : t -> Variable.t option
-end
+open! Core
+open! Import
 
 module Expr : sig
   type t =
@@ -83,7 +20,7 @@ module Expr : sig
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
     | Impure_built_in of impure_built_in
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** expressions which can't reduce/evaluate *)
   and value =
@@ -93,20 +30,20 @@ module Expr : sig
     | Literal of Literal.t
     | Handler of handler
     (** takes a nullary funciton to be called under this handler *)
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** monomorphic binding *)
-  and lambda = Parameter.t list * t [@@deriving sexp]
+  and lambda = Parameter.t list * t [@@deriving sexp_of]
 
   (** lambda which knows its own name *)
-  and fix_lambda = Variable.t * lambda [@@deriving sexp]
+  and fix_lambda = Variable.t * lambda [@@deriving sexp_of]
 
   (** an effect handler *)
   and handler =
     { operations : (Operation_shape.t * op_handler) Variable.Map.t
     ; return_clause : op_handler option
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
@@ -117,7 +54,7 @@ module Expr : sig
          yield) *)
     ; op_body : t
     }
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 
   (** language builtins which actually perform 'external' side effects. These
       are not directly exposed to user code, but are called from toplevel
@@ -130,44 +67,23 @@ module Expr : sig
         ; newline : bool
         }
     | Impure_read_int
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 module Decl : sig
-  module Effect : sig
-    module Operation : sig
-      type t =
-        { shape : Operation_shape.t
-        ; argument : Type.Mono.t
-        ; answer : Type.Mono.t
-        }
-      [@@deriving sexp]
-    end
-
-    type t =
-      { name : Effect.Label.t
-      ; operations : Operation.t Variable.Map.t
-      }
-    [@@deriving sexp]
-
-    (** effect of interacting with stdin/stdout. A single `console` handler is
-        wrapped around the toplevel call to `main()` *)
-    val console : t
-  end
-
   module Fun : sig
     (** toplevel function - implicitly generalised *)
-    type t = Expr.fix_lambda [@@deriving sexp]
+    type t = Expr.fix_lambda [@@deriving sexp_of]
   end
 
   type t =
     | Fun of Fun.t
-    | Effect of Effect.t
-  [@@deriving sexp]
+    | Effect of Effect_decl.t
+  [@@deriving sexp_of]
 end
 
 module Program : sig
-  type t = { declarations : Decl.t list } [@@deriving sexp]
+  type t = { declarations : Decl.t list } [@@deriving sexp_of]
 
   (** wrapper funciton which calls the user's main function, which is appended
       to programs. It may provide toplevel handers for e.g. console/io/exn/div

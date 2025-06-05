@@ -20,7 +20,7 @@ end
 
 module Closure = struct
   module Shape = struct
-    type t = Variable.t list list [@@deriving sexp]
+    type t = Variable.t list list [@@deriving sexp_of]
 
     let empty = []
 

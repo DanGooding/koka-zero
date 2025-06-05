@@ -1,3 +1,6 @@
+open! Core
+open! Import
+
 module Or_cannot_shadow : sig
   (** holds the result of an operation which may fail, due to shadowing an
       unshadowable binding *)
@@ -5,7 +8,7 @@ module Or_cannot_shadow : sig
     [ `Ok of 'a
     | `Cannot_shadow
     ]
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 module Binding : sig
@@ -13,12 +16,12 @@ module Binding : sig
   type t =
     | Value of Type.t
     | Operation of Effect.Label.t * Type.t
-  [@@deriving sexp]
+  [@@deriving sexp_of]
 end
 
 (** represents a typing context, mapping [Variable.t]s to [Binding.t]s, and
     tracking whether those variables can be shadowed *)
-type t [@@deriving sexp]
+type t [@@deriving sexp_of]
 
 (** add a new variable to the context, or shadow an existing one. This returns
     [`Cannot_shadow] if [var] is not shadowable *)

@@ -1,6 +1,5 @@
-open Core
-open Koka_zero_util
-open Import
+open! Core
+open! Import
 
 (** monad encapsulating the mutable state of llvm code generation. It holds
     references to the llcontext, llmodule and llbuilder *)

@@ -2,20 +2,13 @@ open Core
 open Import
 
 (** source syntax *)
-module Expl = Koka_zero_inference.Explicit_syntax
+module Expl = Explicit_syntax
 
 (** target syntax *)
 module EPS = Evidence_passing_syntax
 
 (* [`Pure e] indicates that expression [e] represents a pure term, which must
    be lifted into the effect monad via [EPS.Expr.Construct_pure] *)
-
-let translate_literal (l : Expl.Literal.t) : EPS.Literal.t = l
-
-let translate_unary_operator (op : Expl.Operator.Unary.t) : EPS.Operator.Unary.t
-  =
-  op
-;;
 
 let translate_effect_label (label : Effect.Label.t) : EPS.Expr.t =
   EPS.Expr.Effect_label label
@@ -67,10 +60,9 @@ let rec translate_expr
             |> Maybe_effectful.Effectful
             |> return))
     | Expl.Expr.Unary_operator (op, e) ->
-      let op' = translate_unary_operator op in
       let%bind m_e = translate_expr e ~evv in
       Maybe_effectful.make_map_or_let m_e ~evv ~f:(fun x ->
-        `Pure (EPS.Expr.Unary_operator (op', x)) |> return)
+        `Pure (EPS.Expr.Unary_operator (op, x)) |> return)
     | Expl.Expr.Operator (e_left, op, e_right) ->
       translate_operator ~e_left op ~e_right ~evv
     | Expl.Expr.If_then_else (e_cond, e_yes, e_no) ->
@@ -84,7 +76,7 @@ let rec translate_expr
       let%bind (`Pure subject') = translate_value v_subject in
       let%map m_body = translate_expr e_body ~evv in
       Maybe_effectful.map m_body ~f:(fun m_body ->
-        EPS.Expr.Let (EPS.Parameter.Variable x, subject', m_body))
+        EPS.Expr.Let (Parameter.Variable x, subject', m_body))
     | Expl.Expr.Let_mono (x, e_subject, e_body) ->
       (* `(e_subject, evv) >>= (\x evv'. e_body)` *)
       let%bind m_subject = translate_expr e_subject ~evv in
@@ -102,9 +94,7 @@ and translate_value : Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t =
   let open Generation.Let_syntax in
   function
   | Expl.Expr.Variable v -> `Pure (EPS.Expr.Variable v) |> return
-  | Expl.Expr.Literal lit ->
-    let lit' = translate_literal lit in
-    `Pure (EPS.Expr.Literal lit') |> return
+  | Expl.Expr.Literal lit -> `Pure (EPS.Expr.Literal lit) |> return
   | Expl.Expr.Lambda lambda ->
     let%map lambda' = translate_lambda lambda in
     `Pure (EPS.Expr.Lambda lambda')
@@ -117,7 +107,7 @@ and translate_value : Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t =
     let label' : EPS.Expr.t = translate_effect_label label in
     let handler' =
       EPS.Expr.Application
-        (EPS.Expr.Variable Primitives.Names.handler, [ label'; h' ])
+        (EPS.Expr.Variable Primitive_names.handler, [ label'; h' ])
     in
     `Pure handler'
   | Expl.Expr.Perform
@@ -130,7 +120,7 @@ and translate_value : Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t =
     let label' : EPS.Expr.t = translate_effect_label label in
     let perform' =
       EPS.Expr.Application
-        (EPS.Expr.Variable Primitives.Names.perform, [ label'; selector ])
+        (EPS.Expr.Variable Primitive_names.perform, [ label'; selector ])
     in
     `Pure perform'
 
@@ -138,7 +128,7 @@ and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
   fun (ps, e_body) ->
   let open Generation.Let_syntax in
   let%map x_evv, m_body = provide_evv (translate_expr e_body) in
-  let ps = ps @ [ EPS.Parameter.Variable x_evv ] in
+  let ps = ps @ [ Parameter.Variable x_evv ] in
   Maybe_effectful.make_lambda ps m_body
 
 and translate_fix_lambda
@@ -153,7 +143,7 @@ and translate_fix_lambda
     to allow short-circuiting for boolean operators *)
 and translate_operator
   :  e_left:Expl.Expr.t
-  -> Expl.Operator.t
+  -> Operator.t
   -> e_right:Expl.Expr.t
   -> evv:EPS.Expr.t
   -> Maybe_effectful.t Generation.t
@@ -161,27 +151,27 @@ and translate_operator
   fun ~e_left op ~e_right ~evv ->
   let open Generation.Let_syntax in
   match op with
-  | Expl.Operator.Int iop ->
-    let op = EPS.Operator.Int iop in
+  | Operator.Int iop ->
+    let op = Operator.Int iop in
     let%bind m_left = translate_expr e_left ~evv in
     Maybe_effectful.make_bind_or_let m_left ~evv ~f:(fun x_left ~evv ->
       let%bind m_right = translate_expr e_right ~evv in
       Maybe_effectful.make_map_or_let m_right ~evv ~f:(fun x_right ->
         `Pure (EPS.Expr.Operator (x_left, op, x_right)) |> return))
-  | Expl.Operator.Bool bop ->
+  | Operator.Bool bop ->
     let%bind m_left = translate_expr e_left ~evv in
     Maybe_effectful.make_bind_or_let m_left ~evv ~f:(fun x_left ~evv ->
       let%map m_right = translate_expr e_right ~evv in
       let wrap_bool b = Maybe_effectful.Pure (EPS.Expr.Literal (Bool b)) in
       match bop with
-      | Expl.Operator.Bool.Or ->
+      | Operator.Bool.Or ->
         (* a || b === a ? Pure True : b *)
         Maybe_effectful.combine
           m_right
           (wrap_bool true)
           ~f:(fun m_right m_true ->
             EPS.Expr.If_then_else (x_left, m_true, m_right))
-      | Expl.Operator.Bool.And ->
+      | Operator.Bool.And ->
         (* a && b === a ? b : Pure False *)
         Maybe_effectful.combine
           m_right
@@ -214,14 +204,11 @@ and translate_op_handler
   let open Generation.Let_syntax in
   match shape with
   | Operation_shape.Control ->
-    let resume = Expl.Keyword.resume in
+    let resume = Keyword.resume in
     let%map x_evv, m_body = provide_evv (translate_expr op_body) in
     let clause =
       Maybe_effectful.make_lambda_expr
-        [ op_argument
-        ; EPS.Parameter.Variable resume
-        ; EPS.Parameter.Variable x_evv
-        ]
+        [ op_argument; Parameter.Variable resume; Parameter.Variable x_evv ]
         m_body
     in
     EPS.Expr.Construct_op_normal clause
@@ -229,7 +216,7 @@ and translate_op_handler
     let%map x_evv, m_body = provide_evv (translate_expr op_body) in
     let clause =
       Maybe_effectful.make_lambda_expr
-        [ op_argument; EPS.Parameter.Variable x_evv ]
+        [ op_argument; Parameter.Variable x_evv ]
         m_body
     in
     EPS.Expr.Construct_op_tail clause
@@ -262,8 +249,8 @@ let translate_fun_decl : Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t 
   fun fix_lambda -> translate_fix_lambda fix_lambda
 ;;
 
-let translate_effect_decl : Expl.Decl.Effect.t -> EPS.Program.Effect_decl.t =
-  fun { Expl.Decl.Effect.name; operations } ->
+let translate_effect_decl : Effect_decl.t -> EPS.Program.Effect_decl.t =
+  fun { Effect_decl.name; operations } ->
   let operations = Map.key_set operations in
   { EPS.Program.Effect_decl.name; operations }
 ;;
@@ -292,8 +279,7 @@ let translate_program { Expl.Program.declarations } ~include_prelude =
   (* [entry_point(nil_evidence_vector)] *)
   let entry_expr =
     EPS.Expr.Application
-      ( EPS.Expr.Variable EPS.Keyword.entry_point
-      , [ EPS.Expr.Nil_evidence_vector ] )
+      (EPS.Expr.Variable Keyword.entry_point, [ EPS.Expr.Nil_evidence_vector ])
   in
   { EPS.Program.effect_declarations; fun_declarations; entry_expr }
 ;;

@@ -1,10 +1,5 @@
-open Koka_zero_util
-module Type = Type
-module Effect = Effect
-module Operation_shape = Operation_shape
-module Variable = Variable
-module Minimal_syntax = Minimal_syntax
-module Explicit_syntax = Explicit_syntax
+open! Core
+open! Import
 
 (** typecheck a program, converting to a form with necessary types/effects made
     explicit, and adding an entry_point function to call the user's `main()`.

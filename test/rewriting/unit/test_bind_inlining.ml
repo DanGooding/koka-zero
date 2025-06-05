@@ -35,7 +35,7 @@ let%expect_test "bind inlining - simple expression" =
   let rewritten, extra_decls =
     Koka_zero_evidence_translation.Private.Rewriting.apply_bind_inlining
       translated
-      ~toplevel:(Variable.Set.of_list [ Primitives.Names.bind ])
+      ~toplevel:(Variable.Set.of_list [ Primitive_names.bind ])
     |> Or_static_error.ok_exn
   in
   print_s [%message (rewritten : EPS.Expr.t)];

@@ -1,6 +1,13 @@
 (library
  (name koka_zero_code_generation)
  (public_name koka-zero.code-generation)
- (libraries core llvm llvm.analysis koka_zero_evidence_translation)
+ (libraries
+  core
+  llvm
+  llvm.analysis
+  koka_zero_evidence_translation
+  koka_zero_util
+  koka_zero_ir_common
+  koka_zero_ir_evidence_passing_syntax)
  (preprocess
   (pps ppx_jane)))
