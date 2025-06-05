@@ -1,12 +1,13 @@
 (library
  (name koka_zero_evidence_translation)
- (public_name koka-zero.evidence-translation)
+ (public_name koka-zero.evidence-passing.evidence-translation)
  (libraries
   core
   koka_zero_util
   koka_zero_ir_common
   koka_zero_ir_explicit_syntax
-  koka_zero_ir_evidence_passing_syntax)
+  koka_zero_ir_evidence_passing_syntax
+  koka_zero_evidence_passing_common)
  (inline_tests)
  (preprocess
   (pps ppx_jane)))

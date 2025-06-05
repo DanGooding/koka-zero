@@ -2,8 +2,8 @@
  (name koka_zero_unit_test_rewriting)
  (libraries
   core
-  koka-zero.evidence-translation
-  koka-zero.inference
+  koka-zero.evidence-passing.evidence-translation
+  koka-zero.evidence-passing.rewriting
   koka-zero.util
   koka-zero.ir.common)
  (inline_tests)

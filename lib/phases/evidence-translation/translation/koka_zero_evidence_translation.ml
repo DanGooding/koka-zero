@@ -1,12 +1,7 @@
 open! Core
 open! Import
-module Evidence_passing_syntax = Evidence_passing_syntax
 
 let translate program = Generation.run (Translation.translate program)
-
-let rewrite_program program =
-  Generation.run (Rewriting.rewrite_program program) ~name_prefix:"opt_"
-;;
 
 module Private = struct
   let translate_expr expr ~evv =
@@ -18,10 +13,4 @@ module Private = struct
   let translate_no_prelude program =
     Generation.run (Translation.translate_no_prelude program)
   ;;
-
-  module Rewriting = struct
-    let apply_bind_inlining expr ~toplevel =
-      Generation.run (Bind_inlining.rewrite expr ~toplevel) ~name_prefix:"opt_"
-    ;;
-  end
 end

@@ -33,7 +33,7 @@ let%expect_test "bind inlining - simple expression" =
               (Variable (Generated mon_4))))))))))))
     |}];
   let rewritten, extra_decls =
-    Koka_zero_evidence_translation.Private.Rewriting.apply_bind_inlining
+    Koka_zero_evidence_rewriting.Private.apply_bind_inlining
       translated
       ~toplevel:(Variable.Set.of_list [ Primitive_names.bind ])
     |> Or_static_error.ok_exn

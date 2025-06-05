@@ -8,7 +8,8 @@
   koka-zero.ir.minimal
   koka-zero.inference
   koka-zero.ir.explicit
-  koka-zero.evidence-translation
+  koka-zero.evidence-passing.evidence-translation
+  koka-zero.evidence-passing.rewriting
   koka-zero.ir.evidence-passing
   koka-zero.interpreter
   koka-zero.code-generation)

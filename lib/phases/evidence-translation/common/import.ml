@@ -12,8 +12,6 @@ include struct
   module Parameter = Parameter
 end
 
-module Explicit_syntax = Koka_zero_ir_explicit_syntax.Explicit_syntax
-
 include struct
   open Koka_zero_ir_evidence_passing_syntax
   module Evidence_passing_syntax = Evidence_passing_syntax

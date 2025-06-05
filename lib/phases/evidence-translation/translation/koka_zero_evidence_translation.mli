@@ -1,15 +1,9 @@
 open! Core
 open! Import
-module Evidence_passing_syntax = Evidence_passing_syntax
 
 (** apply the evidence-passing translation to a program *)
 val translate
   :  Explicit_syntax.Program.t
-  -> Evidence_passing_syntax.Program.t Or_static_error.t
-
-(** apply optimising transformations *)
-val rewrite_program
-  :  Evidence_passing_syntax.Program.t
   -> Evidence_passing_syntax.Program.t Or_static_error.t
 
 module Private : sig
@@ -30,13 +24,4 @@ module Private : sig
     :  Explicit_syntax.Expr.t
     -> evv:Evidence_passing_syntax.Expr.t
     -> Evidence_passing_syntax.Expr.t Or_static_error.t
-
-  module Rewriting : sig
-    val apply_bind_inlining
-      :  Evidence_passing_syntax.Expr.t
-      -> toplevel:Variable.Set.t
-      -> (Evidence_passing_syntax.Expr.t
-         * Evidence_passing_syntax.Program.Fun_decl.t list)
-           Or_static_error.t
-  end
 end
