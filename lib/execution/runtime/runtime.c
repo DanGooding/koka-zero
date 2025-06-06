@@ -1,20 +1,18 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
 #ifdef ENABLE_GC
 #include "gc.h"
 #endif
 #include "runtime.h"
 
 void kkr_init(void) {
-  #ifdef ENABLE_GC
+#ifdef ENABLE_GC
   GC_INIT();
-  #endif
+#endif
 }
 
-void kkr_exit(void) {
-  exit(1);
-}
+void kkr_exit(void) { exit(1); }
 
 void kkr_exit_with_message(const uint8_t *message) {
   fprintf(stderr, "runtime error: %s\n", message);
@@ -27,11 +25,11 @@ void kkr_exit_with_message(const uint8_t *message) {
 char malloc_error_message[MALLOC_ERROR_MESSAGE_CAPACITY];
 
 opaque_ptr kkr_malloc(uint64_t size) {
-  #ifdef ENABLE_GC
+#ifdef ENABLE_GC
   opaque_ptr p = GC_MALLOC(size);
-  #else
+#else
   opaque_ptr p = malloc(size);
-  #endif
+#endif
   if (p == NULL) {
     snprintf(malloc_error_message, MALLOC_ERROR_MESSAGE_CAPACITY,
              "failed to malloc %" PRIu64 " bytes", size);
@@ -41,9 +39,7 @@ opaque_ptr kkr_malloc(uint64_t size) {
 }
 
 marker_t next_marker = 0;
-marker_t kkr_fresh_marker(void) {
-  return next_marker++;
-}
+marker_t kkr_fresh_marker(void) { return next_marker++; }
 
 // C operators can't be trusted to produce exactly these values
 const bool_t const_false = 0;
@@ -69,35 +65,29 @@ typedef struct vector_t {
   struct vector_t *tail;
 } vector_t;
 
-
 opaque_ptr kkr_nil_evidence_vector(void) {
   vector_t *vector = (vector_t *)kkr_malloc(sizeof(vector_t));
   // zero other fields for safety (fail fast on bugs)
-  *vector = (vector_t) { .is_nil = 1, .label = -1, .evidence = NULL, .tail = NULL };
+  *vector =
+      (vector_t){.is_nil = 1, .label = -1, .evidence = NULL, .tail = NULL};
   return (opaque_ptr)vector;
 }
 
-opaque_ptr kkr_cons_evidence_vector(
-  label_t label,
-  marker_t marker,
-  opaque_ptr handler,
-  opaque_ptr handler_site_vector,
-  opaque_ptr vector_tail
-) {
+opaque_ptr kkr_cons_evidence_vector(label_t label, marker_t marker,
+                                    opaque_ptr handler,
+                                    opaque_ptr handler_site_vector,
+                                    opaque_ptr vector_tail) {
   evidence_t *evidence = (evidence_t *)kkr_malloc(sizeof(evidence_t));
-  *evidence = (evidence_t) {
-    .handler = handler,
-    .marker = marker,
-    .handler_site_vector = (vector_t *)handler_site_vector
-  };
+  *evidence =
+      (evidence_t){.handler = handler,
+                   .marker = marker,
+                   .handler_site_vector = (vector_t *)handler_site_vector};
 
   vector_t *vector = (vector_t *)kkr_malloc(sizeof(vector_t));
-  *vector = (vector_t) {
-    .is_nil = 0,
-    .label = label,
-    .evidence = evidence,
-    .tail = (vector_t *)vector_tail
-  };
+  *vector = (vector_t){.is_nil = 0,
+                       .label = label,
+                       .evidence = evidence,
+                       .tail = (vector_t *)vector_tail};
 
   return (opaque_ptr)vector;
 }
@@ -111,9 +101,8 @@ opaque_ptr kkr_evidence_vector_lookup(opaque_ptr v, label_t label) {
     current = current->tail;
   }
   kkr_exit_with_message((uint8_t *)"effect label not found in evidence vector");
-  return NULL; // unreachable
+  return NULL;  // unreachable
 }
-
 
 marker_t kkr_get_evidence_marker(opaque_ptr e) {
   evidence_t *evidence = (evidence_t *)e;
@@ -130,13 +119,13 @@ opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr e) {
   return (opaque_ptr)(evidence->handler_site_vector);
 }
 
-void kkr_println(void) {
-  printf("\n");
-}
+void kkr_println(void) { printf("\n"); }
 
 void kkr_print_int(int_t i, uint8_t newline) {
-  if (newline) printf("%" PRId64 "\n", i);
-  else printf("%" PRId64 " " , i);
+  if (newline)
+    printf("%" PRId64 "\n", i);
+  else
+    printf("%" PRId64 " ", i);
 }
 
 int_t kkr_read_int(void) {
@@ -156,4 +145,3 @@ int_t kkr_read_int(void) {
   free(line);
   return result;
 }
-

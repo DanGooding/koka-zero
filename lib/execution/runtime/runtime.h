@@ -31,12 +31,10 @@ bool_t kkr_markers_equal(marker_t, marker_t);
 // returns a heap allocated empty evidence vector
 opaque_ptr kkr_nil_evidence_vector(void);
 
-opaque_ptr kkr_cons_evidence_vector(
-  label_t label,
-  marker_t marker,
-  opaque_ptr handler,
-  opaque_ptr handler_site_vector,
-  opaque_ptr vector_tail);
+opaque_ptr kkr_cons_evidence_vector(label_t label, marker_t marker,
+                                    opaque_ptr handler,
+                                    opaque_ptr handler_site_vector,
+                                    opaque_ptr vector_tail);
 
 // lookup the evidence entry for a given label in an evidence vector
 // exits if not present
