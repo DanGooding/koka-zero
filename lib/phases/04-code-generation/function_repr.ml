@@ -38,7 +38,7 @@ let compile_use_callable
     let%bind tag_is_set =
       Codegen.use_builder (Llvm.build_icmp Eq tag_bit tag "tag_is_set")
     in
-    Helpers.compile_conditional
+    Control_flow.compile_conditional
       ~cond_i1:tag_is_set
       ~compile_true:(fun () ->
         let%bind code_pointer =
@@ -68,4 +68,11 @@ let compile_wrap_callable (callable : Callable.t) =
       Codegen.use_builder (Llvm.build_or ptr_value tag "tagged_value")
     in
     Codegen.use_builder (Llvm.build_inttoptr tagged_value pointer_type "tagged")
+;;
+
+let compile_wrap (t : t) =
+  match t with
+  | Maybe_tagged llvalue -> Codegen.return llvalue
+  | Code_pointer code_pointer ->
+    compile_wrap_callable (Code_pointer code_pointer)
 ;;

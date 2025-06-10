@@ -48,40 +48,43 @@ let unsupported_feature_error message _s =
 ;;
 
 let fresh_name s = Variable.Name_source.next_name s |> Result.Ok
-let parameters_of_names xs = List.map xs ~f:(fun x -> Parameter.Variable x)
 
-let make_lambda_1 make_body =
+let pure_parameters_of_names xs =
+  List.map xs ~f:(fun x -> Parameter.Variable x, EPS.Type.Pure)
+;;
+
+let make_lambda_1 type_ make_body =
   let open Let_syntax in
   let%bind x = fresh_name in
   let%map body = make_body (E.Variable x) in
-  let ps = parameters_of_names [ x ] in
-  ps, body
+  let ps = pure_parameters_of_names [ x ] in
+  ps, type_, body
 ;;
 
 (* note since we can't pattern match on the type of make_body, there isn't much
    we can do that's better than this duplication. Could use ~dependent types
    with the number of arguments passed as a natural number but probably
    overkill *)
-let make_lambda_2 make_body =
+let make_lambda_2 type_ make_body =
   let open Let_syntax in
   let%bind x1 = fresh_name in
   let%bind x2 = fresh_name in
   let%map body = make_body (E.Variable x1) (E.Variable x2) in
-  let ps = parameters_of_names [ x1; x2 ] in
-  ps, body
+  let ps = pure_parameters_of_names [ x1; x2 ] in
+  ps, type_, body
 ;;
 
-let make_lambda_3 make_body =
+let make_lambda_3 type_ make_body =
   let open Let_syntax in
   let%bind x1 = fresh_name in
   let%bind x2 = fresh_name in
   let%bind x3 = fresh_name in
   let%map body = make_body (E.Variable x1) (E.Variable x2) (E.Variable x3) in
-  let ps = parameters_of_names [ x1; x2; x3 ] in
-  ps, body
+  let ps = pure_parameters_of_names [ x1; x2; x3 ] in
+  ps, type_, body
 ;;
 
-let make_lambda_4 make_body =
+let make_lambda_4 type_ make_body =
   let open Let_syntax in
   let%bind x1 = fresh_name in
   let%bind x2 = fresh_name in
@@ -90,11 +93,11 @@ let make_lambda_4 make_body =
   let%map body =
     make_body (E.Variable x1) (E.Variable x2) (E.Variable x3) (E.Variable x4)
   in
-  let ps = parameters_of_names [ x1; x2; x3; x4 ] in
-  ps, body
+  let ps = pure_parameters_of_names [ x1; x2; x3; x4 ] in
+  ps, type_, body
 ;;
 
-let make_lambda_5 make_body =
+let make_lambda_5 type_ make_body =
   let open Let_syntax in
   let%bind x1 = fresh_name in
   let%bind x2 = fresh_name in
@@ -109,30 +112,30 @@ let make_lambda_5 make_body =
       (E.Variable x4)
       (E.Variable x5)
   in
-  let ps = parameters_of_names [ x1; x2; x3; x4; x5 ] in
-  ps, body
+  let ps = pure_parameters_of_names [ x1; x2; x3; x4; x5 ] in
+  ps, type_, body
 ;;
 
 let expr_of_lambda lambda = E.Lambda lambda
 
-let make_lambda_expr_1 make_body =
-  make_lambda_1 make_body |> map ~f:expr_of_lambda
+let make_lambda_expr_1 type_ make_body =
+  make_lambda_1 type_ make_body |> map ~f:expr_of_lambda
 ;;
 
-let make_lambda_expr_2 make_body =
-  make_lambda_2 make_body |> map ~f:expr_of_lambda
+let make_lambda_expr_2 type_ make_body =
+  make_lambda_2 type_ make_body |> map ~f:expr_of_lambda
 ;;
 
-let make_lambda_expr_3 make_body =
-  make_lambda_3 make_body |> map ~f:expr_of_lambda
+let make_lambda_expr_3 type_ make_body =
+  make_lambda_3 type_ make_body |> map ~f:expr_of_lambda
 ;;
 
-let make_lambda_expr_4 make_body =
-  make_lambda_4 make_body |> map ~f:expr_of_lambda
+let make_lambda_expr_4 type_ make_body =
+  make_lambda_4 type_ make_body |> map ~f:expr_of_lambda
 ;;
 
-let make_lambda_expr_5 make_body =
-  make_lambda_5 make_body |> map ~f:expr_of_lambda
+let make_lambda_expr_5 type_ make_body =
+  make_lambda_5 type_ make_body |> map ~f:expr_of_lambda
 ;;
 
 let make_match_ctl subject ~pure ~yield =

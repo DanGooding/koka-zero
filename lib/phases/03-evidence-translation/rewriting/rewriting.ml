@@ -17,10 +17,13 @@ let left_unit : Expr.t -> Expr.t Modified.t =
   Modified.original_for_none (function [@warning "-4"]
     | Expr.Application
         ( bind
-        , [ Expr.Construct_pure e1; vector; Expr.Lambda ([ y; vector' ], e2) ]
-        )
+        , [ (Expr.Construct_pure e1, Ctl)
+          ; (vector, Pure)
+          ; (Expr.Lambda ([ (y, Pure); (vector', Pure) ], Ctl, e2), Pure)
+          ]
+        , Ctl )
       when is_name bind Primitive_names.bind ->
-      Expr.Let (y, e1, Expr.Let (vector', vector, e2)) |> Some
+      Expr.Let (y, Pure, e1, Expr.Let (vector', Pure, vector, e2)) |> Some
     | _ -> None)
 ;;
 

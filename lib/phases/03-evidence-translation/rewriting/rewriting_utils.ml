@@ -23,22 +23,24 @@ and apply_everywhere_below
   match e with
   | Expr.Variable _ ->
     Modified.original e (* TODO: have to be careful to not use wrong [e]*)
-  | Expr.Let (v, subject, body) ->
+  | Expr.Let (v, t, subject, body) ->
     let%bind subject = apply_everywhere ~rewrite subject in
     let%map body = apply_everywhere ~rewrite body in
-    Expr.Let (v, subject, body)
+    Expr.Let (v, t, subject, body)
   | Expr.Lambda lambda ->
     let%map lambda = apply_everywhere_to_lambda ~rewrite lambda in
     Expr.Lambda lambda
   | Expr.Fix_lambda fix_lambda ->
     let%map fix_lambda = apply_everywhere_to_fix_lambda ~rewrite fix_lambda in
     Expr.Fix_lambda fix_lambda
-  | Expr.Application (f, args) ->
+  | Expr.Application (f, args, type_) ->
     let%bind f = apply_everywhere ~rewrite f in
     let%map args =
-      List.map args ~f:(apply_everywhere ~rewrite) |> Modified.all
+      List.map args ~f:(fun (arg, type_) ->
+        apply_everywhere arg ~rewrite |> Modified.map ~f:(fun arg -> arg, type_))
+      |> Modified.all
     in
-    Expr.Application (f, args)
+    Expr.Application (f, args, type_)
   | Expr.Literal _ -> Modified.original e
   | Expr.If_then_else (cond, yes, no) ->
     let%bind cond = apply_everywhere ~rewrite cond in
@@ -144,10 +146,10 @@ and apply_everywhere_to_lambda
   -> Expr.lambda
   -> Expr.lambda Modified.t
   =
-  fun ~rewrite (ps, body) ->
+  fun ~rewrite (ps, type_, body) ->
   let open Modified.Let_syntax in
   let%map body = apply_everywhere ~rewrite body in
-  ps, body
+  ps, type_, body
 
 and apply_everywhere_to_fix_lambda
   :  rewrite:(Expr.t -> Expr.t Modified.t)

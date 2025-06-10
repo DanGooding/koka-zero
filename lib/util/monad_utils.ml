@@ -18,6 +18,12 @@ module Make (M : Monad.S) = struct
       f x acc)
   ;;
 
+  let list_concat_map xs ~f =
+    let open M.Let_syntax in
+    let%map lists = List.map xs ~f |> M.all in
+    List.concat lists
+  ;;
+
   let map_fold xs ~init ~f =
     let open M.Let_syntax in
     Map.fold xs ~init:(return init) ~f:(fun ~key ~data acc ->

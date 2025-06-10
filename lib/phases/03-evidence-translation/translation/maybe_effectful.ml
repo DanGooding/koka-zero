@@ -39,18 +39,21 @@ let make_bind_or_let
     (* let x = [expr] in [f x] *)
     let%bind x = Generation.fresh_name in
     let%map rhs = f (EPS.Expr.Variable x) ~evv in
-    map rhs ~f:(fun rhs -> EPS.Expr.Let (Variable x, expr, rhs))
+    map rhs ~f:(fun rhs -> EPS.Expr.Let (Variable x, Pure, expr, rhs))
   | Effectful expr ->
     (* bind [expr] [evv] (fun x evv -> [f x]) *)
     let%map rhs =
-      Generation.make_lambda_expr_2 (fun x evv ->
+      Generation.make_lambda_expr_2 Ctl (fun x evv ->
         (* TODO: if [result] is [Pure] emit a call to [map]
            instead of [bind] - if [map] is cheaper *)
         let%map result = f x ~evv in
         to_effectful result)
     in
     Effectful
-      (EPS.Expr.Application (Variable Primitive_names.bind, [ expr; evv; rhs ]))
+      (EPS.Expr.Application
+         ( Variable Primitive_names.bind
+         , [ expr, Ctl; evv, Pure; rhs, Pure ]
+         , Ctl ))
 ;;
 
 let make_map_or_let t ~evv ~f =
@@ -77,7 +80,8 @@ let make_bind_or_let_many =
 
 let make_lambda params body =
   let body = to_effectful body in
-  params, body
+  let params = List.map params ~f:(fun param -> param, EPS.Type.Pure) in
+  params, EPS.Type.Ctl, body
 ;;
 
 let make_lambda_expr params body = EPS.Expr.Lambda (make_lambda params body)

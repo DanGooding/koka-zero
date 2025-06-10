@@ -56,7 +56,9 @@ let rec translate_expr
           translate_args
           ~evv
           ~f:(fun xs ~evv ->
-            EPS.Expr.Application (f, xs @ [ evv ])
+            let args = xs @ [ evv ] in
+            EPS.Expr.Application
+              (f, List.map args ~f:(fun arg -> arg, EPS.Type.Pure), Ctl)
             |> Maybe_effectful.Effectful
             |> return))
     | Expl.Expr.Unary_operator (op, e) ->
@@ -76,14 +78,14 @@ let rec translate_expr
       let%bind (`Pure subject') = translate_value v_subject in
       let%map m_body = translate_expr e_body ~evv in
       Maybe_effectful.map m_body ~f:(fun m_body ->
-        EPS.Expr.Let (Parameter.Variable x, subject', m_body))
+        EPS.Expr.Let (Parameter.Variable x, Pure, subject', m_body))
     | Expl.Expr.Let_mono (x, e_subject, e_body) ->
       (* `(e_subject, evv) >>= (\x evv'. e_body)` *)
       let%bind m_subject = translate_expr e_subject ~evv in
       Maybe_effectful.make_bind_or_let m_subject ~evv ~f:(fun y ~evv ->
         let%map m_body = translate_expr e_body ~evv in
         Maybe_effectful.map m_body ~f:(fun m_body ->
-          EPS.Expr.Let (Variable x, y, m_body)))
+          EPS.Expr.Let (Variable x, Pure, y, m_body)))
     | Expl.Expr.Seq (e1, e2) ->
       let%bind e1' = translate_expr e1 ~evv in
       Maybe_effectful.make_bind_or_let e1' ~evv ~f:(fun _x1 ~evv ->
@@ -107,20 +109,24 @@ and translate_value : Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t =
     let label' : EPS.Expr.t = translate_effect_label label in
     let handler' =
       EPS.Expr.Application
-        (EPS.Expr.Variable Primitive_names.handler, [ label'; h' ])
+        ( EPS.Expr.Variable Primitive_names.handler
+        , [ label', Pure; h', Pure ]
+        , Pure )
     in
     `Pure handler'
   | Expl.Expr.Perform
       { Expl.Expr.operation = op_name; performed_effect = label } ->
     let%map selector =
-      Generation.make_lambda_expr_1 (fun h ->
+      Generation.make_lambda_expr_1 Pure (fun h ->
         (* TODO: can we just carry indicies around, rather than select *)
         EPS.Expr.Select_operation (label, op_name, h) |> return)
     in
     let label' : EPS.Expr.t = translate_effect_label label in
     let perform' =
       EPS.Expr.Application
-        (EPS.Expr.Variable Primitive_names.perform, [ label'; selector ])
+        ( EPS.Expr.Variable Primitive_names.perform
+        , [ label', Pure; selector, Pure ]
+        , Pure )
     in
     `Pure perform'
 
@@ -279,7 +285,9 @@ let translate_program { Expl.Program.declarations } ~include_prelude =
   (* [entry_point(nil_evidence_vector)] *)
   let entry_expr =
     EPS.Expr.Application
-      (EPS.Expr.Variable Keyword.entry_point, [ EPS.Expr.Nil_evidence_vector ])
+      ( EPS.Expr.Variable Keyword.entry_point
+      , [ EPS.Expr.Nil_evidence_vector, Pure ]
+      , Ctl )
   in
   { EPS.Program.effect_declarations; fun_declarations; entry_expr }
 ;;

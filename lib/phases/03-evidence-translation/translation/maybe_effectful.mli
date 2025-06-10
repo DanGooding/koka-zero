@@ -17,7 +17,7 @@ val map : t -> f:(EPS.Expr.t -> EPS.Expr.t) -> t
 val combine : t -> t -> f:(EPS.Expr.t -> EPS.Expr.t -> EPS.Expr.t) -> t
 
 (** [make_bind_or_let (Effectful e) ~evv ~f:(fun x ~evv -> e')] builds
-    the expression [(e, evv) >>= fun (x, evv) -> e'].
+    the expression [(e, evv) >>= fun (x: Pure, evv) -> e'].
     For [Pure] terms it builds a let binding instead *)
 val make_bind_or_let
   :  t
@@ -33,7 +33,7 @@ val make_map_or_let
 
 (** [make_bind_or_let_many [(fun ~evv -> Effectful e1);...;(fun ~evv -> Effectful en)] ~evv ~f:(fun [x1;...;xn] ~evv -> Effectful e')]
     builds the expression
-    [(e1, evv) >>= fun (x1, evv) -> (e2, evv) >>= fun (x2, evv) -> ... (en, evv) >>= fun xn -> e'].
+    [(e1, evv) >>= fun (x1: Pure, evv) -> (e2, evv) >>= fun (x2: Pure, evv) -> ... (en, evv) >>= fun (xn: Pure, evv) -> e'].
     For [Pure] terms, let-bindings are built instead *)
 val make_bind_or_let_many
   :  (evv:EPS.Expr.t -> t Generation.t) list

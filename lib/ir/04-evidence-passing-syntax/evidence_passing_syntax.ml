@@ -1,14 +1,21 @@
 open Core
 open Import
 
+module Type = struct
+  type t =
+    | Ctl
+    | Pure
+  [@@deriving sexp_of, equal]
+end
+
 module Expr = struct
   module T = struct
     type t =
       | Variable of Variable.t
-      | Let of Parameter.t * t * t
+      | Let of Parameter.t * Type.t * t * t
       | Lambda of lambda
       | Fix_lambda of fix_lambda
-      | Application of t * t list
+      | Application of t * (t * Type.t) list * Type.t
       | Literal of Literal.t
       | If_then_else of t * t * t
       | Operator of t * Operator.t * t
@@ -60,7 +67,7 @@ module Expr = struct
       | Impure_built_in of impure_built_in
     [@@deriving sexp_of]
 
-    and lambda = Parameter.t list * t [@@deriving sexp_of]
+    and lambda = (Parameter.t * Type.t) list * Type.t * t [@@deriving sexp_of]
     and fix_lambda = Variable.t * lambda [@@deriving sexp_of]
 
     and impure_built_in =

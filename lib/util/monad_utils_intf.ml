@@ -18,6 +18,9 @@ module type S = sig
     -> f:('a -> 'accum -> 'accum t)
     -> 'accum t
 
+  (** a version of [List.concat_map] which runs in this monad *)
+  val list_concat_map : 'a list -> f:('a -> 'b list t) -> 'b list t
+
   (** a version of [Map.fold] which runs in this monad *)
   val map_fold
     :  ('k, 'v, 'cmp) Map.t

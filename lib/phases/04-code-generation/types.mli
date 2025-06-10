@@ -1,3 +1,6 @@
+open! Core
+open! Import
+
 val bool : Llvm.lltype Codegen.t
 val int : Llvm.lltype Codegen.t
 val pointer : Llvm.lltype Codegen.t
@@ -11,17 +14,8 @@ val label : Llvm.lltype Codegen.t
 (** type of the tag used to distinguish variants *)
 val variant_tag : Llvm.lltype Codegen.t
 
-(** control monad variant, with unknown contents. This can be cast to [ctl_pure]
-    or [ctl_yield] depending on tag. Only pointers to this type should be
-    allocated - A [ctl_pure] is smaller so may get aligned wrongly to be cast to
-    a [ctl] *)
-val ctl : Llvm.lltype Codegen.t
-
-(** control monad 'pure' variant: [Pure { tag; value }] *)
-val ctl_pure : Llvm.lltype Codegen.t
-
-(** control monad 'yield' variant:
-    [Yield { tag; opaque_pointer marker; op_clause; resumption }] *)
+(** control monad 'yield' contents:
+    [{ opaque_pointer marker; op_clause; resumption }] *)
 val ctl_yield : Llvm.lltype Codegen.t
 
 (** operation clause variant, but merged into one types as `normal` and `tail`
@@ -46,7 +40,9 @@ val function_object : Llvm.lltype Codegen.t
     function. The type is:
     [ptr ( function_object *f_self, closure *closure, ptr arg_1, ... ptr arg_n) ]
 *)
-val function_code : int -> Llvm.lltype Codegen.t
+val function_code
+  :  args:Evidence_passing_syntax.Type.t list
+  -> Llvm.lltype Codegen.t
 
 (** type of the binary's entry point: [i32 main()] *)
 val main_function : Llvm.lltype Codegen.t
