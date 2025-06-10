@@ -1,4 +1,5 @@
 open Core
+open! Import
 
 let bool =
   (* could use i1 (single bit) but can't allocate that little, nor can an i8*
@@ -10,37 +11,15 @@ let int = Codegen.use_context Llvm.i64_type
 let marker = Codegen.use_context Llvm.i64_type
 let label = Codegen.use_context Llvm.i64_type
 let variant_tag = Codegen.use_context Llvm.i8_type
-let padding = Codegen.use_context Llvm.i8_type
 let pointer = Codegen.use_context Llvm.pointer_type
 
 let ctl_yield =
   let open Codegen.Let_syntax in
-  let%bind variant_tag = variant_tag in
   let%bind pointer = pointer in
   let marker = pointer in
   let op_clause = pointer in
   let resumption = pointer in
-  let fields = [ variant_tag; marker; op_clause; resumption ] in
-  Codegen.use_context (fun context ->
-    Llvm.struct_type context (Array.of_list fields))
-;;
-
-let ctl_pure =
-  let open Codegen.Let_syntax in
-  let%bind variant_tag = variant_tag in
-  let%bind pointer = pointer in
-  let value = pointer in
-  let fields = [ variant_tag; value ] in
-  Codegen.use_context (fun context ->
-    Llvm.struct_type context (Array.of_list fields))
-;;
-
-let ctl =
-  let open Codegen.Let_syntax in
-  let%bind variant_tag = variant_tag in
-  let%bind padding = padding in
-  let padding_array = Llvm.array_type padding (7 + (8 * 3)) in
-  let fields = [ variant_tag; padding_array ] in
+  let fields = [ marker; op_clause; resumption ] in
   Codegen.use_context (fun context ->
     Llvm.struct_type context (Array.of_list fields))
 ;;
@@ -77,7 +56,7 @@ let function_object =
     Llvm.struct_type context (Array.of_list fields))
 ;;
 
-let function_code num_args =
+let function_code ~args =
   let open Codegen.Let_syntax in
   let%map pointer = pointer in
   let function_object_ptr = pointer in
@@ -85,7 +64,10 @@ let function_code num_args =
   let argument_types =
     function_object_ptr
     :: closure_ptr
-    :: List.init num_args ~f:(fun _i -> pointer)
+    :: List.concat_map args ~f:(fun arg_type ->
+      match (arg_type : Evidence_passing_syntax.Type.t) with
+      | Pure -> [ pointer ]
+      | Ctl -> [ pointer; pointer ])
   in
   Llvm.function_type pointer (Array.of_list argument_types)
 ;;

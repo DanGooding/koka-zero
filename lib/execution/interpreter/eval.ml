@@ -74,7 +74,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
          sprintf "unbound variable `%s`" (Variable.to_string_user name)
        in
        Interpreter.impossible_error message)
-  | Expr.Let (p, e_subject, e_body) ->
+  | Expr.Let (p, _type, e_subject, e_body) ->
     let%bind v_subject = eval_expr e_subject ~env in
     let env' =
       match p with
@@ -88,10 +88,13 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
   | Expr.Fix_lambda fix_lambda ->
     let%map closure = eval_fix_lambda fix_lambda ~env in
     Value.Closure closure
-  | Expr.Application (e_f, e_args) ->
+  | Expr.Application (e_f, e_args, _type) ->
     let%bind v_f = eval_expr e_f ~env in
     let%bind closure = Typecast.closure_of_value v_f in
-    let%bind v_args = List.map e_args ~f:(eval_expr ~env) |> Interpreter.all in
+    let%bind v_args =
+      List.map e_args ~f:(fun (arg, _type) -> eval_expr arg ~env)
+      |> Interpreter.all
+    in
     let f, f_env = closure in
     let lambda, f_env =
       match f with
@@ -99,7 +102,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
       | Value.Fix_lambda (f_name, lambda) ->
         lambda, Map.set f_env ~key:f_name ~data:(Value.Closure closure)
     in
-    let params, e_body = lambda in
+    let params, _type, e_body = lambda in
     eval_call ~f_env ~params ~e_body ~v_args
   | Expr.Literal lit -> eval_literal lit |> Value.Primitive |> return
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
@@ -278,7 +281,7 @@ and eval_fix_lambda
 
 and eval_call
   :  f_env:Value.context
-  -> params:Parameter.t list
+  -> params:(Parameter.t * Type.t) list
   -> e_body:Expr.t
   -> v_args:Value.t list
   -> Value.t Interpreter.t
@@ -287,7 +290,7 @@ and eval_call
   let open Interpreter.Let_syntax in
   let%bind params_to_args = Typecast.zip_arguments ~params ~args:v_args in
   let f_body_env =
-    List.fold params_to_args ~init:f_env ~f:(fun f_body_env (p, v) ->
+    List.fold params_to_args ~init:f_env ~f:(fun f_body_env ((p, _type), v) ->
       match p with
       | Parameter.Variable x -> Map.set f_body_env ~key:x ~data:v
       | Parameter.Wildcard -> f_body_env)

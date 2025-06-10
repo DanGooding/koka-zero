@@ -21,9 +21,9 @@ type t =
 
 val compile_use_callable
   :  t
-  -> compile_use_code_pointer:(Llvm.llvalue -> Llvm.llvalue Codegen.t)
-  -> compile_use_function_object_pointer:
-       (Llvm.llvalue -> Llvm.llvalue Codegen.t)
-  -> Llvm.llvalue Codegen.t
+  -> compile_use_code_pointer:(Llvm.llvalue -> Ctl_repr.t Codegen.t)
+  -> compile_use_function_object_pointer:(Llvm.llvalue -> Ctl_repr.t Codegen.t)
+  -> Ctl_repr.t Codegen.t
 
 val compile_wrap_callable : Callable.t -> Llvm.llvalue Codegen.t
+val compile_wrap : t -> Llvm.llvalue Codegen.t

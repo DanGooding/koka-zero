@@ -2,7 +2,7 @@ open Core
 open Import
 
 module Locals = struct
-  type t = (Variable.t * Llvm.llvalue) list
+  type t = (Variable.t * Ctl_repr.t) list
 
   let find t v =
     List.find_map t ~f:(fun (v', value) ->
@@ -16,6 +16,45 @@ module Locals = struct
   ;;
 
   (* TODO: filter shadowed names out? *)
+end
+
+module Return_value_pointer = struct
+  type t =
+    | Pure
+    | Ctl of { is_yield_i1_pointer : Llvm.llvalue }
+
+  let type_ (t : t) : Evidence_passing_syntax.Type.t =
+    match t with
+    | Pure -> Pure
+    | Ctl _ -> Ctl
+  ;;
+
+  let compile_return t (return_value : Ctl_repr.t) =
+    let open Codegen.Let_syntax in
+    match t, return_value with
+    | Pure, Pure return_value ->
+      let%map _return = Codegen.use_builder (Llvm.build_ret return_value) in
+      ()
+    | Ctl { is_yield_i1_pointer }, Ctl maybe_yield ->
+      let%bind is_yield_i1 =
+        Ctl_repr.Maybe_yield_repr.get_is_yield_i1 maybe_yield
+      in
+      let%bind _store =
+        Codegen.use_builder (Llvm.build_store is_yield_i1 is_yield_i1_pointer)
+      in
+      let%bind content = Ctl_repr.Maybe_yield_repr.get_content maybe_yield in
+      let%map _return = Codegen.use_builder (Llvm.build_ret content) in
+      ()
+    | Pure, Ctl _ | Ctl _, Pure _ ->
+      let expected = type_ t in
+      let actual = Ctl_repr.type_ return_value in
+      Codegen.impossible_error
+        (Sexp.to_string
+           [%message
+             "return value's type doesn't match function's return type"
+               (expected : Evidence_passing_syntax.Type.t)
+               (actual : Evidence_passing_syntax.Type.t)])
+  ;;
 end
 
 module Closure = struct
@@ -172,6 +211,7 @@ end
 
 type t =
   { locals : Locals.t
+  ; return_value_pointer : Return_value_pointer.t
   ; closure : Closure.t
   ; toplevel : Toplevel.t
   }
@@ -179,11 +219,19 @@ type t =
 let create_toplevel toplevel =
   let open Codegen.Let_syntax in
   let locals = [] in
+  let return_value_pointer =
+    (* slightly inaccurate, can't actually 'return' in a toplevel expr *)
+    Return_value_pointer.Pure
+  in
   let%map closure = Closure.empty in
-  { locals; closure; toplevel }
+  { locals; return_value_pointer; closure; toplevel }
 ;;
 
-let compile_capture { locals; closure; toplevel = _ } ~free ~runtime =
+let compile_capture
+      { locals; closure; toplevel = _; return_value_pointer = _ }
+      ~free
+      ~runtime
+  =
   let open Codegen.Let_syntax in
   match Locals.intersect_names locals free with
   | [] ->
@@ -195,20 +243,38 @@ let compile_capture { locals; closure; toplevel = _ } ~free ~runtime =
        Closure.empty
      | false -> (* existing parent closure has required names *) return closure)
   | escaping_locals ->
-    (* these locals need to be captured *)
-    Closure.compile_extend closure escaping_locals ~runtime
+    let escaping_pure, escaping_ctl =
+      List.partition_map escaping_locals ~f:(fun (name, repr) ->
+        match (repr : Ctl_repr.t) with
+        | Pure value -> First (name, value)
+        | Ctl value -> Second (name, value))
+    in
+    (match escaping_ctl with
+     | [] ->
+       (* these locals need to be captured *)
+       Closure.compile_extend closure escaping_pure ~runtime
+     | _ :: _ ->
+       let names = List.map escaping_ctl ~f:Tuple2.get1 in
+       raise_s
+         [%message
+           "unable to capture values of Ctl repr in closure"
+             (names : Variable.t list)])
 ;;
 
-let compile_get { locals; closure; toplevel } v =
+let compile_get { locals; closure; toplevel; return_value_pointer = _ } v =
   let open Codegen.Let_syntax in
   match Locals.find locals v with
   | Some value -> return value
   | None ->
     (match Closure.mem closure v with
-     | true -> Closure.compile_get closure v
+     | true ->
+       let%map value = Closure.compile_get closure v in
+       Ctl_repr.Pure value
      | false ->
        (match Toplevel.find toplevel v with
-        | Some callable -> Function_repr.compile_wrap_callable callable
+        | Some callable ->
+          let%map value = Function_repr.compile_wrap_callable callable in
+          Ctl_repr.Pure value
         | None ->
           let message =
             sprintf

@@ -71,14 +71,52 @@ module Rewrite_result = struct
   ;;
 end
 
+let all_of_type type_ types =
+  List.all_equal (type_ :: types) ~equal:[%equal: Type.t] |> Option.is_some
+;;
+
 let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
   : Expr.t Rewrite_result.t Generation.t
   =
   let open Generation.Let_syntax in
   match expr with
   | Application
-      (bind, [ expr_a; vector_a; Lambda ([ param_a; param_vector_a ], inner_a) ])
+      ( bind
+      , [ (expr_a, type_expr_a)
+        ; (vector_a, type_vector_a)
+        ; ( Lambda
+              ( [ (param_a, type_param_a)
+                ; (param_vector_a, type_param_vector_a)
+                ]
+              , type_inner_a
+              , inner_a )
+          , type_bind_expr (* Pure *) )
+        ]
+      , type_bind_result (* Ctl *) )
     when is_name bind Primitive_names.bind ->
+    (* guard against incorrectly typed bind. for some reason the exhaustive match heurstic complains if
+       we check this in the above pattern match. *)
+    (match
+       all_of_type Ctl [ type_expr_a; type_inner_a; type_bind_result ]
+       && all_of_type
+            Pure
+            [ type_vector_a; type_param_a; type_param_vector_a; type_bind_expr ]
+     with
+     | true -> ()
+     | false ->
+       raise_s
+         [%message
+           "badly typed [bind] application"
+             (expr : Expr.t)
+             ~expected_ctl:
+               ([ type_expr_a; type_inner_a; type_bind_expr ] : Type.t list)
+             ~expected_pure:
+               ([ type_vector_a
+                ; type_param_a
+                ; type_param_vector_a
+                ; type_bind_result
+                ]
+                : Type.t list)]);
     let inner_a_free = Free_variables.free_in_expr inner_a in
     let inner_a_free = Set.diff inner_a_free toplevel in
     let inner_a_free_excluding_a =
@@ -93,17 +131,23 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
     in
     let%bind join_name = Generation.fresh_name in
     let join_args = inner_a_free_excluding_a in
-    let join_params = List.map join_args ~f:(fun v -> Parameter.Variable v) in
-    let join_args = List.map join_args ~f:(fun v -> Expr.Variable v) in
+    let join_params =
+      List.map join_args ~f:(fun v -> Parameter.Variable v, Type.Pure)
+    in
+    let join_args =
+      List.map join_args ~f:(fun v -> Expr.Variable v, Type.Pure)
+    in
     let join_decl : Program.Fun_decl.t =
       (*
          fun (free(Inner_a) - a) -> fun (a, param_vector_a) -> transformed_inner_a_slow_path
       *)
       ( join_name
       , ( join_params
+        , Pure
         , Lambda
-            ([ param_a; param_vector_a ], inner_result.transformed_slow_path) )
-      )
+            ( [ param_a, Pure; param_vector_a, Pure ]
+            , Ctl
+            , inner_result.transformed_slow_path ) ) )
     in
     let%bind expr_a_result = rewrite_aux expr_a ~toplevel in
     let fun_decls =
@@ -125,7 +169,8 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
           | Wildcard -> Generation.fresh_name
         in
         let body =
-          Expr.Let (param_vector_a, vector_a, inner_result.transformed_fast_path)
+          Expr.Let
+            (param_vector_a, Pure, vector_a, inner_result.transformed_fast_path)
         in
         var_a, body
       in
@@ -137,13 +182,16 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
           let marker = Expr.Variable marker in
           let op_clause = Expr.Variable op_clause in
           let%map resumption =
-            Generation.make_lambda_expr_2 (fun x w ->
+            Generation.make_lambda_expr_2 Ctl (fun x w ->
               Expr.Application
                 ( bind
-                , [ Application (Variable resumption, [ x; w ])
-                  ; w
-                  ; Application (Variable join_name, join_args)
-                  ] )
+                , [ ( Application
+                        (Variable resumption, [ x, Pure; w, Pure ], Ctl)
+                    , Ctl )
+                  ; w, Pure
+                  ; Application (Variable join_name, join_args, Pure), Pure
+                  ]
+                , Ctl )
               |> Generation.return)
           in
           Expr.Construct_yield { marker; op_clause; resumption }
@@ -158,10 +206,11 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
       *)
       Expr.Application
         ( bind
-        , [ expr_a_result.transformed_slow_path
-          ; vector_a
-          ; Application (Variable join_name, join_args)
-          ] )
+        , [ expr_a_result.transformed_slow_path, Ctl
+          ; vector_a, Pure
+          ; Application (Variable join_name, join_args, Pure), Pure
+          ]
+        , Ctl )
     in
     return
       { Rewrite_result.transformed_fast_path; transformed_slow_path; fun_decls }
@@ -173,22 +222,25 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
     Rewrite_result.map lambda ~f:(fun lambda -> Expr.Fix_lambda (name, lambda))
   (* the implementation simply recurses over the rest of the syntax tree,
      choosing the fast-path for within each new lambda. *)
-  | Application (e_fun, e_args) ->
+  | Application (e_fun, e_args, type_) ->
     let%bind fun_result = rewrite_aux e_fun ~toplevel in
     let%map arg_results =
-      List.map e_args ~f:(rewrite_aux ~toplevel) |> Generation.all
+      List.map e_args ~f:(fun (e_arg, type_) ->
+        let%map arg_result = rewrite_aux e_arg ~toplevel in
+        Rewrite_result.map arg_result ~f:(fun arg -> arg, type_))
+      |> Generation.all
     in
     Rewrite_result.combine
       fun_result
       (Rewrite_result.all arg_results)
-      ~f:(fun e_fun e_args -> Expr.Application (e_fun, e_args))
+      ~f:(fun e_fun e_args -> Expr.Application (e_fun, e_args, type_))
   | Variable _ | Literal _ | Fresh_marker | Effect_label _ | Nil_evidence_vector
     -> return (Rewrite_result.return expr)
-  | Let (param, e_subject, e_body) ->
+  | Let (param, type_, e_subject, e_body) ->
     let%bind subject_result = rewrite_aux e_subject ~toplevel in
     let%map body_result = rewrite_aux e_body ~toplevel in
     Rewrite_result.combine subject_result body_result ~f:(fun subject body ->
-      Expr.Let (param, subject, body))
+      Expr.Let (param, type_, subject, body))
   | If_then_else (e_cond, e_true, e_false) ->
     let%bind cond_result = rewrite_aux e_cond ~toplevel in
     let%bind true_result = rewrite_aux e_true ~toplevel in
@@ -295,10 +347,10 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
        so there is no need to recurse into this *)
     return (Rewrite_result.return expr)
 
-and rewrite_lambda (params, e_body) ~toplevel =
+and rewrite_lambda (params, type_, e_body) ~toplevel =
   let open Generation.Let_syntax in
   let%map (body_result : _ Rewrite_result.t) = rewrite_aux e_body ~toplevel in
-  let lambda = params, body_result.transformed_fast_path in
+  let lambda = params, type_, body_result.transformed_fast_path in
   let fun_decls = body_result.fun_decls in
   lambda, fun_decls
 

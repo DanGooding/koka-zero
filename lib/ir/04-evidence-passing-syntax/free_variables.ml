@@ -4,7 +4,7 @@ open Evidence_passing_syntax
 
 let rec free_in_expr : Expr.t -> Variable.Set.t = function
   | Expr.Variable v -> Variable.Set.singleton v
-  | Expr.Let (p, subject, body) ->
+  | Expr.Let (p, _type, subject, body) ->
     let subject_free = free_in_expr subject in
     let body_free =
       match p with
@@ -14,7 +14,8 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
     Set.union subject_free body_free
   | Expr.Lambda lambda -> free_in_lambda lambda
   | Expr.Fix_lambda fix_lambda -> free_in_fix_lambda fix_lambda
-  | Expr.Application (e_f, e_args) -> free_in_exprs (e_f :: e_args)
+  | Expr.Application (e_f, e_args, _ty) ->
+    free_in_exprs (e_f :: List.map e_args ~f:(fun (param, _type) -> param))
   | Expr.Literal _ -> Variable.Set.empty
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     free_in_exprs [ e_cond; e_yes; e_no ]
@@ -80,11 +81,12 @@ and free_in_binding : Variable.t -> Expr.t -> Variable.Set.t =
   Set.remove e_free v
 
 and free_in_lambda : Expr.lambda -> Variable.Set.t =
-  fun (params, body) ->
+  fun (params, _ty, body) ->
   let param_names =
-    List.filter_map params ~f:(function
-      | Parameter.Variable v -> Some v
-      | Parameter.Wildcard -> None)
+    List.filter_map params ~f:(fun (p, _t) ->
+      match (p : Parameter.t) with
+      | Variable v -> Some v
+      | Wildcard -> None)
   in
   free_in_bindings param_names body
 

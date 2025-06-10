@@ -4,7 +4,15 @@ open Import
 module Locals : sig
   (** maps the current function's locals and parameters to their [llvalues]. The
       first name is the innermost, so must search in forward order *)
-  type t = (Variable.t * Llvm.llvalue) list
+  type t = (Variable.t * Ctl_repr.t) list
+end
+
+module Return_value_pointer : sig
+  type t =
+    | Pure
+    | Ctl of { is_yield_i1_pointer : Llvm.llvalue }
+
+  val compile_return : t -> Ctl_repr.t -> unit Codegen.t
 end
 
 module Closure : sig
@@ -41,6 +49,7 @@ end
 (** maps in-scope names to their [llvalues] *)
 type t =
   { locals : Locals.t
+  ; return_value_pointer : Return_value_pointer.t
   ; closure : Closure.t
   ; toplevel : Toplevel.t
   }
@@ -62,7 +71,7 @@ val compile_capture
 (** generate code to retrieve an in-scope variable, either directly from
     [parameters], or indirectly in the [closure]. fails with a codegen_error if
     it is not in scope. *)
-val compile_get : t -> Variable.t -> Llvm.llvalue Codegen.t
+val compile_get : t -> Variable.t -> Ctl_repr.t Codegen.t
 
-(** add another local binding to the context, failing if at [Toplevel] *)
-val add_local_exn : t -> name:Variable.t -> value:Llvm.llvalue -> t
+(** add another local binding to the context *)
+val add_local_exn : t -> name:Variable.t -> value:Ctl_repr.t -> t

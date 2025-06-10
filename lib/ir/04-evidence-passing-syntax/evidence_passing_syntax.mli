@@ -1,13 +1,23 @@
 open! Core
 open Import
 
+module Type : sig
+  type t =
+    | Ctl
+    (** either a Pure value or a Yield. this is the result of calling any effectful function.
+        The contents can be extracted by Match_ctl *)
+    | Pure (** simply a value, can be used directly *)
+  [@@deriving sexp_of, equal]
+end
+
 module Expr : sig
   type t =
     | Variable of Variable.t
-    | Let of Parameter.t * t * t (** local binding [let y = x in e] *)
+    | Let of Parameter.t * Type.t * t * t
+    (** local binding [let y: t = x in e] *)
     | Lambda of lambda
     | Fix_lambda of fix_lambda
-    | Application of t * t list
+    | Application of t * (t * Type.t) list * Type.t
     | Literal of Literal.t
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t
@@ -65,7 +75,7 @@ module Expr : sig
     | Impure_built_in of impure_built_in
   [@@deriving sexp_of]
 
-  and lambda = Parameter.t list * t [@@deriving sexp_of]
+  and lambda = (Parameter.t * Type.t) list * Type.t * t [@@deriving sexp_of]
   and fix_lambda = Variable.t * lambda [@@deriving sexp_of]
 
   (** interaction with the outside world *)
