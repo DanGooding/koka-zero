@@ -96,7 +96,7 @@ let build_phi incoming =
       Codegen.use_builder (Llvm.build_phi content "content_incoming")
     in
     let%map is_yield_i1 =
-      Codegen.use_builder (Llvm.build_phi is_yield_i1 "content_incoming")
+      Codegen.use_builder (Llvm.build_phi is_yield_i1 "is_yield_incoming")
     in
     Ctl { Maybe_yield_repr.content; is_yield_i1 }
 ;;

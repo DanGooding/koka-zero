@@ -185,7 +185,7 @@ let compile_call
          function_type
          code_pointer
          (Array.of_list arg_values)
-         "call")
+         "result")
   in
   match return_arg with
   | `Pure -> return (Ctl_repr.Pure return_value)
@@ -228,7 +228,7 @@ let make_function_and_context
     ; return_ =
         (match (return_type : Type.t) with
          | Pure -> `Pure
-         | Ctl -> `Ctl "return")
+         | Ctl -> `Ctl "return_is_yield")
     }
   in
   let%bind all_params_and_types =
