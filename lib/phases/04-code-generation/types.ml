@@ -56,22 +56,6 @@ let function_object =
     Llvm.struct_type context (Array.of_list fields))
 ;;
 
-let function_code ~args =
-  let open Codegen.Let_syntax in
-  let%map pointer = pointer in
-  let function_object_ptr = pointer in
-  let closure_ptr = pointer in
-  let argument_types =
-    function_object_ptr
-    :: closure_ptr
-    :: List.concat_map args ~f:(fun arg_type ->
-      match (arg_type : Evidence_passing_syntax.Type.t) with
-      | Pure -> [ pointer ]
-      | Ctl -> [ pointer; pointer ])
-  in
-  Llvm.function_type pointer (Array.of_list argument_types)
-;;
-
 let main_function =
   let open Codegen.Let_syntax in
   let%map i32 = Codegen.use_context Llvm.i32_type in

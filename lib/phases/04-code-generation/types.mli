@@ -33,16 +33,5 @@ val closure : Llvm.lltype Codegen.t
     [{ opaque_pointer code; closure *closure; i1 is_recursive }] *)
 val function_object : Llvm.lltype Codegen.t
 
-(** an llvm function type, representing the generated function for a lambda with
-    [n] arguments. This will be an llvm function of [n + 2] arguments, it also
-    requires a pointer to the function object itself for recursion, and a
-    closure. [null] should be passed for the former if it is not a recursive
-    function. The type is:
-    [ptr ( function_object *f_self, closure *closure, ptr arg_1, ... ptr arg_n) ]
-*)
-val function_code
-  :  args:Evidence_passing_syntax.Type.t list
-  -> Llvm.lltype Codegen.t
-
 (** type of the binary's entry point: [i32 main()] *)
 val main_function : Llvm.lltype Codegen.t
