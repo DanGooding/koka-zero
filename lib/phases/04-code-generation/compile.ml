@@ -123,40 +123,6 @@ let compile_select_operation
     (Llvm.build_load pointer_type op_clause_field_ptr "op_clause")
 ;;
 
-(** [compile_construct_function_object code_address ~is_recursive ~captured_closure ...]
-    generates code to heap allocate and populate a [Types.function_object], with
-    code pointed to by the (typed or opaque) [code_address], keeping
-    [captured_closure] as it's closure. *)
-let compile_construct_function_object
-  :  Llvm.llvalue
-  -> is_recursive:bool
-  -> captured_closure:Llvm.llvalue
-  -> runtime:Runtime.t
-  -> Llvm.llvalue Codegen.t
-  =
-  fun code_address ~is_recursive ~captured_closure ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind function_object_type = Types.function_object in
-  let%bind function_ptr =
-    Helpers.heap_allocate function_object_type "function" ~runtime
-  in
-  let%bind i1 = Codegen.use_context Llvm.i1_type in
-  let is_recursive = Llvm.const_int i1 (if is_recursive then 1 else 0) in
-  let fields =
-    [ code_address, "code"
-    ; captured_closure, "closure"
-    ; is_recursive, "is_recursive"
-    ]
-  in
-  let%map () =
-    Helpers.compile_populate_struct
-      function_ptr
-      ~struct_type:function_object_type
-      fields
-  in
-  function_ptr
-;;
-
 (** [compile_match_corrupted_tag ...] generates a default branch for a match
     statement, executed when a variants tag has an unexpected value. This exits
     the program, and results in a null [Types.opaque_pointer] to satisfy llvm's
@@ -622,7 +588,7 @@ and compile_function
       (params : (Parameter.t * EPS.Type.t) list)
       e_body
       ~(return_type : EPS.Type.t)
-      ~(captured_shape : Context.Closure.Shape.t)
+      ~(captured_shape : Context.Closure.Shape.t option)
       ~(toplevel : Context.Toplevel.t)
       ~outer_symbol
       ~runtime
@@ -659,7 +625,7 @@ and compile_local_function
       (ps : (Parameter.t * EPS.Type.t) list)
       (e_body : EPS.Expr.t)
       ~(return_type : EPS.Type.t)
-      ~(captured_shape : Context.Closure.Shape.t)
+      ~(captured_shape : Context.Closure.Shape.t option)
       ~(toplevel : Context.Toplevel.t)
       ~(outer_symbol : Symbol_name.t)
       ~(runtime : Runtime.t)
@@ -710,39 +676,34 @@ and compile_lambda_like
   in
   (* capture all free varaibles which are local (non-local ones are already in
      the closure, so just chain)*)
-  let%bind escaping = Context.compile_capture env ~free ~runtime in
-  let { Context.Closure.shape = escaping_shape; closure = escaping_closure } =
-    escaping
-  in
-  let rec_name, is_recursive, (params, return_type, e_body) =
+  let captured_shape = Context.get_captured env ~free in
+  let rec_name, (params, return_type, e_body) =
     match lambda_like with
-    | `Fix_lambda (rec_name, lambda) -> Some rec_name, true, lambda
-    | `Lambda lambda -> None, false, lambda
+    | `Fix_lambda (rec_name, lambda) -> Some rec_name, lambda
+    | `Lambda lambda -> None, lambda
   in
-  let%bind function_code =
+  let%bind code_address =
     compile_local_function
       ~rec_name
       params
       e_body
       ~return_type
-      ~captured_shape:escaping_shape
+      ~captured_shape
       ~toplevel:env.toplevel
       ~outer_symbol
       ~runtime
       ~effect_reprs
   in
-  match Context.Closure.is_empty escaping with
-  | true ->
+  match captured_shape with
+  | None ->
     (* functions with no free variables are simply code pointers,
        with no heap allocation required *)
-    Function_repr.compile_wrap_callable (Code_pointer function_code)
-  | false ->
-    (* closures are allocated on the heap *)
-    compile_construct_function_object
-      function_code
-      ~is_recursive
-      ~captured_closure:escaping_closure
-      ~runtime
+    Function_repr.compile_wrap_callable (Code_pointer code_address)
+  | Some captured_shape ->
+    let%map { Context.Closure.closure; shape = _ } =
+      Context.compile_capture env ~captured_shape ~code_address ~runtime
+    in
+    closure
 
 (** [compile_lambda lambda ...] compiles a lambda as a function, and generates
     code to construct a function object of it in the given [env]. The result is
@@ -790,49 +751,28 @@ and compile_application
   Function_repr.compile_use_callable
     function_repr
     ~compile_use_code_pointer:(fun code_pointer ->
-      let%bind { closure; _ } = Context.Closure.empty in
       Calling_convention.compile_call
         ~code_pointer
         ~function_repr
-        ~closure
         ~args
         ~return_type)
     ~compile_use_function_object_pointer:(fun f_ptr ->
-      let%bind function_object_type = Types.function_object in
+      let%bind closure_type =
+        (* we don't know the number of variables in the closure struct at the call-site,
+           but this should be okay, since we only access the field before them. *)
+        Types.closure_struct ~num_captured:1
+      in
       (* extract fields of f *)
       let%bind code_pointer =
         Helpers.compile_access_field
           f_ptr
-          ~struct_type:function_object_type
+          ~struct_type:closure_type
           ~i:0
           "code_address"
       in
-      let%bind closure =
-        Helpers.compile_access_field
-          f_ptr
-          ~struct_type:function_object_type
-          ~i:1
-          "closure"
-      in
-      let%bind is_recursive =
-        Helpers.compile_access_field
-          f_ptr
-          ~struct_type:function_object_type
-          ~i:2
-          "is_recursive"
-      in
-      let%bind pointer_type = Types.pointer in
-      (* pass either [f_ptr] or [null] depending on whether the function is
-         recursive *)
-      let null_function = Llvm.const_pointer_null pointer_type in
-      let%bind f_self =
-        Codegen.use_builder
-          (Llvm.build_select is_recursive f_ptr null_function "f_self")
-      in
       Calling_convention.compile_call
         ~code_pointer
-        ~function_repr:(Maybe_tagged f_self)
-        ~closure
+        ~function_repr:(Maybe_tagged f_ptr)
         ~args
         ~return_type)
 
@@ -987,7 +927,7 @@ let compile_fun_decl
       ps
       e_body
       ~return_type
-      ~captured_shape:Context.Closure.Shape.empty
+      ~captured_shape:None
       ~toplevel
       ~outer_symbol:symbol_name
       ~runtime
@@ -1039,7 +979,7 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
     Runtime.Function.build_call init ~args:(Array.of_list []) ""
   in
   let toplevel = Context.Toplevel.of_ordered_alist named_code_addresses in
-  let%bind env = Context.create_toplevel toplevel in
+  let env = Context.create_toplevel toplevel in
   let%bind _unit =
     compile_expr
       entry_expr

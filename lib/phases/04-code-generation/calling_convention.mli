@@ -6,7 +6,6 @@ module Type = Evidence_passing_syntax.Type
 val compile_call
   :  code_pointer:Llvm.llvalue
   -> function_repr:Function_repr.t
-  -> closure:Llvm.llvalue
   -> args:Ctl_repr.t list
   -> return_type:Type.t
   -> Ctl_repr.t Codegen.t
@@ -19,6 +18,6 @@ val make_function_and_context
   -> symbol_name:Symbol_name.t
   -> self:Variable.t option
   -> return_type:Type.t
-  -> captured_shape:Context.Closure.Shape.t
+  -> captured_shape:Context.Closure.Shape.t option
   -> toplevel:Context.Toplevel.t
   -> (Llvm.llvalue * Context.t) Codegen.t

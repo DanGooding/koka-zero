@@ -25,6 +25,7 @@ type t =
 
 (* fail with 'impossible error' if the expected variant isn't returned *)
 val pure : t -> Llvm.llvalue Codegen.t
+val pure_exn : t -> Llvm.llvalue
 val ctl : t -> Maybe_yield_repr.t Codegen.t
 val type_ : t -> Evidence_passing_syntax.Type.t
 val build_phi : (t * Llvm.llbasicblock) list -> t Codegen.t

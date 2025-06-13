@@ -9,11 +9,8 @@ module Locals = struct
       Option.some_if Variable.(v = v') value)
   ;;
 
+  let mem t v = find t v |> Option.is_some
   let add t ~name ~value = (name, value) :: t
-
-  let intersect_names t names =
-    List.filter t ~f:(fun (name, _) -> Set.mem names name)
-  ;;
 
   (* TODO: filter shadowed names out? *)
 end
@@ -58,17 +55,45 @@ module Return_value_pointer = struct
 end
 
 module Closure = struct
-  module Shape = struct
-    type t = Variable.t list list [@@deriving sexp_of]
+  (* it's important that the shape has the same order as the values are stored
+     into the closure itself. *)
+  let variable_ordering = [%compare: Variable.t]
 
-    let empty = []
+  module Shape : sig
+    type t [@@deriving sexp_of]
 
-    let is_empty = function
-      | [] -> true
-      | _ -> false
+    (** raises if empty, or if not in order *)
+    val create_exn : Variable.t list -> t
+
+    val mem : t -> Variable.t -> bool
+    val length : t -> int
+    val index_of_variable : t -> Variable.t -> int option
+    val to_list : t -> Variable.t list
+  end = struct
+    type t = Variable.t list [@@deriving sexp_of]
+
+    let create_exn vs =
+      match vs with
+      | [] -> raise_s [%message "closure must be non-empty"]
+      | vs ->
+        (match List.is_sorted vs ~compare:variable_ordering with
+         | true -> vs
+         | false ->
+           raise_s
+             [%message
+               "closure variables must be in sorted order, so creator and body \
+                agree"])
     ;;
 
-    let names t = List.concat t |> Variable.Set.of_list
+    let mem = List.mem ~equal:[%equal: Variable.t]
+    let length = List.length
+    let to_list t = t
+
+    let index_of_variable vs v =
+      match List.findi vs ~f:(fun _i v' -> [%equal: Variable.t] v v') with
+      | Some (i, _v) -> Some i
+      | None -> None
+    ;;
   end
 
   type t =
@@ -76,127 +101,95 @@ module Closure = struct
     ; shape : Shape.t
     }
 
-  let empty =
-    let open Codegen.Let_syntax in
-    let%map pointer_type = Types.pointer in
-    let closure = Llvm.const_pointer_null pointer_type in
-    let shape = Shape.empty in
-    { closure; shape }
-  ;;
-
-  let is_empty { shape; _ } = Shape.is_empty shape
-  let names { shape; _ } = Shape.names shape
-
-  (** [compile_extend_closure closure names_and_values ~runtime] creates a new
-      closure with the specified values (which should all be
-      [Types.opaque_pointer]), and the given parent *)
-  let compile_extend_closure
-    :  Llvm.llvalue
-    -> (Variable.t * Llvm.llvalue) list
-    -> runtime:Runtime.t
-    -> Llvm.llvalue Codegen.t
+  let get_var_pointer
+        (closure : Llvm.llvalue)
+        (closure_type : Llvm.lltype)
+        ~(i : int)
+        ~name
     =
-    fun closure named_vars ~runtime ->
     let open Codegen.Let_syntax in
-    let%bind closure_type = Types.closure in
-    let%bind closure_ptr =
-      Helpers.heap_allocate closure_type "extended_closure" ~runtime
-    in
-    let%bind pointer_type = Types.pointer in
-    let num_vars = List.length named_vars in
-    let vars_type = Llvm.array_type pointer_type num_vars in
-    let%bind vars_ptr = Helpers.heap_allocate vars_type "vars" ~runtime in
-    let var_values_and_register_names =
-      List.map named_vars ~f:(fun (name, value) ->
-        value, Helpers.register_name_of_variable name)
-    in
-    let array_type = Llvm.array_type pointer_type num_vars in
-    let%bind () =
-      Helpers.compile_populate_array
-        vars_ptr
-        var_values_and_register_names
-        ~array_type
-    in
-    let%bind i64 = Codegen.use_context Llvm.i64_type in
-    let num_vars_value = Llvm.const_int i64 num_vars in
-    let%bind closure_type = Types.closure in
-    let%map () =
-      (* TODO: a first-class concept of a struct with populate+accessors *)
-      Helpers.compile_populate_struct
-        ~struct_type:closure_type
-        closure_ptr
-        [ num_vars_value, "num_vars"; vars_ptr, "vars"; closure, "parent" ]
-    in
-    closure_ptr
+    let%bind i32 = Codegen.use_context Llvm.i32_type in
+    Codegen.use_builder
+      (Llvm.build_gep
+         closure_type
+         closure
+         (Array.of_list (List.map [ 0; 1; i ] ~f:(Llvm.const_int i32)))
+         (name ^ "_ptr"))
   ;;
 
-  let compile_extend { closure = parent; shape } locals ~runtime =
+  let compile_create
+        (contents : (Variable.t * Llvm.llvalue) list)
+        ~code_address
+        ~runtime
+    =
     let open Codegen.Let_syntax in
-    let var_names = List.map locals ~f:(fun (name, _value) -> name) in
-    let shape = var_names :: shape in
-    let%map closure_ptr = compile_extend_closure parent locals ~runtime in
-    { closure = closure_ptr; shape }
+    let%bind closure_type =
+      Types.closure_struct ~num_captured:(List.length contents)
+    in
+    let%bind closure_ptr =
+      Helpers.heap_allocate closure_type "closure" ~runtime
+    in
+    let%bind code_address_ptr =
+      Codegen.use_builder
+        (Llvm.build_struct_gep closure_type closure_ptr 0 "code_address_ptr")
+    in
+    let%bind _store =
+      Codegen.use_builder (Llvm.build_store code_address code_address_ptr)
+    in
+    (* ensure contents sorted *)
+    let contents =
+      List.sort
+        contents
+        ~compare:(Comparable.lift variable_ordering ~f:Tuple2.get1)
+    in
+    let%map () =
+      List.mapi contents ~f:(fun i (name, value) ->
+        let%bind var_pointer =
+          get_var_pointer
+            closure_ptr
+            closure_type
+            ~i
+            ~name:(Helpers.register_name_of_variable name)
+        in
+        let%map _store =
+          Codegen.use_builder (Llvm.build_store value var_pointer)
+        in
+        ())
+      |> Codegen.all_unit
+    in
+    let shape = List.map contents ~f:(fun (name, _value) -> name) in
+    let shape = Shape.create_exn shape in
+    { shape; closure = closure_ptr }
   ;;
 
   (** compile accessing [ closure->vars[i] ] *)
-  let compile_get_var (closure : Llvm.llvalue) ~(i : int) name =
+  let compile_get_var (closure : Llvm.llvalue) ~(i : int) ~num_captured ~name =
     let open Codegen.Let_syntax in
-    let%bind closure_type = Types.closure in
-    let%bind vars =
-      Helpers.compile_access_field closure ~struct_type:closure_type ~i:1 "vars"
-    in
-    let%bind i64 = Codegen.use_context Llvm.i64_type in
-    let index = Llvm.const_int i64 i in
+    let%bind closure_type = Types.closure_struct ~num_captured in
+    let%bind var_ptr = get_var_pointer closure closure_type ~i ~name in
     let%bind pointer_type = Types.pointer in
-    let%bind var_ptr =
-      Codegen.use_builder
-        (Llvm.build_gep
-           pointer_type
-           vars
-           (Array.of_list [ index ])
-           (name ^ "_ptr"))
-    in
     (* treat all values as pointer types, even potential immediates *)
     Codegen.use_builder (Llvm.build_load pointer_type var_ptr name)
   ;;
 
-  let index_of_variable vs v =
-    match List.findi vs ~f:(fun _i v' -> Variable.(v = v')) with
-    | Some (i, _v) -> Some i
-    | None -> None
-  ;;
+  let mem { shape; _ } v = Shape.mem shape v
 
-  let mem { shape; _ } v =
-    List.exists shape ~f:(fun vars ->
-      List.mem vars v ~equal:[%equal: Variable.t])
-  ;;
-
-  let rec compile_get { closure; shape } v =
-    let open Codegen.Let_syntax in
-    match shape with
-    | [] ->
+  let compile_get { closure; shape } v =
+    match Shape.index_of_variable shape v with
+    | Some i ->
+      compile_get_var
+        closure
+        ~i
+        ~num_captured:(Shape.length shape)
+        ~name:(Helpers.register_name_of_variable v)
+    | None ->
       let message =
         sprintf "variable not found in closure: %s" (Variable.to_string_user v)
       in
       Codegen.impossible_error message
-    | vs :: parent_shape ->
-      (match index_of_variable vs v with
-       | Some i ->
-         compile_get_var closure ~i (Helpers.register_name_of_variable v)
-       | None ->
-         (* compile accessing closure->parent *)
-         let%bind closure_type = Types.closure in
-         let%bind parent_ptr =
-           Helpers.compile_access_field
-             closure
-             ~struct_type:closure_type
-             ~i:2
-             "parent"
-         in
-         (* recurse on that *)
-         let parent_closure = { closure = parent_ptr; shape = parent_shape } in
-         compile_get parent_closure v)
   ;;
+
+  let get_type _t _v = Evidence_passing_syntax.Type.Pure
 end
 
 module Toplevel = struct
@@ -207,81 +200,120 @@ module Toplevel = struct
   ;;
 
   let find t v = Map.find t v
+  let mem t v = Map.mem t v
+  let type_ _t _v = Evidence_passing_syntax.Type.Pure
 end
 
 type t =
   { locals : Locals.t
   ; return_value_pointer : Return_value_pointer.t
-  ; closure : Closure.t
+  ; closure : Closure.t option
   ; toplevel : Toplevel.t
   }
 
 let create_toplevel toplevel =
-  let open Codegen.Let_syntax in
   let locals = [] in
   let return_value_pointer =
     (* slightly inaccurate, can't actually 'return' in a toplevel expr *)
     Return_value_pointer.Pure
   in
-  let%map closure = Closure.empty in
+  let closure = None in
   { locals; return_value_pointer; closure; toplevel }
 ;;
 
-let compile_capture
-      { locals; closure; toplevel = _; return_value_pointer = _ }
-      ~free
-      ~runtime
-  =
-  let open Codegen.Let_syntax in
-  match Locals.intersect_names locals free with
-  | [] ->
-    (* we don't need to capture anything *)
-    let used_names_from_closure = Set.inter (Closure.names closure) free in
-    (match Set.is_empty used_names_from_closure with
-     | true ->
-       (* don't need the closure at all *)
-       Closure.empty
-     | false -> (* existing parent closure has required names *) return closure)
-  | escaping_locals ->
-    let escaping_pure, escaping_ctl =
-      List.partition_map escaping_locals ~f:(fun (name, repr) ->
-        match (repr : Ctl_repr.t) with
-        | Pure value -> First (name, value)
-        | Ctl value -> Second (name, value))
+let find { locals; closure; toplevel; return_value_pointer = _ } v =
+  match Locals.mem locals v with
+  | true -> `Local
+  | false ->
+    let in_closure =
+      match closure with
+      | None -> false
+      | Some closure -> Closure.mem closure v
     in
-    (match escaping_ctl with
-     | [] ->
-       (* these locals need to be captured *)
-       Closure.compile_extend closure escaping_pure ~runtime
+    (match in_closure with
+     | true -> `Closure
+     | false ->
+       (match Toplevel.mem toplevel v with
+        | true -> `Toplevel
+        | false -> `Not_found))
+;;
+
+let get_type t v =
+  match find t v with
+  | `Local -> Locals.find t.locals v |> Option.value_exn |> Ctl_repr.type_
+  | `Closure -> Closure.get_type (Option.value_exn t.closure) v
+  | `Toplevel -> Toplevel.type_ t.toplevel v
+  | `Not_found ->
+    raise_s [%message "variable not found in scope: %s" (v : Variable.t)]
+;;
+
+let compile_get t v =
+  let open Codegen.Let_syntax in
+  match find t v with
+  | `Local -> return (Locals.find t.locals v |> Option.value_exn)
+  | `Closure ->
+    let%map value = Closure.compile_get (Option.value_exn t.closure) v in
+    Ctl_repr.Pure value
+  | `Toplevel ->
+    let callable = Toplevel.find t.toplevel v |> Option.value_exn in
+    let%map value = Function_repr.compile_wrap_callable callable in
+    Ctl_repr.Pure value
+  | `Not_found ->
+    let message =
+      sprintf "variable not found in scope: %s" (Variable.to_string_user v)
+    in
+    Codegen.impossible_error message
+;;
+
+let get_captured t ~free =
+  (* new closure will contain [free - toplevel] *)
+  let free_with_sources = Set.to_map free ~f:(fun v -> find t v) in
+  let to_capture =
+    Map.filteri free_with_sources ~f:(fun ~key:v ~data:source ->
+      match source with
+      | `Toplevel -> false
+      | `Local | `Closure -> true
+      | `Not_found ->
+        raise_s [%message "captured variable is not in scope" (v : Variable.t)])
+    |> Map.keys
+  in
+  match List.is_empty to_capture with
+  | true -> None
+  | false ->
+    let captured_with_types =
+      List.map to_capture ~f:(fun v -> v, get_type t v)
+    in
+    let captured_pure, captured_ctl =
+      List.partition_map captured_with_types ~f:(fun (name, type_) ->
+        match (type_ : Evidence_passing_syntax.Type.t) with
+        | Pure -> First name
+        | Ctl -> Second name)
+    in
+    (match captured_ctl with
+     | [] -> ()
      | _ :: _ ->
-       let names = List.map escaping_ctl ~f:Tuple2.get1 in
+       (* we could implement this someday, but there's no need right now *)
        raise_s
          [%message
            "unable to capture values of Ctl repr in closure"
-             (names : Variable.t list)])
+             (captured_ctl : Variable.t list)]);
+    let captured_pure =
+      List.sort captured_pure ~compare:Closure.variable_ordering
+    in
+    Some (Closure.Shape.create_exn captured_pure)
 ;;
 
-let compile_get { locals; closure; toplevel; return_value_pointer = _ } v =
+let compile_capture t ~captured_shape ~code_address ~runtime =
   let open Codegen.Let_syntax in
-  match Locals.find locals v with
-  | Some value -> return value
-  | None ->
-    (match Closure.mem closure v with
-     | true ->
-       let%map value = Closure.compile_get closure v in
-       Ctl_repr.Pure value
-     | false ->
-       (match Toplevel.find toplevel v with
-        | Some callable ->
-          let%map value = Function_repr.compile_wrap_callable callable in
-          Ctl_repr.Pure value
-        | None ->
-          let message =
-            sprintf
-              "variable not found in scope: %s"
-              (Variable.to_string_user v)
-          in
-          Codegen.impossible_error message))
+  let%bind captued =
+    Closure.Shape.to_list captured_shape
+    |> List.map ~f:(fun v ->
+      let%map value = compile_get t v in
+      v, Ctl_repr.pure_exn value)
+    |> Codegen.all
+  in
+  let%map closure = Closure.compile_create captued ~code_address ~runtime in
+  closure
 ;;
 
 let add_local_exn t ~name ~value =

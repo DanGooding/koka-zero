@@ -34,24 +34,12 @@ let op =
     Llvm.struct_type context (Array.of_list fields))
 ;;
 
-let closure =
-  let open Codegen.Let_syntax in
-  let%bind num_vars = Codegen.use_context Llvm.i64_type in
-  let%bind pointer = pointer in
-  let variable_array = (* pointer to array of pointers *) pointer in
-  let parent_closure = pointer in
-  let fields = [ num_vars; variable_array; parent_closure ] in
-  Codegen.use_context (fun context ->
-    Llvm.struct_type context (Array.of_list fields))
-;;
-
-let function_object =
+let closure_struct ~num_captured =
   let open Codegen.Let_syntax in
   let%bind pointer = pointer in
   let code_address = pointer in
-  let closure_ptr = pointer in
-  let%bind is_recursive = Codegen.use_context Llvm.i1_type in
-  let fields = [ code_address; closure_ptr; is_recursive ] in
+  let captures = Llvm.array_type pointer num_captured in
+  let fields = [ code_address; captures ] in
   Codegen.use_context (fun context ->
     Llvm.struct_type context (Array.of_list fields))
 ;;

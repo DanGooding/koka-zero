@@ -53,6 +53,12 @@ let pure t =
   | Ctl _ -> Codegen.impossible_error "expected Pure llvalue, got Ctl"
 ;;
 
+let pure_exn t =
+  match t with
+  | Pure pure -> pure
+  | Ctl _ -> raise_s [%message "expected Pure but got Ctl"]
+;;
+
 let ctl t =
   match t with
   | Ctl is_yield -> Codegen.return is_yield

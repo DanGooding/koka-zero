@@ -8,7 +8,6 @@ module Type = Evidence_passing_syntax.Type
     {v
     ptr f(
       ptr f_self,
-      ptr closure, 
       ptr a, 
       ptr b_content,
       i1 b_is_yield,
@@ -18,20 +17,18 @@ module Type = Evidence_passing_syntax.Type
 module Function_type = struct
   type ('a, 'c, 'r) t =
     { function_repr : 'a
-    ; closure : 'a
     ; args : [ `Pure of 'a | `Ctl of 'c ] list
     ; return_ : [ `Pure | `Ctl of 'r ]
     }
 
   let flatten_to_args
-        { function_repr; closure; args; return_ }
+        { function_repr; args; return_ }
         ~get_ctl_content
         ~get_ctl_is_yield_i1
     =
     let open Codegen.Let_syntax in
     let%bind pointer_type = Types.pointer in
     let function_repr = pointer_type, function_repr in
-    let closure = pointer_type, closure in
     let%bind args =
       let%bind i1_type = Codegen.use_context Llvm.i1_type in
       Codegen.list_concat_map args ~f:(fun arg ->
@@ -49,7 +46,7 @@ module Function_type = struct
         let%map pointer_type = Types.pointer in
         Some (pointer_type, is_yield_i1_ptr)
     in
-    (function_repr :: closure :: args) @ Option.to_list return_
+    (function_repr :: args) @ Option.to_list return_
   ;;
 
   let args_for_call
@@ -88,7 +85,6 @@ module Function_type = struct
 
   let map_unit (t : ('a, 'c, 'r) t) : (unit, unit, unit) t =
     { function_repr = ()
-    ; closure = ()
     ; args =
         List.map t.args ~f:(function
           | `Pure _ -> `Pure ()
@@ -104,7 +100,7 @@ module Function_type = struct
     : (Llvm.llvalue, Ctl_repr.Maybe_yield_repr.t, Llvm.llvalue) t
     =
     match params with
-    | function_repr :: closure :: params ->
+    | function_repr :: params ->
       let params, return_ =
         match t.return_ with
         | `Pure ->
@@ -129,7 +125,7 @@ module Function_type = struct
           | Ctl_repr.Pure arg -> `Pure arg
           | Ctl arg -> `Ctl arg)
       in
-      { function_repr; closure; args; return_ }
+      { function_repr; args; return_ }
     | _ -> raise_s [%message "function has wrong number of params"]
   ;;
 end
@@ -142,7 +138,6 @@ let return_lltype (type_ : Type.t) =
 let compile_call
       ~(code_pointer : Llvm.llvalue)
       ~(function_repr : Function_repr.t)
-      ~(closure : Llvm.llvalue)
       ~(args : Ctl_repr.t list)
       ~(return_type : Type.t)
   : Ctl_repr.t Codegen.t
@@ -165,7 +160,6 @@ let compile_call
   in
   let function_type =
     { Function_type.function_repr = f_self_arg
-    ; closure
     ; args =
         List.map args ~f:(function
           | Ctl_repr.Pure arg -> `Pure arg
@@ -204,7 +198,7 @@ let make_function_and_context
       ~(symbol_name : Symbol_name.t)
       ~(self : Variable.t option)
       ~(return_type : Type.t)
-      ~(captured_shape : Context.Closure.Shape.t)
+      ~(captured_shape : Context.Closure.Shape.t option)
       ~toplevel
   =
   let open Codegen.Let_syntax in
@@ -213,8 +207,10 @@ let make_function_and_context
         Option.value_map
           self
           ~f:Helpers.register_name_of_variable
-          ~default:"ignored"
-    ; closure = "closure"
+          ~default:
+            (match captured_shape with
+             | Some _ -> "closure"
+             | None -> "ignored")
     ; args =
         List.map params ~f:(fun (name, type_) ->
           let root_name =
@@ -254,9 +250,10 @@ let make_function_and_context
       param_llvalues
   in
   let closure =
-    { Context.Closure.closure = function_type_with_llvalues.closure
-    ; shape = captured_shape
-    }
+    Option.map captured_shape ~f:(fun captured_shape ->
+      { Context.Closure.closure = function_type_with_llvalues.function_repr
+      ; shape = captured_shape
+      })
   in
   let locals =
     let f_self =

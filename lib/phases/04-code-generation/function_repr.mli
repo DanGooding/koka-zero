@@ -4,8 +4,8 @@ module Callable : sig
   (** a [Callable] is a representation of a function which we are directly able to call
   *)
   type t =
-    | Code_pointer of Llvm.llvalue
-    | Function_object_pointer of Llvm.llvalue
+    | Code_pointer of Llvm.llvalue (* pointer to the code *)
+    | Function_object_pointer of Llvm.llvalue (* pointer to a [Types.closure] *)
 end
 
 (** an unambiguous representation of a function, suitable for passing around polymorphically

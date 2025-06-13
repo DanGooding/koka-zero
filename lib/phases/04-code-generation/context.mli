@@ -17,12 +17,9 @@ end
 
 module Closure : sig
   module Shape : sig
-    (** describes the statically known shape and contents of a closure.
-        the outer list stores the closure, then it's parent, then grandparent etc.
-        the inner list stores the list of variables at one level, in order *)
-    type t = Variable.t list list [@@deriving sexp_of]
-
-    val empty : t
+    (** describes the statically known contents of a closure.
+        must be non-empty. *)
+    type t [@@deriving sexp_of]
   end
 
   (** a runtime closure [llvalue] and its statically known contents *)
@@ -30,9 +27,6 @@ module Closure : sig
     { closure : Llvm.llvalue (** of type [ptr], potentially [null] *)
     ; shape : Shape.t
     }
-
-  val empty : t Codegen.t
-  val is_empty : t -> bool
 
   (** generate code to retrieve a varaible from a closure, failing with a
       codegen_eror if it is not present. *)
@@ -50,21 +44,21 @@ end
 type t =
   { locals : Locals.t
   ; return_value_pointer : Return_value_pointer.t
-  ; closure : Closure.t
+  ; closure : Closure.t option
   ; toplevel : Toplevel.t
   }
 (* lookups are done in order: locals, closure, toplevel *)
 
-val create_toplevel : Toplevel.t -> t Codegen.t
+val create_toplevel : Toplevel.t -> t
+val get_captured : t -> free:Variable.Set.t -> Closure.Shape.t option
 
-(** generate code to create or extend the closure with the subset of locals which are free
+(** generate code to create a closure with the subset of locals which are free
     (escaping variables). may return a null closure if all free are in toplevel.
-
-    note this does not check that non-local free variables are actually present in the closure.
 *)
 val compile_capture
   :  t
-  -> free:Variable.Set.t
+  -> captured_shape:Closure.Shape.t
+  -> code_address:Llvm.llvalue
   -> runtime:Runtime.t
   -> Closure.t Codegen.t
 
