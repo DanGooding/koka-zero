@@ -1,7 +1,15 @@
 open! Core
 open! Import
 
-let compile_conditional ~cond_i1 ~compile_true ~compile_false =
+module Phi_builder = struct
+  type 'a t = ('a * Llvm.llbasicblock) list -> 'a Codegen.t
+
+  let llvalue incoming =
+    Codegen.use_builder (Llvm.build_phi incoming "incoming")
+  ;;
+end
+
+let compile_conditional ~cond_i1 ~compile_true ~compile_false ~phi_builder =
   let open Codegen.Let_syntax in
   let%bind if_start_block = Codegen.insertion_block_exn in
   let current_function = Llvm.block_parent if_start_block in
@@ -33,18 +41,12 @@ let compile_conditional ~cond_i1 ~compile_true ~compile_false =
   let%bind false_end_block = Codegen.insertion_block_exn in
   (* connect back together *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end if_end_block) in
-  match
-    Ctl_repr.build_phi
-      [ true_branch_result, true_end_block
-      ; false_branch_result, false_end_block
-      ]
-  with
-  | result -> result
-  | exception exn -> Exn.reraise exn "build conditional"
+  phi_builder
+    [ true_branch_result, true_end_block; false_branch_result, false_end_block ]
 ;;
 
 let compile_switch =
-  fun subject ~table ~compile_default ->
+  fun subject ~table ~compile_default ~phi_builder ->
   let open Codegen.Let_syntax in
   let%bind switch_start_block = Codegen.insertion_block_exn in
   let current_function = Llvm.block_parent switch_start_block in
@@ -95,5 +97,5 @@ let compile_switch =
   (* create phi in post-switch *)
   let%bind () = Codegen.use_builder (Llvm.position_at_end post_switch_block) in
   let incoming = (default_result, default_end_block) :: table_ends in
-  Ctl_repr.build_phi incoming
+  phi_builder incoming
 ;;

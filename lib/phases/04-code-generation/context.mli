@@ -37,7 +37,7 @@ module Toplevel : sig
   (** the code pointer for each toplevel function *)
   type t
 
-  val of_ordered_alist : (Variable.t * Function_repr.Callable.t) list -> t
+  val of_ordered_alist : (Variable.t * Value_repr.Unpacked.Function.t) list -> t
 end
 
 (** maps in-scope names to their [llvalues] *)

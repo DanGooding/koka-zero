@@ -1,0 +1,89 @@
+open! Core
+open! Import
+
+module Packed = struct
+  type t = Llvm.llvalue
+end
+
+module Unpacked = struct
+  module Function = struct
+    type t =
+      | Code_pointer of (Llvm.llvalue[@sexp.opaque])
+      | Closure of (Llvm.llvalue[@sexp.opaque])
+    [@@deriving sexp_of]
+
+    (* this relies on the alignment of functions being greater than one byte *)
+    let tag () =
+      let open Codegen.Let_syntax in
+      let%map i64 = Codegen.use_context Llvm.i64_type in
+      Llvm.const_int i64 1
+    ;;
+
+    let unpack packed ~f ~phi_builder =
+      let open Codegen.Let_syntax in
+      let%bind i64 = Codegen.use_context Llvm.i64_type in
+      let%bind pointer_type = Types.pointer in
+      let%bind tag = tag () in
+      let%bind ptr_value =
+        Codegen.use_builder (Llvm.build_ptrtoint packed i64 "ptr_value")
+      in
+      let%bind tag_bit =
+        Codegen.use_builder (Llvm.build_and ptr_value tag "tag_bit")
+      in
+      let%bind tag_is_set =
+        Codegen.use_builder (Llvm.build_icmp Eq tag_bit tag "tag_is_set")
+      in
+      Control_flow.compile_conditional
+        ~cond_i1:tag_is_set
+        ~compile_true:(fun () ->
+          let%bind code_pointer =
+            Codegen.use_builder
+              (Llvm.build_xor ptr_value tag "code_pointer_value")
+          in
+          let%bind code_pointer =
+            Codegen.use_builder
+              (Llvm.build_inttoptr code_pointer pointer_type "code_pointer")
+          in
+          f (Code_pointer code_pointer))
+        ~compile_false:(fun () -> f (Closure packed))
+        ~phi_builder
+    ;;
+
+    let pack t =
+      let open Codegen.Let_syntax in
+      match t with
+      | Closure closure -> return closure
+      | Code_pointer code_address ->
+        let%bind i64 = Codegen.use_context Llvm.i64_type in
+        let%bind pointer_type = Types.pointer in
+        let%bind tag = tag () in
+        let%bind ptr_value =
+          Codegen.use_builder (Llvm.build_ptrtoint code_address i64 "ptr_value")
+        in
+        let%bind tagged_value =
+          Codegen.use_builder (Llvm.build_or ptr_value tag "tagged_value")
+        in
+        Codegen.use_builder
+          (Llvm.build_inttoptr tagged_value pointer_type "tagged")
+    ;;
+  end
+end
+
+module Lazily_packed = struct
+  type t =
+    | Function of Unpacked.Function.t
+    | Packed of (Packed.t[@sexp.opaque])
+  [@@deriving sexp_of]
+
+  let pack t =
+    match t with
+    | Function f -> Unpacked.Function.pack f
+    | Packed t -> Codegen.return t
+  ;;
+
+  let unpack_function t ~f ~phi_builder =
+    match t with
+    | Function unpacked_function -> f unpacked_function
+    | Packed packed -> Unpacked.Function.unpack packed ~f ~phi_builder
+  ;;
+end

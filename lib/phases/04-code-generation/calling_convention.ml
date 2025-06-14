@@ -137,13 +137,13 @@ let return_lltype (type_ : Type.t) =
 
 let compile_call
       ~(code_pointer : Llvm.llvalue)
-      ~(function_repr : Function_repr.t)
+      ~(function_repr : Value_repr.Unpacked.Function.t)
       ~(args : Ctl_repr.t list)
       ~(return_type : Type.t)
   : Ctl_repr.t Codegen.t
   =
   let open Codegen.Let_syntax in
-  let%bind f_self_arg = Function_repr.compile_wrap function_repr in
+  let%bind f_self_arg = Value_repr.Unpacked.Function.pack function_repr in
   let%bind return_arg =
     match (return_type : Type.t) with
     | Pure -> return `Pure

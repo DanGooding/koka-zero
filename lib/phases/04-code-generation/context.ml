@@ -193,7 +193,7 @@ module Closure = struct
 end
 
 module Toplevel = struct
-  type t = Function_repr.Callable.t Variable.Map.t
+  type t = Value_repr.Unpacked.Function.t Variable.Map.t
 
   let of_ordered_alist alist : t =
     Variable.Map.of_alist_multi alist |> Map.map ~f:List.last_exn
@@ -255,8 +255,8 @@ let compile_get t v =
     let%map value = Closure.compile_get (Option.value_exn t.closure) v in
     Ctl_repr.Pure value
   | `Toplevel ->
-    let callable = Toplevel.find t.toplevel v |> Option.value_exn in
-    let%map value = Function_repr.compile_wrap_callable callable in
+    let function_ = Toplevel.find t.toplevel v |> Option.value_exn in
+    let%map value = Value_repr.Unpacked.Function.pack function_ in
     Ctl_repr.Pure value
   | `Not_found ->
     let message =

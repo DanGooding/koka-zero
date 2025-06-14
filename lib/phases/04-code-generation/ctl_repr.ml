@@ -71,7 +71,7 @@ let type_ t : Evidence_passing_syntax.Type.t =
   | Ctl _ -> Ctl
 ;;
 
-let build_phi incoming =
+let phi_builder incoming =
   let open Codegen.Let_syntax in
   let pure, ctl =
     List.partition_map incoming ~f:(fun (t, block) ->
@@ -87,7 +87,7 @@ let build_phi incoming =
         "cannot build phi node to combine mixture of Ctl and Pure values"
           (types : Evidence_passing_syntax.Type.t list)]
   | pure, [] ->
-    let%map pure = Codegen.use_builder (Llvm.build_phi pure "incoming") in
+    let%map pure = Control_flow.Phi_builder.llvalue pure in
     Pure pure
   | [], ctl ->
     let content =

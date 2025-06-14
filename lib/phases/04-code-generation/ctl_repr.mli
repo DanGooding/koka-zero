@@ -28,4 +28,4 @@ val pure : t -> Llvm.llvalue Codegen.t
 val pure_exn : t -> Llvm.llvalue
 val ctl : t -> Maybe_yield_repr.t Codegen.t
 val type_ : t -> Evidence_passing_syntax.Type.t
-val build_phi : (t * Llvm.llbasicblock) list -> t Codegen.t
+val phi_builder : t Control_flow.Phi_builder.t

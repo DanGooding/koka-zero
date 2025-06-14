@@ -515,6 +515,7 @@ and compile_match_ctl =
     ~cond_i1:is_yield_i1
     ~compile_true:compile_yield
     ~compile_false:compile_pure
+    ~phi_builder:Ctl_repr.phi_builder
 
 (** [compile_match_op subject ~normal_branch ~tail_branch ...] compiles a match
     statement on a [Types.op] pointed to by [subject], calling either
@@ -557,6 +558,7 @@ and compile_match_op =
       ; tail_tag, "op_tail", make_compile_branch tail_branch
       ]
     ~compile_default:(compile_match_corrupted_tag ~runtime ~type_:Ctl)
+    ~phi_builder:Ctl_repr.phi_builder
 
 (** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol]
     generates code to branch on the value of the [Types.bool] [b], and evaluate
@@ -577,6 +579,7 @@ and compile_if_then_else =
       compile_expr e_yes ~env ~runtime ~effect_reprs ~outer_symbol)
     ~compile_false:(fun () ->
       compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol)
+    ~phi_builder:Ctl_repr.phi_builder
 
 (** [compile_function ~symbol_name rec_name ps e_body ~return_type ~captured_shape ~outer_symbol ...]
     generates a function with the given arguments and body, and within the scope
@@ -698,12 +701,12 @@ and compile_lambda_like
   | None ->
     (* functions with no free variables are simply code pointers,
        with no heap allocation required *)
-    Function_repr.compile_wrap_callable (Code_pointer code_address)
+    Value_repr.Unpacked.Function.pack (Code_pointer code_address)
   | Some captured_shape ->
-    let%map { Context.Closure.closure; shape = _ } =
+    let%bind { Context.Closure.closure; shape = _ } =
       Context.compile_capture env ~captured_shape ~code_address ~runtime
     in
-    closure
+    Value_repr.Unpacked.Function.pack (Closure closure)
 
 (** [compile_lambda lambda ...] compiles a lambda as a function, and generates
     code to construct a function object of it in the given [env]. The result is
@@ -747,34 +750,36 @@ and compile_application
   : Ctl_repr.t Codegen.t
   =
   let open Codegen.Let_syntax in
-  let function_repr = Function_repr.Maybe_tagged f_ptr in
-  Function_repr.compile_use_callable
-    function_repr
-    ~compile_use_code_pointer:(fun code_pointer ->
-      Calling_convention.compile_call
-        ~code_pointer
-        ~function_repr
-        ~args
-        ~return_type)
-    ~compile_use_function_object_pointer:(fun f_ptr ->
-      let%bind closure_type =
-        (* we don't know the number of variables in the closure struct at the call-site,
-           but this should be okay, since we only access the field before them. *)
-        Types.closure_struct ~num_captured:1
-      in
-      (* extract fields of f *)
-      let%bind code_pointer =
-        Helpers.compile_access_field
-          f_ptr
-          ~struct_type:closure_type
-          ~i:0
-          "code_address"
-      in
-      Calling_convention.compile_call
-        ~code_pointer
-        ~function_repr:(Maybe_tagged f_ptr)
-        ~args
-        ~return_type)
+  Value_repr.Unpacked.Function.unpack
+    f_ptr
+    ~f:(fun function_repr ->
+      match (function_repr : Value_repr.Unpacked.Function.t) with
+      | Code_pointer code_pointer ->
+        Calling_convention.compile_call
+          ~code_pointer
+          ~function_repr
+          ~args
+          ~return_type
+      | Closure closure ->
+        let%bind closure_type =
+          (* we don't know the number of variables in the closure struct at the call-site,
+             but this should be okay, since we only access the field before them. *)
+          Types.closure_struct ~num_captured:1
+        in
+        (* extract fields of f *)
+        let%bind code_pointer =
+          Helpers.compile_access_field
+            closure
+            ~struct_type:closure_type
+            ~i:0
+            "code_address"
+        in
+        Calling_convention.compile_call
+          ~code_pointer
+          ~function_repr
+          ~args
+          ~return_type)
+    ~phi_builder:Ctl_repr.phi_builder
 
 and compile_construct_handler
   :  Effect_label.t
@@ -944,7 +949,7 @@ let compile_fun_decls
   :  EPS.Program.Fun_decl.t list
   -> runtime:Runtime.t
   -> effect_reprs:Effect_repr.t Effect_label.Map.t
-  -> (Variable.t * Function_repr.Callable.t) list Codegen.t
+  -> (Variable.t * Value_repr.Unpacked.Function.t) list Codegen.t
   =
   fun decls ~runtime ~effect_reprs ->
   let open Codegen.Let_syntax in
@@ -954,7 +959,7 @@ let compile_fun_decls
     let%map name, code =
       compile_fun_decl decl ~toplevel ~runtime ~effect_reprs
     in
-    defined @ [ name, Function_repr.Callable.Code_pointer code ])
+    defined @ [ name, Value_repr.Unpacked.Function.Code_pointer code ])
 ;;
 
 let compile_program : EPS.Program.t -> unit Codegen.t =
