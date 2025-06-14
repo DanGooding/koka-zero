@@ -30,6 +30,7 @@ module Return_value_pointer = struct
     let open Codegen.Let_syntax in
     match t, return_value with
     | Pure, Pure return_value ->
+      let%bind return_value = Value_repr.Lazily_packed.pack return_value in
       let%map _return = Codegen.use_builder (Llvm.build_ret return_value) in
       ()
     | Ctl { is_yield_i1_pointer }, Ctl maybe_yield ->
@@ -253,11 +254,10 @@ let compile_get t v =
   | `Local -> return (Locals.find t.locals v |> Option.value_exn)
   | `Closure ->
     let%map value = Closure.compile_get (Option.value_exn t.closure) v in
-    Ctl_repr.Pure value
+    Ctl_repr.Pure (Value_repr.Lazily_packed.Packed value)
   | `Toplevel ->
     let function_ = Toplevel.find t.toplevel v |> Option.value_exn in
-    let%map value = Value_repr.Unpacked.Function.pack function_ in
-    Ctl_repr.Pure value
+    return (Ctl_repr.Pure (Value_repr.Lazily_packed.Function function_))
   | `Not_found ->
     let message =
       sprintf "variable not found in scope: %s" (Variable.to_string_user v)
@@ -308,8 +308,10 @@ let compile_capture t ~captured_shape ~code_address ~runtime =
   let%bind captued =
     Closure.Shape.to_list captured_shape
     |> List.map ~f:(fun v ->
-      let%map value = compile_get t v in
-      v, Ctl_repr.pure_exn value)
+      let%bind value = compile_get t v in
+      let value = Ctl_repr.pure_exn value in
+      let%map value = Value_repr.Lazily_packed.pack value in
+      v, value)
     |> Codegen.all
   in
   let%map closure = Closure.compile_create captued ~code_address ~runtime in

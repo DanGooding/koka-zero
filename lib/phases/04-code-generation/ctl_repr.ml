@@ -44,7 +44,7 @@ module Maybe_yield_repr = struct
 end
 
 type t =
-  | Pure of Llvm.llvalue
+  | Pure of Value_repr.Lazily_packed.t
   | Ctl of Maybe_yield_repr.t
 
 let pure t =
@@ -87,7 +87,7 @@ let phi_builder incoming =
         "cannot build phi node to combine mixture of Ctl and Pure values"
           (types : Evidence_passing_syntax.Type.t list)]
   | pure, [] ->
-    let%map pure = Control_flow.Phi_builder.llvalue pure in
+    let%map pure = Value_repr.Lazily_packed.phi_builder pure in
     Pure pure
   | [], ctl ->
     let content =

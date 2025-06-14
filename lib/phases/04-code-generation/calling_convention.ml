@@ -74,7 +74,9 @@ module Function_type = struct
     =
     match params, types with
     | [], [] -> []
-    | p :: params, Pure :: types -> Ctl_repr.Pure p :: reconstruct params types
+    | p :: params, Pure :: types ->
+      Ctl_repr.Pure (Value_repr.Lazily_packed.Packed p)
+      :: reconstruct params types
     | content :: is_yield_i1 :: params, Ctl :: types ->
       Ctl (Ctl_repr.Maybe_yield_repr.create ~content ~is_yield_i1)
       :: reconstruct params types
@@ -97,10 +99,11 @@ module Function_type = struct
   ;;
 
   let attach_params (t : (unit, unit, unit) t) (params : Llvm.llvalue list)
-    : (Llvm.llvalue, Ctl_repr.Maybe_yield_repr.t, Llvm.llvalue) t
+    : (Value_repr.Lazily_packed.t, Ctl_repr.Maybe_yield_repr.t, Llvm.llvalue) t
     =
     match params with
     | function_repr :: params ->
+      let function_repr = Value_repr.Lazily_packed.Packed function_repr in
       let params, return_ =
         match t.return_ with
         | `Pure ->
@@ -143,7 +146,7 @@ let compile_call
   : Ctl_repr.t Codegen.t
   =
   let open Codegen.Let_syntax in
-  let%bind f_self_arg = Value_repr.Unpacked.Function.pack function_repr in
+  let%bind function_repr = Value_repr.Unpacked.Function.pack function_repr in
   let%bind return_arg =
     match (return_type : Type.t) with
     | Pure -> return `Pure
@@ -158,14 +161,16 @@ let compile_call
       in
       `Ctl return_is_yield_i1_pointer
   in
+  let%bind args =
+    List.map args ~f:(function
+      | Ctl_repr.Ctl maybe_yield -> return (`Ctl maybe_yield)
+      | Ctl_repr.Pure arg ->
+        let%map arg = Value_repr.Lazily_packed.pack arg in
+        `Pure arg)
+    |> Codegen.all
+  in
   let function_type =
-    { Function_type.function_repr = f_self_arg
-    ; args =
-        List.map args ~f:(function
-          | Ctl_repr.Pure arg -> `Pure arg
-          | Ctl_repr.Ctl maybe_yield -> `Ctl maybe_yield)
-    ; return_ = return_arg
-    }
+    { Function_type.function_repr; args; return_ = return_arg }
   in
   let%bind arg_types_and_values = Function_type.args_for_call function_type in
   let arg_types, arg_values = List.unzip arg_types_and_values in
@@ -182,7 +187,8 @@ let compile_call
          "result")
   in
   match return_arg with
-  | `Pure -> return (Ctl_repr.Pure return_value)
+  | `Pure ->
+    return (Ctl_repr.Pure (Value_repr.Lazily_packed.Packed return_value))
   | `Ctl is_yield_i1_pointer ->
     let%bind i1_type = Codegen.use_context Llvm.i1_type in
     let%map is_yield_i1 =
@@ -235,7 +241,7 @@ let make_function_and_context
     let%map return_type = return_lltype return_type in
     Llvm.function_type return_type (Array.of_list param_types)
   in
-  let%map function_ =
+  let%bind function_ =
     Codegen.use_module
       (Llvm.define_function (Symbol_name.to_string symbol_name) function_type)
   in
@@ -249,11 +255,12 @@ let make_function_and_context
       (Function_type.map_unit function_type_with_names)
       param_llvalues
   in
+  let%map closure =
+    Value_repr.Lazily_packed.pack function_type_with_llvalues.function_repr
+  in
   let closure =
     Option.map captured_shape ~f:(fun captured_shape ->
-      { Context.Closure.closure = function_type_with_llvalues.function_repr
-      ; shape = captured_shape
-      })
+      { Context.Closure.closure; shape = captured_shape })
   in
   let locals =
     let f_self =

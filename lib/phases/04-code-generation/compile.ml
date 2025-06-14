@@ -137,7 +137,7 @@ let compile_match_corrupted_tag ~runtime ~type_ () =
   | Pure ->
     let%map pointer_type = Types.pointer in
     let content = Llvm.const_null pointer_type in
-    Ctl_repr.Pure content
+    Ctl_repr.Pure (Packed content)
   | Ctl ->
     let%bind pointer_type = Types.pointer in
     let%map i1_type = Codegen.use_context Llvm.i1_type in
@@ -176,12 +176,12 @@ let rec compile_expr
     let%map lambda =
       compile_lambda lambda ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    Ctl_repr.Pure lambda
+    Ctl_repr.Pure (Value_repr.Lazily_packed.Function lambda)
   | EPS.Expr.Fix_lambda fix_lambda ->
     let%map lambda =
       compile_fix_lambda fix_lambda ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    Ctl_repr.Pure lambda
+    Ctl_repr.Pure (Value_repr.Lazily_packed.Function lambda)
   | EPS.Expr.Application (e_f, e_args, return_type) ->
     let%bind f =
       compile_expr_pure e_f ~env ~runtime ~effect_reprs ~outer_symbol
@@ -194,10 +194,10 @@ let rec compile_expr
     compile_application f args return_type
   | EPS.Expr.Literal lit ->
     let%map lit = compile_literal lit in
-    Ctl_repr.Pure lit
+    Ctl_repr.Pure (Packed lit)
   | EPS.Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind cond_ptr =
-      compile_expr_pure e_cond ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e_cond ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%bind cond = Immediate_repr.Bool.of_opaque cond_ptr in
     compile_if_then_else
@@ -210,22 +210,22 @@ let rec compile_expr
       ~outer_symbol
   | EPS.Expr.Unary_operator (op, e) ->
     let%bind arg =
-      compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%map result = compile_unary_operator arg op in
-    Ctl_repr.Pure result
+    Ctl_repr.Pure (Packed result)
   | EPS.Expr.Operator (e_left, op, e_right) ->
     let%bind left =
-      compile_expr_pure e_left ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e_left ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%bind right =
-      compile_expr_pure e_right ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e_right ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%map result = compile_binary_operator ~left op ~right in
-    Ctl_repr.Pure result
+    Ctl_repr.Pure (Packed result)
   | EPS.Expr.Construct_pure e ->
     let%bind x =
-      compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%map pure = Ctl_repr.Maybe_yield_repr.compile_construct_pure x in
     Ctl_repr.Ctl pure
@@ -233,13 +233,28 @@ let rec compile_expr
       { marker = e_marker; op_clause = e_op_clause; resumption = e_resumption }
     ->
     let%bind marker =
-      compile_expr_pure e_marker ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_marker
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%bind op_clause =
-      compile_expr_pure e_op_clause ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_op_clause
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%bind resumption =
-      compile_expr_pure e_resumption ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_resumption
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%map yield =
       Ctl_repr.Maybe_yield_repr.compile_construct_yield
@@ -270,13 +285,13 @@ let rec compile_expr
         "fresh_marker"
     in
     let%map marker = Helpers.heap_store_marker m ~runtime in
-    Ctl_repr.Pure marker
+    Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Markers_equal (e1, e2) ->
     let%bind marker1_ptr =
-      compile_expr_pure e1 ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e1 ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%bind marker2_ptr =
-      compile_expr_pure e2 ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e2 ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%bind marker1 = Helpers.dereference_marker marker1_ptr in
     let%bind marker2 = Helpers.dereference_marker marker2_ptr in
@@ -289,13 +304,13 @@ let rec compile_expr
     in
     let eq = Immediate_repr.Bool.of_bool_llvalue eq in
     let%map eq = Immediate_repr.Bool.to_opaque eq in
-    Ctl_repr.Pure eq
+    Ctl_repr.Pure (Packed eq)
   | EPS.Expr.Effect_label label ->
     let%bind repr = lookup_effect_repr effect_reprs label in
     let { Effect_repr.id; _ } = repr in
     let%bind label = Helpers.const_label id in
     let%map label = Helpers.heap_store_label label ~runtime in
-    Ctl_repr.Pure label
+    Ctl_repr.Pure (Packed label)
   | EPS.Expr.Construct_handler
       { handled_effect; operation_clauses = operation_clause_exprs } ->
     let%map handler =
@@ -307,22 +322,37 @@ let rec compile_expr
         ~effect_reprs
         ~outer_symbol
     in
-    Ctl_repr.Pure handler
+    Ctl_repr.Pure (Packed handler)
   | EPS.Expr.Construct_op_normal e_clause ->
     let%bind clause =
-      compile_expr_pure e_clause ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_clause
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%map op = compile_construct_op `Normal clause ~runtime in
-    Ctl_repr.Pure op
+    Ctl_repr.Pure (Packed op)
   | EPS.Expr.Construct_op_tail e_clause ->
     let%bind clause =
-      compile_expr_pure e_clause ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_clause
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%map op = compile_construct_op `Tail clause ~runtime in
-    Ctl_repr.Pure op
+    Ctl_repr.Pure (Packed op)
   | EPS.Expr.Match_op { subject = e_subject; normal_branch; tail_branch } ->
     let%bind subject =
-      compile_expr_pure e_subject ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_subject
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     compile_match_op
       subject
@@ -334,12 +364,17 @@ let rec compile_expr
       ~outer_symbol
   | EPS.Expr.Select_operation (label, op_name, e_handler) ->
     let%bind handler_ptr =
-      compile_expr_pure e_handler ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_handler
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%map op =
       compile_select_operation label ~op_name handler_ptr ~effect_reprs
     in
-    Ctl_repr.Pure op
+    Ctl_repr.Pure (Packed op)
   | EPS.Expr.Nil_evidence_vector ->
     let { Runtime.nil_evidence_vector; _ } = runtime in
     let%map vector =
@@ -348,7 +383,7 @@ let rec compile_expr
         ~args:(Array.of_list [])
         "nil_vector"
     in
-    Ctl_repr.Pure vector
+    Ctl_repr.Pure (Packed vector)
   | EPS.Expr.Cons_evidence_vector
       { label = e_label
       ; marker = e_marker
@@ -357,18 +392,28 @@ let rec compile_expr
       ; vector_tail = e_vector_tail
       } ->
     let%bind label_ptr =
-      compile_expr_pure e_label ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e_label ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%bind label = Helpers.dereference_label label_ptr in
     let%bind marker_ptr =
-      compile_expr_pure e_marker ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_marker
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%bind marker = Helpers.dereference_marker marker_ptr in
     let%bind handler =
-      compile_expr_pure e_handler ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_handler
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let%bind handler_site_vector =
-      compile_expr_pure
+      compile_expr_pure_packed
         e_handler_site_vector
         ~env
         ~runtime
@@ -376,7 +421,12 @@ let rec compile_expr
         ~outer_symbol
     in
     let%bind vector_tail =
-      compile_expr_pure e_vector_tail ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_vector_tail
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let { Runtime.cons_evidence_vector; _ } = runtime in
     let args =
@@ -385,24 +435,29 @@ let rec compile_expr
     let%map extended_vector =
       Runtime.Function.build_call cons_evidence_vector ~args "extended_vector"
     in
-    Ctl_repr.Pure extended_vector
+    Ctl_repr.Pure (Packed extended_vector)
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
     let%bind label_ptr =
-      compile_expr_pure e_label ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e_label ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%bind label = Helpers.dereference_label label_ptr in
     let%bind vector =
-      compile_expr_pure e_vector ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed
+        e_vector
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol
     in
     let { Runtime.evidence_vector_lookup; _ } = runtime in
     let args = Array.of_list [ vector; label ] in
     let%map evidence =
       Runtime.Function.build_call evidence_vector_lookup ~args "evidence"
     in
-    Ctl_repr.Pure evidence
+    Ctl_repr.Pure (Packed evidence)
   | EPS.Expr.Get_evidence_marker e ->
     let%bind evidence =
-      compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.get_evidence_marker; _ } = runtime in
     let%bind marker =
@@ -412,10 +467,10 @@ let rec compile_expr
         "marker"
     in
     let%map marker = Helpers.heap_store_marker marker ~runtime in
-    Ctl_repr.Pure marker
+    Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Get_evidence_handler e ->
     let%bind evidence =
-      compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.get_evidence_handler; _ } = runtime in
     let%map handler =
@@ -424,10 +479,10 @@ let rec compile_expr
         ~args:(Array.of_list [ evidence ])
         "handler"
     in
-    Ctl_repr.Pure handler
+    Ctl_repr.Pure (Packed handler)
   | EPS.Expr.Get_evidence_handler_site_vector e ->
     let%bind evidence =
-      compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let { Runtime.get_evidence_handler_site_vector; _ } = runtime in
     let%map vector =
@@ -436,19 +491,26 @@ let rec compile_expr
         ~args:(Array.of_list [ evidence ])
         "handler_site_vector"
     in
-    Ctl_repr.Pure vector
+    Ctl_repr.Pure (Packed vector)
   | EPS.Expr.Impure_built_in impure ->
     let%map result =
       compile_impure_built_in impure ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    Ctl_repr.Pure result
+    Ctl_repr.Pure (Packed result)
 
 and compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
-  : Llvm.llvalue Codegen.t
+  : Value_repr.Lazily_packed.t Codegen.t
   =
   let open Codegen.Let_syntax in
   let%bind e = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
   Ctl_repr.pure e
+
+and compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
+  : Llvm.llvalue Codegen.t
+  =
+  let open Codegen.Let_syntax in
+  let%bind v = compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol in
+  Value_repr.Lazily_packed.pack v
 
 and compile_expr_ctl e ~env ~runtime ~effect_reprs ~outer_symbol
   : Ctl_repr.Maybe_yield_repr.t Codegen.t
@@ -474,7 +536,9 @@ and compile_match_ctl =
   let compile_pure () =
     let x_value, body = pure_branch in
     let%bind content = Ctl_repr.Maybe_yield_repr.get_content subject in
-    let env' = Context.add_local_exn env ~name:x_value ~value:(Pure content) in
+    let env' =
+      Context.add_local_exn env ~name:x_value ~value:(Pure (Packed content))
+    in
     compile_expr body ~env:env' ~runtime ~effect_reprs ~outer_symbol
   in
   let compile_yield () =
@@ -504,9 +568,13 @@ and compile_match_ctl =
     in
     let env' =
       env
-      |> Context.add_local_exn ~name:x_marker ~value:(Pure marker)
-      |> Context.add_local_exn ~name:x_op_clause ~value:(Pure op_clause)
-      |> Context.add_local_exn ~name:x_resumption ~value:(Pure resumption)
+      |> Context.add_local_exn ~name:x_marker ~value:(Pure (Packed marker))
+      |> Context.add_local_exn
+           ~name:x_op_clause
+           ~value:(Pure (Packed op_clause))
+      |> Context.add_local_exn
+           ~name:x_resumption
+           ~value:(Pure (Packed resumption))
     in
     compile_expr body ~env:env' ~runtime ~effect_reprs ~outer_symbol
   in
@@ -545,7 +613,9 @@ and compile_match_op =
         ~i:1
         (Helpers.register_name_of_variable x)
     in
-    let env' = Context.add_local_exn env ~name:x ~value:(Pure clause) in
+    let env' =
+      Context.add_local_exn env ~name:x ~value:(Pure (Packed clause))
+    in
     let%map result =
       compile_expr_ctl body ~env:env' ~runtime ~effect_reprs ~outer_symbol
     in
@@ -669,7 +739,7 @@ and compile_lambda_like
       ~outer_symbol
       ~runtime
       ~effect_reprs
-  : Llvm.llvalue Codegen.t
+  : Value_repr.Unpacked.Function.t Codegen.t
   =
   let open Codegen.Let_syntax in
   let free =
@@ -701,12 +771,12 @@ and compile_lambda_like
   | None ->
     (* functions with no free variables are simply code pointers,
        with no heap allocation required *)
-    Value_repr.Unpacked.Function.pack (Code_pointer code_address)
+    return (Value_repr.Unpacked.Function.Code_pointer code_address)
   | Some captured_shape ->
-    let%bind { Context.Closure.closure; shape = _ } =
+    let%map { Context.Closure.closure; shape = _ } =
       Context.compile_capture env ~captured_shape ~code_address ~runtime
     in
-    Value_repr.Unpacked.Function.pack (Closure closure)
+    Value_repr.Unpacked.Function.Closure closure
 
 (** [compile_lambda lambda ...] compiles a lambda as a function, and generates
     code to construct a function object of it in the given [env]. The result is
@@ -717,7 +787,7 @@ and compile_lambda
   -> outer_symbol:Symbol_name.t
   -> runtime:Runtime.t
   -> effect_reprs:Effect_repr.t Effect_label.Map.t
-  -> Llvm.llvalue Codegen.t
+  -> Value_repr.Unpacked.Function.t Codegen.t
   =
   fun lambda ~env ~outer_symbol ~runtime ~effect_reprs ->
   compile_lambda_like (`Lambda lambda) ~env ~outer_symbol ~runtime ~effect_reprs
@@ -731,7 +801,7 @@ and compile_fix_lambda
   -> outer_symbol:Symbol_name.t
   -> runtime:Runtime.t
   -> effect_reprs:Effect_repr.t Effect_label.Map.t
-  -> Llvm.llvalue Codegen.t
+  -> Value_repr.Unpacked.Function.t Codegen.t
   =
   fun fix_lambda ~env ~outer_symbol ~runtime ~effect_reprs ->
   compile_lambda_like
@@ -744,13 +814,13 @@ and compile_fix_lambda
 (** [compile_application f args type_] generates code to 'call' the function object
     pointed to by [f], with the given arguments. *)
 and compile_application
-      (f_ptr : Llvm.llvalue)
+      (f_ptr : Value_repr.Lazily_packed.t)
       (args : Ctl_repr.t list)
       (return_type : EPS.Type.t)
   : Ctl_repr.t Codegen.t
   =
   let open Codegen.Let_syntax in
-  Value_repr.Unpacked.Function.unpack
+  Value_repr.Lazily_packed.unpack_function
     f_ptr
     ~f:(fun function_repr ->
       match (function_repr : Value_repr.Unpacked.Function.t) with
@@ -814,7 +884,12 @@ and compile_construct_handler
           Codegen.impossible_error message
       in
       let%map clause =
-        compile_expr_pure e_clause ~env ~runtime ~effect_reprs ~outer_symbol
+        compile_expr_pure_packed
+          e_clause
+          ~env
+          ~runtime
+          ~effect_reprs
+          ~outer_symbol
       in
       clause, Helpers.register_name_of_variable op_name)
     |> Codegen.all
@@ -847,7 +922,7 @@ and compile_impure_built_in
     Immediate_repr.Unit.const_opaque ()
   | EPS.Expr.Impure_print_int { value = e; newline } ->
     let%bind v =
-      compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
+      compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%bind i = Immediate_repr.Int.of_opaque v in
     let i = Immediate_repr.Int.to_int_llvalue i in

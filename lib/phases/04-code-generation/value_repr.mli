@@ -41,4 +41,6 @@ module Lazily_packed : sig
     -> f:(Unpacked.Function.t -> 'a Codegen.t)
     -> phi_builder:'a Control_flow.Phi_builder.t
     -> 'a Codegen.t
+
+  val phi_builder : t Control_flow.Phi_builder.t
 end

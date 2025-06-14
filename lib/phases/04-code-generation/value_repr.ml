@@ -86,4 +86,34 @@ module Lazily_packed = struct
     | Function unpacked_function -> f unpacked_function
     | Packed packed -> Unpacked.Function.unpack packed ~f ~phi_builder
   ;;
+
+  let phi_builder t_incoming =
+    let open Codegen.Let_syntax in
+    let code_pointer_incoming, closure_incoming, packed_incoming =
+      List.partition3_map t_incoming ~f:(fun (t, block) ->
+        match t with
+        | Function (Code_pointer code_pointer) -> `Fst (code_pointer, block)
+        | Function (Closure closure) -> `Snd (closure, block)
+        | Packed packed -> `Trd (packed, block))
+    in
+    match code_pointer_incoming, closure_incoming, packed_incoming with
+    | _ :: _, [], [] ->
+      let%map code_pointer =
+        Control_flow.Phi_builder.llvalue code_pointer_incoming
+      in
+      Function (Code_pointer code_pointer)
+    | [], _ :: _, [] ->
+      let%map closure = Control_flow.Phi_builder.llvalue closure_incoming in
+      Function (Closure closure)
+    | _ ->
+      (* need to pack all of them *)
+      let%bind packed_incoming =
+        List.map t_incoming ~f:(fun (t, block) ->
+          let%map packed = pack t in
+          packed, block)
+        |> Codegen.all
+      in
+      let%map packed = Control_flow.Phi_builder.llvalue packed_incoming in
+      Packed packed
+  ;;
 end
