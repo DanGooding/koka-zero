@@ -210,13 +210,13 @@ let make_function_and_context
   let open Codegen.Let_syntax in
   let function_type_with_names =
     { Function_type.function_repr =
-        Option.value_map
-          self
-          ~f:Helpers.register_name_of_variable
-          ~default:
-            (match captured_shape with
-             | Some _ -> "closure"
-             | None -> "ignored")
+        (match captured_shape with
+         | None -> "ignored"
+         | Some _ ->
+           Option.value_map
+             self
+             ~f:Helpers.register_name_of_variable
+             ~default:"closure")
     ; args =
         List.map params ~f:(fun (name, type_) ->
           let root_name =
@@ -256,16 +256,27 @@ let make_function_and_context
       param_llvalues
   in
   let%map closure =
-    Value_repr.Lazily_packed.pack function_type_with_llvalues.function_repr
-  in
-  let closure =
-    Option.map captured_shape ~f:(fun captured_shape ->
-      { Context.Closure.closure; shape = captured_shape })
+    match captured_shape with
+    | None -> return None
+    | Some captured_shape ->
+      let%map closure =
+        Value_repr.Lazily_packed.pack function_type_with_llvalues.function_repr
+      in
+      Some { Context.Closure.closure; shape = captured_shape }
   in
   let locals =
     let f_self =
       Option.map self ~f:(fun name ->
-        name, Ctl_repr.Pure function_type_with_llvalues.function_repr)
+        let v_self =
+          match captured_shape with
+          | None ->
+            (* use the statically known code pointer *)
+            Value_repr.Lazily_packed.Function (Code_pointer function_)
+          | Some _ ->
+            (* the closure passed in as f_self *)
+            function_type_with_llvalues.function_repr
+        in
+        name, Ctl_repr.Pure v_self)
     in
     let args =
       List.map function_type_with_llvalues.args ~f:(function
