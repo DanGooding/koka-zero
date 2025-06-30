@@ -138,29 +138,16 @@ let return_lltype (type_ : Type.t) =
   | Pure | Ctl -> Types.pointer
 ;;
 
-let compile_call
+let compile_call_common
       ~(code_pointer : Llvm.llvalue)
       ~(function_repr : Value_repr.Unpacked.Function.t)
       ~(args : Ctl_repr.t list)
       ~(return_type : Type.t)
-  : Ctl_repr.t Codegen.t
+      ~(return_arg : [ `Pure | `Ctl of Llvm.llvalue ])
+  : Llvm.llvalue Codegen.t
   =
   let open Codegen.Let_syntax in
   let%bind function_repr = Value_repr.Unpacked.Function.pack function_repr in
-  let%bind return_arg =
-    match (return_type : Type.t) with
-    | Pure -> return `Pure
-    | Ctl ->
-      let%bind i1_type = Codegen.use_context Llvm.i1_type in
-      let%bind return_is_yield_i1_pointer =
-        Codegen.use_builder (Llvm.build_alloca i1_type "return_is_yield")
-      in
-      let zero = Llvm.const_null i1_type in
-      let%map _store =
-        Codegen.use_builder (Llvm.build_store zero return_is_yield_i1_pointer)
-      in
-      `Ctl return_is_yield_i1_pointer
-  in
   let%bind args =
     List.map args ~f:(function
       | Ctl_repr.Ctl maybe_yield -> return (`Ctl maybe_yield)
@@ -178,13 +165,43 @@ let compile_call
     let%map return_type = return_lltype return_type in
     Llvm.function_type return_type (Array.of_list arg_types)
   in
+  Codegen.use_builder
+    (Llvm.build_call
+       function_type
+       code_pointer
+       (Array.of_list arg_values)
+       "result")
+;;
+
+let compile_call
+      ~(code_pointer : Llvm.llvalue)
+      ~(function_repr : Value_repr.Unpacked.Function.t)
+      ~(args : Ctl_repr.t list)
+      ~(return_type : Type.t)
+  : Ctl_repr.t Codegen.t
+  =
+  let open Codegen.Let_syntax in
+  let%bind return_arg =
+    match (return_type : Type.t) with
+    | Pure -> return `Pure
+    | Ctl ->
+      let%bind i1_type = Codegen.use_context Llvm.i1_type in
+      let%bind return_is_yield_i1_pointer =
+        Codegen.use_builder (Llvm.build_alloca i1_type "return_is_yield")
+      in
+      let zero = Llvm.const_null i1_type in
+      let%map _store =
+        Codegen.use_builder (Llvm.build_store zero return_is_yield_i1_pointer)
+      in
+      `Ctl return_is_yield_i1_pointer
+  in
   let%bind return_value =
-    Codegen.use_builder
-      (Llvm.build_call
-         function_type
-         code_pointer
-         (Array.of_list arg_values)
-         "result")
+    compile_call_common
+      ~code_pointer
+      ~function_repr
+      ~args
+      ~return_type
+      ~return_arg
   in
   match return_arg with
   | `Pure ->
@@ -197,6 +214,27 @@ let compile_call
     in
     Ctl_repr.Ctl
       (Ctl_repr.Maybe_yield_repr.create ~content:return_value ~is_yield_i1)
+;;
+
+let compile_tail_call
+      ~(code_pointer : Llvm.llvalue)
+      ~(function_repr : Value_repr.Unpacked.Function.t)
+      ~(args : Ctl_repr.t list)
+      ~(return_type : Type.t)
+      ~(return_value_pointer : Context.Return_value_pointer.t)
+  : Llvm.llvalue Codegen.t
+  =
+  let return_arg =
+    match return_value_pointer with
+    | Pure -> `Pure
+    | Ctl { is_yield_i1_pointer } -> `Ctl is_yield_i1_pointer
+  in
+  compile_call_common
+    ~code_pointer
+    ~function_repr
+    ~args
+    ~return_arg
+    ~return_type
 ;;
 
 let make_function_and_context

@@ -10,6 +10,15 @@ val compile_call
   -> return_type:Type.t
   -> Ctl_repr.t Codegen.t
 
+(** Compile a tail-call to a function, returning the return llvalue. *)
+val compile_tail_call
+  :  code_pointer:Llvm.llvalue
+  -> function_repr:Value_repr.Unpacked.Function.t
+  -> args:Ctl_repr.t list
+  -> return_type:Type.t
+  -> return_value_pointer:Context.Return_value_pointer.t
+  -> Llvm.llvalue Codegen.t
+
 (** Constructs a llvm function with the expected type and parameters,
     and builds a [Context.t] that is available in it's body.
     Leaves the body of the function uninitialised. *)

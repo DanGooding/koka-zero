@@ -127,27 +127,43 @@ let compile_select_operation
     statement, executed when a variants tag has an unexpected value. This exits
     the program, and results in a null [Types.opaque_pointer] to satisfy llvm's
     type system *)
-let compile_match_corrupted_tag ~runtime ~type_ () =
+let compile_match_corrupted_tag
+      (type result)
+      ~runtime
+      ~type_
+      ~(is_tail_position : result Is_tail_position.t)
+      ()
+  : result Codegen.t
+  =
   let open Codegen.Let_syntax in
   let { Runtime.exit; _ } = runtime in
   let%bind _void =
     Runtime.Function.build_call exit ~args:(Array.of_list []) ""
   in
-  match (type_ : EPS.Type.t) with
-  | Pure ->
-    let%map pointer_type = Types.pointer in
-    let content = Llvm.const_null pointer_type in
-    Ctl_repr.Pure (Packed content)
-  | Ctl ->
-    let%bind pointer_type = Types.pointer in
-    let%map i1_type = Codegen.use_context Llvm.i1_type in
-    let content = Llvm.const_null pointer_type in
-    let is_yield_i1 = Llvm.const_null i1_type in
-    Ctl_repr.Ctl (Ctl_repr.Maybe_yield_repr.create ~is_yield_i1 ~content)
+  match is_tail_position with
+  | Tail_position ->
+    (* exit never returns, so this is always unreachable.
+       TODO: compile_switch should take [default_never_returns]
+       which would exclude the [default] branch from recombination
+    *)
+    (let%map _unreachable = Codegen.use_builder Llvm.build_unreachable in
+     ()
+     : result Codegen.t)
+  | Non_tail_position ->
+    (match (type_ : EPS.Type.t) with
+     | Pure ->
+       let%map pointer_type = Types.pointer in
+       let content = Llvm.const_null pointer_type in
+       Ctl_repr.Pure (Packed content)
+     | Ctl ->
+       let%bind pointer_type = Types.pointer in
+       let%map i1_type = Codegen.use_context Llvm.i1_type in
+       let content = Llvm.const_null pointer_type in
+       let is_yield_i1 = Llvm.const_null i1_type in
+       Ctl_repr.Ctl (Ctl_repr.Maybe_yield_repr.create ~is_yield_i1 ~content))
 ;;
 
-(** produces code to evaluate the given expression and store its value to the
-    heap. The returned [llvalue] is the [Types.opaque_pointer] to this value. *)
+(** produces code to evaluate the given expression *)
 let rec compile_expr
           (e : EPS.Expr.t)
           ~(env : Context.t)
@@ -162,16 +178,17 @@ let rec compile_expr
     (* TODO: note this will be duplicated for each access, although common
        subexpression elimination should easily remove it *)
     Context.compile_get env v
-  | EPS.Expr.Let (p, _type, e_subject, e_body) ->
-    let%bind subject =
-      compile_expr e_subject ~env ~runtime ~effect_reprs ~outer_symbol
-    in
-    let env' =
-      match p with
-      | Parameter.Wildcard -> env
-      | Parameter.Variable v -> Context.add_local_exn env ~name:v ~value:subject
-    in
-    compile_expr e_body ~env:env' ~runtime ~effect_reprs ~outer_symbol
+  | EPS.Expr.Let (param, type_, subject, body) ->
+    compile_let
+      ~param
+      ~type_
+      ~subject
+      ~body
+      ~is_tail_position:Is_tail_position.Non_tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   | EPS.Expr.Lambda lambda ->
     let%map lambda =
       compile_lambda lambda ~env ~runtime ~effect_reprs ~outer_symbol
@@ -191,7 +208,12 @@ let rec compile_expr
         compile_expr e_arg ~env ~runtime ~effect_reprs ~outer_symbol)
       |> Codegen.all
     in
-    compile_application f args return_type
+    compile_application
+      f
+      args
+      return_type
+      ~is_tail_position:Is_tail_position.Non_tail_position
+      ~env
   | EPS.Expr.Literal lit ->
     let%map lit = compile_literal lit in
     Ctl_repr.Pure (Packed lit)
@@ -204,6 +226,7 @@ let rec compile_expr
       cond
       ~e_yes
       ~e_no
+      ~is_tail_position:Is_tail_position.Non_tail_position
       ~env
       ~runtime
       ~effect_reprs
@@ -272,6 +295,7 @@ let rec compile_expr
       subject
       ~pure_branch
       ~yield_branch
+      ~is_tail_position:Is_tail_position.Non_tail_position
       ~env
       ~runtime
       ~effect_reprs
@@ -358,6 +382,7 @@ let rec compile_expr
       subject
       ~normal_branch
       ~tail_branch
+      ~is_tail_position:Is_tail_position.Non_tail_position
       ~env
       ~runtime
       ~effect_reprs
@@ -498,6 +523,130 @@ let rec compile_expr
     in
     Ctl_repr.Pure (Packed result)
 
+and compile_tail_position_expr
+      (e : EPS.Expr.t)
+      ~(env : Context.t)
+      ~runtime
+      ~effect_reprs
+      ~(outer_symbol : Symbol_name.t)
+  : unit Codegen.t
+  =
+  let open Codegen.Let_syntax in
+  match e with
+  | Application (e_f, e_args, return_type) ->
+    (* compile a tail-call *)
+    let%bind f =
+      compile_expr_pure e_f ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    let%bind args =
+      List.map e_args ~f:(fun (e_arg, _type) ->
+        compile_expr e_arg ~env ~runtime ~effect_reprs ~outer_symbol)
+      |> Codegen.all
+    in
+    compile_application
+      f
+      args
+      return_type
+      ~is_tail_position:Is_tail_position.Tail_position
+      ~env
+  | Let (param, type_, subject, body) ->
+    compile_let
+      ~param
+      ~type_
+      ~subject
+      ~body
+      ~is_tail_position:Is_tail_position.Tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
+  | If_then_else (e_cond, e_yes, e_no) ->
+    let%bind cond_ptr =
+      compile_expr_pure_packed e_cond ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    let%bind cond = Immediate_repr.Bool.of_opaque cond_ptr in
+    compile_if_then_else
+      cond
+      ~e_yes
+      ~e_no
+      ~is_tail_position:Is_tail_position.Tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
+  | Match_ctl { subject; pure_branch; yield_branch } ->
+    let%bind subject =
+      compile_expr_ctl subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_match_ctl
+      subject
+      ~pure_branch
+      ~yield_branch
+      ~is_tail_position:Is_tail_position.Tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
+  | Match_op { subject; normal_branch; tail_branch } ->
+    let%bind subject =
+      compile_expr_pure_packed subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_match_op
+      subject
+      ~normal_branch
+      ~tail_branch
+      ~is_tail_position:Is_tail_position.Tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
+  | Variable _
+  | Lambda _
+  | Fix_lambda _
+  | Literal _
+  | Operator _
+  | Unary_operator _
+  | Construct_pure _
+  | Construct_yield _
+  | Fresh_marker
+  | Markers_equal _
+  | Effect_label _
+  | Construct_op_normal _
+  | Construct_op_tail _
+  | Construct_handler _
+  | Select_operation _
+  | Nil_evidence_vector
+  | Cons_evidence_vector _
+  | Lookup_evidence _
+  | Get_evidence_marker _
+  | Get_evidence_handler _
+  | Get_evidence_handler_site_vector _
+  | Impure_built_in _ ->
+    let%bind result =
+      compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    Context.Return_value_pointer.compile_return env.return_value_pointer result
+
+and compile_maybe_tail_position_expr
+  : type result.
+    EPS.Expr.t
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t
+    -> result Codegen.t
+  =
+  fun e ~is_tail_position ~env ~runtime ~effect_reprs ~outer_symbol ->
+  match is_tail_position with
+  | Non_tail_position ->
+    compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol
+  | Tail_position ->
+    compile_tail_position_expr e ~env ~runtime ~effect_reprs ~outer_symbol
+
+(* branching - eval subject/match as normal, then recurse on each branch *)
+(* all others - delegate to  *)
+
 and compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
   : Value_repr.Lazily_packed.t Codegen.t
   =
@@ -519,19 +668,69 @@ and compile_expr_ctl e ~env ~runtime ~effect_reprs ~outer_symbol
   let%bind e = compile_expr e ~env ~runtime ~effect_reprs ~outer_symbol in
   Ctl_repr.ctl e
 
+and compile_let
+  : type result.
+    param:Parameter.t
+    -> type_:Evidence_passing_syntax.Type.t
+    -> subject:EPS.Expr.t
+    -> body:EPS.Expr.t
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t
+    -> result Codegen.t
+  =
+  fun ~param
+    ~type_:_
+    ~subject
+    ~body
+    ~(is_tail_position : result Is_tail_position.t)
+    ~env
+    ~runtime
+    ~effect_reprs
+    ~outer_symbol ->
+  let open Codegen.Let_syntax in
+  let%bind subject =
+    compile_expr subject ~env ~runtime ~effect_reprs ~outer_symbol
+  in
+  let env' =
+    match param with
+    | Parameter.Wildcard -> env
+    | Parameter.Variable v -> Context.add_local_exn env ~name:v ~value:subject
+  in
+  compile_maybe_tail_position_expr
+    body
+    ~is_tail_position
+    ~env:env'
+    ~runtime
+    ~effect_reprs
+    ~outer_symbol
+
 (** [compile_match_ctl subject ~pure_branch ~yield_branch ...] generates code to
     branch on the ctl varaint poitned to by [Types.opaque_pointer]:[subject],
     calling either [pure_branch] or [yield_branch] with its fields. (These are
     also compiled) *)
-and compile_match_ctl =
-  fun (subject : Ctl_repr.Maybe_yield_repr.t)
-    ~(pure_branch : Variable.t * EPS.Expr.t)
-    ~(yield_branch : Variable.t * Variable.t * Variable.t * EPS.Expr.t)
+and compile_match_ctl
+  : type result.
+    Ctl_repr.Maybe_yield_repr.t
+    -> pure_branch:Variable.t * EPS.Expr.t
+    -> yield_branch:Variable.t * Variable.t * Variable.t * EPS.Expr.t
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t
+    -> result Codegen.t
+  =
+  fun subject
+    ~pure_branch
+    ~yield_branch
+    ~is_tail_position
     ~env
     ~runtime
     ~effect_reprs
-    ~outer_symbol
-    : Ctl_repr.t Codegen.t ->
+    ~outer_symbol ->
   let open Codegen.Let_syntax in
   let compile_pure () =
     let x_value, body = pure_branch in
@@ -539,7 +738,13 @@ and compile_match_ctl =
     let env' =
       Context.add_local_exn env ~name:x_value ~value:(Pure (Packed content))
     in
-    compile_expr body ~env:env' ~runtime ~effect_reprs ~outer_symbol
+    compile_maybe_tail_position_expr
+      body
+      ~is_tail_position
+      ~env:env'
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   in
   let compile_yield () =
     let%bind ctl_yield_type = Types.ctl_yield in
@@ -576,27 +781,44 @@ and compile_match_ctl =
            ~name:x_resumption
            ~value:(Pure (Packed resumption))
     in
-    compile_expr body ~env:env' ~runtime ~effect_reprs ~outer_symbol
+    compile_maybe_tail_position_expr
+      body
+      ~is_tail_position
+      ~env:env'
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   in
   let%bind is_yield_i1 = Ctl_repr.Maybe_yield_repr.get_is_yield_i1 subject in
-  Control_flow.compile_conditional
+  Is_tail_position.compile_conditional
+    is_tail_position
     ~cond_i1:is_yield_i1
     ~compile_true:compile_yield
     ~compile_false:compile_pure
-    ~phi_builder:Ctl_repr.phi_builder
 
 (** [compile_match_op subject ~normal_branch ~tail_branch ...] compiles a match
     statement on a [Types.op] pointed to by [subject], calling either
     normal/tail with the op's clause *)
-and compile_match_op =
+and compile_match_op
+  : type result.
+    Llvm.llvalue
+    -> normal_branch:Variable.t * EPS.Expr.t
+    -> tail_branch:Variable.t * EPS.Expr.t
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t
+    -> result Codegen.t
+  =
   fun (subject : Llvm.llvalue)
     ~(normal_branch : Variable.t * EPS.Expr.t)
     ~(tail_branch : Variable.t * EPS.Expr.t)
+    ~(is_tail_position : result Is_tail_position.t)
     ~env
     ~runtime
     ~effect_reprs
-    ~outer_symbol
-    : Ctl_repr.t Codegen.t ->
+    ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind op_type = Types.op in
   let%bind tag =
@@ -604,8 +826,7 @@ and compile_match_op =
   in
   let%bind normal_tag = Helpers.const_op_normal_tag in
   let%bind tail_tag = Helpers.const_op_tail_tag in
-  let make_compile_branch branch () =
-    let x, body = branch in
+  let make_compile_branch (x, body) () : result Codegen.t =
     let%bind clause =
       Helpers.compile_access_field
         subject
@@ -616,40 +837,63 @@ and compile_match_op =
     let env' =
       Context.add_local_exn env ~name:x ~value:(Pure (Packed clause))
     in
-    let%map result =
-      compile_expr_ctl body ~env:env' ~runtime ~effect_reprs ~outer_symbol
-    in
-    Ctl_repr.Ctl result
+    compile_maybe_tail_position_expr
+      body
+      ~is_tail_position
+      ~env:env'
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   in
-  Control_flow.compile_switch
+  Is_tail_position.compile_switch
+    is_tail_position
     tag
     ~table:
       [ normal_tag, "op_normal", make_compile_branch normal_branch
       ; tail_tag, "op_tail", make_compile_branch tail_branch
       ]
-    ~compile_default:(compile_match_corrupted_tag ~runtime ~type_:Ctl)
-    ~phi_builder:Ctl_repr.phi_builder
+    ~compile_default:
+      (compile_match_corrupted_tag ~runtime ~type_:Ctl ~is_tail_position)
 
 (** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol]
     generates code to branch on the value of the [Types.bool] [b], and evaluate
     to the value of either [e_yes] or [e_no] *)
-and compile_if_then_else =
+and compile_if_then_else
+  : type result.
+    Immediate_repr.Bool.t
+    -> e_yes:EPS.Expr.t
+    -> e_no:EPS.Expr.t
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t
+    -> result Codegen.t
+  =
   fun (cond : Immediate_repr.Bool.t)
     ~(e_yes : EPS.Expr.t)
     ~(e_no : EPS.Expr.t)
+    ~(is_tail_position : result Is_tail_position.t)
     ~env
     ~runtime
     ~effect_reprs
     ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind cond_i1 = Immediate_repr.Bool.to_i1 cond in
-  Control_flow.compile_conditional
+  let compile_branch e () =
+    compile_maybe_tail_position_expr
+      e
+      ~is_tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
+  in
+  Is_tail_position.compile_conditional
+    is_tail_position
     ~cond_i1
-    ~compile_true:(fun () ->
-      compile_expr e_yes ~env ~runtime ~effect_reprs ~outer_symbol)
-    ~compile_false:(fun () ->
-      compile_expr e_no ~env ~runtime ~effect_reprs ~outer_symbol)
-    ~phi_builder:Ctl_repr.phi_builder
+    ~compile_true:(compile_branch e_yes)
+    ~compile_false:(compile_branch e_no)
 
 (** [compile_function ~symbol_name rec_name ps e_body ~return_type ~captured_shape ~outer_symbol ...]
     generates a function with the given arguments and body, and within the scope
@@ -682,12 +926,12 @@ and compile_function
   let function_start_block = Llvm.entry_block function_ in
   let%map () =
     Codegen.within_block function_start_block ~f:(fun () ->
-      let%bind result =
-        compile_expr e_body ~env:context ~runtime ~effect_reprs ~outer_symbol
-      in
-      Context.Return_value_pointer.compile_return
-        context.return_value_pointer
-        result)
+      compile_tail_position_expr
+        e_body
+        ~env:context
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol)
   in
   function_
 
@@ -814,22 +1058,48 @@ and compile_fix_lambda
 (** [compile_application f args type_] generates code to 'call' the function object
     pointed to by [f], with the given arguments. *)
 and compile_application
-      (f_ptr : Value_repr.Lazily_packed.t)
-      (args : Ctl_repr.t list)
-      (return_type : EPS.Type.t)
-  : Ctl_repr.t Codegen.t
+  : type result.
+    Value_repr.Lazily_packed.t
+    -> Ctl_repr.t list
+    -> EPS.Type.t
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> result Codegen.t
   =
+  fun (f_ptr : Value_repr.Lazily_packed.t)
+    (args : Ctl_repr.t list)
+    (return_type : EPS.Type.t)
+    ~(is_tail_position : result Is_tail_position.t)
+    ~(env : Context.t) ->
   let open Codegen.Let_syntax in
+  let compile_call ~code_pointer ~function_repr ~args ~return_type
+    : result Codegen.t
+    =
+    match is_tail_position with
+    | Non_tail_position ->
+      Calling_convention.compile_call
+        ~code_pointer
+        ~function_repr
+        ~args
+        ~return_type
+    | Tail_position ->
+      let%bind result =
+        Calling_convention.compile_tail_call
+          ~code_pointer
+          ~function_repr
+          ~args
+          ~return_type
+          ~return_value_pointer:env.return_value_pointer
+      in
+      let%map _return = Codegen.use_builder (Llvm.build_ret result) in
+      ()
+  in
   Value_repr.Lazily_packed.unpack_function
     f_ptr
     ~f:(fun function_repr ->
       match (function_repr : Value_repr.Unpacked.Function.t) with
       | Code_pointer code_pointer ->
-        Calling_convention.compile_call
-          ~code_pointer
-          ~function_repr
-          ~args
-          ~return_type
+        compile_call ~code_pointer ~function_repr ~args ~return_type
       | Closure closure ->
         let%bind closure_type =
           (* we don't know the number of variables in the closure struct at the call-site,
@@ -844,12 +1114,8 @@ and compile_application
             ~i:0
             "code_address"
         in
-        Calling_convention.compile_call
-          ~code_pointer
-          ~function_repr
-          ~args
-          ~return_type)
-    ~phi_builder:Ctl_repr.phi_builder
+        compile_call ~code_pointer ~function_repr ~args ~return_type)
+    ~compile_conditional:(Is_tail_position.compile_conditional is_tail_position)
 
 and compile_construct_handler
   :  Effect_label.t

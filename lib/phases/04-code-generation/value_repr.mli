@@ -20,7 +20,7 @@ module Unpacked : sig
     val unpack
       :  Packed.t
       -> f:(t -> 'a Codegen.t)
-      -> phi_builder:'a Control_flow.Phi_builder.t
+      -> compile_conditional:'a Control_flow.Compile_conditional.t
       -> 'a Codegen.t
   end
 end
@@ -41,7 +41,7 @@ module Lazily_packed : sig
   val unpack_function
     :  t
     -> f:(Unpacked.Function.t -> 'a Codegen.t)
-    -> phi_builder:'a Control_flow.Phi_builder.t
+    -> compile_conditional:'a Control_flow.Compile_conditional.t
     -> 'a Codegen.t
 
   val phi_builder : t Control_flow.Phi_builder.t

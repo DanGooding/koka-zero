@@ -19,7 +19,7 @@ module Unpacked = struct
       Llvm.const_int i64 1
     ;;
 
-    let unpack packed ~f ~phi_builder =
+    let unpack packed ~f ~compile_conditional =
       let open Codegen.Let_syntax in
       let%bind i64 = Codegen.use_context Llvm.i64_type in
       let%bind pointer_type = Types.pointer in
@@ -33,7 +33,7 @@ module Unpacked = struct
       let%bind tag_is_set =
         Codegen.use_builder (Llvm.build_icmp Eq tag_bit tag "tag_is_set")
       in
-      Control_flow.compile_conditional
+      compile_conditional
         ~cond_i1:tag_is_set
         ~compile_true:(fun () ->
           let%bind code_pointer =
@@ -46,7 +46,6 @@ module Unpacked = struct
           in
           f (Code_pointer code_pointer))
         ~compile_false:(fun () -> f (Closure packed))
-        ~phi_builder
     ;;
 
     let pack t =
@@ -81,10 +80,10 @@ module Lazily_packed = struct
     | Packed t -> Codegen.return t
   ;;
 
-  let unpack_function t ~f ~phi_builder =
+  let unpack_function t ~f ~compile_conditional =
     match t with
     | Function unpacked_function -> f unpacked_function
-    | Packed packed -> Unpacked.Function.unpack packed ~f ~phi_builder
+    | Packed packed -> Unpacked.Function.unpack packed ~f ~compile_conditional
   ;;
 
   let phi_builder t_incoming =
