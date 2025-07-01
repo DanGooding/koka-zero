@@ -11,6 +11,7 @@ module Bool : sig
   val of_bool_llvalue : Llvm.llvalue -> t
   val to_opaque : t -> Llvm.llvalue Codegen.t
   val of_opaque : Llvm.llvalue -> t Codegen.t
+  val of_i1 : Llvm.llvalue -> t Codegen.t
   val to_i1 : t -> Llvm.llvalue Codegen.t
 
   val compile_binary_operation
@@ -45,4 +46,15 @@ end
 module Unit : sig
   (* unit carries no information, so is only kept for uniformity *)
   val const_opaque : unit -> Llvm.llvalue Codegen.t
+end
+
+module Marker : sig
+  (** an llvalue value of type [Types.marker] *)
+  type t
+
+  val of_marker_llvalue : Llvm.llvalue -> t
+  val to_marker_llvalue : t -> Llvm.llvalue
+  val to_opaque : t -> Llvm.llvalue Codegen.t
+  val of_opaque : Llvm.llvalue -> t Codegen.t
+  val compile_equal : t -> t -> Bool.t Codegen.t
 end

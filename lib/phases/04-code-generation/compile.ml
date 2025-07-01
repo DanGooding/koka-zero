@@ -282,25 +282,19 @@ let rec compile_expr
         ~args:(Array.of_list [])
         "fresh_marker"
     in
-    let%map marker = Helpers.heap_store_marker m ~runtime in
+    let marker = Immediate_repr.Marker.of_marker_llvalue m in
+    let%map marker = Immediate_repr.Marker.to_opaque marker in
     Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Markers_equal (e1, e2) ->
-    let%bind marker1_ptr =
+    let%bind marker1 =
       compile_expr_pure_packed e1 ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind marker2_ptr =
+    let%bind marker2 =
       compile_expr_pure_packed e2 ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind marker1 = Helpers.dereference_marker marker1_ptr in
-    let%bind marker2 = Helpers.dereference_marker marker2_ptr in
-    let { Runtime.markers_equal; _ } = runtime in
-    let%bind eq =
-      Runtime.Function.build_call
-        markers_equal
-        ~args:(Array.of_list [ marker1; marker2 ])
-        "markers_equal"
-    in
-    let eq = Immediate_repr.Bool.of_bool_llvalue eq in
+    let%bind marker1 = Immediate_repr.Marker.of_opaque marker1 in
+    let%bind marker2 = Immediate_repr.Marker.of_opaque marker2 in
+    let%bind eq = Immediate_repr.Marker.compile_equal marker1 marker2 in
     let%map eq = Immediate_repr.Bool.to_opaque eq in
     Ctl_repr.Pure (Packed eq)
   | EPS.Expr.Effect_label label ->
@@ -402,7 +396,8 @@ let rec compile_expr
         ~effect_reprs
         ~outer_symbol
     in
-    let%bind marker = Helpers.dereference_marker marker_ptr in
+    let%bind marker = Immediate_repr.Marker.of_opaque marker_ptr in
+    let marker = Immediate_repr.Marker.to_marker_llvalue marker in
     let%bind handler =
       compile_expr_pure_packed
         e_handler
@@ -465,7 +460,10 @@ let rec compile_expr
         ~args:(Array.of_list [ evidence ])
         "marker"
     in
-    let%map marker = Helpers.heap_store_marker marker ~runtime in
+    let%map marker =
+      Immediate_repr.Marker.of_marker_llvalue marker
+      |> Immediate_repr.Marker.to_opaque
+    in
     Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Get_evidence_handler e ->
     let%bind evidence =
