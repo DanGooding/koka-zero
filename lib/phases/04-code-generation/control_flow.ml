@@ -90,7 +90,7 @@ module Compile_switch = struct
   type 'a t =
     Llvm.llvalue
     -> table:(Llvm.llvalue * string * (unit -> 'a Codegen.t)) list
-    -> compile_default:(unit -> 'a Codegen.t)
+    -> compile_default:(unit -> [ `Result of 'a | `Exits ] Codegen.t)
     -> 'a Codegen.t
 
   let recombining =
@@ -146,7 +146,14 @@ module Compile_switch = struct
     let%bind () =
       Codegen.use_builder (Llvm.position_at_end post_switch_block)
     in
-    let incoming = (default_result, default_end_block) :: table_ends in
+    let incoming =
+      match default_result with
+      | `Exits ->
+        (* if the default branch exits, don't try to recombine it with the others *)
+        table_ends
+      | `Result default_result ->
+        (default_result, default_end_block) :: table_ends
+    in
     phi_builder incoming
   ;;
 
@@ -178,7 +185,7 @@ module Compile_switch = struct
     let%bind () =
       Codegen.use_builder (Llvm.position_at_end default_start_block)
     in
-    let%bind () = compile_default () in
+    let%bind (_ : [ `Exits | `Result of unit ]) = compile_default () in
     (* compile each branch *)
     List.map table ~f:(fun (tag, start_block, compile_branch) ->
       Llvm.add_case switch tag start_block;

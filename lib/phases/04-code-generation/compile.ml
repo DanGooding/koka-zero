@@ -127,40 +127,14 @@ let compile_select_operation
     statement, executed when a variants tag has an unexpected value. This exits
     the program, and results in a null [Types.opaque_pointer] to satisfy llvm's
     type system *)
-let compile_match_corrupted_tag
-      (type result)
-      ~runtime
-      ~type_
-      ~(is_tail_position : result Is_tail_position.t)
-      ()
-  : result Codegen.t
-  =
+let compile_match_corrupted_tag ~runtime () : [> `Exits ] Codegen.t =
   let open Codegen.Let_syntax in
   let { Runtime.exit; _ } = runtime in
   let%bind _void =
     Runtime.Function.build_call exit ~args:(Array.of_list []) ""
   in
-  match is_tail_position with
-  | Tail_position ->
-    (* exit never returns, so this is always unreachable.
-       TODO: compile_switch should take [default_never_returns]
-       which would exclude the [default] branch from recombination
-    *)
-    (let%map _unreachable = Codegen.use_builder Llvm.build_unreachable in
-     ()
-     : result Codegen.t)
-  | Non_tail_position ->
-    (match (type_ : EPS.Type.t) with
-     | Pure ->
-       let%map pointer_type = Types.pointer in
-       let content = Llvm.const_null pointer_type in
-       Ctl_repr.Pure (Packed content)
-     | Ctl ->
-       let%bind pointer_type = Types.pointer in
-       let%map i1_type = Codegen.use_context Llvm.i1_type in
-       let content = Llvm.const_null pointer_type in
-       let is_yield_i1 = Llvm.const_null i1_type in
-       Ctl_repr.Ctl (Ctl_repr.Maybe_yield_repr.create ~is_yield_i1 ~content))
+  let%map _unreachable = Codegen.use_builder Llvm.build_unreachable in
+  `Exits
 ;;
 
 (** produces code to evaluate the given expression *)
@@ -852,8 +826,7 @@ and compile_match_op
       [ normal_tag, "op_normal", make_compile_branch normal_branch
       ; tail_tag, "op_tail", make_compile_branch tail_branch
       ]
-    ~compile_default:
-      (compile_match_corrupted_tag ~runtime ~type_:Ctl ~is_tail_position)
+    ~compile_default:(compile_match_corrupted_tag ~runtime)
 
 (** [compile_if_then_else b ~e_yes ~e_no ~env ~runtime ~effect_reprs ~outer_symbol]
     generates code to branch on the value of the [Types.bool] [b], and evaluate
