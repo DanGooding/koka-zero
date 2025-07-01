@@ -32,7 +32,7 @@ let compile_switch
       (t : result t)
       subject
       ~(table : (Llvm.llvalue * string * (unit -> result Codegen.t)) list)
-      ~(compile_default : unit -> result Codegen.t)
+      ~(compile_default : unit -> [ `Result of result | `Exits ] Codegen.t)
   : result Codegen.t
   =
   match t with

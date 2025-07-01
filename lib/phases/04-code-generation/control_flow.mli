@@ -28,7 +28,7 @@ module Compile_switch : sig
   type 'a t =
     Llvm.llvalue
     -> table:(Llvm.llvalue * string * (unit -> 'a Codegen.t)) list
-    -> compile_default:(unit -> 'a Codegen.t)
+    -> compile_default:(unit -> [ `Result of 'a | `Exits ] Codegen.t)
     -> 'a Codegen.t
 
   (** [compile_switch case ~table ~compile_default ~phi_builder] builds a switch statement,
