@@ -30,11 +30,6 @@ val heap_store
   -> runtime:Runtime.t
   -> Llvm.llvalue Codegen.t
 
-val heap_store_marker
-  :  Llvm.llvalue
-  -> runtime:Runtime.t
-  -> Llvm.llvalue Codegen.t
-
 val heap_store_label
   :  Llvm.llvalue
   -> runtime:Runtime.t
@@ -48,7 +43,6 @@ val dereference
   -> string
   -> Llvm.llvalue Codegen.t
 
-val dereference_marker : Llvm.llvalue -> Llvm.llvalue Codegen.t
 val dereference_label : Llvm.llvalue -> Llvm.llvalue Codegen.t
 
 (** [compile_populate_struct p members] generates code to populate the struct

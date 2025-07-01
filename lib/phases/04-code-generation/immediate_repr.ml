@@ -138,3 +138,35 @@ module Unit = struct
     Llvm.const_null ptr_type
   ;;
 end
+
+module Marker = struct
+  (* holds a value of type [Types.marker] *)
+  type t = Marker of Llvm.llvalue
+
+  let of_marker_llvalue marker = Marker marker
+  let to_marker_llvalue (Marker marker) = marker
+
+  let to_opaque (Marker m) =
+    let open Codegen.Let_syntax in
+    let%bind ptr_type = Types.pointer in
+    Codegen.use_builder (Llvm.build_inttoptr m ptr_type "opaque")
+  ;;
+
+  let of_opaque opaque =
+    let open Codegen.Let_syntax in
+    let%bind marker_type = Types.marker in
+    let%map m =
+      Codegen.use_builder (Llvm.build_ptrtoint opaque marker_type "marker")
+    in
+    Marker m
+  ;;
+
+  let compile_equal (Marker left) (Marker right) =
+    let open Codegen.Let_syntax in
+    let%bind eq_i1 =
+      Codegen.use_builder
+        (Llvm.build_icmp Llvm.Icmp.Eq left right "markers_equal")
+    in
+    Bool.of_i1 eq_i1
+  ;;
+end

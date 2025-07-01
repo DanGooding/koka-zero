@@ -50,7 +50,6 @@ let heap_store_aux
   heap_store t v name ~runtime
 ;;
 
-let heap_store_marker = heap_store_aux Types.marker "marker"
 let heap_store_label = heap_store_aux Types.label "label"
 
 let dereference ptr type_ name =
@@ -66,7 +65,6 @@ let dereference_aux
   dereference ptr t name
 ;;
 
-let dereference_marker = dereference_aux Types.marker "marker"
 let dereference_label = dereference_aux Types.label "label"
 
 let compile_populate_struct
