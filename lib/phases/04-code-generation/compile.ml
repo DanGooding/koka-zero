@@ -253,6 +253,7 @@ let rec compile_expr
         ~effect_reprs
         ~outer_symbol
     in
+    let%bind marker = Immediate_repr.Marker.of_opaque marker in
     let%map yield =
       Ctl_repr.Maybe_yield_repr.compile_construct_yield
         ~marker
@@ -728,6 +729,10 @@ and compile_match_ctl
         ~struct_type:ctl_yield_type
         ~i:0
         (Helpers.register_name_of_variable x_marker)
+    in
+    let%bind marker =
+      Immediate_repr.Marker.to_opaque
+        (Immediate_repr.Marker.of_marker_llvalue marker)
     in
     let%bind op_clause =
       Helpers.compile_access_field

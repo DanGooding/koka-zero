@@ -16,7 +16,7 @@ let pointer = Codegen.use_context Llvm.pointer_type
 let ctl_yield =
   let open Codegen.Let_syntax in
   let%bind pointer = pointer in
-  let marker = pointer in
+  let%bind marker = marker in
   let op_clause = pointer in
   let resumption = pointer in
   let fields = [ marker; op_clause; resumption ] in

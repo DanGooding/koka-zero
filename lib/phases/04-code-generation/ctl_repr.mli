@@ -12,7 +12,7 @@ module Maybe_yield_repr : sig
   val compile_construct_pure : Llvm.llvalue -> t Codegen.t
 
   val compile_construct_yield
-    :  marker:Llvm.llvalue
+    :  marker:Immediate_repr.Marker.t
     -> op_clause:Llvm.llvalue
     -> resumption:Llvm.llvalue
     -> runtime:Runtime.t
