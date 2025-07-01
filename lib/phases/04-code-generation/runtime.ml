@@ -15,7 +15,6 @@ type t =
   ; exit_with_message : Function.t
   ; malloc : Function.t
   ; fresh_marker : Function.t
-  ; markers_equal : Function.t
   ; nil_evidence_vector : Function.t
   ; cons_evidence_vector : Function.t
   ; evidence_vector_lookup : Function.t
@@ -43,7 +42,6 @@ let declare =
   let%bind ptr = Types.pointer in
   let%bind i64 = Codegen.use_context Llvm.i64_type in
   let%bind pointer_type = Types.pointer in
-  let%bind bool_type = Types.bool in
   let%bind int_type = Types.int in
   let%bind marker_type = Types.marker in
   let%bind label_type = Types.label in
@@ -66,10 +64,6 @@ let declare =
   let%bind fresh_marker =
     let name = Symbol_name.of_runtime_exn "kkr_fresh_marker" in
     declare_function name marker_type []
-  in
-  let%bind markers_equal =
-    let name = Symbol_name.of_runtime_exn "kkr_markers_equal" in
-    declare_function name bool_type [ marker_type; marker_type ]
   in
   let%bind nil_evidence_vector =
     let name = Symbol_name.of_runtime_exn "kkr_nil_evidence_vector" in
@@ -122,7 +116,6 @@ let declare =
   ; exit_with_message
   ; malloc
   ; fresh_marker
-  ; markers_equal
   ; nil_evidence_vector
   ; cons_evidence_vector
   ; evidence_vector_lookup

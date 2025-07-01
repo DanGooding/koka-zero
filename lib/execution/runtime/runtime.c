@@ -45,10 +45,6 @@ marker_t kkr_fresh_marker(void) { return next_marker++; }
 const bool_t const_false = 0;
 const bool_t const_true = 1;
 
-bool_t kkr_markers_equal(marker_t m1, marker_t m2) {
-  return m1 == m2 ? const_true : const_false;
-}
-
 // evidence vectors and entries - these are managed entirely in the C runtime
 // and are essentially abstract outside of it
 typedef struct {
