@@ -18,15 +18,13 @@ void kkr_init(void);
 // exits with failure
 void kkr_exit(void);
 // prints a null terminated error message, then exits with failure
-void kkr_exit_with_message(const uint8_t *message);
+void kkr_exit_with_message(const uint8_t* message);
 
 // safe malloc wrapper: will never return NULL, instead exits on failure
 opaque_ptr kkr_malloc(uint64_t size);
 
 // generates a fresh marker
 marker_t kkr_fresh_marker(void);
-// compares two markers for equality
-bool_t kkr_markers_equal(marker_t, marker_t);
 
 // returns a heap allocated empty evidence vector
 opaque_ptr kkr_nil_evidence_vector(void);

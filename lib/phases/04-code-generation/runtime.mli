@@ -18,7 +18,6 @@ type t =
   ; exit_with_message : Function.t
   ; malloc : Function.t
   ; fresh_marker : Function.t
-  ; markers_equal : Function.t
   ; nil_evidence_vector : Function.t
   ; cons_evidence_vector : Function.t
   ; evidence_vector_lookup : Function.t
