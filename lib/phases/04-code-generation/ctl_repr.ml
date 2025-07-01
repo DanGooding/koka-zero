@@ -20,7 +20,7 @@ module Maybe_yield_repr = struct
   ;;
 
   let compile_construct_yield
-        ~(marker : Llvm.llvalue)
+        ~(marker : Immediate_repr.Marker.t)
         ~(op_clause : Llvm.llvalue)
         ~(resumption : Llvm.llvalue)
         ~(runtime : Runtime.t)
@@ -31,6 +31,7 @@ module Maybe_yield_repr = struct
     let%bind ctl_yield_ptr =
       Helpers.heap_allocate ctl_yield_type "ctl_yield" ~runtime
     in
+    let marker = Immediate_repr.Marker.to_marker_llvalue marker in
     let%bind () =
       Helpers.compile_populate_struct
         ctl_yield_ptr
