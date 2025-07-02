@@ -300,7 +300,7 @@ let rec compile_expr
   | EPS.Expr.Effect_label label ->
     let%bind repr = lookup_effect_repr effect_reprs label in
     let { Effect_repr.id; _ } = repr in
-    let%bind label = Immediate_repr.Label.of_const_int id in
+    let%bind label = Immediate_repr.Label.const id in
     let%map label = Immediate_repr.Label.to_opaque label in
     Ctl_repr.Pure (Packed label)
   | EPS.Expr.Construct_handler
