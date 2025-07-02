@@ -58,3 +58,13 @@ module Marker : sig
   val of_opaque : Llvm.llvalue -> t Codegen.t
   val compile_equal : t -> t -> Bool.t Codegen.t
 end
+
+module Label : sig
+  (** an llvalue value of type [Types.label] *)
+  type t
+
+  val of_const_int : int -> t Codegen.t
+  val to_label_llvalue : t -> Llvm.llvalue
+  val to_opaque : t -> Llvm.llvalue Codegen.t
+  val of_opaque : Llvm.llvalue -> t Codegen.t
+end

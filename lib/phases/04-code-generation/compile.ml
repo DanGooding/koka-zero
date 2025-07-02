@@ -301,8 +301,8 @@ let rec compile_expr
   | EPS.Expr.Effect_label label ->
     let%bind repr = lookup_effect_repr effect_reprs label in
     let { Effect_repr.id; _ } = repr in
-    let%bind label = Helpers.const_label id in
-    let%map label = Helpers.heap_store_label label ~runtime in
+    let%bind label = Immediate_repr.Label.of_const_int id in
+    let%map label = Immediate_repr.Label.to_opaque label in
     Ctl_repr.Pure (Packed label)
   | EPS.Expr.Construct_handler
       { handled_effect; operation_clauses = operation_clause_exprs } ->
@@ -385,10 +385,11 @@ let rec compile_expr
       ; handler_site_vector = e_handler_site_vector
       ; vector_tail = e_vector_tail
       } ->
-    let%bind label_ptr =
+    let%bind label =
       compile_expr_pure_packed e_label ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind label = Helpers.dereference_label label_ptr in
+    let%bind label = Immediate_repr.Label.of_opaque label in
+    let label = Immediate_repr.Label.to_label_llvalue label in
     let%bind marker_ptr =
       compile_expr_pure_packed
         e_marker
@@ -432,10 +433,11 @@ let rec compile_expr
     in
     Ctl_repr.Pure (Packed extended_vector)
   | EPS.Expr.Lookup_evidence { label = e_label; vector = e_vector } ->
-    let%bind label_ptr =
+    let%bind label =
       compile_expr_pure_packed e_label ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind label = Helpers.dereference_label label_ptr in
+    let%bind label = Immediate_repr.Label.of_opaque label in
+    let label = Immediate_repr.Label.to_label_llvalue label in
     let%bind vector =
       compile_expr_pure_packed
         e_vector
