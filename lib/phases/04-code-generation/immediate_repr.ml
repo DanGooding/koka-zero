@@ -2,26 +2,24 @@ open! Core
 open! Import
 
 module Bool = struct
-  type t = Bool of Llvm.llvalue
-
-  let of_bool_llvalue b = Bool b
+  type t = Unpacked of Llvm.llvalue
 
   let const_false () =
     let open Codegen.Let_syntax in
     let%map bool_type = Types.bool in
     (* all zeros *)
-    Bool (Llvm.const_null bool_type)
+    Unpacked (Llvm.const_null bool_type)
   ;;
 
   let const_true () =
     let open Codegen.Let_syntax in
     let%map bool_type = Types.bool in
-    Bool (Llvm.const_int bool_type 1)
+    Unpacked (Llvm.const_int bool_type 1)
   ;;
 
   let const_bool b = if b then const_true () else const_false ()
 
-  let to_i1 (Bool b) =
+  let to_i1 (Unpacked b) =
     let open Codegen.Let_syntax in
     let%bind i1 = Codegen.use_context Llvm.i1_type in
     (* expects only [const_true]/[const_false] *)
@@ -32,10 +30,10 @@ module Bool = struct
     let open Codegen.Let_syntax in
     let%bind bool = Types.bool in
     let%map b = Codegen.use_builder (Llvm.build_zext b bool "bool") in
-    Bool b
+    Unpacked b
   ;;
 
-  let to_opaque (Bool b) =
+  let to_opaque (Unpacked b) =
     let open Codegen.Let_syntax in
     let%bind ptr_type = Types.pointer in
     Codegen.use_builder (Llvm.build_inttoptr b ptr_type "opaque")
@@ -47,10 +45,14 @@ module Bool = struct
     let%map b =
       Codegen.use_builder (Llvm.build_ptrtoint opaque bool_type "bool")
     in
-    Bool b
+    Unpacked b
   ;;
 
-  let compile_binary_operation (Bool left) (op : Operator.Bool.t) (Bool right) =
+  let compile_binary_operation
+        (Unpacked left)
+        (op : Operator.Bool.t)
+        (Unpacked right)
+    =
     let open Codegen.Let_syntax in
     let%bind result =
       (* [and]/[or] work directly on bools, don't need to convert to [i1] and
@@ -59,32 +61,29 @@ module Bool = struct
       | And -> Codegen.use_builder (Llvm.build_and left right "bool_and")
       | Or -> Codegen.use_builder (Llvm.build_or left right "bool_or")
     in
-    to_opaque (Bool result)
+    to_opaque (Unpacked result)
   ;;
 
-  let compile_unary_operation (op : Operator.Bool.Unary.t) (Bool b) =
+  let compile_unary_operation (op : Operator.Bool.Unary.t) (Unpacked b) =
     let open Codegen.Let_syntax in
     match op with
     | Not ->
-      let%bind (Bool true_) = const_true () in
+      let%bind (Unpacked true_) = const_true () in
       Codegen.use_builder (Llvm.build_xor b true_ "not")
   ;;
 end
 
 module Int = struct
   (* holds a value of type [Types.int] *)
-  type t = Int of Llvm.llvalue
+  type t = Unpacked of Llvm.llvalue
 
   let const i =
     let open Codegen.Let_syntax in
     let%map int_type = Types.int in
-    Int (Llvm.const_int int_type i)
+    Unpacked (Llvm.const_int int_type i)
   ;;
 
-  let of_int_llvalue t = Int t
-  let to_int_llvalue (Int t) = t
-
-  let to_opaque (Int i) =
+  let to_opaque (Unpacked i) =
     let open Codegen.Let_syntax in
     let%bind ptr_type = Types.pointer in
     Codegen.use_builder (Llvm.build_inttoptr i ptr_type "opaque")
@@ -96,10 +95,14 @@ module Int = struct
     let%map i =
       Codegen.use_builder (Llvm.build_ptrtoint opaque int_type "int")
     in
-    Int i
+    Unpacked i
   ;;
 
-  let compile_binary_operation (Int left) (op : Operator.Int.t) (Int right) =
+  let compile_binary_operation
+        (Unpacked left)
+        (op : Operator.Int.t)
+        (Unpacked right)
+    =
     let open Codegen.Let_syntax in
     let operation =
       match op with
@@ -121,7 +124,7 @@ module Int = struct
     match operation with
     | `Int build ->
       let%bind result = Codegen.use_builder (build left right "int_math") in
-      to_opaque (Int result)
+      to_opaque (Unpacked result)
     | `Bool icmp ->
       let%bind result =
         Codegen.use_builder (Llvm.build_icmp icmp left right "int_cmp")
@@ -141,12 +144,9 @@ end
 
 module Marker = struct
   (* holds a value of type [Types.marker] *)
-  type t = Marker of Llvm.llvalue
+  type t = Unpacked of Llvm.llvalue
 
-  let of_marker_llvalue marker = Marker marker
-  let to_marker_llvalue (Marker marker) = marker
-
-  let to_opaque (Marker m) =
+  let to_opaque (Unpacked m) =
     let open Codegen.Let_syntax in
     let%bind ptr_type = Types.pointer in
     Codegen.use_builder (Llvm.build_inttoptr m ptr_type "opaque")
@@ -158,10 +158,10 @@ module Marker = struct
     let%map m =
       Codegen.use_builder (Llvm.build_ptrtoint opaque marker_type "marker")
     in
-    Marker m
+    Unpacked m
   ;;
 
-  let compile_equal (Marker left) (Marker right) =
+  let compile_equal (Unpacked left) (Unpacked right) =
     let open Codegen.Let_syntax in
     let%bind eq_i1 =
       Codegen.use_builder
@@ -173,17 +173,15 @@ end
 
 module Label = struct
   (* holds a value of type [Types.label] *)
-  type t = Label of Llvm.llvalue
+  type t = Unpacked of Llvm.llvalue
 
   let of_const_int i =
     let open Codegen.Let_syntax in
     let%map label = Types.label in
-    Label (Llvm.const_int label i)
+    Unpacked (Llvm.const_int label i)
   ;;
 
-  let to_label_llvalue (Label label) = label
-
-  let to_opaque (Label label) =
+  let to_opaque (Unpacked label) =
     let open Codegen.Let_syntax in
     let%bind ptr_type = Types.pointer in
     Codegen.use_builder (Llvm.build_inttoptr label ptr_type "opaque")
@@ -195,6 +193,6 @@ module Label = struct
     let%map label =
       Codegen.use_builder (Llvm.build_ptrtoint opaque marker_type "label")
     in
-    Label label
+    Unpacked label
   ;;
 end

@@ -283,8 +283,7 @@ let rec compile_expr
         ~args:(Array.of_list [])
         "fresh_marker"
     in
-    let marker = Immediate_repr.Marker.of_marker_llvalue m in
-    let%map marker = Immediate_repr.Marker.to_opaque marker in
+    let%map marker = Immediate_repr.Marker.to_opaque (Unpacked m) in
     Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Markers_equal (e1, e2) ->
     let%bind marker1 =
@@ -388,8 +387,7 @@ let rec compile_expr
     let%bind label =
       compile_expr_pure_packed e_label ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind label = Immediate_repr.Label.of_opaque label in
-    let label = Immediate_repr.Label.to_label_llvalue label in
+    let%bind (Unpacked label) = Immediate_repr.Label.of_opaque label in
     let%bind marker_ptr =
       compile_expr_pure_packed
         e_marker
@@ -398,8 +396,7 @@ let rec compile_expr
         ~effect_reprs
         ~outer_symbol
     in
-    let%bind marker = Immediate_repr.Marker.of_opaque marker_ptr in
-    let marker = Immediate_repr.Marker.to_marker_llvalue marker in
+    let%bind (Unpacked marker) = Immediate_repr.Marker.of_opaque marker_ptr in
     let%bind handler =
       compile_expr_pure_packed
         e_handler
@@ -436,8 +433,7 @@ let rec compile_expr
     let%bind label =
       compile_expr_pure_packed e_label ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind label = Immediate_repr.Label.of_opaque label in
-    let label = Immediate_repr.Label.to_label_llvalue label in
+    let%bind (Unpacked label) = Immediate_repr.Label.of_opaque label in
     let%bind vector =
       compile_expr_pure_packed
         e_vector
@@ -463,10 +459,7 @@ let rec compile_expr
         ~args:(Array.of_list [ evidence ])
         "marker"
     in
-    let%map marker =
-      Immediate_repr.Marker.of_marker_llvalue marker
-      |> Immediate_repr.Marker.to_opaque
-    in
+    let%map marker = Immediate_repr.Marker.to_opaque (Unpacked marker) in
     Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Get_evidence_handler e ->
     let%bind evidence =
@@ -732,10 +725,7 @@ and compile_match_ctl
         ~i:0
         (Names.register_name_of_variable x_marker)
     in
-    let%bind marker =
-      Immediate_repr.Marker.to_opaque
-        (Immediate_repr.Marker.of_marker_llvalue marker)
-    in
+    let%bind marker = Immediate_repr.Marker.to_opaque (Unpacked marker) in
     let%bind op_clause =
       Struct_helpers.compile_access_field
         content
@@ -1168,8 +1158,7 @@ and compile_impure_built_in
     let%bind v =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind i = Immediate_repr.Int.of_opaque v in
-    let i = Immediate_repr.Int.to_int_llvalue i in
+    let%bind (Unpacked i) = Immediate_repr.Int.of_opaque v in
     let%bind i8_type = Codegen.use_context Llvm.i8_type in
     let newline = Llvm.const_int i8_type (Bool.to_int newline) in
     let { Runtime.print_int; _ } = runtime in
@@ -1185,8 +1174,7 @@ and compile_impure_built_in
     let%bind i =
       Runtime.Function.build_call read_int ~args:(Array.of_list []) "i"
     in
-    let i = Immediate_repr.Int.of_int_llvalue i in
-    Immediate_repr.Int.to_opaque i
+    Immediate_repr.Int.to_opaque (Unpacked i)
 ;;
 
 (** creates the representation of a declared effect. This builds the type of
