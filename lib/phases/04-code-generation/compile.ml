@@ -730,7 +730,7 @@ and compile_match_ctl
         content
         ~struct_type:ctl_yield_type
         ~i:0
-        (Struct_helpers.register_name_of_variable x_marker)
+        (Names.register_name_of_variable x_marker)
     in
     let%bind marker =
       Immediate_repr.Marker.to_opaque
@@ -741,14 +741,14 @@ and compile_match_ctl
         content
         ~struct_type:ctl_yield_type
         ~i:1
-        (Struct_helpers.register_name_of_variable x_op_clause)
+        (Names.register_name_of_variable x_op_clause)
     in
     let%bind resumption =
       Struct_helpers.compile_access_field
         content
         ~struct_type:ctl_yield_type
         ~i:2
-        (Struct_helpers.register_name_of_variable x_resumption)
+        (Names.register_name_of_variable x_resumption)
     in
     let env' =
       env
@@ -811,7 +811,7 @@ and compile_match_op
         subject
         ~struct_type:op_type
         ~i:1
-        (Struct_helpers.register_name_of_variable x)
+        (Names.register_name_of_variable x)
     in
     let env' =
       Context.add_local_exn env ~name:x ~value:(Pure (Packed clause))
@@ -1135,7 +1135,7 @@ and compile_construct_handler
           ~effect_reprs
           ~outer_symbol
       in
-      clause, Struct_helpers.register_name_of_variable op_name)
+      clause, Names.register_name_of_variable op_name)
     |> Codegen.all
   in
   let%bind handler_ptr = Struct_helpers.heap_allocate hnd_type "hnd" ~runtime in
