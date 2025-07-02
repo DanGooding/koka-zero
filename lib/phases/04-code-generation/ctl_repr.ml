@@ -31,7 +31,7 @@ module Maybe_yield_repr = struct
     let%bind ctl_yield_ptr =
       Struct_helpers.heap_allocate ctl_yield_type "ctl_yield" ~runtime
     in
-    let marker = Immediate_repr.Marker.to_marker_llvalue marker in
+    let (Unpacked marker) = marker in
     let%bind () =
       Struct_helpers.compile_populate_struct
         ctl_yield_ptr
