@@ -10,18 +10,7 @@ let bool =
 let int = Codegen.use_context Llvm.i64_type
 let marker = Codegen.use_context Llvm.i64_type
 let label = Codegen.use_context Llvm.i64_type
-let variant_tag = Codegen.use_context Llvm.i8_type
 let pointer = Codegen.use_context Llvm.pointer_type
-
-let op =
-  let open Codegen.Let_syntax in
-  let%bind variant_tag = variant_tag in
-  let%bind pointer = pointer in
-  let clause = pointer in
-  let fields = [ variant_tag; clause ] in
-  Codegen.use_context (fun context ->
-    Llvm.struct_type context (Array.of_list fields))
-;;
 
 let closure_struct ~num_captured =
   let open Codegen.Let_syntax in

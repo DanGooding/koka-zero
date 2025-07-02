@@ -16,7 +16,12 @@ module type Struct_S = sig
 
   val type_ : Llvm.lltype Codegen.t
   val populate : Llvm.llvalue -> f:(Field.t -> Llvm.llvalue) -> unit Codegen.t
-  val project : Llvm.llvalue -> Field.t -> Llvm.llvalue Codegen.t
+
+  val project
+    :  ?name:string
+    -> Llvm.llvalue
+    -> Field.t
+    -> Llvm.llvalue Codegen.t
 end
 
 module type S = sig

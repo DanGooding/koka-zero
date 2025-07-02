@@ -1,15 +1,6 @@
 open! Core
 open! Import
 
-let const_tag i =
-  let open Codegen.Let_syntax in
-  let%map tag_type = Types.variant_tag in
-  Llvm.const_int tag_type i
-;;
-
-let const_op_normal_tag = const_tag 0
-let const_op_tail_tag = const_tag 1
-
 let heap_allocate type_ name ~runtime =
   let size = Llvm.size_of type_ in
   let { Runtime.malloc; _ } = runtime in
