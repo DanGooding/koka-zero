@@ -13,17 +13,6 @@ let label = Codegen.use_context Llvm.i64_type
 let variant_tag = Codegen.use_context Llvm.i8_type
 let pointer = Codegen.use_context Llvm.pointer_type
 
-let ctl_yield =
-  let open Codegen.Let_syntax in
-  let%bind pointer = pointer in
-  let%bind marker = marker in
-  let op_clause = pointer in
-  let resumption = pointer in
-  let fields = [ marker; op_clause; resumption ] in
-  Codegen.use_context (fun context ->
-    Llvm.struct_type context (Array.of_list fields))
-;;
-
 let op =
   let open Codegen.Let_syntax in
   let%bind variant_tag = variant_tag in

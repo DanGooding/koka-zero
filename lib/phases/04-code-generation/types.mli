@@ -14,10 +14,6 @@ val label : Llvm.lltype Codegen.t
 (** type of the tag used to distinguish variants *)
 val variant_tag : Llvm.lltype Codegen.t
 
-(** control monad 'yield' contents:
-    [{ marker; op_clause; resumption }] *)
-val ctl_yield : Llvm.lltype Codegen.t
-
 (** operation clause variant, but merged into one types as `normal` and `tail`
     have identical fields: [{ tag; opaque_pointer clause }]*)
 val op : Llvm.lltype Codegen.t

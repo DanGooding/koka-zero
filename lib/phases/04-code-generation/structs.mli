@@ -11,3 +11,14 @@ module Evidence_entry : sig
 
   include Struct.Struct_S with module Field := Field
 end
+
+module Ctl_yield : sig
+  module Field : sig
+    type t =
+      | Marker
+      | Op_clause
+      | Resumption
+  end
+
+  include Struct.Struct_S with module Field := Field
+end
