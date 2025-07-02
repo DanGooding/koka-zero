@@ -58,7 +58,7 @@ module Label : sig
   (** an llvalue value of type [Types.label] *)
   type t = Unpacked of Llvm.llvalue
 
-  val of_const_int : int -> t Codegen.t
+  val const : int -> t Codegen.t
   val to_opaque : t -> Llvm.llvalue Codegen.t
   val of_opaque : Llvm.llvalue -> t Codegen.t
 end

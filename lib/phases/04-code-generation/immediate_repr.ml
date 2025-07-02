@@ -73,8 +73,10 @@ module Bool = struct
   ;;
 end
 
-module Int = struct
-  (* holds a value of type [Types.int] *)
+module Int_common (Arg : sig
+    val register_name : string
+  end) =
+struct
   type t = Unpacked of Llvm.llvalue
 
   let const i =
@@ -93,10 +95,18 @@ module Int = struct
     let open Codegen.Let_syntax in
     let%bind int_type = Types.int in
     let%map i =
-      Codegen.use_builder (Llvm.build_ptrtoint opaque int_type "int")
+      Codegen.use_builder
+        (Llvm.build_ptrtoint opaque int_type Arg.register_name)
     in
     Unpacked i
   ;;
+end
+
+module Int = struct
+  (* holds a value of type [Types.int] *)
+  include Int_common (struct
+      let register_name = "int"
+    end)
 
   let compile_binary_operation
         (Unpacked left)
@@ -144,22 +154,9 @@ end
 
 module Marker = struct
   (* holds a value of type [Types.marker] *)
-  type t = Unpacked of Llvm.llvalue
-
-  let to_opaque (Unpacked m) =
-    let open Codegen.Let_syntax in
-    let%bind ptr_type = Types.pointer in
-    Codegen.use_builder (Llvm.build_inttoptr m ptr_type "opaque")
-  ;;
-
-  let of_opaque opaque =
-    let open Codegen.Let_syntax in
-    let%bind marker_type = Types.marker in
-    let%map m =
-      Codegen.use_builder (Llvm.build_ptrtoint opaque marker_type "marker")
-    in
-    Unpacked m
-  ;;
+  include Int_common (struct
+      let register_name = "marker"
+    end)
 
   let compile_equal (Unpacked left) (Unpacked right) =
     let open Codegen.Let_syntax in
@@ -173,26 +170,7 @@ end
 
 module Label = struct
   (* holds a value of type [Types.label] *)
-  type t = Unpacked of Llvm.llvalue
-
-  let of_const_int i =
-    let open Codegen.Let_syntax in
-    let%map label = Types.label in
-    Unpacked (Llvm.const_int label i)
-  ;;
-
-  let to_opaque (Unpacked label) =
-    let open Codegen.Let_syntax in
-    let%bind ptr_type = Types.pointer in
-    Codegen.use_builder (Llvm.build_inttoptr label ptr_type "opaque")
-  ;;
-
-  let of_opaque opaque =
-    let open Codegen.Let_syntax in
-    let%bind marker_type = Types.marker in
-    let%map label =
-      Codegen.use_builder (Llvm.build_ptrtoint opaque marker_type "label")
-    in
-    Unpacked label
-  ;;
+  include Int_common (struct
+      let register_name = "label"
+    end)
 end
