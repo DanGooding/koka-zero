@@ -45,19 +45,12 @@ marker_t kkr_fresh_marker(void) { return next_marker++; }
 const bool_t const_false = 0;
 const bool_t const_true = 1;
 
-// evidence vectors and entries - these are managed entirely in the C runtime
+// evidence vectors - these are managed entirely in the C runtime
 // and are essentially abstract outside of it
-typedef struct {
-  opaque_ptr handler;
-  marker_t marker;
-  struct vector_t *handler_site_vector;
-
-} evidence_t;
-
 typedef struct vector_t {
   uint8_t is_nil;  // not bool_t since this isn't a Koka value
   label_t label;
-  evidence_t *evidence;
+  opaque_ptr evidence;
   struct vector_t *tail;
 } vector_t;
 
@@ -69,16 +62,8 @@ opaque_ptr kkr_nil_evidence_vector(void) {
   return (opaque_ptr)vector;
 }
 
-opaque_ptr kkr_cons_evidence_vector(label_t label, marker_t marker,
-                                    opaque_ptr handler,
-                                    opaque_ptr handler_site_vector,
+opaque_ptr kkr_cons_evidence_vector(label_t label, opaque_ptr evidence,
                                     opaque_ptr vector_tail) {
-  evidence_t *evidence = (evidence_t *)kkr_malloc(sizeof(evidence_t));
-  *evidence =
-      (evidence_t){.handler = handler,
-                   .marker = marker,
-                   .handler_site_vector = (vector_t *)handler_site_vector};
-
   vector_t *vector = (vector_t *)kkr_malloc(sizeof(vector_t));
   *vector = (vector_t){.is_nil = 0,
                        .label = label,
@@ -98,21 +83,6 @@ opaque_ptr kkr_evidence_vector_lookup(opaque_ptr v, label_t label) {
   }
   kkr_exit_with_message((uint8_t *)"effect label not found in evidence vector");
   return NULL;  // unreachable
-}
-
-marker_t kkr_get_evidence_marker(opaque_ptr e) {
-  evidence_t *evidence = (evidence_t *)e;
-  return evidence->marker;
-}
-
-opaque_ptr kkr_get_evidence_handler(opaque_ptr e) {
-  evidence_t *evidence = (evidence_t *)e;
-  return evidence->handler;
-}
-
-opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr e) {
-  evidence_t *evidence = (evidence_t *)e;
-  return (opaque_ptr)(evidence->handler_site_vector);
 }
 
 void kkr_println(void) { printf("\n"); }

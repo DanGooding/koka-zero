@@ -21,9 +21,6 @@ type t =
   ; nil_evidence_vector : Function.t
   ; cons_evidence_vector : Function.t
   ; evidence_vector_lookup : Function.t
-  ; get_evidence_marker : Function.t
-  ; get_evidence_handler : Function.t
-  ; get_evidence_handler_site_vector : Function.t
   ; println : Function.t
   ; print_int : Function.t
   ; read_int : Function.t
