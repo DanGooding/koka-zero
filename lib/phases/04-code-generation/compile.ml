@@ -68,8 +68,7 @@ let compile_unary_operator arg op =
 let compile_construct_op =
   fun tag (clause : Llvm.llvalue) ~runtime : Llvm.llvalue Codegen.t ->
   let open Codegen.Let_syntax in
-  let%bind op_type = Structs.Op.type_ in
-  let%bind op_ptr = Struct_helpers.heap_allocate op_type "op" ~runtime in
+  let%bind op_ptr = Structs.Op.heap_allocate ~name:"op" ~runtime in
   let%bind tag =
     match tag with
     | `Normal -> Structs.Op.Tag.const_normal
@@ -420,9 +419,8 @@ let rec compile_expr
         ~effect_reprs
         ~outer_symbol
     in
-    let%bind evidence_type = Structs.Evidence_entry.type_ in
     let%bind evidence_entry =
-      Struct_helpers.heap_allocate evidence_type "evidence_entry" ~runtime
+      Structs.Evidence_entry.heap_allocate ~name:"evidence_entry" ~runtime
     in
     let%bind () =
       Structs.Evidence_entry.populate evidence_entry ~f:(function

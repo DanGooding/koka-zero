@@ -22,6 +22,8 @@ module type Struct_S = sig
     -> Llvm.llvalue
     -> Field.t
     -> Llvm.llvalue Codegen.t
+
+  val heap_allocate : name:string -> runtime:Runtime.t -> Llvm.llvalue Codegen.t
 end
 
 module type S = sig

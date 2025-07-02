@@ -27,9 +27,8 @@ module Maybe_yield_repr = struct
     : t Codegen.t
     =
     let open Codegen.Let_syntax in
-    let%bind ctl_yield_type = Structs.Ctl_yield.type_ in
     let%bind ctl_yield_ptr =
-      Struct_helpers.heap_allocate ctl_yield_type "ctl_yield" ~runtime
+      Structs.Ctl_yield.heap_allocate ~name:"ctl_yield" ~runtime
     in
     let (Unpacked marker) = marker in
     let%bind () =
