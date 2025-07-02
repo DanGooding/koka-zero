@@ -150,7 +150,7 @@ module Closure = struct
             closure_ptr
             closure_type
             ~i
-            ~name:(Struct_helpers.register_name_of_variable name)
+            ~name:(Names.register_name_of_variable name)
         in
         let%map _store =
           Codegen.use_builder (Llvm.build_store value var_pointer)
@@ -182,7 +182,7 @@ module Closure = struct
         closure
         ~i
         ~num_captured:(Shape.length shape)
-        ~name:(Struct_helpers.register_name_of_variable v)
+        ~name:(Names.register_name_of_variable v)
     | None ->
       let message =
         sprintf "variable not found in closure: %s" (Variable.to_string_user v)
