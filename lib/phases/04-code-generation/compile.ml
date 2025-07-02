@@ -600,9 +600,6 @@ and compile_maybe_tail_position_expr
   | Tail_position ->
     compile_tail_position_expr e ~env ~runtime ~effect_reprs ~outer_symbol
 
-(* branching - eval subject/match as normal, then recurse on each branch *)
-(* all others - delegate to  *)
-
 and compile_expr_pure e ~env ~runtime ~effect_reprs ~outer_symbol
   : Value_repr.Lazily_packed.t Codegen.t
   =
