@@ -62,3 +62,44 @@ module Ctl_yield = struct
   include T
   include Struct.Make (T)
 end
+
+module Op = struct
+  module Tag = struct
+    let type_ = Codegen.use_context Llvm.i8_type
+
+    let const_tag i =
+      let open Codegen.Let_syntax in
+      let%map type_ = type_ in
+      Llvm.const_int type_ i
+    ;;
+
+    let const_normal = const_tag 0
+    let const_tail = const_tag 1
+  end
+
+  module T = struct
+    module Field = struct
+      type t =
+        | Tag
+        | Clause
+      [@@deriving equal]
+
+      let all = [ Tag; Clause ]
+
+      let name t =
+        match t with
+        | Tag -> "op_tag"
+        | Clause -> "op_clause"
+      ;;
+
+      let type_ t =
+        match t with
+        | Tag -> Tag.type_
+        | Clause -> Types.pointer
+      ;;
+    end
+  end
+
+  include T
+  include Struct.Make (T)
+end

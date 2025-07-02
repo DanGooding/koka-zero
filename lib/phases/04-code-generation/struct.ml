@@ -17,11 +17,11 @@ module Make (Arg : Arg_S) = struct
       Llvm.struct_type context (Array.of_list field_types))
   ;;
 
-  let project struct_value field =
+  let project ?name struct_value field =
     let open Codegen.Let_syntax in
     let%bind type_ = type_ in
     let index = index_exn field in
-    let name = Field.name field in
+    let name = Option.value name ~default:(Field.name field) in
     let%bind field_ptr =
       Codegen.use_builder
         (Llvm.build_struct_gep type_ struct_value index (name ^ "_ptr"))

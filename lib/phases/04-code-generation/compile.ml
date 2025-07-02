@@ -68,18 +68,17 @@ let compile_unary_operator arg op =
 let compile_construct_op =
   fun tag (clause : Llvm.llvalue) ~runtime : Llvm.llvalue Codegen.t ->
   let open Codegen.Let_syntax in
-  let%bind op_type = Types.op in
+  let%bind op_type = Structs.Op.type_ in
   let%bind op_ptr = Struct_helpers.heap_allocate op_type "op" ~runtime in
   let%bind tag =
     match tag with
-    | `Normal -> Struct_helpers.const_op_normal_tag
-    | `Tail -> Struct_helpers.const_op_tail_tag
+    | `Normal -> Structs.Op.Tag.const_normal
+    | `Tail -> Structs.Op.Tag.const_tail
   in
   let%map () =
-    Struct_helpers.compile_populate_struct
-      op_ptr
-      ~struct_type:op_type
-      [ tag, "tag"; clause, "clause" ]
+    Structs.Op.populate op_ptr ~f:(function
+      | Tag -> tag
+      | Clause -> clause)
   in
   op_ptr
 ;;
@@ -761,19 +760,15 @@ and compile_match_op
     ~effect_reprs
     ~outer_symbol ->
   let open Codegen.Let_syntax in
-  let%bind op_type = Types.op in
-  let%bind tag =
-    Struct_helpers.compile_access_field subject ~struct_type:op_type ~i:0 "tag"
-  in
-  let%bind normal_tag = Struct_helpers.const_op_normal_tag in
-  let%bind tail_tag = Struct_helpers.const_op_tail_tag in
+  let%bind tag = Structs.Op.project subject Tag in
+  let%bind normal_tag = Structs.Op.Tag.const_normal in
+  let%bind tail_tag = Structs.Op.Tag.const_tail in
   let make_compile_branch (x, body) () : result Codegen.t =
     let%bind clause =
-      Struct_helpers.compile_access_field
+      Structs.Op.project
         subject
-        ~struct_type:op_type
-        ~i:1
-        (Names.register_name_of_variable x)
+        Clause
+        ~name:(Names.register_name_of_variable x)
     in
     let env' =
       Context.add_local_exn env ~name:x ~value:(Pure (Packed clause))
