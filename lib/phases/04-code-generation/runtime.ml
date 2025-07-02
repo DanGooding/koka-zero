@@ -18,9 +18,6 @@ type t =
   ; nil_evidence_vector : Function.t
   ; cons_evidence_vector : Function.t
   ; evidence_vector_lookup : Function.t
-  ; get_evidence_marker : Function.t
-  ; get_evidence_handler : Function.t
-  ; get_evidence_handler_site_vector : Function.t
   ; println : Function.t
   ; print_int : Function.t
   ; read_int : Function.t
@@ -75,29 +72,13 @@ let declare =
       name
       pointer_type
       [ label_type
-      ; marker_type
-      ; pointer_type (* handler *)
-      ; pointer_type (* handler site vector *)
+      ; pointer_type (* evidence entry *)
       ; pointer_type (* vector tail *)
       ]
   in
   let%bind evidence_vector_lookup =
     let name = Symbol_name.of_runtime_exn "kkr_evidence_vector_lookup" in
     declare_function name pointer_type [ pointer_type; label_type ]
-  in
-  let%bind get_evidence_marker =
-    let name = Symbol_name.of_runtime_exn "kkr_get_evidence_marker" in
-    declare_function name marker_type [ pointer_type ]
-  in
-  let%bind get_evidence_handler =
-    let name = Symbol_name.of_runtime_exn "kkr_get_evidence_handler" in
-    declare_function name pointer_type [ pointer_type ]
-  in
-  let%bind get_evidence_handler_site_vector =
-    let name =
-      Symbol_name.of_runtime_exn "kkr_get_evidence_handler_site_vector"
-    in
-    declare_function name pointer_type [ pointer_type ]
   in
   let%bind println =
     let name = Symbol_name.of_runtime_exn "kkr_println" in
@@ -119,9 +100,6 @@ let declare =
   ; nil_evidence_vector
   ; cons_evidence_vector
   ; evidence_vector_lookup
-  ; get_evidence_marker
-  ; get_evidence_handler
-  ; get_evidence_handler_site_vector
   ; println
   ; print_int
   ; read_int

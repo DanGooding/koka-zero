@@ -29,21 +29,12 @@ marker_t kkr_fresh_marker(void);
 // returns a heap allocated empty evidence vector
 opaque_ptr kkr_nil_evidence_vector(void);
 
-opaque_ptr kkr_cons_evidence_vector(label_t label, marker_t marker,
-                                    opaque_ptr handler,
-                                    opaque_ptr handler_site_vector,
+opaque_ptr kkr_cons_evidence_vector(label_t label, opaque_ptr evidence,
                                     opaque_ptr vector_tail);
 
 // lookup the evidence entry for a given label in an evidence vector
 // exits if not present
 opaque_ptr kkr_evidence_vector_lookup(opaque_ptr vector, label_t label);
-
-// access the [marker] field of an evidence entry
-marker_t kkr_get_evidence_marker(opaque_ptr);
-// access the [handler] field of an evidence entry
-opaque_ptr kkr_get_evidence_handler(opaque_ptr);
-// access the [handler_site_vector] field of an evidence entry
-opaque_ptr kkr_get_evidence_handler_site_vector(opaque_ptr);
 
 // write a newline to stdout
 void kkr_println(void);

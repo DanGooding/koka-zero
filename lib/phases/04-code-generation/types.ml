@@ -34,6 +34,17 @@ let op =
     Llvm.struct_type context (Array.of_list fields))
 ;;
 
+let evidence_entry =
+  let open Codegen.Let_syntax in
+  let%bind pointer = pointer in
+  let handler = pointer in
+  let%bind marker = marker in
+  let handler_site_vector = pointer in
+  let fields = [ handler; marker; handler_site_vector ] in
+  Codegen.use_context (fun context ->
+    Llvm.struct_type context (Array.of_list fields))
+;;
+
 let closure_struct ~num_captured =
   let open Codegen.Let_syntax in
   let%bind pointer = pointer in
