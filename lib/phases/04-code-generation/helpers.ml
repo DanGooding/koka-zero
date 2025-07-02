@@ -18,12 +18,6 @@ let const_tag i =
 let const_op_normal_tag = const_tag 0
 let const_op_tail_tag = const_tag 1
 
-let const_label i =
-  let open Codegen.Let_syntax in
-  let%map label_type = Types.label in
-  Llvm.const_int label_type i
-;;
-
 let heap_allocate type_ name ~runtime =
   let size = Llvm.size_of type_ in
   let { Runtime.malloc; _ } = runtime in
@@ -37,35 +31,9 @@ let heap_store type_ v name ~runtime =
   ptr
 ;;
 
-let heap_store_aux
-  :  Llvm.lltype Codegen.t
-  -> string
-  -> Llvm.llvalue
-  -> runtime:Runtime.t
-  -> Llvm.llvalue Codegen.t
-  =
-  fun t name v ~runtime ->
-  let open Codegen.Let_syntax in
-  let%bind t = t in
-  heap_store t v name ~runtime
-;;
-
-let heap_store_label = heap_store_aux Types.label "label"
-
 let dereference ptr type_ name =
   Codegen.use_builder (Llvm.build_load type_ ptr name)
 ;;
-
-let dereference_aux
-  : Llvm.lltype Codegen.t -> string -> Llvm.llvalue -> Llvm.llvalue Codegen.t
-  =
-  fun t name ptr ->
-  let open Codegen.Let_syntax in
-  let%bind t = t in
-  dereference ptr t name
-;;
-
-let dereference_label = dereference_aux Types.label "label"
 
 let compile_populate_struct
   :  struct_type:Llvm.lltype

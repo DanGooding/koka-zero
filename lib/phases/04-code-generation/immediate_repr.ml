@@ -170,3 +170,31 @@ module Marker = struct
     Bool.of_i1 eq_i1
   ;;
 end
+
+module Label = struct
+  (* holds a value of type [Types.label] *)
+  type t = Label of Llvm.llvalue
+
+  let of_const_int i =
+    let open Codegen.Let_syntax in
+    let%map label = Types.label in
+    Label (Llvm.const_int label i)
+  ;;
+
+  let to_label_llvalue (Label label) = label
+
+  let to_opaque (Label label) =
+    let open Codegen.Let_syntax in
+    let%bind ptr_type = Types.pointer in
+    Codegen.use_builder (Llvm.build_inttoptr label ptr_type "opaque")
+  ;;
+
+  let of_opaque opaque =
+    let open Codegen.Let_syntax in
+    let%bind marker_type = Types.marker in
+    let%map label =
+      Codegen.use_builder (Llvm.build_ptrtoint opaque marker_type "label")
+    in
+    Label label
+  ;;
+end
