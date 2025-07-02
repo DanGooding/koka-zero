@@ -47,4 +47,12 @@ module Make (Arg : Arg_S) = struct
       in
       ())
   ;;
+
+  let heap_allocate ~name ~runtime =
+    let open Codegen.Let_syntax in
+    let%bind type_ = type_ in
+    let size = Llvm.size_of type_ in
+    let { Runtime.malloc; _ } = runtime in
+    Runtime.Function.build_call malloc ~args:(Array.of_list [ size ]) name
+  ;;
 end
