@@ -22,10 +22,6 @@ val ctl_yield : Llvm.lltype Codegen.t
     have identical fields: [{ tag; opaque_pointer clause }]*)
 val op : Llvm.lltype Codegen.t
 
-(** an element in an evidence vector, representing a single handler.
-    [{ handler; marker; evidence_site_vector }] *)
-val evidence_entry : Llvm.lltype Codegen.t
-
 (** A function object holds a code address, and the captured free-variables
     [{ ptr code; [ptr x num_captured] }] *)
 val closure_struct : num_captured:int -> Llvm.lltype Codegen.t

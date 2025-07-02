@@ -421,18 +421,15 @@ let rec compile_expr
         ~effect_reprs
         ~outer_symbol
     in
-    let%bind evidence_type = Types.evidence_entry in
+    let%bind evidence_type = Structs.Evidence_entry.type_ in
     let%bind evidence_entry =
       Struct_helpers.heap_allocate evidence_type "evidence_entry" ~runtime
     in
     let%bind () =
-      Struct_helpers.compile_populate_struct
-        evidence_entry
-        [ handler, "handler"
-        ; marker, "marker"
-        ; handler_site_vector, "handler_site_vector"
-        ]
-        ~struct_type:evidence_type
+      Structs.Evidence_entry.populate evidence_entry ~f:(function
+        | Handler -> handler
+        | Marker -> marker
+        | Handler_site_vector -> handler_site_vector)
     in
     let { Runtime.cons_evidence_vector; _ } = runtime in
     let args = Array.of_list [ label; evidence_entry; vector_tail ] in
@@ -463,41 +460,22 @@ let rec compile_expr
     let%bind evidence =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind evidence_type = Types.evidence_entry in
-    let%map marker =
-      Struct_helpers.compile_access_field
-        evidence
-        ~struct_type:evidence_type
-        ~i:1
-        "marker"
-    in
+    let%map marker = Structs.Evidence_entry.project evidence Marker in
     Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Get_evidence_handler e ->
     let%bind evidence =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind evidence_type = Types.evidence_entry in
-    let%map marker =
-      Struct_helpers.compile_access_field
-        evidence
-        ~struct_type:evidence_type
-        ~i:0
-        "handler"
-    in
-    Ctl_repr.Pure (Packed marker)
+    let%map handler = Structs.Evidence_entry.project evidence Handler in
+    Ctl_repr.Pure (Packed handler)
   | EPS.Expr.Get_evidence_handler_site_vector e ->
     let%bind evidence =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%bind evidence_type = Types.evidence_entry in
-    let%map marker =
-      Struct_helpers.compile_access_field
-        evidence
-        ~struct_type:evidence_type
-        ~i:2
-        "handler_site_vector"
+    let%map handler_site_vector =
+      Structs.Evidence_entry.project evidence Handler_site_vector
     in
-    Ctl_repr.Pure (Packed marker)
+    Ctl_repr.Pure (Packed handler_site_vector)
   | EPS.Expr.Impure_built_in impure ->
     let%map result =
       compile_impure_built_in impure ~env ~runtime ~effect_reprs ~outer_symbol
