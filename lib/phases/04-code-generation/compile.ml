@@ -706,31 +706,12 @@ and compile_match_ctl
       ~outer_symbol
   in
   let compile_yield () =
-    let%bind ctl_yield_type = Types.ctl_yield in
     let x_marker, x_op_clause, x_resumption, body = yield_branch in
     let%bind content = Ctl_repr.Maybe_yield_repr.get_content subject in
-    let%bind marker =
-      Struct_helpers.compile_access_field
-        content
-        ~struct_type:ctl_yield_type
-        ~i:0
-        (Names.register_name_of_variable x_marker)
-    in
+    let%bind marker = Structs.Ctl_yield.project content Marker in
     let%bind marker = Immediate_repr.Marker.to_opaque (Unpacked marker) in
-    let%bind op_clause =
-      Struct_helpers.compile_access_field
-        content
-        ~struct_type:ctl_yield_type
-        ~i:1
-        (Names.register_name_of_variable x_op_clause)
-    in
-    let%bind resumption =
-      Struct_helpers.compile_access_field
-        content
-        ~struct_type:ctl_yield_type
-        ~i:2
-        (Names.register_name_of_variable x_resumption)
-    in
+    let%bind op_clause = Structs.Ctl_yield.project content Op_clause in
+    let%bind resumption = Structs.Ctl_yield.project content Resumption in
     let env' =
       env
       |> Context.add_local_exn ~name:x_marker ~value:(Pure (Packed marker))

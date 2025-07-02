@@ -31,3 +31,34 @@ module Evidence_entry = struct
   include T
   include Struct.Make (T)
 end
+
+module Ctl_yield = struct
+  module T = struct
+    module Field = struct
+      type t =
+        | Marker
+        | Op_clause
+        | Resumption
+      [@@deriving equal]
+
+      let all = [ Marker; Op_clause; Resumption ]
+
+      let name t =
+        match t with
+        | Marker -> "marker"
+        | Op_clause -> "op_clause"
+        | Resumption -> "resumption"
+      ;;
+
+      let type_ t =
+        match t with
+        | Marker -> Types.marker
+        | Op_clause -> Types.pointer
+        | Resumption -> Types.pointer
+      ;;
+    end
+  end
+
+  include T
+  include Struct.Make (T)
+end

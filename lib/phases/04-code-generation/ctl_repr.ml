@@ -27,16 +27,16 @@ module Maybe_yield_repr = struct
     : t Codegen.t
     =
     let open Codegen.Let_syntax in
-    let%bind ctl_yield_type = Types.ctl_yield in
+    let%bind ctl_yield_type = Structs.Ctl_yield.type_ in
     let%bind ctl_yield_ptr =
       Struct_helpers.heap_allocate ctl_yield_type "ctl_yield" ~runtime
     in
     let (Unpacked marker) = marker in
     let%bind () =
-      Struct_helpers.compile_populate_struct
-        ctl_yield_ptr
-        ~struct_type:ctl_yield_type
-        [ marker, "marker"; op_clause, "op_clause"; resumption, "resumption" ]
+      Structs.Ctl_yield.populate ctl_yield_ptr ~f:(function
+        | Marker -> marker
+        | Op_clause -> op_clause
+        | Resumption -> resumption)
     in
     let%map i1_type = Codegen.use_context Llvm.i1_type in
     let is_yield_i1 = Llvm.const_int i1_type 1 in
