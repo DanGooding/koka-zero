@@ -24,17 +24,6 @@ let heap_allocate type_ name ~runtime =
   Runtime.Function.build_call malloc ~args:(Array.of_list [ size ]) name
 ;;
 
-let heap_store type_ v name ~runtime =
-  let open Codegen.Let_syntax in
-  let%bind ptr = heap_allocate type_ name ~runtime in
-  let%map _store = Codegen.use_builder (Llvm.build_store v ptr) in
-  ptr
-;;
-
-let dereference ptr type_ name =
-  Codegen.use_builder (Llvm.build_load type_ ptr name)
-;;
-
 let compile_populate_struct
   :  struct_type:Llvm.lltype
   -> Llvm.llvalue
@@ -49,21 +38,6 @@ let compile_populate_struct
         (Llvm.build_struct_gep struct_type struct_ptr i (name ^ "_field_ptr"))
     in
     let%map _store = Codegen.use_builder (Llvm.build_store x member_ptr) in
-    ())
-  |> Codegen.all_unit
-;;
-
-let compile_populate_array ~array_type array_ptr elements =
-  let open Codegen.Let_syntax in
-  let%bind i64 = Codegen.use_context Llvm.i64_type in
-  List.mapi elements ~f:(fun i (x, name) ->
-    (* first zero is because we require an array pointer, rather than an
-       element pointer *)
-    let indices = List.map [ 0; i ] ~f:(Llvm.const_int i64) |> Array.of_list in
-    let%bind element_ptr =
-      Codegen.use_builder (Llvm.build_gep array_type array_ptr indices name)
-    in
-    let%map _store = Codegen.use_builder (Llvm.build_store x element_ptr) in
     ())
   |> Codegen.all_unit
 ;;
