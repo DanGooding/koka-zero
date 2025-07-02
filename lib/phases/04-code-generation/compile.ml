@@ -69,14 +69,14 @@ let compile_construct_op =
   fun tag (clause : Llvm.llvalue) ~runtime : Llvm.llvalue Codegen.t ->
   let open Codegen.Let_syntax in
   let%bind op_type = Types.op in
-  let%bind op_ptr = Helpers.heap_allocate op_type "op" ~runtime in
+  let%bind op_ptr = Struct_helpers.heap_allocate op_type "op" ~runtime in
   let%bind tag =
     match tag with
-    | `Normal -> Helpers.const_op_normal_tag
-    | `Tail -> Helpers.const_op_tail_tag
+    | `Normal -> Struct_helpers.const_op_normal_tag
+    | `Tail -> Struct_helpers.const_op_tail_tag
   in
   let%map () =
-    Helpers.compile_populate_struct
+    Struct_helpers.compile_populate_struct
       op_ptr
       ~struct_type:op_type
       [ tag, "tag"; clause, "clause" ]
@@ -726,29 +726,29 @@ and compile_match_ctl
     let x_marker, x_op_clause, x_resumption, body = yield_branch in
     let%bind content = Ctl_repr.Maybe_yield_repr.get_content subject in
     let%bind marker =
-      Helpers.compile_access_field
+      Struct_helpers.compile_access_field
         content
         ~struct_type:ctl_yield_type
         ~i:0
-        (Helpers.register_name_of_variable x_marker)
+        (Struct_helpers.register_name_of_variable x_marker)
     in
     let%bind marker =
       Immediate_repr.Marker.to_opaque
         (Immediate_repr.Marker.of_marker_llvalue marker)
     in
     let%bind op_clause =
-      Helpers.compile_access_field
+      Struct_helpers.compile_access_field
         content
         ~struct_type:ctl_yield_type
         ~i:1
-        (Helpers.register_name_of_variable x_op_clause)
+        (Struct_helpers.register_name_of_variable x_op_clause)
     in
     let%bind resumption =
-      Helpers.compile_access_field
+      Struct_helpers.compile_access_field
         content
         ~struct_type:ctl_yield_type
         ~i:2
-        (Helpers.register_name_of_variable x_resumption)
+        (Struct_helpers.register_name_of_variable x_resumption)
     in
     let env' =
       env
@@ -801,17 +801,17 @@ and compile_match_op
   let open Codegen.Let_syntax in
   let%bind op_type = Types.op in
   let%bind tag =
-    Helpers.compile_access_field subject ~struct_type:op_type ~i:0 "tag"
+    Struct_helpers.compile_access_field subject ~struct_type:op_type ~i:0 "tag"
   in
-  let%bind normal_tag = Helpers.const_op_normal_tag in
-  let%bind tail_tag = Helpers.const_op_tail_tag in
+  let%bind normal_tag = Struct_helpers.const_op_normal_tag in
+  let%bind tail_tag = Struct_helpers.const_op_tail_tag in
   let make_compile_branch (x, body) () : result Codegen.t =
     let%bind clause =
-      Helpers.compile_access_field
+      Struct_helpers.compile_access_field
         subject
         ~struct_type:op_type
         ~i:1
-        (Helpers.register_name_of_variable x)
+        (Struct_helpers.register_name_of_variable x)
     in
     let env' =
       Context.add_local_exn env ~name:x ~value:(Pure (Packed clause))
@@ -1086,7 +1086,7 @@ and compile_application
         in
         (* extract fields of f *)
         let%bind code_pointer =
-          Helpers.compile_access_field
+          Struct_helpers.compile_access_field
             closure
             ~struct_type:closure_type
             ~i:0
@@ -1135,12 +1135,12 @@ and compile_construct_handler
           ~effect_reprs
           ~outer_symbol
       in
-      clause, Helpers.register_name_of_variable op_name)
+      clause, Struct_helpers.register_name_of_variable op_name)
     |> Codegen.all
   in
-  let%bind handler_ptr = Helpers.heap_allocate hnd_type "hnd" ~runtime in
+  let%bind handler_ptr = Struct_helpers.heap_allocate hnd_type "hnd" ~runtime in
   let%map () =
-    Helpers.compile_populate_struct
+    Struct_helpers.compile_populate_struct
       ~struct_type:hnd_type
       handler_ptr
       operation_clauses_and_names

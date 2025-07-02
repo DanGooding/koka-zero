@@ -253,13 +253,13 @@ let make_function_and_context
          | Some _ ->
            Option.value_map
              self
-             ~f:Helpers.register_name_of_variable
+             ~f:Struct_helpers.register_name_of_variable
              ~default:"closure")
     ; args =
         List.map params ~f:(fun (name, type_) ->
           let root_name =
             match (name : Parameter.t) with
-            | Variable name -> Helpers.register_name_of_variable name
+            | Variable name -> Struct_helpers.register_name_of_variable name
             | Wildcard -> ""
           in
           match (type_ : Type.t) with
