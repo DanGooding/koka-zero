@@ -23,6 +23,16 @@ module Ctl_yield : sig
   include Struct.Struct_S with module Field := Field and type t = unit
 end
 
+module Handler : sig
+  type t = { num_ops : int }
+
+  module Field : sig
+    type t = Op of { index : int }
+  end
+
+  include Struct.Struct_S with module Field := Field and type t := t
+end
+
 module Op : sig
   module Tag : sig
     val const_normal : Llvm.llvalue Codegen.t

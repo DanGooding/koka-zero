@@ -95,8 +95,8 @@ let compile_select_operation
   fun label ~op_name handler ~effect_reprs ->
   let open Codegen.Let_syntax in
   let%bind repr = lookup_effect_repr effect_reprs label in
-  let { Effect_repr.hnd_type; operations; _ } = repr in
-  let%bind op_index =
+  let { Effect_repr.operations; _ } = repr in
+  let%bind index =
     match
       List.findi operations ~f:(fun _i op_name' ->
         Variable.(op_name = op_name'))
@@ -111,14 +111,8 @@ let compile_select_operation
       in
       Codegen.impossible_error message
   in
-  (* pointer into the struct - of type [op_clause**] *)
-  let%bind op_clause_field_ptr =
-    Codegen.use_builder
-      (Llvm.build_struct_gep hnd_type handler op_index "op_clause_field_ptr")
-  in
-  let%bind pointer_type = Types.pointer in
-  Codegen.use_builder
-    (Llvm.build_load pointer_type op_clause_field_ptr "op_clause")
+  let num_ops = List.length operations in
+  Structs.Handler.project { num_ops } handler (Op { index })
 ;;
 
 (** [compile_match_corrupted_tag ...] generates a default branch for a match
@@ -1065,8 +1059,8 @@ and compile_construct_handler
     ~outer_symbol ->
   let open Codegen.Let_syntax in
   let%bind repr = lookup_effect_repr effect_reprs handled_effect in
-  let { Effect_repr.hnd_type; operations; _ } = repr in
-  let%bind (operation_clauses_and_names : (Llvm.llvalue * string) list) =
+  let { Effect_repr.operations; _ } = repr in
+  let%bind (operation_clauses : Llvm.llvalue list) =
     List.map operations ~f:(fun op_name ->
       let%bind e_clause =
         match Map.find operation_clause_exprs op_name with
@@ -1080,23 +1074,23 @@ and compile_construct_handler
           in
           Codegen.impossible_error message
       in
-      let%map clause =
-        compile_expr_pure_packed
-          e_clause
-          ~env
-          ~runtime
-          ~effect_reprs
-          ~outer_symbol
-      in
-      clause, Names.register_name_of_variable op_name)
+      compile_expr_pure_packed
+        e_clause
+        ~env
+        ~runtime
+        ~effect_reprs
+        ~outer_symbol)
     |> Codegen.all
   in
-  let%bind handler_ptr = Struct_helpers.heap_allocate hnd_type "hnd" ~runtime in
+  let handler_struct = { Structs.Handler.num_ops = List.length operations } in
+  let%bind handler_ptr =
+    Structs.Handler.heap_allocate handler_struct ~name:"handler" ~runtime
+  in
   let%map () =
-    Struct_helpers.compile_populate_struct
-      ~struct_type:hnd_type
+    Structs.Handler.populate
+      handler_struct
       handler_ptr
-      operation_clauses_and_names
+      ~f:(fun (Op { index }) -> List.nth_exn operation_clauses index)
   in
   handler_ptr
 
@@ -1143,40 +1137,28 @@ and compile_impure_built_in
 (** creates the representation of a declared effect. This builds the type of
     handlers for that effect to be a struct with as many [Types.opaque_pointer]
     fields as there are operations *)
-let compile_effect_decl
-  : EPS.Program.Effect_decl.t -> id:int -> Effect_repr.t Codegen.t
-  =
+let compile_effect_decl : EPS.Program.Effect_decl.t -> id:int -> Effect_repr.t =
   fun { EPS.Program.Effect_decl.operations; name = _ } ~id ->
-  let open Codegen.Let_syntax in
   (* result may be sorted anyway, but this makes intent obvious and is less
      brittle *)
   let operations =
     Set.to_list operations |> List.sort ~compare:Variable.compare
   in
-  let%bind pointer_type = Types.pointer in
-  let fields = Array.of_list_map operations ~f:(fun _op -> pointer_type) in
-  let%map hnd_type =
-    Codegen.use_context (fun context -> Llvm.struct_type context fields)
-  in
-  { Effect_repr.id; hnd_type; operations }
+  { Effect_repr.id; operations }
 ;;
 
 let compile_effect_decls
-  : EPS.Program.Effect_decl.t list -> Effect_repr.t Effect_label.Map.t Codegen.t
+  : EPS.Program.Effect_decl.t list -> Effect_repr.t Effect_label.Map.t
   =
   fun decls ->
-  let open Codegen.Let_syntax in
   let initial = 0, Effect_label.Map.empty in
-  let%map _next_label_id, effect_reprs =
-    Codegen.list_fold
-      decls
-      ~init:initial
-      ~f:(fun (next_label_id, effect_reprs) decl ->
-        let { EPS.Program.Effect_decl.name; _ } = decl in
-        let%map repr = compile_effect_decl decl ~id:next_label_id in
-        let next_label_id = next_label_id + 1 in
-        let effect_reprs = Map.add_exn effect_reprs ~key:name ~data:repr in
-        next_label_id, effect_reprs)
+  let _next_label_id, effect_reprs =
+    List.fold decls ~init:initial ~f:(fun (next_label_id, effect_reprs) decl ->
+      let { EPS.Program.Effect_decl.name; _ } = decl in
+      let repr = compile_effect_decl decl ~id:next_label_id in
+      let next_label_id = next_label_id + 1 in
+      let effect_reprs = Map.add_exn effect_reprs ~key:name ~data:repr in
+      next_label_id, effect_reprs)
   in
   effect_reprs
 ;;
@@ -1235,7 +1217,7 @@ let compile_fun_decls
 let compile_program : EPS.Program.t -> unit Codegen.t =
   fun { EPS.Program.effect_declarations; fun_declarations; entry_expr } ->
   let open Codegen.Let_syntax in
-  let%bind effect_reprs = compile_effect_decls effect_declarations in
+  let effect_reprs = compile_effect_decls effect_declarations in
   let%bind runtime = Runtime.declare in
   (* compile toplevel functions, returning a list of their llvalues *)
   let%bind named_code_addresses =

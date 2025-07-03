@@ -67,6 +67,23 @@ module Ctl_yield = struct
   include Struct.Make (T)
 end
 
+module Handler = struct
+  module T = struct
+    type t = { num_ops : int }
+
+    module Field = struct
+      type t = Op of { index : int } [@@deriving equal]
+
+      let all { num_ops } = List.init num_ops ~f:(fun index -> Op { index })
+      let name (Op { index }) = [%string "op_%{index#Int}"]
+      let type_ (Op { index = _ }) = Types.pointer
+    end
+  end
+
+  include T
+  include Struct.Make (T)
+end
+
 module Op = struct
   module Tag = struct
     let type_ = Codegen.use_context Llvm.i8_type
