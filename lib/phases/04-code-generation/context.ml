@@ -102,40 +102,17 @@ module Closure = struct
     ; shape : Shape.t
     }
 
-  let get_var_pointer
-        (closure : Llvm.llvalue)
-        (closure_type : Llvm.lltype)
-        ~(i : int)
-        ~name
-    =
-    let open Codegen.Let_syntax in
-    let%bind i32 = Codegen.use_context Llvm.i32_type in
-    Codegen.use_builder
-      (Llvm.build_gep
-         closure_type
-         closure
-         (Array.of_list (List.map [ 0; 1; i ] ~f:(Llvm.const_int i32)))
-         (name ^ "_ptr"))
-  ;;
-
   let compile_create
         (contents : (Variable.t * Llvm.llvalue) list)
         ~code_address
         ~runtime
     =
     let open Codegen.Let_syntax in
-    let%bind closure_type =
-      Types.closure_struct ~num_captured:(List.length contents)
+    let closure_struct =
+      { Structs.Closure.num_captured = List.length contents }
     in
     let%bind closure_ptr =
-      Struct_helpers.heap_allocate closure_type "closure" ~runtime
-    in
-    let%bind code_address_ptr =
-      Codegen.use_builder
-        (Llvm.build_struct_gep closure_type closure_ptr 0 "code_address_ptr")
-    in
-    let%bind _store =
-      Codegen.use_builder (Llvm.build_store code_address code_address_ptr)
+      Structs.Closure.heap_allocate closure_struct ~name:"closure" ~runtime
     in
     (* ensure contents sorted *)
     let contents =
@@ -144,19 +121,11 @@ module Closure = struct
         ~compare:(Comparable.lift variable_ordering ~f:Tuple2.get1)
     in
     let%map () =
-      List.mapi contents ~f:(fun i (name, value) ->
-        let%bind var_pointer =
-          get_var_pointer
-            closure_ptr
-            closure_type
-            ~i
-            ~name:(Names.register_name_of_variable name)
-        in
-        let%map _store =
-          Codegen.use_builder (Llvm.build_store value var_pointer)
-        in
-        ())
-      |> Codegen.all_unit
+      Structs.Closure.populate closure_struct closure_ptr ~f:(function
+        | Code_address -> code_address
+        | Capture { index } ->
+          let _name, value = List.nth_exn contents index in
+          value)
     in
     let shape = List.map contents ~f:(fun (name, _value) -> name) in
     let shape = Shape.create_exn shape in
@@ -165,12 +134,8 @@ module Closure = struct
 
   (** compile accessing [ closure->vars[i] ] *)
   let compile_get_var (closure : Llvm.llvalue) ~(i : int) ~num_captured ~name =
-    let open Codegen.Let_syntax in
-    let%bind closure_type = Types.closure_struct ~num_captured in
-    let%bind var_ptr = get_var_pointer closure closure_type ~i ~name in
-    let%bind pointer_type = Types.pointer in
-    (* treat all values as pointer types, even potential immediates *)
-    Codegen.use_builder (Llvm.build_load pointer_type var_ptr name)
+    let closure_struct = { Structs.Closure.num_captured } in
+    Structs.Closure.project closure_struct closure (Capture { index = i }) ~name
   ;;
 
   let mem { shape; _ } v = Shape.mem shape v

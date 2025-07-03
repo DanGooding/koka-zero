@@ -1026,18 +1026,13 @@ and compile_application
       | Code_pointer code_pointer ->
         compile_call ~code_pointer ~function_repr ~args ~return_type
       | Closure closure ->
-        let%bind closure_type =
+        let closure_struct =
           (* we don't know the number of variables in the closure struct at the call-site,
              but this should be okay, since we only access the field before them. *)
-          Types.closure_struct ~num_captured:1
+          { Structs.Closure.num_captured = 1 }
         in
-        (* extract fields of f *)
         let%bind code_pointer =
-          Struct_helpers.compile_access_field
-            closure
-            ~struct_type:closure_type
-            ~i:0
-            "code_address"
+          Structs.Closure.project closure_struct closure Code_address
         in
         compile_call ~code_pointer ~function_repr ~args ~return_type)
     ~compile_conditional:(Is_tail_position.compile_conditional is_tail_position)

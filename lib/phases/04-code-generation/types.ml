@@ -12,16 +12,6 @@ let marker = Codegen.use_context Llvm.i64_type
 let label = Codegen.use_context Llvm.i64_type
 let pointer = Codegen.use_context Llvm.pointer_type
 
-let closure_struct ~num_captured =
-  let open Codegen.Let_syntax in
-  let%bind pointer = pointer in
-  let code_address = pointer in
-  let captures = Llvm.array_type pointer num_captured in
-  let fields = [ code_address; captures ] in
-  Codegen.use_context (fun context ->
-    Llvm.struct_type context (Array.of_list fields))
-;;
-
 let main_function =
   let open Codegen.Let_syntax in
   let%map i32 = Codegen.use_context Llvm.i32_type in

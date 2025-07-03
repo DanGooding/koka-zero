@@ -67,6 +67,38 @@ module Ctl_yield = struct
   include Struct.Make (T)
 end
 
+module Closure = struct
+  module T = struct
+    type t = { num_captured : int }
+
+    module Field = struct
+      type t =
+        | Code_address
+        | Capture of { index : int }
+      [@@deriving equal]
+
+      let all { num_captured } =
+        Code_address
+        :: List.init num_captured ~f:(fun index -> Capture { index })
+      ;;
+
+      let name t =
+        match t with
+        | Code_address -> "code_address"
+        | Capture { index } -> [%string "capture_%{index#Int}"]
+      ;;
+
+      let type_ t =
+        match t with
+        | Code_address | Capture _ -> Types.pointer
+      ;;
+    end
+  end
+
+  include T
+  include Struct.Make (T)
+end
+
 module Handler = struct
   module T = struct
     type t = { num_ops : int }
