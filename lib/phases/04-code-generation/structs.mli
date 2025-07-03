@@ -9,7 +9,7 @@ module Evidence_entry : sig
       | Handler_site_vector
   end
 
-  include Struct.Struct_S with module Field := Field
+  include Struct.Struct_S with module Field := Field and type t = unit
 end
 
 module Ctl_yield : sig
@@ -20,7 +20,7 @@ module Ctl_yield : sig
       | Resumption
   end
 
-  include Struct.Struct_S with module Field := Field
+  include Struct.Struct_S with module Field := Field and type t = unit
 end
 
 module Op : sig
@@ -35,5 +35,5 @@ module Op : sig
       | Clause
   end
 
-  include Struct.Struct_S with module Field := Field
+  include Struct.Struct_S with module Field := Field and type t = unit
 end
