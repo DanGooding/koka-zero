@@ -3,6 +3,8 @@ open! Import
 
 module Evidence_entry = struct
   module T = struct
+    type t = unit
+
     module Field = struct
       type t =
         | Handler
@@ -10,7 +12,7 @@ module Evidence_entry = struct
         | Handler_site_vector
       [@@deriving equal]
 
-      let all = [ Handler; Marker; Handler_site_vector ]
+      let all () = [ Handler; Marker; Handler_site_vector ]
 
       let name t =
         match t with
@@ -34,6 +36,8 @@ end
 
 module Ctl_yield = struct
   module T = struct
+    type t = unit
+
     module Field = struct
       type t =
         | Marker
@@ -41,7 +45,7 @@ module Ctl_yield = struct
         | Resumption
       [@@deriving equal]
 
-      let all = [ Marker; Op_clause; Resumption ]
+      let all () = [ Marker; Op_clause; Resumption ]
 
       let name t =
         match t with
@@ -78,13 +82,15 @@ module Op = struct
   end
 
   module T = struct
+    type t = unit
+
     module Field = struct
       type t =
         | Tag
         | Clause
       [@@deriving equal]
 
-      let all = [ Tag; Clause ]
+      let all () = [ Tag; Clause ]
 
       let name t =
         match t with

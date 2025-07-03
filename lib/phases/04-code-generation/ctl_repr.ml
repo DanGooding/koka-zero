@@ -28,11 +28,11 @@ module Maybe_yield_repr = struct
     =
     let open Codegen.Let_syntax in
     let%bind ctl_yield_ptr =
-      Structs.Ctl_yield.heap_allocate ~name:"ctl_yield" ~runtime
+      Structs.Ctl_yield.heap_allocate () ~name:"ctl_yield" ~runtime
     in
     let (Unpacked marker) = marker in
     let%bind () =
-      Structs.Ctl_yield.populate ctl_yield_ptr ~f:(function
+      Structs.Ctl_yield.populate () ctl_yield_ptr ~f:(function
         | Marker -> marker
         | Op_clause -> op_clause
         | Resumption -> resumption)

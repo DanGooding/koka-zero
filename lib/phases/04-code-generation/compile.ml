@@ -68,14 +68,14 @@ let compile_unary_operator arg op =
 let compile_construct_op =
   fun tag (clause : Llvm.llvalue) ~runtime : Llvm.llvalue Codegen.t ->
   let open Codegen.Let_syntax in
-  let%bind op_ptr = Structs.Op.heap_allocate ~name:"op" ~runtime in
+  let%bind op_ptr = Structs.Op.heap_allocate () ~name:"op" ~runtime in
   let%bind tag =
     match tag with
     | `Normal -> Structs.Op.Tag.const_normal
     | `Tail -> Structs.Op.Tag.const_tail
   in
   let%map () =
-    Structs.Op.populate op_ptr ~f:(function
+    Structs.Op.populate () op_ptr ~f:(function
       | Tag -> tag
       | Clause -> clause)
   in
@@ -420,10 +420,10 @@ let rec compile_expr
         ~outer_symbol
     in
     let%bind evidence_entry =
-      Structs.Evidence_entry.heap_allocate ~name:"evidence_entry" ~runtime
+      Structs.Evidence_entry.heap_allocate () ~name:"evidence_entry" ~runtime
     in
     let%bind () =
-      Structs.Evidence_entry.populate evidence_entry ~f:(function
+      Structs.Evidence_entry.populate () evidence_entry ~f:(function
         | Handler -> handler
         | Marker -> marker
         | Handler_site_vector -> handler_site_vector)
@@ -457,20 +457,20 @@ let rec compile_expr
     let%bind evidence =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%map marker = Structs.Evidence_entry.project evidence Marker in
+    let%map marker = Structs.Evidence_entry.project () evidence Marker in
     Ctl_repr.Pure (Packed marker)
   | EPS.Expr.Get_evidence_handler e ->
     let%bind evidence =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
-    let%map handler = Structs.Evidence_entry.project evidence Handler in
+    let%map handler = Structs.Evidence_entry.project () evidence Handler in
     Ctl_repr.Pure (Packed handler)
   | EPS.Expr.Get_evidence_handler_site_vector e ->
     let%bind evidence =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
     in
     let%map handler_site_vector =
-      Structs.Evidence_entry.project evidence Handler_site_vector
+      Structs.Evidence_entry.project () evidence Handler_site_vector
     in
     Ctl_repr.Pure (Packed handler_site_vector)
   | EPS.Expr.Impure_built_in impure ->
@@ -702,10 +702,10 @@ and compile_match_ctl
   let compile_yield () =
     let x_marker, x_op_clause, x_resumption, body = yield_branch in
     let%bind content = Ctl_repr.Maybe_yield_repr.get_content subject in
-    let%bind marker = Structs.Ctl_yield.project content Marker in
+    let%bind marker = Structs.Ctl_yield.project () content Marker in
     let%bind marker = Immediate_repr.Marker.to_opaque (Unpacked marker) in
-    let%bind op_clause = Structs.Ctl_yield.project content Op_clause in
-    let%bind resumption = Structs.Ctl_yield.project content Resumption in
+    let%bind op_clause = Structs.Ctl_yield.project () content Op_clause in
+    let%bind resumption = Structs.Ctl_yield.project () content Resumption in
     let env' =
       env
       |> Context.add_local_exn ~name:x_marker ~value:(Pure (Packed marker))
@@ -755,12 +755,13 @@ and compile_match_op
     ~effect_reprs
     ~outer_symbol ->
   let open Codegen.Let_syntax in
-  let%bind tag = Structs.Op.project subject Tag in
+  let%bind tag = Structs.Op.project () subject Tag in
   let%bind normal_tag = Structs.Op.Tag.const_normal in
   let%bind tail_tag = Structs.Op.Tag.const_tail in
   let make_compile_branch (x, body) () : result Codegen.t =
     let%bind clause =
       Structs.Op.project
+        ()
         subject
         Clause
         ~name:(Names.register_name_of_variable x)
