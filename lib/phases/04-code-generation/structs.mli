@@ -23,6 +23,18 @@ module Ctl_yield : sig
   include Struct.Struct_S with module Field := Field and type t = unit
 end
 
+module Closure : sig
+  type t = { num_captured : int }
+
+  module Field : sig
+    type t =
+      | Code_address
+      | Capture of { index : int }
+  end
+
+  include Struct.Struct_S with module Field := Field and type t := t
+end
+
 module Handler : sig
   type t = { num_ops : int }
 
