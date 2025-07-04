@@ -190,10 +190,8 @@ let%expect_test "inference for a simple function" =
              , Int Plus
              , Value (Variable (Variable.of_user "y")) ) ))
   in
-  let inference = Inference.create () in
-  let type_, effect_ =
-    Inference.infer_expr_exn inference expr ~env:Context.empty
-  in
+  let inference = create () in
+  let type_, effect_ = infer_expr_exn inference expr ~env:Context.empty in
   print_s [%message (type_ : Type.Mono.t) (effect_ : Effect.t)];
   print_s [%sexp (inference.constraints : Constraints.t)];
   [%expect
