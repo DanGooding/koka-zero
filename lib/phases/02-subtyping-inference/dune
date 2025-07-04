@@ -1,0 +1,12 @@
+(library
+ (name koka_zero_subtyping_inference)
+ (public_name koka-zero.subtyping-inference)
+ (libraries
+  core
+  koka_zero_util
+  koka_zero_ir_common
+  koka_zero_ir_minimal_syntax
+  koka_zero_ir_explicit_syntax)
+ (preprocess
+  (pps ppx_jane))
+ (inline_tests))
