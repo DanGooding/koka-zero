@@ -20,6 +20,7 @@ module Metavariable : sig
   type t [@@deriving sexp_of]
 
   include Comparable.S_plain with type t := t
+  include Hashable.S_plain with type t := t
 
   module Name_source : sig
     include Name_source.S with type Name.t := t
@@ -31,7 +32,7 @@ module Primitive : sig
     | Int
     | Bool
     | Unit
-  [@@deriving sexp_of]
+  [@@deriving equal, compare, sexp_of, hash]
 
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 
@@ -52,7 +53,7 @@ module Mono : sig
     | Variable of Variable.t
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, compare, hash]
 
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 

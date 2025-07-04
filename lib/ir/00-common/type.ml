@@ -28,7 +28,7 @@ module Primitive = struct
       | Int
       | Bool
       | Unit
-    [@@deriving sexp_of]
+    [@@deriving equal, compare, sexp_of, hash]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
@@ -53,7 +53,7 @@ module Mono = struct
       | Variable of Variable.t
       | Metavariable of Metavariable.t
       | Primitive of Primitive.t
-    [@@deriving sexp_of]
+    [@@deriving sexp_of, compare, hash]
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
