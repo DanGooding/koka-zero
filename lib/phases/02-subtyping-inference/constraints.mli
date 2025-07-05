@@ -11,3 +11,5 @@ val create : unit -> t
 val constrain_type_at_most_exn : t -> Type.Mono.t -> Type.Mono.t -> unit
 
 val constrain_effect_at_most_exn : t -> Effect.t -> Effect.t -> unit
+val get_type_bounds : t -> Type.Metavariable.t -> Type.Mono.t Bounds.t option
+val get_effect_bounds : t -> Effect.Metavariable.t -> Effect.t Bounds.t option
