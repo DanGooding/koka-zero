@@ -5,18 +5,29 @@ type t =
   { (* TODO: name_source should mutate internally *)
     mutable type_metavariable_source : Type.Metavariable.Name_source.t
   ; mutable effect_metavariable_source : Effect.Metavariable.Name_source.t
+  ; mutable type_variable_source : Type.Variable.Name_source.t
+  ; mutable effect_variable_source : Effect.Variable.Name_source.t
   ; constraints : Constraints.t
   }
 
 let create () =
   let type_metavariable_source =
-    Type.Metavariable.Name_source.fresh () ~prefix:"t"
+    Type.Metavariable.Name_source.fresh () ~prefix:"tm"
   in
   let effect_metavariable_source =
-    Effect.Metavariable.Name_source.fresh () ~prefix:"e"
+    Effect.Metavariable.Name_source.fresh () ~prefix:"em"
+  in
+  let type_variable_source = Type.Variable.Name_source.fresh () ~prefix:"t" in
+  let effect_variable_source =
+    Effect.Variable.Name_source.fresh () ~prefix:"e"
   in
   let constraints = Constraints.create () in
-  { type_metavariable_source; effect_metavariable_source; constraints }
+  { type_metavariable_source
+  ; effect_metavariable_source
+  ; type_variable_source
+  ; effect_variable_source
+  ; constraints
+  }
 ;;
 
 let fresh_type_metavariable t : Type.Mono.t =
@@ -33,6 +44,22 @@ let fresh_effect_metavariable t : Effect.t =
   in
   t.effect_metavariable_source <- name_source;
   Unknown (Metavariable meta)
+;;
+
+let fresh_type_variable t : Type.Variable.t =
+  let var, name_source =
+    Type.Variable.Name_source.next_name t.type_variable_source
+  in
+  t.type_variable_source <- name_source;
+  var
+;;
+
+let fresh_effect_variable t : Effect.Variable.t =
+  let var, name_source =
+    Effect.Variable.Name_source.next_name t.effect_variable_source
+  in
+  t.effect_variable_source <- name_source;
+  var
 ;;
 
 let union_effects t effects_ =
@@ -180,6 +207,183 @@ and type_literal (lit : Literal.t) : Type.Mono.t =
   | Unit -> Primitive Unit
 ;;
 
+let rec expand_type_aux
+          t
+          (type_ : Type.Mono.t)
+          ~polarity_positive
+          ~in_progress_type_meta
+          ~in_progress_effect_meta
+  : Polar_type.t
+  =
+  match type_ with
+  | Primitive p -> Primitive p
+  | Arrow (args, effect_, result) ->
+    let args =
+      List.map
+        args
+        ~f:
+          (expand_type_aux
+             t
+             ~polarity_positive:(not polarity_positive)
+             ~in_progress_type_meta
+             ~in_progress_effect_meta)
+    in
+    let effect_ =
+      expand_effect_aux t effect_ ~polarity_positive ~in_progress_effect_meta
+    in
+    let result =
+      expand_type_aux
+        t
+        result
+        ~polarity_positive
+        ~in_progress_type_meta
+        ~in_progress_effect_meta
+    in
+    Arrow (args, effect_, result)
+  | Variable _ ->
+    (* unclear if we'll encounter this once polymorphism is added *)
+    raise_s [%message "unexpected variable when expanding type"]
+  | Metavariable meta ->
+    (match Map.find in_progress_type_meta meta with
+     | Some var ->
+       (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
+       Variable var
+     | None ->
+       let var = fresh_type_variable t in
+       let in_progress_type_meta =
+         Map.add_exn in_progress_type_meta ~key:meta ~data:var
+       in
+       let bounds =
+         Constraints.get_type_bounds t.constraints meta
+         |> Option.value_map
+              ~f:(fun (bounds : _ Bounds.t) ->
+                match polarity_positive with
+                | true -> bounds.lowerBounds
+                | false -> bounds.upperBounds)
+              ~default:[]
+       in
+       let bound_types =
+         List.map bounds ~f:(fun bound_type ->
+           expand_type_aux
+             t
+             bound_type
+             ~polarity_positive
+             ~in_progress_type_meta
+             ~in_progress_effect_meta)
+       in
+       let is_recursive =
+         List.exists bound_types ~f:(fun type_ ->
+           Set.mem (Polar_type.variables type_) var)
+       in
+       let combined : Polar_type.t =
+         match polarity_positive with
+         | true -> Union bound_types
+         | false -> Intersection bound_types
+       in
+       (match is_recursive with
+        | true -> Recursive (var, combined)
+        | false ->
+          (match bound_types with
+           | [] -> Variable var
+           | _ :: _ -> combined)))
+
+and expand_effect_aux
+      t
+      (effect_ : Effect.t)
+      ~polarity_positive
+      ~in_progress_effect_meta
+  : Polar_type.Effect.t
+  =
+  match effect_ with
+  | Labels labels -> Labels labels
+  | Handled (labels, unknown) ->
+    let effect_ =
+      expand_unknown_effect_aux
+        t
+        unknown
+        ~polarity_positive
+        ~in_progress_effect_meta
+    in
+    Handled (labels, effect_)
+  | Unknown unknown ->
+    expand_unknown_effect_aux
+      t
+      unknown
+      ~polarity_positive
+      ~in_progress_effect_meta
+
+and expand_unknown_effect_aux
+      t
+      (effect_ : Effect.Unknown.t)
+      ~polarity_positive
+      ~in_progress_effect_meta
+  : Polar_type.Effect.t
+  =
+  match effect_ with
+  | Variable _ ->
+    raise_s [%message "unexpected effect variable when expanding type"]
+  | Metavariable meta ->
+    (* TODO: avoid duplication with the type case *)
+    (match Map.find in_progress_effect_meta meta with
+     | Some var ->
+       (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
+       Variable var
+     | None ->
+       let var = fresh_effect_variable t in
+       let in_progress_effect_meta =
+         Map.add_exn in_progress_effect_meta ~key:meta ~data:var
+       in
+       let bounds =
+         Constraints.get_effect_bounds t.constraints meta
+         |> Option.value_map
+              ~f:(fun (bounds : _ Bounds.t) ->
+                match polarity_positive with
+                | true -> bounds.lowerBounds
+                | false -> bounds.upperBounds)
+              ~default:[]
+       in
+       let bound_effects =
+         List.map bounds ~f:(fun bound_effect ->
+           expand_effect_aux
+             t
+             bound_effect
+             ~polarity_positive
+             ~in_progress_effect_meta)
+       in
+       let is_recursive =
+         List.exists bound_effects ~f:(fun type_ ->
+           Set.mem (Polar_type.Effect.variables type_) var)
+       in
+       let combined : Polar_type.Effect.t =
+         match polarity_positive with
+         | true -> Union bound_effects
+         | false -> Intersection bound_effects
+       in
+       (match is_recursive with
+        | true -> Recursive (var, combined)
+        | false ->
+          (match bound_effects with
+           | [] -> Variable var
+           | _ :: _ -> combined)))
+;;
+
+let expand_type t type_ =
+  expand_type_aux
+    t
+    type_
+    ~polarity_positive:true
+    ~in_progress_type_meta:Type.Metavariable.Map.empty
+    ~in_progress_effect_meta:Effect.Metavariable.Map.empty
+;;
+
+let expand_effect t effect_ =
+  expand_effect_aux
+    t
+    effect_
+    ~polarity_positive:true
+    ~in_progress_effect_meta:Effect.Metavariable.Map.empty
+;;
+
 let%expect_test "inference for a simple function" =
   let expr : Explicit_syntax.Expr.t =
     Value
@@ -193,21 +397,33 @@ let%expect_test "inference for a simple function" =
   let inference = create () in
   let type_, effect_ = infer_expr_exn inference expr ~env:Context.empty in
   print_s [%message (type_ : Type.Mono.t) (effect_ : Effect.t)];
+  [%expect {|
+    ((type_
+      (Arrow ((Metavariable tm0) (Metavariable tm1)) (Unknown (Metavariable em0))
+       (Primitive Int)))
+     (effect_ (Labels ())))
+    |}];
   print_s [%sexp (inference.constraints : Constraints.t)];
   [%expect
     {|
-    ((type_
-      (Arrow ((Metavariable t0) (Metavariable t1)) (Unknown (Metavariable e0))
-       (Primitive Int)))
-     (effect_ (Labels ())))
     ((type_constraints
-      ((t0 ((lowerBounds ()) (upperBounds ((Primitive Int)))))
-       (t1 ((lowerBounds ()) (upperBounds ((Primitive Int)))))))
-     (effect_constraints ((e0 ((lowerBounds ((Labels ()))) (upperBounds ())))))
+      ((tm0 ((lowerBounds ()) (upperBounds ((Primitive Int)))))
+       (tm1 ((lowerBounds ()) (upperBounds ((Primitive Int)))))))
+     (effect_constraints ((em0 ((lowerBounds ((Labels ()))) (upperBounds ())))))
      (already_seen_constraints
-      ((Type_at_most (type_lo (Metavariable t0)) (type_hi (Primitive Int)))
-       (Type_at_most (type_lo (Metavariable t1)) (type_hi (Primitive Int)))
+      ((Type_at_most (type_lo (Metavariable tm0)) (type_hi (Primitive Int)))
+       (Type_at_most (type_lo (Metavariable tm1)) (type_hi (Primitive Int)))
        (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable e0)))))))
+        (effect_hi (Unknown (Metavariable em0)))))))
+    |}];
+  let polar_type = expand_type inference type_ in
+  let polar_effect = expand_effect inference effect_ in
+  print_s
+    [%message (polar_type : Polar_type.t) (polar_effect : Polar_type.Effect.t)];
+  [%expect {|
+    ((polar_type
+      (Arrow ((Intersection ((Primitive Int))) (Intersection ((Primitive Int))))
+       (Union ((Labels ()))) (Primitive Int)))
+     (polar_effect (Labels ())))
     |}]
 ;;

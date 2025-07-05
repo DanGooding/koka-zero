@@ -15,6 +15,9 @@ let create () =
   { type_constraints; effect_constraints; already_seen_constraints }
 ;;
 
+let get_type_bounds t meta = Hashtbl.find t.type_constraints meta
+let get_effect_bounds t meta = Hashtbl.find t.effect_constraints meta
+
 (** add constraints for [type_lo <= type_hi]
     fails if we find something unsatisfiable - i.e. a type error *)
 let rec constrain_type_at_most_exn
