@@ -388,19 +388,25 @@ let%expect_test "inference for a simple function" =
   let expr : Explicit_syntax.Expr.t =
     Value
       (Lambda
-         ( [ Variable (Variable.of_user "x"); Variable (Variable.of_user "y") ]
+         ( [ Variable (Variable.of_user "x")
+           ; Variable (Variable.of_user "f")
+           ; Variable (Variable.of_user "y")
+           ]
          , Operator
              ( Value (Variable (Variable.of_user "x"))
              , Int Plus
-             , Value (Variable (Variable.of_user "y")) ) ))
+             , Application
+                 ( Value (Variable (Variable.of_user "f"))
+                 , [ Value (Variable (Variable.of_user "y")) ] ) ) ))
   in
   let inference = create () in
   let type_, effect_ = infer_expr_exn inference expr ~env:Context.empty in
   print_s [%message (type_ : Type.Mono.t) (effect_ : Effect.t)];
-  [%expect {|
+  [%expect
+    {|
     ((type_
-      (Arrow ((Metavariable tm0) (Metavariable tm1)) (Unknown (Metavariable em0))
-       (Primitive Int)))
+      (Arrow ((Metavariable tm0) (Metavariable tm1) (Metavariable tm2))
+       (Unknown (Metavariable em1)) (Primitive Int)))
      (effect_ (Labels ())))
     |}];
   print_s [%sexp (inference.constraints : Constraints.t)];
@@ -408,22 +414,52 @@ let%expect_test "inference for a simple function" =
     {|
     ((type_constraints
       ((tm0 ((lowerBounds ()) (upperBounds ((Primitive Int)))))
-       (tm1 ((lowerBounds ()) (upperBounds ((Primitive Int)))))))
-     (effect_constraints ((em0 ((lowerBounds ((Labels ()))) (upperBounds ())))))
+       (tm1
+        ((lowerBounds ())
+         (upperBounds
+          ((Arrow ((Metavariable tm2)) (Unknown (Metavariable em0))
+            (Metavariable tm3))))))
+       (tm3 ((lowerBounds ()) (upperBounds ((Primitive Int)))))))
+     (effect_constraints
+      ((em0
+        ((lowerBounds ((Labels ())))
+         (upperBounds ((Unknown (Metavariable em1))))))
+       (em1 ((lowerBounds ((Labels ()))) (upperBounds ())))))
      (already_seen_constraints
       ((Type_at_most (type_lo (Metavariable tm0)) (type_hi (Primitive Int)))
-       (Type_at_most (type_lo (Metavariable tm1)) (type_hi (Primitive Int)))
+       (Type_at_most (type_lo (Metavariable tm1))
+        (type_hi
+         (Arrow ((Metavariable tm2)) (Unknown (Metavariable em0))
+          (Metavariable tm3))))
+       (Type_at_most (type_lo (Metavariable tm3)) (type_hi (Primitive Int)))
+       (Effect_at_most (effect_lo (Unknown (Metavariable em0)))
+        (effect_hi (Unknown (Metavariable em1))))
        (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable em0)))))))
+        (effect_hi (Unknown (Metavariable em0))))
+       (Effect_at_most (effect_lo (Labels ()))
+        (effect_hi (Unknown (Metavariable em1)))))))
     |}];
   let polar_type = expand_type inference type_ in
   let polar_effect = expand_effect inference effect_ in
   print_s
     [%message (polar_type : Polar_type.t) (polar_effect : Polar_type.Effect.t)];
-  [%expect {|
+  [%expect
+    {|
     ((polar_type
-      (Arrow ((Intersection ((Primitive Int))) (Intersection ((Primitive Int))))
+      (Arrow
+       ((Intersection ((Primitive Int)))
+        (Intersection
+         ((Arrow ((Variable t2)) (Intersection ((Variable e1)))
+           (Intersection ((Primitive Int))))))
+        (Variable t4))
        (Union ((Labels ()))) (Primitive Int)))
      (polar_effect (Labels ())))
     |}]
+    (*
+  (int, 
+  t2 -> e1 int,
+  t4)
+  -> <>
+  int
+    *)
 ;;
