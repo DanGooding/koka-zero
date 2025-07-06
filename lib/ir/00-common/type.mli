@@ -35,16 +35,7 @@ module Primitive : sig
   [@@deriving equal, compare, sexp_of, hash]
 
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
-
-  val instantiate_as
-    :  t
-    -> var_to_meta:Metavariable.t Variable.Map.t
-    -> effect_var_to_meta:Effect.Metavariable.t Effect.Variable.Map.t
-    -> t
 end
-
-(* TODO: have a version of [Mono.t] without metavariables (for the output of
-   inference) *)
 
 (** a monotype contains no forall quantifiers *)
 module Mono : sig
@@ -75,10 +66,12 @@ module Poly : sig
     }
   [@@deriving sexp_of]
 
+  (** don't generalise over any variables *)
+  val wrap_monotype : Mono.t -> t
+
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 end
 
-(* TODO: is [Type.t] redundant, or logically meaningful? *)
 type t =
   | Mono of Mono.t
   | Poly of Poly.t
@@ -86,3 +79,17 @@ type t =
 
 (** find all the metavariables in this type *)
 val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
+
+val generalise
+  :  Mono.t
+  -> should_generalise_type_metavariable:(Metavariable.t -> bool)
+  -> should_generalise_effect_metavariable:(Effect.Metavariable.t -> bool)
+  -> fresh_type_variable:(unit -> Variable.t)
+  -> fresh_effect_variable:(unit -> Effect.Variable.t)
+  -> Poly.t
+
+val instantiate
+  :  Poly.t
+  -> fresh_type_metavariable:(unit -> Metavariable.t)
+  -> fresh_effect_metavariable:(unit -> Effect.Metavariable.t)
+  -> Mono.t
