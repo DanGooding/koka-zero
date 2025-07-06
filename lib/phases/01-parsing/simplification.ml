@@ -110,16 +110,12 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
     let%map labels =
       List.map labels ~f:simplify_type_as_effect_label |> Result.all
     in
-    let labels = Effect.Label.Multiset.of_list labels in
-    Effect.Row (Effect.Row.Closed labels)
-  | Syntax.Effect_row (Syntax.Open (labels, tail)) ->
-    let%bind labels =
-      Non_empty_list.map labels ~f:simplify_type_as_effect_label
-      |> Static_error.all_non_empty
-    in
-    let labels = Effect.Label.Multiset.Non_empty.of_non_empty_list labels in
-    let%map tail_effect = simplify_type_as_effect tail in
-    Effect.cons_row ~labels ~effect_:tail_effect |> Effect.Row
+    let labels = Effect.Label.Set.of_list labels in
+    Effect.Labels labels
+  | Syntax.Effect_row (Syntax.Open (_labels, _tail)) ->
+    Static_error.unsupported_feature
+      "union of effect variable and label not yet supported"
+    |> Result.Error
   | Syntax.Type_atom { constructor; arguments } ->
     let%bind () =
       restrict_to_empty arguments ~description:"parameterised types"
