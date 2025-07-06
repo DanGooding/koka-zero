@@ -182,7 +182,8 @@ let rec infer_expr_exn
     let arg_type, effect_ = infer_expr_exn t arg ~env ~level in
     Constraints.constrain_type_at_most_exn t.constraints arg_type op_arg_type;
     result_type, effect_
-  | Impure_built_in _ -> failwith "todo: impure builtin"
+  | Impure_built_in impure_built_in ->
+    infer_impure_built_in t impure_built_in ~env ~level
 
 and infer_value_exn (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
   : Type.Mono.t
@@ -227,6 +228,26 @@ and type_literal (lit : Literal.t) : Type.Mono.t =
   | Int _ -> Primitive Int
   | Bool _ -> Primitive Bool
   | Unit -> Primitive Unit
+
+and infer_impure_built_in
+      t
+      (impure_built_in : Explicit_syntax.Expr.impure_built_in)
+      ~env
+      ~level
+  : Type.Mono.t * Effect.t
+  =
+  match impure_built_in with
+  (* these have no actual effect - they are used to implement the [console] effect's
+     operations, and not exposed directly to user code *)
+  | Impure_println -> Primitive Unit, Labels Effect.Label.Set.empty
+  | Impure_print_int { value; newline = _ } ->
+    let type_value, effect_ = infer_expr_exn t value ~env ~level in
+    Constraints.constrain_type_at_most_exn
+      t.constraints
+      type_value
+      (Primitive Int);
+    Primitive Unit, effect_
+  | Impure_read_int -> Primitive Int, Labels Effect.Label.Set.empty
 ;;
 
 let%expect_test "inference for a simple function" =
