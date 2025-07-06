@@ -119,8 +119,8 @@ let generalise
       (mono : Mono.t)
       ~should_generalise_type_metavariable
       ~should_generalise_effect_metavariable
-      ~fresh_type_variable
-      ~fresh_effect_variable
+      ~type_variable_source
+      ~effect_variable_source
   : Poly.t
   =
   let type_meta_to_var = Metavariable.Table.create () in
@@ -130,7 +130,8 @@ let generalise
     | Variable v -> Variable v
     | Metavariable m when should_generalise_type_metavariable m ->
       let v =
-        Hashtbl.find_or_add type_meta_to_var m ~default:fresh_type_variable
+        Hashtbl.find_or_add type_meta_to_var m ~default:(fun () ->
+          Variable.Name_source.next_name type_variable_source)
       in
       Variable v
     | Metavariable m -> Metavariable m
@@ -153,7 +154,8 @@ let generalise
     | Variable v -> Variable v
     | Metavariable m when should_generalise_effect_metavariable m ->
       let v =
-        Hashtbl.find_or_add effect_meta_to_var m ~default:fresh_effect_variable
+        Hashtbl.find_or_add effect_meta_to_var m ~default:(fun () ->
+          Effect.Variable.Name_source.next_name effect_variable_source)
       in
       Variable v
     | Metavariable m -> Metavariable m

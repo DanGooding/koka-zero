@@ -6,15 +6,11 @@ type t =
   ; in_progress_type_metavariables : Type.Variable.t Type.Metavariable.Table.t
   ; in_progress_effect_metavariables :
       Effect.Variable.t Effect.Metavariable.Table.t
-  ; mutable type_variable_source : Type.Variable.Name_source.t
-  ; mutable effect_variable_source : Effect.Variable.Name_source.t
+  ; type_variable_source : Type.Variable.Name_source.t
+  ; effect_variable_source : Effect.Variable.Name_source.t
   }
 
-let create ~constraints =
-  let type_variable_source = Type.Variable.Name_source.fresh () ~prefix:"t" in
-  let effect_variable_source =
-    Effect.Variable.Name_source.fresh () ~prefix:"e"
-  in
+let create ~constraints ~type_variable_source ~effect_variable_source =
   let in_progress_type_metavariables = Type.Metavariable.Table.create () in
   let in_progress_effect_metavariables = Effect.Metavariable.Table.create () in
   { constraints
@@ -23,22 +19,6 @@ let create ~constraints =
   ; in_progress_type_metavariables
   ; in_progress_effect_metavariables
   }
-;;
-
-let fresh_type_variable t : Type.Variable.t =
-  let var, name_source =
-    Type.Variable.Name_source.next_name t.type_variable_source
-  in
-  t.type_variable_source <- name_source;
-  var
-;;
-
-let fresh_effect_variable t : Effect.Variable.t =
-  let var, name_source =
-    Effect.Variable.Name_source.next_name t.effect_variable_source
-  in
-  t.effect_variable_source <- name_source;
-  var
 ;;
 
 let rec expand_type_aux t (type_ : Type.Mono.t) ~polarity_positive
@@ -64,7 +44,7 @@ let rec expand_type_aux t (type_ : Type.Mono.t) ~polarity_positive
        (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
        Variable var
      | None ->
-       let var = fresh_type_variable t in
+       let var = Type.Variable.Name_source.next_name t.type_variable_source in
        Hashtbl.add_exn t.in_progress_type_metavariables ~key:meta ~data:var;
        let bounds =
          Constraints.get_type_bounds t.constraints meta
@@ -118,7 +98,9 @@ and expand_unknown_effect_aux t (effect_ : Effect.Unknown.t) ~polarity_positive
        (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
        Variable var
      | None ->
-       let var = fresh_effect_variable t in
+       let var =
+         Effect.Variable.Name_source.next_name t.effect_variable_source
+       in
        Hashtbl.add_exn t.in_progress_effect_metavariables ~key:meta ~data:var;
        let bounds =
          Constraints.get_effect_bounds t.constraints meta

@@ -11,19 +11,19 @@ end
 
 module T = struct
   (** a state monad to keep the name source state *)
-  type 'a t = State.t -> ('a * State.t) Or_static_error.t
+  type 'a t = State.t -> 'a Or_static_error.t
 
   let bind m ~f s =
-    let%bind.Result x, s' = m s in
-    f x s'
+    let%bind.Result x = m s in
+    f x s
   ;;
 
-  let return x s = Result.Ok (x, s)
+  let return x _s = Result.Ok x
 
   let map =
     let map m ~f s =
-      let%map.Result x, s' = m s in
-      f x, s'
+      let%map.Result x = m s in
+      f x
     in
     `Custom map
   ;;
@@ -39,8 +39,7 @@ include Monad_utils.Make (T')
 
 let run ?name_prefix (t : 'a t) : 'a Or_static_error.t =
   let state = State.initial ?prefix:name_prefix () in
-  let%map.Result x, _final = t state in
-  x
+  t state
 ;;
 
 let unsupported_feature_error message _s =
