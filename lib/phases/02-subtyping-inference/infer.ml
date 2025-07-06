@@ -231,18 +231,27 @@ and type_literal (lit : Literal.t) : Type.Mono.t =
 
 let%expect_test "inference for a simple function" =
   let expr : Explicit_syntax.Expr.t =
-    Value
-      (Lambda
-         ( [ Variable (Variable.of_user "x")
-           ; Variable (Variable.of_user "f")
-           ; Variable (Variable.of_user "y")
-           ]
-         , Operator
-             ( Value (Variable (Variable.of_user "x"))
-             , Int Plus
-             , Application
-                 ( Value (Variable (Variable.of_user "f"))
-                 , [ Value (Variable (Variable.of_user "y")) ] ) ) ))
+    Let
+      ( Variable.of_user "id"
+      , Lambda
+          ( [ Variable (Variable.of_user "a") ]
+          , Value (Variable (Variable.of_user "a")) )
+      , Value
+          (Lambda
+             ( [ Variable (Variable.of_user "x")
+               ; Variable (Variable.of_user "f")
+               ; Variable (Variable.of_user "y")
+               ]
+             , Operator
+                 ( Application
+                     ( Value (Variable (Variable.of_user "id"))
+                     , [ Value (Variable (Variable.of_user "x")) ] )
+                 , Int Plus
+                 , Application
+                     ( Application
+                         ( Value (Variable (Variable.of_user "id"))
+                         , [ Value (Variable (Variable.of_user "f")) ] )
+                     , [ Value (Variable (Variable.of_user "y")) ] ) ) )) )
   in
   let type_variable_source = Type.Variable.Name_source.fresh () ~prefix:"t" in
   let effect_variable_source =
@@ -256,39 +265,71 @@ let%expect_test "inference for a simple function" =
   [%expect
     {|
     ((type_
-      (Arrow ((Metavariable tm0) (Metavariable tm1) (Metavariable tm2))
-       (Unknown (Metavariable em1)) (Primitive Int)))
+      (Arrow ((Metavariable tm1) (Metavariable tm2) (Metavariable tm3))
+       (Unknown (Metavariable em3)) (Primitive Int)))
      (effect_ (Labels ())))
     |}];
   print_s [%sexp (inference.constraints : Constraints.t)];
   [%expect
     {|
     ((type_constraints
-      ((tm0 ((lowerBounds ()) (upperBounds ((Primitive Int)))))
-       (tm1
+      ((tm1 ((lowerBounds ()) (upperBounds ((Metavariable tm4)))))
+       (tm2 ((lowerBounds ()) (upperBounds ((Metavariable tm6)))))
+       (tm4 ((lowerBounds ()) (upperBounds ((Metavariable tm5)))))
+       (tm5 ((lowerBounds ()) (upperBounds ((Primitive Int)))))
+       (tm6 ((lowerBounds ()) (upperBounds ((Metavariable tm7)))))
+       (tm7
         ((lowerBounds ())
          (upperBounds
-          ((Arrow ((Metavariable tm2)) (Unknown (Metavariable em0))
-            (Metavariable tm3))))))
-       (tm3 ((lowerBounds ()) (upperBounds ((Primitive Int)))))))
+          ((Arrow ((Metavariable tm3)) (Unknown (Metavariable em2))
+            (Metavariable tm8))))))
+       (tm8 ((lowerBounds ()) (upperBounds ((Primitive Int)))))))
      (effect_constraints
       ((em0
         ((lowerBounds ((Labels ())))
-         (upperBounds ((Unknown (Metavariable em1))))))
-       (em1 ((lowerBounds ((Labels ()))) (upperBounds ())))))
+         (upperBounds ((Unknown (Metavariable em3))))))
+       (em1
+        ((lowerBounds ((Labels ())))
+         (upperBounds ((Unknown (Metavariable em2))))))
+       (em2
+        ((lowerBounds ((Labels ())))
+         (upperBounds ((Unknown (Metavariable em3))))))
+       (em3 ((lowerBounds ((Labels ()))) (upperBounds ())))))
      (already_seen_constraints
-      ((Type_at_most (type_lo (Metavariable tm0)) (type_hi (Primitive Int)))
-       (Type_at_most (type_lo (Metavariable tm1))
+      ((Type_at_most
+        (type_lo (Arrow ((Metavariable tm4)) (Labels ()) (Metavariable tm4)))
         (type_hi
-         (Arrow ((Metavariable tm2)) (Unknown (Metavariable em0))
-          (Metavariable tm3))))
-       (Type_at_most (type_lo (Metavariable tm3)) (type_hi (Primitive Int)))
+         (Arrow ((Metavariable tm1)) (Unknown (Metavariable em0))
+          (Metavariable tm5))))
+       (Type_at_most
+        (type_lo (Arrow ((Metavariable tm6)) (Labels ()) (Metavariable tm6)))
+        (type_hi
+         (Arrow ((Metavariable tm2)) (Unknown (Metavariable em1))
+          (Metavariable tm7))))
+       (Type_at_most (type_lo (Metavariable tm1)) (type_hi (Metavariable tm4)))
+       (Type_at_most (type_lo (Metavariable tm2)) (type_hi (Metavariable tm6)))
+       (Type_at_most (type_lo (Metavariable tm4)) (type_hi (Metavariable tm5)))
+       (Type_at_most (type_lo (Metavariable tm5)) (type_hi (Primitive Int)))
+       (Type_at_most (type_lo (Metavariable tm6)) (type_hi (Metavariable tm7)))
+       (Type_at_most (type_lo (Metavariable tm7))
+        (type_hi
+         (Arrow ((Metavariable tm3)) (Unknown (Metavariable em2))
+          (Metavariable tm8))))
+       (Type_at_most (type_lo (Metavariable tm8)) (type_hi (Primitive Int)))
        (Effect_at_most (effect_lo (Unknown (Metavariable em0)))
-        (effect_hi (Unknown (Metavariable em1))))
+        (effect_hi (Unknown (Metavariable em3))))
+       (Effect_at_most (effect_lo (Unknown (Metavariable em1)))
+        (effect_hi (Unknown (Metavariable em2))))
+       (Effect_at_most (effect_lo (Unknown (Metavariable em2)))
+        (effect_hi (Unknown (Metavariable em3))))
        (Effect_at_most (effect_lo (Labels ()))
         (effect_hi (Unknown (Metavariable em0))))
        (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable em1)))))))
+        (effect_hi (Unknown (Metavariable em1))))
+       (Effect_at_most (effect_lo (Labels ()))
+        (effect_hi (Unknown (Metavariable em2))))
+       (Effect_at_most (effect_lo (Labels ()))
+        (effect_hi (Unknown (Metavariable em3)))))))
     |}];
   let expansion =
     Expansion.create
@@ -304,11 +345,13 @@ let%expect_test "inference for a simple function" =
     {|
     ((polar_type
       (Arrow
-       ((Intersection ((Primitive Int)))
+       ((Intersection ((Intersection ((Intersection ((Primitive Int)))))))
         (Intersection
-         ((Arrow ((Variable t2)) (Intersection ((Variable e1)))
-           (Intersection ((Primitive Int))))))
-        (Variable t2))
+         ((Intersection
+           ((Intersection
+             ((Arrow ((Variable t7)) (Intersection ((Variable e1)))
+               (Intersection ((Primitive Int))))))))))
+        (Variable t7))
        (Variable e1) (Primitive Int)))
      (polar_effect (Labels ())))
     |}]
