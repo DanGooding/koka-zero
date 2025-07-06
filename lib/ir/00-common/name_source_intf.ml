@@ -10,5 +10,5 @@ module type S = sig
   type t [@@deriving sexp]
 
   val fresh : ?prefix:string -> unit -> t
-  val next_name : t -> Name.t * t
+  val next_name : t -> Name.t
 end

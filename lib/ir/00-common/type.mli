@@ -84,8 +84,8 @@ val generalise
   :  Mono.t
   -> should_generalise_type_metavariable:(Metavariable.t -> bool)
   -> should_generalise_effect_metavariable:(Effect.Metavariable.t -> bool)
-  -> fresh_type_variable:(unit -> Variable.t)
-  -> fresh_effect_variable:(unit -> Effect.Variable.t)
+  -> type_variable_source:Variable.Name_source.t
+  -> effect_variable_source:Effect.Variable.Name_source.t
   -> Poly.t
 
 val instantiate

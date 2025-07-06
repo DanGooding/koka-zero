@@ -2,15 +2,16 @@ open! Core
 open! Import
 
 type t =
-  { (* TODO: name_source should mutate internally *)
-    mutable type_metavariable_source : Type.Metavariable.Name_source.t
-  ; mutable effect_metavariable_source : Effect.Metavariable.Name_source.t
-  ; constraints : Constraints.t
+  { type_metavariable_source : Type.Metavariable.Name_source.t
+  ; effect_metavariable_source : Effect.Metavariable.Name_source.t
+  ; type_variable_source : Type.Variable.Name_source.t
+  ; effect_variable_source : Effect.Variable.Name_source.t
   ; type_metavariable_levels : int Type.Metavariable.Table.t
   ; effect_metavariable_levels : int Effect.Metavariable.Table.t
+  ; constraints : Constraints.t
   }
 
-let create () =
+let create () ~type_variable_source ~effect_variable_source =
   let type_metavariable_source =
     Type.Metavariable.Name_source.fresh () ~prefix:"tm"
   in
@@ -25,14 +26,15 @@ let create () =
   ; constraints
   ; type_metavariable_levels
   ; effect_metavariable_levels
+  ; type_variable_source
+  ; effect_variable_source
   }
 ;;
 
 let fresh_type_metavariable t ~level : Type.Metavariable.t =
-  let meta, name_source =
+  let meta =
     Type.Metavariable.Name_source.next_name t.type_metavariable_source
   in
-  t.type_metavariable_source <- name_source;
   Hashtbl.add_exn t.type_metavariable_levels ~key:meta ~data:level;
   meta
 ;;
@@ -42,10 +44,9 @@ let fresh_type t ~level : Type.Mono.t =
 ;;
 
 let fresh_effect_metavariable t ~level : Effect.Metavariable.t =
-  let meta, name_source =
+  let meta =
     Effect.Metavariable.Name_source.next_name t.effect_metavariable_source
   in
-  t.effect_metavariable_source <- name_source;
   Hashtbl.add_exn t.effect_metavariable_levels ~key:meta ~data:level;
   meta
 ;;
@@ -116,8 +117,8 @@ let rec infer_expr_exn
           Hashtbl.find_exn t.type_metavariable_levels meta >= local_level)
         ~should_generalise_effect_metavariable:(fun meta ->
           Hashtbl.find_exn t.effect_metavariable_levels meta >= local_level)
-        ~fresh_type_variable
-        ~fresh_effect_variable
+        ~type_variable_source:t.type_variable_source
+        ~effect_variable_source:t.effect_variable_source
     in
     let env = Context.extend env ~name ~type_:(Poly poly_subject) in
     infer_expr_exn t body ~env ~level
@@ -243,7 +244,11 @@ let%expect_test "inference for a simple function" =
                  ( Value (Variable (Variable.of_user "f"))
                  , [ Value (Variable (Variable.of_user "y")) ] ) ) ))
   in
-  let inference = create () in
+  let type_variable_source = Type.Variable.Name_source.fresh () ~prefix:"t" in
+  let effect_variable_source =
+    Effect.Variable.Name_source.fresh () ~prefix:"e"
+  in
+  let inference = create () ~type_variable_source ~effect_variable_source in
   let type_, effect_ =
     infer_expr_exn inference expr ~env:Context.empty ~level:0
   in
@@ -285,7 +290,12 @@ let%expect_test "inference for a simple function" =
        (Effect_at_most (effect_lo (Labels ()))
         (effect_hi (Unknown (Metavariable em1)))))))
     |}];
-  let expansion = Expansion.create ~constraints:inference.constraints in
+  let expansion =
+    Expansion.create
+      ~constraints:inference.constraints
+      ~type_variable_source
+      ~effect_variable_source
+  in
   let polar_type = Expansion.expand_type expansion type_ in
   let polar_effect = Expansion.expand_effect expansion effect_ in
   print_s
