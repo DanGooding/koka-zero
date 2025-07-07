@@ -3,8 +3,11 @@ include Koka_zero_util
 include struct
   open Koka_zero_ir_common
   module Effect = Effect
+  module Effect_decl = Effect_decl
   module Keyword = Keyword
   module Literal = Literal
+  module Name_source = Name_source
+  module Operation_shape = Operation_shape
   module Operator = Operator
   module Parameter = Parameter
   module Type = Type

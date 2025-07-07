@@ -49,6 +49,12 @@ let unary_operator_result_type : Operator.Unary.t -> Type.Primitive.t = function
   | Operator.Unary.Bool Operator.Bool.Unary.Not -> Type.Primitive.Bool
 ;;
 
+let raise_if_cannot_shadow result ~name =
+  match result with
+  | `Cannot_shadow -> raise_s [%message "cannot shadow" (name : Variable.t)]
+  | `Ok result -> result
+;;
+
 let instantiate (t : t) (poly : Type.Poly.t) ~level =
   let fresh_types = Type.Metavariable.Table.create () in
   let fresh_effects = Effect.Metavariable.Table.create () in
@@ -128,7 +134,7 @@ let rec infer_expr_exn
     let type_ = infer_value_exn t value ~env ~level in
     let effect_ = Effect.Labels Effect.Label.Set.empty in
     type_, effect_
-  | Let (name, subject, body) ->
+  | Let (var, subject, body) ->
     let local_level = level + 1 in
     let type_subject = infer_value_exn t subject ~env ~level:local_level in
     let poly_subject =
@@ -140,11 +146,17 @@ let rec infer_expr_exn
         ~should_generalise_effect_metavariable:(fun meta ->
           Metavariables.effect_level_exn t.metavariables meta >= local_level)
     in
-    let env = Context.extend env ~name ~type_:(Poly poly_subject) in
+    let env =
+      Context.extend env ~var ~type_:(Poly poly_subject)
+      |> raise_if_cannot_shadow ~name:var
+    in
     infer_expr_exn t body ~env ~level
-  | Let_mono (name, subject, body) ->
+  | Let_mono (var, subject, body) ->
     let type_subject, effect_subject = infer_expr_exn t subject ~env ~level in
-    let env = Context.extend env ~name ~type_:(Mono type_subject) in
+    let env =
+      Context.extend env ~var ~type_:(Mono type_subject)
+      |> raise_if_cannot_shadow ~name:var
+    in
     let type_body, effect_body = infer_expr_exn t body ~env ~level in
     let overall_effect =
       union_effects t [ effect_subject; effect_body ] ~level
@@ -212,10 +224,13 @@ and infer_value_exn (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
   =
   match value with
   | Variable name ->
-    let type_ = Context.get_exn env name in
-    (match (type_ : Type.t) with
-     | Mono mono -> mono
-     | Poly poly -> instantiate t poly ~level)
+    (match (Context.find env name : Context.Binding.t option) with
+     | None -> raise_s [%message "name not found" (name : Variable.t)]
+     | Some (Value type_) ->
+       (match (type_ : Type.t) with
+        | Mono mono -> mono
+        | Poly poly -> instantiate t poly ~level)
+     | Some (Operation (_, _)) -> failwith "operations not implemented")
   | Lambda (params, body) ->
     let param_metas =
       List.map params ~f:(fun param ->
@@ -225,14 +240,19 @@ and infer_value_exn (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
       List.fold param_metas ~init:env ~f:(fun env (param, meta) ->
         match (param : Parameter.t) with
         | Wildcard -> env
-        | Variable name -> Context.extend env ~name ~type_:(Mono meta))
+        | Variable name ->
+          Context.extend env ~var:name ~type_:(Mono meta)
+          |> raise_if_cannot_shadow ~name)
     in
     let result, effect_ = infer_expr_exn t body ~env ~level in
     let param_types = List.map param_metas ~f:(fun (_, meta) -> meta) in
     Type.Mono.Arrow (param_types, effect_, result)
-  | Fix_lambda (name, lambda) ->
+  | Fix_lambda (var, lambda) ->
     let meta_self = Metavariables.fresh_type t.metavariables ~level in
-    let env = Context.extend env ~name ~type_:(Mono meta_self) in
+    let env =
+      Context.extend env ~var ~type_:(Mono meta_self)
+      |> raise_if_cannot_shadow ~name:var
+    in
     let lambda_type = infer_value_exn t (Lambda lambda) ~env ~level in
     (* [lambda] should be usable as [f_self] *)
     Constraints.constrain_type_at_most_exn t.constraints lambda_type meta_self;
