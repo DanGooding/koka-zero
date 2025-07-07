@@ -144,3 +144,11 @@ and constrain_effect_at_most_exn t (effect_lo : Effect.t) (effect_hi : Effect.t)
          [%message
            "unexpected effect variable in constraint" (v : Effect.Variable.t)])
 ;;
+
+let add_fresh_type_exn t meta bounds =
+  Hashtbl.add_exn t.type_constraints ~key:meta ~data:bounds
+;;
+
+let add_fresh_effect_exn t meta bounds =
+  Hashtbl.add_exn t.effect_constraints ~key:meta ~data:bounds
+;;

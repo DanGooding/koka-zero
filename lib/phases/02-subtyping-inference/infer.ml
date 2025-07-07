@@ -92,6 +92,67 @@ let unary_operator_result_type : Operator.Unary.t -> Type.Primitive.t = function
   | Operator.Unary.Bool Operator.Bool.Unary.Not -> Type.Primitive.Bool
 ;;
 
+let instantiate (t : t) (poly : Type.Poly.t) ~level =
+  let fresh_types = Type.Metavariable.Table.create () in
+  let fresh_effects = Effect.Metavariable.Table.create () in
+  let rec instantiate_aux (type_ : Type.Mono.t) : Type.Mono.t =
+    match type_ with
+    | Primitive p -> Primitive p
+    | Variable v -> Variable v
+    | Arrow (args, effect_, result) ->
+      let args = List.map args ~f:instantiate_aux in
+      let effect_ = instantiate_effect_aux effect_ in
+      let result = instantiate_aux result in
+      Arrow (args, effect_, result)
+    | Metavariable meta when poly.forall_bound meta ->
+      (match Hashtbl.find fresh_types meta with
+       | Some meta' -> Metavariable meta'
+       | None ->
+         let meta' = fresh_type_metavariable t ~level in
+         Hashtbl.add_exn fresh_types ~key:meta ~data:meta';
+         (* freshen bounds to [level] *)
+         let bounds = Constraints.get_type_bounds t.constraints meta in
+         Option.iter bounds ~f:(fun { Bounds.lowerBounds; upperBounds } ->
+           let lowerBounds = List.map lowerBounds ~f:instantiate_aux in
+           let upperBounds = List.map upperBounds ~f:instantiate_aux in
+           Constraints.add_fresh_type_exn
+             t.constraints
+             meta'
+             { Bounds.lowerBounds; upperBounds });
+         Metavariable meta')
+    | Metavariable meta -> Metavariable meta
+  and instantiate_effect_aux (effect_ : Effect.t) : Effect.t =
+    match effect_ with
+    | Labels labels -> Labels labels
+    | Unknown unknown -> Unknown (instantiate_unknown_effect_aux unknown)
+    | Handled (labels, unknown) ->
+      Handled (labels, instantiate_unknown_effect_aux unknown)
+  and instantiate_unknown_effect_aux (effect_ : Effect.Unknown.t)
+    : Effect.Unknown.t
+    =
+    match effect_ with
+    | Variable v -> Variable v
+    | Metavariable meta when poly.forall_bound_effects meta ->
+      (match Hashtbl.find fresh_effects meta with
+       | Some meta' -> Metavariable meta'
+       | None ->
+         let meta' = fresh_effect_metavariable t ~level in
+         Hashtbl.add_exn fresh_effects ~key:meta ~data:meta';
+         (* freshen bounds to [level] *)
+         let bounds = Constraints.get_effect_bounds t.constraints meta in
+         Option.iter bounds ~f:(fun { Bounds.lowerBounds; upperBounds } ->
+           let lowerBounds = List.map lowerBounds ~f:instantiate_effect_aux in
+           let upperBounds = List.map upperBounds ~f:instantiate_effect_aux in
+           Constraints.add_fresh_effect_exn
+             t.constraints
+             meta'
+             { Bounds.lowerBounds; upperBounds });
+         Metavariable meta')
+    | Metavariable meta -> Metavariable meta
+  in
+  instantiate_aux poly.monotype
+;;
+
 (** determine the type and effect of an expression, raising if we encounter a type-error.
     This will update [constraints], and won't fully solve them. *)
 let rec infer_expr_exn
@@ -117,8 +178,6 @@ let rec infer_expr_exn
           Hashtbl.find_exn t.type_metavariable_levels meta >= local_level)
         ~should_generalise_effect_metavariable:(fun meta ->
           Hashtbl.find_exn t.effect_metavariable_levels meta >= local_level)
-        ~type_variable_source:t.type_variable_source
-        ~effect_variable_source:t.effect_variable_source
     in
     let env = Context.extend env ~name ~type_:(Poly poly_subject) in
     infer_expr_exn t body ~env ~level
@@ -193,12 +252,7 @@ and infer_value_exn (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
     let type_ = Context.get_exn env name in
     (match (type_ : Type.t) with
      | Mono mono -> mono
-     | Poly poly ->
-       Type.instantiate
-         poly
-         ~fresh_type_metavariable:(fun () -> fresh_type_metavariable t ~level)
-         ~fresh_effect_metavariable:(fun () ->
-           fresh_effect_metavariable t ~level))
+     | Poly poly -> instantiate t poly ~level)
   | Lambda (params, body) ->
     let param_metas =
       List.map params ~f:(fun param -> param, fresh_type t ~level)
@@ -370,9 +424,9 @@ let%expect_test "inference for a simple function" =
         (Intersection
          ((Intersection
            ((Intersection
-             ((Arrow ((Variable t7)) (Intersection ((Variable e1)))
+             ((Arrow ((Variable t6)) (Intersection ((Variable e1)))
                (Intersection ((Primitive Int))))))))))
-        (Variable t7))
+        (Variable t6))
        (Union ((Labels ()))) (Primitive Int)))
      (polar_effect (Labels ())))
     |}]

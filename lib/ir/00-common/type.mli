@@ -60,16 +60,11 @@ end
 (** a polytype has a toplevel forall quantifier *)
 module Poly : sig
   type t =
-    { forall_bound : Variable.Set.t
-    ; forall_bound_effects : Effect.Variable.Set.t
+    { forall_bound : Metavariable.t -> bool
+    ; forall_bound_effects : Effect.Metavariable.t -> bool
     ; monotype : Mono.t
     }
   [@@deriving sexp_of]
-
-  (** don't generalise over any variables *)
-  val wrap_monotype : Mono.t -> t
-
-  val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 end
 
 type t =
@@ -77,19 +72,8 @@ type t =
   | Poly of Poly.t
 [@@deriving sexp_of]
 
-(** find all the metavariables in this type *)
-val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
-
 val generalise
   :  Mono.t
   -> should_generalise_type_metavariable:(Metavariable.t -> bool)
   -> should_generalise_effect_metavariable:(Effect.Metavariable.t -> bool)
-  -> type_variable_source:Variable.Name_source.t
-  -> effect_variable_source:Effect.Variable.Name_source.t
   -> Poly.t
-
-val instantiate
-  :  Poly.t
-  -> fresh_type_metavariable:(unit -> Metavariable.t)
-  -> fresh_effect_metavariable:(unit -> Effect.Metavariable.t)
-  -> Mono.t
