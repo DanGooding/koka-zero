@@ -246,12 +246,11 @@ and infer_value (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
   | Variable name ->
     (match (Context.find env name : Context.Binding.t option) with
      | None -> raise_s [%message "name not found" (name : Variable.t)]
-     | Some (Value type_) ->
+     | Some (Value type_) | Some (Operation (_, type_)) ->
        return
          (match (type_ : Type.t) with
           | Mono mono -> mono
-          | Poly poly -> instantiate t poly ~level)
-     | Some (Operation (_, _)) -> failwith "operations not implemented")
+          | Poly poly -> instantiate t poly ~level))
   | Lambda (params, body) ->
     let param_metas =
       List.map params ~f:(fun param ->
