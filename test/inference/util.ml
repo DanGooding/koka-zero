@@ -2,30 +2,29 @@ open Core
 open! Import
 
 let print_explicit_program_result result =
-  [%sexp (result : (Explicit_syntax.Program.t, Static_error.t) Result.t)]
+  [%sexp (result : Explicit_syntax.Program.t Or_error.t)]
   |> Sexp.to_string_hum
   |> print_endline
 ;;
 
 let print_check_program_result program =
-  let result = Koka_zero_inference.infer_program program in
+  let result = Koka_zero_subtyping_inference.infer_program program in
   print_explicit_program_result result
 ;;
 
 let print_check_program_without_main_result program =
-  let result = Koka_zero_inference.Private.infer_program_without_main program in
+  let result =
+    Koka_zero_subtyping_inference.Private.infer_program_without_main program
+  in
   print_explicit_program_result result
 ;;
 
 let print_expr_inference_result ?(declarations = []) expr =
   let result =
-    Koka_zero_inference.Private.infer_expr_toplevel expr ~declarations
+    Koka_zero_subtyping_inference.Private.infer_expr_toplevel expr ~declarations
   in
   [%sexp
-    (result
-     : ( Type.Mono.t * Effect.t * Explicit_syntax.Expr.t
-         , Static_error.t )
-         Result.t)]
+    (result : (Type.Mono.t * Effect.t * Explicit_syntax.Expr.t) Or_error.t)]
   |> Sexp.to_string_hum
   |> print_endline
 ;;
