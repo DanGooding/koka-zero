@@ -752,7 +752,7 @@ let check_entry_point t ~env ~level : unit Or_error.t =
 ;;
 
 let infer_expr_toplevel t (expr : Min.Expr.t) ~declarations
-  : (Expl.Expr.t * Type.Mono.t * Effect.t) Or_error.t
+  : (Type.Mono.t * Effect.t * Expl.Expr.t) Or_error.t
   =
   let open Result.Let_syntax in
   let%map expr, type_, effect_ =
@@ -765,7 +765,7 @@ let infer_expr_toplevel t (expr : Min.Expr.t) ~declarations
     infer_expr t expr ~env ~level ~effect_env
   in
   (* TODO: convert to a type with only unknown metavariables *)
-  expr, type_, effect_
+  type_, effect_, expr
 ;;
 
 let infer_program t { Min.Program.declarations }

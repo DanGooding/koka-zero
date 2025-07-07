@@ -9,7 +9,7 @@ val infer_expr_toplevel
   :  t
   -> Minimal_syntax.Expr.t
   -> declarations:Minimal_syntax.Decl.t list
-  -> (Explicit_syntax.Expr.t * Import.Type.Mono.t * Import.Effect.t) Or_error.t
+  -> (Type.Mono.t * Effect.t * Explicit_syntax.Expr.t) Or_error.t
 
 val infer_program
   :  t
