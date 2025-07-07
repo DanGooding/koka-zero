@@ -71,13 +71,13 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
          Hashtbl.add_exn fresh_types ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_type_bounds t.constraints meta in
-         Option.iter bounds ~f:(fun { Bounds.lowerBounds; upperBounds } ->
-           let lowerBounds = List.map lowerBounds ~f:instantiate_aux in
-           let upperBounds = List.map upperBounds ~f:instantiate_aux in
+         Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
+           let lower_bounds = List.map lower_bounds ~f:instantiate_aux in
+           let upper_bounds = List.map upper_bounds ~f:instantiate_aux in
            Constraints.add_fresh_type_exn
              t.constraints
              meta'
-             { Bounds.lowerBounds; upperBounds });
+             { Bounds.lower_bounds; upper_bounds });
          Metavariable meta')
     | Metavariable meta -> Metavariable meta
   and instantiate_effect_aux (effect_ : Effect.t) : Effect.t =
@@ -101,13 +101,13 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
          Hashtbl.add_exn fresh_effects ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_effect_bounds t.constraints meta in
-         Option.iter bounds ~f:(fun { Bounds.lowerBounds; upperBounds } ->
-           let lowerBounds = List.map lowerBounds ~f:instantiate_effect_aux in
-           let upperBounds = List.map upperBounds ~f:instantiate_effect_aux in
+         Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
+           let lower_bounds = List.map lower_bounds ~f:instantiate_effect_aux in
+           let upper_bounds = List.map upper_bounds ~f:instantiate_effect_aux in
            Constraints.add_fresh_effect_exn
              t.constraints
              meta'
-             { Bounds.lowerBounds; upperBounds });
+             { Bounds.lower_bounds; upper_bounds });
          Metavariable meta')
     | Metavariable meta -> Metavariable meta
   in
@@ -308,28 +308,28 @@ let%expect_test "inference for a simple function" =
   [%expect
     {|
     ((type_constraints
-      ((tm1 ((lowerBounds ()) (upperBounds ((Metavariable tm4)))))
-       (tm2 ((lowerBounds ()) (upperBounds ((Metavariable tm6)))))
-       (tm4 ((lowerBounds ()) (upperBounds ((Metavariable tm5)))))
-       (tm5 ((lowerBounds ()) (upperBounds ((Primitive Int)))))
-       (tm6 ((lowerBounds ()) (upperBounds ((Metavariable tm7)))))
+      ((tm1 ((lower_bounds ()) (upper_bounds ((Metavariable tm4)))))
+       (tm2 ((lower_bounds ()) (upper_bounds ((Metavariable tm6)))))
+       (tm4 ((lower_bounds ()) (upper_bounds ((Metavariable tm5)))))
+       (tm5 ((lower_bounds ()) (upper_bounds ((Primitive Int)))))
+       (tm6 ((lower_bounds ()) (upper_bounds ((Metavariable tm7)))))
        (tm7
-        ((lowerBounds ())
-         (upperBounds
+        ((lower_bounds ())
+         (upper_bounds
           ((Arrow ((Metavariable tm3)) (Unknown (Metavariable em2))
             (Metavariable tm8))))))
-       (tm8 ((lowerBounds ()) (upperBounds ((Primitive Int)))))))
+       (tm8 ((lower_bounds ()) (upper_bounds ((Primitive Int)))))))
      (effect_constraints
       ((em0
-        ((lowerBounds ((Labels ())))
-         (upperBounds ((Unknown (Metavariable em3))))))
+        ((lower_bounds ((Labels ())))
+         (upper_bounds ((Unknown (Metavariable em3))))))
        (em1
-        ((lowerBounds ((Labels ())))
-         (upperBounds ((Unknown (Metavariable em2))))))
+        ((lower_bounds ((Labels ())))
+         (upper_bounds ((Unknown (Metavariable em2))))))
        (em2
-        ((lowerBounds ((Labels ())))
-         (upperBounds ((Unknown (Metavariable em3))))))
-       (em3 ((lowerBounds ((Labels ()))) (upperBounds ())))))
+        ((lower_bounds ((Labels ())))
+         (upper_bounds ((Unknown (Metavariable em3))))))
+       (em3 ((lower_bounds ((Labels ()))) (upper_bounds ())))))
      (already_seen_constraints
       ((Type_at_most
         (type_lo (Arrow ((Metavariable tm4)) (Labels ()) (Metavariable tm4)))

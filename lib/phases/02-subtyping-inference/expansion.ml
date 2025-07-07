@@ -72,8 +72,8 @@ let rec expand_type_aux
          |> Option.value_map
               ~f:(fun (bounds : _ Bounds.t) ->
                 match polarity_positive with
-                | true -> bounds.lowerBounds
-                | false -> bounds.upperBounds)
+                | true -> bounds.lower_bounds
+                | false -> bounds.upper_bounds)
               ~default:[]
        in
        let bound_types =
@@ -152,8 +152,8 @@ and expand_unknown_effect_aux
          |> Option.value_map
               ~f:(fun (bounds : _ Bounds.t) ->
                 match polarity_positive with
-                | true -> bounds.lowerBounds
-                | false -> bounds.upperBounds)
+                | true -> bounds.lower_bounds
+                | false -> bounds.upper_bounds)
               ~default:[]
        in
        let bound_effects =

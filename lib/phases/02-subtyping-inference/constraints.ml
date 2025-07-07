@@ -78,23 +78,23 @@ let rec extrude_aux
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
        Option.iter
          (get_type_bounds t m)
-         ~f:(fun { Bounds.lowerBounds; upperBounds } ->
+         ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
            let bounds =
              match polarity_positive with
              | true ->
-               let lowerBounds =
+               let lower_bounds =
                  List.map
-                   lowerBounds
+                   lower_bounds
                    ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
                in
-               { Bounds.lowerBounds; upperBounds }
+               { Bounds.lower_bounds; upper_bounds }
              | false ->
-               let upperBounds =
+               let upper_bounds =
                  List.map
-                   upperBounds
+                   upper_bounds
                    ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
                in
-               { Bounds.lowerBounds; upperBounds }
+               { Bounds.lower_bounds; upper_bounds }
            in
            add_fresh_type_exn t fresh bounds);
        Metavariable fresh)
@@ -142,23 +142,23 @@ and extrude_unkown_effect_aux
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
        Option.iter
          (get_effect_bounds t m)
-         ~f:(fun { Bounds.lowerBounds; upperBounds } ->
+         ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
            let bounds =
              match polarity_positive with
              | true ->
-               let lowerBounds =
+               let lower_bounds =
                  List.map
-                   lowerBounds
+                   lower_bounds
                    ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
                in
-               { Bounds.lowerBounds; upperBounds }
+               { Bounds.lower_bounds; upper_bounds }
              | false ->
-               let upperBounds =
+               let upper_bounds =
                  List.map
-                   upperBounds
+                   upper_bounds
                    ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
                in
-               { Bounds.lowerBounds; upperBounds }
+               { Bounds.lower_bounds; upper_bounds }
            in
            add_fresh_effect_exn t fresh bounds);
        Metavariable fresh)
@@ -222,9 +222,9 @@ let rec constrain_type_at_most_exn
             Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
           in
           (* add [m <= type_hi]*)
-          m_bounds.upperBounds <- type_hi :: m_bounds.upperBounds;
+          m_bounds.upper_bounds <- type_hi :: m_bounds.upper_bounds;
           (* add transitive closure *)
-          List.iter m_bounds.lowerBounds ~f:(fun below_m ->
+          List.iter m_bounds.lower_bounds ~f:(fun below_m ->
             constrain_type_at_most_exn t below_m type_hi)
         | false ->
           (* need to copy [type_hi] down to [m_level] *)
@@ -250,9 +250,9 @@ let rec constrain_type_at_most_exn
             Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
           in
           (* add [type_less_than_m <= m] *)
-          m_bounds.lowerBounds <- type_lo :: m_bounds.lowerBounds;
+          m_bounds.lower_bounds <- type_lo :: m_bounds.lower_bounds;
           (* add transitive closure *)
-          List.iter m_bounds.upperBounds ~f:(fun above_m ->
+          List.iter m_bounds.upper_bounds ~f:(fun above_m ->
             constrain_type_at_most_exn t type_lo above_m)
         | false ->
           let approx_type_lo =
@@ -338,8 +338,8 @@ and constrain_effect_at_most_exn t (effect_lo : Effect.t) (effect_hi : Effect.t)
           let m_bounds =
             Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
           in
-          m_bounds.upperBounds <- above_m :: m_bounds.upperBounds;
-          List.iter m_bounds.lowerBounds ~f:(fun below_m ->
+          m_bounds.upper_bounds <- above_m :: m_bounds.upper_bounds;
+          List.iter m_bounds.lower_bounds ~f:(fun below_m ->
             constrain_effect_at_most_exn t below_m above_m)
         | false ->
           let above_approx =
@@ -359,8 +359,8 @@ and constrain_effect_at_most_exn t (effect_lo : Effect.t) (effect_hi : Effect.t)
           let m_bounds =
             Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
           in
-          m_bounds.lowerBounds <- below_m :: m_bounds.lowerBounds;
-          List.iter m_bounds.upperBounds ~f:(fun above_m ->
+          m_bounds.lower_bounds <- below_m :: m_bounds.lower_bounds;
+          List.iter m_bounds.upper_bounds ~f:(fun above_m ->
             constrain_effect_at_most_exn t below_m above_m)
         | false ->
           let approx_below_m =
