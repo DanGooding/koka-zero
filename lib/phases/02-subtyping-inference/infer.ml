@@ -334,7 +334,8 @@ and infer_value (t : t) (value : Min.Expr.value) ~env ~level ~effect_env
   match value with
   | Variable name ->
     (match (Context.find env name : Context.Binding.t option) with
-     | None -> raise_s [%message "name not found" (name : Variable.t)]
+     | None ->
+       Or_error.errorf "unbound variable: %s" (Variable.to_string_user name)
      | Some (Value type_) ->
        let type_ =
          match (type_ : Type.t) with
@@ -688,8 +689,12 @@ let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
     infer_and_generalise t f ~infer:infer_fix_lambda ~env ~level ~effect_env
   in
   let%map env' =
-    Context.extend_toplevel env ~var:f_name ~type_:(Type.Poly poly_f)
-    |> error_if_cannot_shadow ~name:f_name
+    match Context.extend_toplevel env ~var:f_name ~type_:(Type.Poly poly_f) with
+    | `Ok env' -> return env'
+    | `Cannot_shadow ->
+      Or_error.errorf
+        "cannot shadow '%s' at toplevel"
+        (Variable.to_string_user f_name)
   in
   env', f
 ;;
