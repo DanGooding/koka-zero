@@ -557,7 +557,7 @@ and infer_handler
             t
             op_handler
             ~t_argument
-            ~t_answer
+            ~t_clause:t_answer
             ~eff_handler
             ~env
             ~level
@@ -579,7 +579,7 @@ and infer_handler
             t
             op_handler
             ~t_argument
-            ~t_answer
+            ~t_clause:t_handler_result
             ~eff_handler
             ~env
             ~level
@@ -601,7 +601,7 @@ and infer_operation_clause
       t
       (op_handler : Min.Expr.op_handler)
       ~(t_argument : Type.Mono.t)
-      ~(t_answer : Type.Mono.t)
+      ~(t_clause : Type.Mono.t)
       ~(eff_handler : Effect.t)
       ~env
       ~level
@@ -620,7 +620,7 @@ and infer_operation_clause
     infer_expr t op_handler.op_body ~env ~level ~effect_env
   in
   let%bind () =
-    Constraints.constrain_type_at_most t.constraints t_body t_answer
+    Constraints.constrain_type_at_most t.constraints t_body t_clause
   in
   let%map () =
     Constraints.constrain_effect_at_most t.constraints eff_op_clause eff_handler
@@ -893,41 +893,7 @@ let%expect_test "inference for a simple function" =
         ((lower_bounds ((Labels ())))
          (upper_bounds ((Unknown (Metavariable em3))))))
        (em3 ((lower_bounds ((Labels ()))) (upper_bounds ())))))
-     (already_seen_constraints
-      ((Type_at_most
-        (type_lo (Arrow ((Metavariable tm4)) (Labels ()) (Metavariable tm4)))
-        (type_hi
-         (Arrow ((Metavariable tm1)) (Unknown (Metavariable em0))
-          (Metavariable tm5))))
-       (Type_at_most
-        (type_lo (Arrow ((Metavariable tm6)) (Labels ()) (Metavariable tm6)))
-        (type_hi
-         (Arrow ((Metavariable tm2)) (Unknown (Metavariable em1))
-          (Metavariable tm7))))
-       (Type_at_most (type_lo (Metavariable tm1)) (type_hi (Metavariable tm4)))
-       (Type_at_most (type_lo (Metavariable tm2)) (type_hi (Metavariable tm6)))
-       (Type_at_most (type_lo (Metavariable tm4)) (type_hi (Metavariable tm5)))
-       (Type_at_most (type_lo (Metavariable tm5)) (type_hi (Primitive Int)))
-       (Type_at_most (type_lo (Metavariable tm6)) (type_hi (Metavariable tm7)))
-       (Type_at_most (type_lo (Metavariable tm7))
-        (type_hi
-         (Arrow ((Metavariable tm3)) (Unknown (Metavariable em2))
-          (Metavariable tm8))))
-       (Type_at_most (type_lo (Metavariable tm8)) (type_hi (Primitive Int)))
-       (Effect_at_most (effect_lo (Unknown (Metavariable em0)))
-        (effect_hi (Unknown (Metavariable em3))))
-       (Effect_at_most (effect_lo (Unknown (Metavariable em1)))
-        (effect_hi (Unknown (Metavariable em2))))
-       (Effect_at_most (effect_lo (Unknown (Metavariable em2)))
-        (effect_hi (Unknown (Metavariable em3))))
-       (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable em0))))
-       (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable em1))))
-       (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable em2))))
-       (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable em3))))))
+     (already_seen_constraints <opaque>)
      (metavariables
       ((type_metavariable_source ((next 9) (prefix tm)))
        (effect_metavariable_source ((next 4) (prefix em)))

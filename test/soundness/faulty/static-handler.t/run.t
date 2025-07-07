@@ -1,9 +1,9 @@
 Attempting to perform an effect not under a (dynamic) handler,
 but within a function _defined_ under a handler (statically)
   $ koka-zero check static-handler.kk
-  type error: cannot unify
-  (Row (Open (Non_empty ((exn 1))) (Metavariable e36)))
-  with
-  (Row (Closed ()))
-  
+  type error: (("error when expanding constraint"
+    (type_lo (Arrow () (Unknown (Metavariable em16)) (Primitive Unit)))
+    (type_hi (Arrow () (Labels ()) (Primitive Unit))))
+   ("less-than constraint doesn't hold" (labels (exn))
+    (expected_at_most (console))))
   [1]
