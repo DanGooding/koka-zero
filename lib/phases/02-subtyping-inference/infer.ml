@@ -373,7 +373,7 @@ let%expect_test "inference for a simple function" =
              ((Arrow ((Variable t7)) (Intersection ((Variable e1)))
                (Intersection ((Primitive Int))))))))))
         (Variable t7))
-       (Variable e1) (Primitive Int)))
+       (Union ((Labels ()))) (Primitive Int)))
      (polar_effect (Labels ())))
     |}]
 ;;
