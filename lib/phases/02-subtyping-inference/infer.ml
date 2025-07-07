@@ -313,20 +313,24 @@ and infer_value (t : t) (value : Min.Expr.value) ~env ~level ~effect_env
   let open Result.Let_syntax in
   match value with
   | Variable name ->
-    let%map type_ =
-      match (Context.find env name : Context.Binding.t option) with
-      | None -> raise_s [%message "name not found" (name : Variable.t)]
-      | Some (Value type_) ->
-        return
-          (match (type_ : Type.t) with
-           | Mono mono -> mono
-           | Poly poly -> instantiate t poly ~level)
-      | Some (Operation { argument; label; answer }) ->
-        return
-          (Type.Mono.Arrow
-             ([ argument ], Labels (Effect.Label.Set.singleton label), answer))
-    in
-    Expl.Expr.Variable name, type_
+    (match (Context.find env name : Context.Binding.t option) with
+     | None -> raise_s [%message "name not found" (name : Variable.t)]
+     | Some (Value type_) ->
+       let type_ =
+         match (type_ : Type.t) with
+         | Mono mono -> mono
+         | Poly poly -> instantiate t poly ~level
+       in
+       return (Expl.Expr.Variable name, type_)
+     | Some (Operation { argument; label; answer }) ->
+       let type_ =
+         Type.Mono.Arrow
+           ([ argument ], Labels (Effect.Label.Set.singleton label), answer)
+       in
+       let expr =
+         Expl.Expr.Perform { operation = name; performed_effect = label }
+       in
+       return (expr, type_))
   | Lambda lambda ->
     let%map lambda, type_ = infer_lambda t lambda ~env ~level ~effect_env in
     Expl.Expr.Lambda lambda, type_
