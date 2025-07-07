@@ -59,6 +59,36 @@ let error_if_cannot_shadow result ~name =
   | `Ok result -> Ok result
 ;;
 
+let infer_and_generalise
+      (t : t)
+      (value : 'v)
+      ~(infer :
+         t
+         -> 'v
+         -> env:Context.t
+         -> level:int
+         -> effect_env:Effect_signature.Context.t
+         -> ('w * Type.Mono.t) Or_error.t)
+      ~env
+      ~level
+      ~effect_env
+  : ('w * Type.Poly.t) Or_error.t
+  =
+  let open Result.Let_syntax in
+  let local_level = level + 1 in
+  let%map value, type_ = infer t value ~env ~level:local_level ~effect_env in
+  let poly =
+    (* generalise only metavariables introduced within [subject] *)
+    Type.generalise
+      type_
+      ~should_generalise_type_metavariable:(fun meta ->
+        Metavariables.type_level_exn t.metavariables meta >= local_level)
+      ~should_generalise_effect_metavariable:(fun meta ->
+        Metavariables.effect_level_exn t.metavariables meta >= local_level)
+  in
+  value, poly
+;;
+
 let instantiate (t : t) (poly : Type.Poly.t) ~level =
   let fresh_types = Type.Metavariable.Table.create () in
   let fresh_effects = Effect.Metavariable.Table.create () in
@@ -176,18 +206,8 @@ let rec infer_expr
     let effect_ = Effect.Labels Effect.Label.Set.empty in
     Expl.Expr.Value value, type_, effect_
   | Let (var, subject, body) ->
-    let local_level = level + 1 in
-    let%bind subject, type_subject =
-      infer_value t subject ~env ~level:local_level ~effect_env
-    in
-    let poly_subject =
-      (* generalise only metavariables introduced within [subject] *)
-      Type.generalise
-        type_subject
-        ~should_generalise_type_metavariable:(fun meta ->
-          Metavariables.type_level_exn t.metavariables meta >= local_level)
-        ~should_generalise_effect_metavariable:(fun meta ->
-          Metavariables.effect_level_exn t.metavariables meta >= local_level)
+    let%bind subject, poly_subject =
+      infer_and_generalise t subject ~infer:infer_value ~env ~level ~effect_env
     in
     let%bind env =
       Context.extend env ~var ~type_:(Poly poly_subject)
@@ -334,20 +354,11 @@ and infer_value (t : t) (value : Min.Expr.value) ~env ~level ~effect_env
   | Lambda lambda ->
     let%map lambda, type_ = infer_lambda t lambda ~env ~level ~effect_env in
     Expl.Expr.Lambda lambda, type_
-  | Fix_lambda (var, lambda) ->
-    let meta_self = Metavariables.fresh_type t.metavariables ~level in
-    let%bind env =
-      Context.extend env ~var ~type_:(Mono meta_self)
-      |> error_if_cannot_shadow ~name:var
+  | Fix_lambda fix_lambda ->
+    let%map fix_lambda, lambda_type =
+      infer_fix_lambda t fix_lambda ~env ~level ~effect_env
     in
-    let%bind lambda, lambda_type =
-      infer_lambda t lambda ~env ~level ~effect_env
-    in
-    (* [lambda] should be usable as [f_self] *)
-    let%map () =
-      Constraints.constrain_type_at_most t.constraints lambda_type meta_self
-    in
-    Expl.Expr.Fix_lambda (var, lambda), lambda_type
+    Expl.Expr.Fix_lambda fix_lambda, lambda_type
   | Literal lit -> return (Expl.Expr.Literal lit, type_literal lit)
   | Handler handler ->
     let%map handler, type_ = infer_handler t handler ~env ~level ~effect_env in
@@ -373,6 +384,29 @@ and infer_lambda t ((params, body) : Min.Expr.lambda) ~env ~level ~effect_env
   let%map body, result, effect_ = infer_expr t body ~env ~level ~effect_env in
   let param_types = List.map param_metas ~f:(fun (_, meta) -> meta) in
   (params, body), Type.Mono.Arrow (param_types, effect_, result)
+
+and infer_fix_lambda
+      t
+      ((var, lambda) : Min.Expr.fix_lambda)
+      ~env
+      ~level
+      ~effect_env
+  : (Expl.Expr.fix_lambda * Type.Mono.t) Or_error.t
+  =
+  let open Result.Let_syntax in
+  let meta_self = Metavariables.fresh_type t.metavariables ~level in
+  let%bind env =
+    Context.extend env ~var ~type_:(Mono meta_self)
+    |> error_if_cannot_shadow ~name:var
+  in
+  let%bind lambda, lambda_type =
+    infer_lambda t lambda ~env ~level ~effect_env
+  in
+  (* [lambda] should be usable as [f_self] *)
+  let%map () =
+    Constraints.constrain_type_at_most t.constraints lambda_type meta_self
+  in
+  (var, lambda), lambda_type
 
 and type_literal (lit : Literal.t) : Type.Mono.t =
   match lit with
@@ -611,6 +645,162 @@ let bind_operations (env : Context.t) ~(declaration : Effect_decl.t)
       Or_error.errorf
         "operation names must be unique: '%s' is reused"
         (Variable.to_string_user op_name))
+;;
+
+(** add an effect's signature to the effect environment *)
+let bind_effect_signature
+      (effect_env : Effect_signature.Context.t)
+      ~(declaration : Effect_decl.t)
+  : Effect_signature.Context.t Or_error.t
+  =
+  let open Result.Let_syntax in
+  match Effect_signature.Context.extend_decl effect_env declaration with
+  | `Ok effect_env -> return effect_env
+  | `Duplicate ->
+    let { Effect_decl.name; _ } = declaration in
+    Or_error.errorf
+      "effect '%s' is already defined"
+      (Effect.Label.to_string name)
+;;
+
+(** check an effect declaration, adding its signature and operations to the
+    contexts if correct *)
+let infer_effect_decl (declaration : Effect_decl.t) ~env ~effect_env
+  : (Context.t * Effect_signature.Context.t * Effect_decl.t) Or_error.t
+  =
+  let open Result.Let_syntax in
+  let%bind env =
+    (* add all operation names to the context *)
+    bind_operations env ~declaration
+  in
+  let%map effect_env = bind_effect_signature effect_env ~declaration in
+  env, effect_env, declaration
+;;
+
+(** run inference on a function declaration, adding it (generalised) to the
+    environment if well typed *)
+let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
+  : (Context.t * Expl.Decl.Fun.t) Or_error.t
+  =
+  let open Result.Let_syntax in
+  let f_name, _lambda = f in
+  let%bind f, poly_f =
+    infer_and_generalise t f ~infer:infer_fix_lambda ~env ~level ~effect_env
+  in
+  let%map env' =
+    Context.extend_toplevel env ~var:f_name ~type_:(Type.Poly poly_f)
+    |> error_if_cannot_shadow ~name:f_name
+  in
+  env', f
+;;
+
+let infer_decl t (declaration : Min.Decl.t) ~env ~level ~effect_env
+  : (Context.t * Effect_signature.Context.t * Expl.Decl.t) Or_error.t
+  =
+  let open Result.Let_syntax in
+  match declaration with
+  | Min.Decl.Fun f ->
+    let%map env', f = infer_fun_decl t f ~env ~level ~effect_env in
+    env', effect_env, Expl.Decl.Fun f
+  | Effect e ->
+    let%map env', effect_env', e' = infer_effect_decl e ~env ~effect_env in
+    env', effect_env', Expl.Decl.Effect e'
+;;
+
+let infer_decls t (declarations : Min.Decl.t list) ~env ~level ~effect_env
+  : (Context.t * Effect_signature.Context.t * Expl.Decl.t list) Or_error.t
+  =
+  let open Result.Let_syntax in
+  (* importantly this is a left fold *)
+  let%map env', effect_env', declarations_rev' =
+    List.fold
+      declarations
+      ~init:(return (env, effect_env, []))
+      ~f:(fun acc declaration ->
+        let%bind env, effect_env, declarations_rev = acc in
+        let%map env', effect_env', declaration' =
+          infer_decl t declaration ~env ~level ~effect_env
+        in
+        env', effect_env', declaration' :: declarations_rev)
+  in
+  let declarations' = List.rev declarations_rev' in
+  env', effect_env', declarations'
+;;
+
+(** Constrain [Keywords.entry_point] to be a total function [() -> <> ()], skipping if
+    not present *)
+let check_entry_point t ~env ~level : unit Or_error.t =
+  let open Result.Let_syntax in
+  match Context.find env Keyword.entry_point with
+  | None -> return ()
+  | Some (Context.Binding.Operation _) ->
+    raise_s [%message "entry point shadowed by operation"]
+  | Some (Context.Binding.Value type_) ->
+    let t_expected =
+      (* () -> <> () *)
+      Type.Mono.Arrow
+        ( []
+        , Labels Effect.Label.Set.empty
+        , Type.Mono.Primitive Type.Primitive.Unit )
+    in
+    let t_actual =
+      match (type_ : Type.t) with
+      | Mono mono -> mono
+      | Poly poly -> instantiate t poly ~level
+    in
+    Constraints.constrain_type_at_most t.constraints t_actual t_expected
+;;
+
+let infer_expr_toplevel t (expr : Min.Expr.t) ~declarations
+  : (Expl.Expr.t * Type.Mono.t * Effect.t) Or_error.t
+  =
+  let open Result.Let_syntax in
+  let%map expr, type_, effect_ =
+    let env = Context.empty in
+    let level = 0 in
+    let effect_env = Effect_signature.Context.empty in
+    let%bind env, effect_env, _declarations' =
+      infer_decls t declarations ~env ~level ~effect_env
+    in
+    infer_expr t expr ~env ~level ~effect_env
+  in
+  (* TODO: convert to a type with only unknown metavariables *)
+  expr, type_, effect_
+;;
+
+let infer_program t { Min.Program.declarations }
+  : Explicit_syntax.Program.t Or_error.t
+  =
+  let open Result.Let_syntax in
+  let declarations =
+    [ Min.Decl.Effect Effect_decl.console ]
+    @ declarations
+    @ [ Min.Decl.Fun Min.Program.entry_point ]
+  in
+  let%map declarations' =
+    let env = Context.empty in
+    let level = 0 in
+    let effect_env = Effect_signature.Context.empty in
+    let%bind env, _effect_env, declarations' =
+      infer_decls t declarations ~env ~level ~effect_env
+    in
+    let%map () = check_entry_point t ~env ~level in
+    declarations'
+  in
+  { Expl.Program.declarations = declarations' }
+;;
+
+let infer_program_without_main t { Min.Program.declarations }
+  : Explicit_syntax.Program.t Or_error.t
+  =
+  let open Result.Let_syntax in
+  let%map _env, _effect_env, declarations' =
+    let env = Context.empty in
+    let level = 0 in
+    let effect_env = Effect_signature.Context.empty in
+    infer_decls t declarations ~env ~level ~effect_env
+  in
+  { Expl.Program.declarations = declarations' }
 ;;
 
 let%expect_test "inference for a simple function" =
