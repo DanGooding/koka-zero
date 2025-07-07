@@ -4,14 +4,12 @@ open! Import
 type t =
   { metavariables : Metavariables.t
   ; constraints : Constraints.t
-  ; type_variable_source : Type.Variable.Name_source.t
-  ; effect_variable_source : Effect.Variable.Name_source.t
   }
 
-let create () ~type_variable_source ~effect_variable_source =
+let create () =
   let metavariables = Metavariables.create () in
   let constraints = Constraints.create ~metavariables in
-  { metavariables; constraints; type_variable_source; effect_variable_source }
+  { metavariables; constraints }
 ;;
 
 let union_effects t effects_ ~level =
@@ -294,11 +292,7 @@ let%expect_test "inference for a simple function" =
                          , [ Value (Variable (Variable.of_user "f")) ] )
                      , [ Value (Variable (Variable.of_user "y")) ] ) ) )) )
   in
-  let type_variable_source = Type.Variable.Name_source.fresh () ~prefix:"t" in
-  let effect_variable_source =
-    Effect.Variable.Name_source.fresh () ~prefix:"e"
-  in
-  let inference = create () ~type_variable_source ~effect_variable_source in
+  let inference = create () in
   let type_, effect_ =
     infer_expr_exn inference expr ~env:Context.empty ~level:0
   in
@@ -378,6 +372,10 @@ let%expect_test "inference for a simple function" =
         ((tm0 1) (tm1 0) (tm2 0) (tm3 0) (tm4 0) (tm5 0) (tm6 0) (tm7 0) (tm8 0)))
        (effect_metavariable_levels ((em0 0) (em1 0) (em2 0) (em3 0))))))
     |}];
+  let type_variable_source = Type.Variable.Name_source.fresh () ~prefix:"t" in
+  let effect_variable_source =
+    Effect.Variable.Name_source.fresh () ~prefix:"e"
+  in
   let expansion =
     Expansion.create
       ~constraints:inference.constraints
