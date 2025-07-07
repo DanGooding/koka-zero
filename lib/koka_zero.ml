@@ -13,7 +13,12 @@ module Util = Koka_zero_util
 
 let parse_channel = Koka_zero_parsing.parse_channel
 let parse_string = Koka_zero_parsing.parse_string
-let infer_program = Koka_zero_inference.infer_program
+
+let infer_program program =
+  Koka_zero_subtyping_inference.infer_program program
+  |> Result.map_error ~f:Static_error.type_error_of_error
+;;
+
 let translate = Koka_zero_evidence_translation.translate
 let rewrite_program = Koka_zero_evidence_rewriting.rewrite_program
 let interpret_program = Koka_zero_interpreter.interpret_program

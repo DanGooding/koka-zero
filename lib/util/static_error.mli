@@ -1,3 +1,5 @@
+open! Core
+
 (** An issue in supplied koka code (e.g. syntax error / type error) *)
 type t [@@deriving sexp]
 
@@ -10,6 +12,7 @@ end
 val syntax_error : ?at:Source_location.t -> string -> t
 val unsupported_feature : ?at:Source_location.t -> string -> t
 val type_error : ?at:Source_location.t -> string -> t
+val type_error_of_error : Error.t -> t
 val string_of_t : t -> string
 
 (** swap the order of a nested [ Or_static_error option ], preserving the inner

@@ -6,7 +6,7 @@
   koka-zero.util
   koka-zero.parsing
   koka-zero.ir.minimal
-  koka-zero.inference
+  koka-zero.subtyping-inference
   koka-zero.ir.explicit
   koka-zero.evidence-passing.evidence-translation
   koka-zero.evidence-passing.rewriting

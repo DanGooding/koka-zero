@@ -47,6 +47,11 @@ let syntax_error = error_of_kind Kind.Syntax_error
 let unsupported_feature = error_of_kind Kind.Unsupported_feature
 let type_error = error_of_kind Kind.Type_error
 
+let type_error_of_error error =
+  let message = Error.to_string_hum error in
+  type_error message
+;;
+
 let string_of_t t =
   let { kind; message; location } = t in
   let location_part =
