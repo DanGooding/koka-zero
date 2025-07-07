@@ -43,31 +43,12 @@ simplification
 - discover an empty intersection type
 
 
+[ ] combine level & bounds for each metavariable into a single hashtable
+
 [ ] remove Variable from Type.Mono?
-
-[] BUG? how does generalisation work if it's done before we apply any constraints?
-- need extrude
-
-
-current incorrect:
-- gen: replace all meta >=local_level with fresh vars
-- inst; replace those vars with fresh meta
-this loses a bunch of constraints...
-
-
-described:
-- gen: just remember local_level
-- inst: replace all meta >= local_level with fresh meta at the current level
-  - fresh meta should have all their bounds freshened also
-
-- constrain: if variable's bound is at a higher level, extrude the bound to it's level
-
-
-so it seems like we could indeed freshen bounds only once
-then the relevant meta with new meta (including in the bounds)
-i.e. duplicating
-
-
 
 
 [ ] should expansion cache each metavaraible's expansion?
+[ ] bounds should not use camelCase
+
+[ ] add_binding function which supports parameters & shadowing errors
