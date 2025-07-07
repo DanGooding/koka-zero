@@ -3,19 +3,18 @@ open! Import
 
 module State = struct
   type t =
-    { substitution : Substitution.t
+    { 
       (** 'values' of metavariables, these are replaced 'on-demand' in
           [unify] rather than ever propagating over a whole type *)
-    ; variable_source : Type.Variable.Name_source.t
+     variable_source : Type.Variable.Name_source.t
     ; metavariable_source : Type.Metavariable.Name_source.t
     ; effect_variable_source : Effect.Variable.Name_source.t
     ; effect_metavariable_source : Effect.Metavariable.Name_source.t
     }
   [@@deriving sexp_of]
 
-  let initial : t =
-    { substitution = Substitution.identity
-    ; variable_source = Type.Variable.Name_source.fresh ~prefix:"$a" ()
+  let create() : t =
+    { variable_source = Type.Variable.Name_source.fresh ~prefix:"$a" ()
     ; metavariable_source = Type.Metavariable.Name_source.fresh ~prefix:"a" ()
     ; effect_variable_source = Effect.Variable.Name_source.fresh ~prefix:"$e" ()
     ; effect_metavariable_source =
@@ -27,19 +26,19 @@ end
 module T = struct
   (** a state monad to store the global substitution and the name source, plus
       an exception monad for type errors *)
-  type 'a t = State.t -> ('a * State.t) Or_static_error.t
+  type 'a t = State.t -> 'a Or_static_error.t
 
   let bind m ~f s =
-    let%bind.Result x, s' = m s in
-    f x s'
+    let%bind.Result x = m s in
+    f x s
   ;;
 
-  let return x s = Result.Ok (x, s)
+  let return x s = Result.Ok (x)
 
   let map =
     let map m ~f s =
-      let%map.Result x, s' = m s in
-      f x, s'
+      let%map.Result x = m s in
+      f x, s
     in
     `Custom map
   ;;
@@ -55,79 +54,34 @@ include Monad_utils.Make (T')
 
 let fresh_variable s =
   let { State.variable_source; _ } = s in
-  let name, variable_source =
+  let name =
     Type.Variable.Name_source.next_name variable_source
   in
-  let s = State.{ s with variable_source } in
-  Result.Ok (name, s)
+  Result.Ok (name)
 ;;
 
 let fresh_metavariable s =
   let { State.metavariable_source; _ } = s in
-  let name, metavariable_source =
+  let name =
     Type.Metavariable.Name_source.next_name metavariable_source
   in
-  let s = State.{ s with metavariable_source } in
-  Result.Ok (name, s)
+  Result.Ok (name)
 ;;
 
 let fresh_effect_variable s =
   let { State.effect_variable_source; _ } = s in
-  let name, effect_variable_source =
+  let name =
     Effect.Variable.Name_source.next_name effect_variable_source
   in
-  let s = State.{ s with effect_variable_source } in
-  Result.Ok (name, s)
+  Result.Ok (name)
 ;;
 
 let fresh_effect_metavariable s =
   let { State.effect_metavariable_source; _ } = s in
-  let name, effect_metavariable_source =
+  let name =
     Effect.Metavariable.Name_source.next_name effect_metavariable_source
   in
-  let s = State.{ s with effect_metavariable_source } in
-  Result.Ok (name, s)
-;;
-
-let lookup_meta a s =
-  let { State.substitution; _ } = s in
-  let t = Substitution.lookup substitution a in
-  Result.Ok (t, s)
-;;
-
-let lookup_effect_meta a s =
-  let { State.substitution; _ } = s in
-  let e = Substitution.lookup_effect substitution a in
-  Result.Ok (e, s)
-;;
-
-(** pass the current global substitution as an argument to a pure function *)
-let use_substitution : (Substitution.t -> 'a) -> 'a t =
-  fun f s ->
-  let { State.substitution; _ } = s in
-  Result.Ok (f substitution, s)
-;;
-
-(** modify the global substitution using a pure function *)
-let map_substitution (f : Substitution.t -> Substitution.t) s =
-  let { State.substitution; _ } = s in
-  let substitution = f substitution in
-  let s = { s with State.substitution } in
-  Result.Ok ((), s)
-;;
-
-let substitute_meta_exn ~var ~type_ =
-  map_substitution (fun substitution ->
-    match Substitution.extend substitution ~var ~type_ with
-    | `Duplicate -> raise_s [%message "metavariable already has a type"]
-    | `Ok substitution -> substitution)
-;;
-
-let substitute_effect_meta_exn ~var ~effect_ =
-  map_substitution (fun substitution ->
-    match Substitution.extend_effect substitution ~var ~effect_ with
-    | `Duplicate -> raise_s [%message "effect metavariable already has a type"]
-    | `Ok substitution -> substitution)
+  Result.Ok (name)
 ;;
 
 let with_any_effect t =

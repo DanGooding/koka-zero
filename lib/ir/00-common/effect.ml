@@ -73,3 +73,10 @@ let instantiate_as t ~var_to_meta =
   | Handled (labels, unknown) ->
     Handled (labels, Unknown.instantiate_as unknown ~var_to_meta)
 ;;
+
+let max_level t ~metavariable_level : int =
+  match t with
+  | Unknown (Metavariable meta) | Handled (_, Metavariable meta) ->
+    metavariable_level meta
+  | Unknown (Variable _) | Handled (_, Variable _) | Labels _ -> 0
+;;
