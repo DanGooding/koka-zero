@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Min = Minimal_syntax
 
 type t =
   { metavariables : Metavariables.t
@@ -124,11 +125,7 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
 
 (** determine the type and effect of an expression, raising if we encounter a type-error.
     This will update [constraints], and won't fully solve them. *)
-let rec infer_expr
-          (t : t)
-          (expr : Explicit_syntax.Expr.t)
-          ~(env : Context.t)
-          ~(level : int)
+let rec infer_expr (t : t) (expr : Min.Expr.t) ~(env : Context.t) ~(level : int)
   : (Type.Mono.t * Effect.t) Or_error.t
   =
   let open Result.Let_syntax in
@@ -238,7 +235,7 @@ let rec infer_expr
   | Impure_built_in impure_built_in ->
     infer_impure_built_in t impure_built_in ~env ~level
 
-and infer_value (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
+and infer_value (t : t) (value : Min.Expr.value) ~env ~level
   : Type.Mono.t Or_error.t
   =
   let open Result.Let_syntax in
@@ -281,7 +278,6 @@ and infer_value (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
     in
     lambda_type
   | Literal lit -> type_literal lit |> return
-  | Perform _ -> failwith "todo: perform"
   | Handler _ -> failwith "todo: handler"
 
 and type_literal (lit : Literal.t) : Type.Mono.t =
@@ -292,7 +288,7 @@ and type_literal (lit : Literal.t) : Type.Mono.t =
 
 and infer_impure_built_in
       t
-      (impure_built_in : Explicit_syntax.Expr.impure_built_in)
+      (impure_built_in : Min.Expr.impure_built_in)
       ~env
       ~level
   : (Type.Mono.t * Effect.t) Or_error.t
@@ -317,7 +313,7 @@ and infer_impure_built_in
 ;;
 
 let%expect_test "inference for a simple function" =
-  let expr : Explicit_syntax.Expr.t =
+  let expr : Min.Expr.t =
     Let
       ( Variable.of_user "id"
       , Lambda
