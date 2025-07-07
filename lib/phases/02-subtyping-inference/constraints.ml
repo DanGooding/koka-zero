@@ -4,7 +4,7 @@ open! Import
 type t =
   { type_constraints : Type.Mono.t Bounds.t Type.Metavariable.Table.t
   ; effect_constraints : Effect.t Bounds.t Effect.Metavariable.Table.t
-  ; already_seen_constraints : Constraint.Hash_set.t
+  ; already_seen_constraints : (Constraint.Hash_set.t[@sexp.opaque])
   ; metavariables : Metavariables.t
   }
 [@@deriving sexp_of]
@@ -391,4 +391,26 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
        Or_error.error_s
          [%message
            "unexpected effect variable in constraint" (v : Effect.Variable.t)])
+;;
+
+let constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t) =
+  constrain_type_at_most t type_lo type_hi
+  |> Or_error.tag_s_lazy
+       ~tag:
+         (lazy
+           [%message
+             "error when expanding constraint"
+               (type_lo : Type.Mono.t)
+               (type_hi : Type.Mono.t)])
+;;
+
+let constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t) =
+  constrain_effect_at_most t effect_lo effect_hi
+  |> Or_error.tag_s_lazy
+       ~tag:
+         (lazy
+           [%message
+             "error when expanding constraint"
+               (effect_lo : Effect.t)
+               (effect_hi : Effect.t)])
 ;;
