@@ -2,7 +2,7 @@
  (name koka_zero_test_inference)
  (libraries
   core
-  koka-zero.inference
+  koka-zero.subtyping-inference
   koka-zero.util
   koka-zero.ir.explicit
   koka-zero.ir.minimal
