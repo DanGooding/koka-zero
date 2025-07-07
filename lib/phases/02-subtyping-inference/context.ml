@@ -4,7 +4,11 @@ open! Import
 module Binding = struct
   type t =
     | Value of Type.t
-    | Operation of Effect.Label.t * Type.t
+    | Operation of
+        { argument : Type.Mono.t
+        ; label : Effect.Label.t
+        ; answer : Type.Mono.t
+        }
   [@@deriving sexp_of]
 end
 
@@ -49,11 +53,11 @@ let extend_toplevel t ~var ~type_ =
   | `Ok t' -> `Ok t'
 ;;
 
-let extend_operation t ~var ~label ~type_ =
+let extend_operation t ~var ~label ~argument ~answer =
   if Map.mem t var
   then `Cannot_shadow
   else (
-    let binding = Binding.Operation (label, type_) in
+    let binding = Binding.Operation { label; argument; answer } in
     let entry = { Entry.shadowable = false; binding } in
     `Ok (Map.set t ~key:var ~data:entry))
 ;;

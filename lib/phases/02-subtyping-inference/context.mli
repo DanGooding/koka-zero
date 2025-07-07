@@ -15,7 +15,11 @@ module Binding : sig
   (** represents the different things a variable can map to *)
   type t =
     | Value of Type.t
-    | Operation of Effect.Label.t * Type.t
+    | Operation of
+        { argument : Type.Mono.t
+        ; label : Effect.Label.t
+        ; answer : Type.Mono.t
+        }
   [@@deriving sexp_of]
 end
 
@@ -43,7 +47,8 @@ val extend_operation
   :  t
   -> var:Variable.t
   -> label:Effect.Label.t
-  -> type_:Type.t
+  -> argument:Type.Mono.t
+  -> answer:Type.Mono.t
   -> t Or_cannot_shadow.t
 
 (** lookup a variable's type in the context *)

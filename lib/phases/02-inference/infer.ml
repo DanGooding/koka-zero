@@ -570,7 +570,8 @@ let bind_operations
           "operation names must be unique: '%s' is reused"
           (Variable.to_string_user op_name)
       in
-      Inference.type_error message)
+      Inference.type_error message
+      )
 ;;
 
 (** add an effect's signature to the effect environment *)
