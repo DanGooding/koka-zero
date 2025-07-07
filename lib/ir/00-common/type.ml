@@ -83,6 +83,23 @@ module Mono = struct
         , instantiate_as t_result ~var_to_meta ~effect_var_to_meta )
     | Primitive p -> Primitive p
   ;;
+
+  let rec max_level t ~type_metavariable_level ~effect_metavariable_level =
+    match t with
+    | Variable _ | Primitive _ -> 0
+    | Metavariable meta -> type_metavariable_level meta
+    | Arrow (args, effect_, result) ->
+      let type_levels =
+        List.map
+          (result :: args)
+          ~f:(max_level ~type_metavariable_level ~effect_metavariable_level)
+      in
+      let effect_level =
+        Effect.max_level effect_ ~metavariable_level:effect_metavariable_level
+      in
+      List.max_elt (effect_level :: type_levels) ~compare:[%compare: int]
+      |> Option.value ~default:0
+  ;;
 end
 
 module Poly = struct

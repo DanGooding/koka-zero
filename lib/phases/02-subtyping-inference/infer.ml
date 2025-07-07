@@ -2,61 +2,20 @@ open! Core
 open! Import
 
 type t =
-  { type_metavariable_source : Type.Metavariable.Name_source.t
-  ; effect_metavariable_source : Effect.Metavariable.Name_source.t
+  { metavariables : Metavariables.t
+  ; constraints : Constraints.t
   ; type_variable_source : Type.Variable.Name_source.t
   ; effect_variable_source : Effect.Variable.Name_source.t
-  ; type_metavariable_levels : int Type.Metavariable.Table.t
-  ; effect_metavariable_levels : int Effect.Metavariable.Table.t
-  ; constraints : Constraints.t
   }
 
 let create () ~type_variable_source ~effect_variable_source =
-  let type_metavariable_source =
-    Type.Metavariable.Name_source.fresh () ~prefix:"tm"
-  in
-  let effect_metavariable_source =
-    Effect.Metavariable.Name_source.fresh () ~prefix:"em"
-  in
-  let constraints = Constraints.create () in
-  let type_metavariable_levels = Type.Metavariable.Table.create () in
-  let effect_metavariable_levels = Effect.Metavariable.Table.create () in
-  { type_metavariable_source
-  ; effect_metavariable_source
-  ; constraints
-  ; type_metavariable_levels
-  ; effect_metavariable_levels
-  ; type_variable_source
-  ; effect_variable_source
-  }
-;;
-
-let fresh_type_metavariable t ~level : Type.Metavariable.t =
-  let meta =
-    Type.Metavariable.Name_source.next_name t.type_metavariable_source
-  in
-  Hashtbl.add_exn t.type_metavariable_levels ~key:meta ~data:level;
-  meta
-;;
-
-let fresh_type t ~level : Type.Mono.t =
-  Metavariable (fresh_type_metavariable t ~level)
-;;
-
-let fresh_effect_metavariable t ~level : Effect.Metavariable.t =
-  let meta =
-    Effect.Metavariable.Name_source.next_name t.effect_metavariable_source
-  in
-  Hashtbl.add_exn t.effect_metavariable_levels ~key:meta ~data:level;
-  meta
-;;
-
-let fresh_effect t ~level : Effect.t =
-  Unknown (Metavariable (fresh_effect_metavariable t ~level))
+  let metavariables = Metavariables.create () in
+  let constraints = Constraints.create ~metavariables in
+  { metavariables; constraints; type_variable_source; effect_variable_source }
 ;;
 
 let union_effects t effects_ ~level =
-  let overall_effect = fresh_effect t ~level in
+  let overall_effect = Metavariables.fresh_effect t.metavariables ~level in
   List.iter effects_ ~f:(fun effect_ ->
     Constraints.constrain_effect_at_most_exn
       t.constraints
@@ -108,7 +67,9 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
       (match Hashtbl.find fresh_types meta with
        | Some meta' -> Metavariable meta'
        | None ->
-         let meta' = fresh_type_metavariable t ~level in
+         let meta' =
+           Metavariables.fresh_type_metavariable t.metavariables ~level
+         in
          Hashtbl.add_exn fresh_types ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_type_bounds t.constraints meta in
@@ -136,7 +97,9 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
       (match Hashtbl.find fresh_effects meta with
        | Some meta' -> Metavariable meta'
        | None ->
-         let meta' = fresh_effect_metavariable t ~level in
+         let meta' =
+           Metavariables.fresh_effect_metavariable t.metavariables ~level
+         in
          Hashtbl.add_exn fresh_effects ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_effect_bounds t.constraints meta in
@@ -175,9 +138,9 @@ let rec infer_expr_exn
       Type.generalise
         type_subject
         ~should_generalise_type_metavariable:(fun meta ->
-          Hashtbl.find_exn t.type_metavariable_levels meta >= local_level)
+          Metavariables.type_level_exn t.metavariables meta >= local_level)
         ~should_generalise_effect_metavariable:(fun meta ->
-          Hashtbl.find_exn t.effect_metavariable_levels meta >= local_level)
+          Metavariables.effect_level_exn t.metavariables meta >= local_level)
     in
     let env = Context.extend env ~name ~type_:(Poly poly_subject) in
     infer_expr_exn t body ~env ~level
@@ -195,7 +158,9 @@ let rec infer_expr_exn
     in
     let arg_types, arg_effects = List.unzip arg_types_and_effects in
     let function_type, function_expr_effect = infer_expr_exn t f ~env ~level in
-    let result : Type.Mono.t = fresh_type t ~level in
+    let result : Type.Mono.t =
+      Metavariables.fresh_type t.metavariables ~level
+    in
     let overall_effect =
       union_effects t (function_expr_effect :: arg_effects) ~level
     in
@@ -219,7 +184,7 @@ let rec infer_expr_exn
       t.constraints
       type_cond
       (Primitive Bool);
-    let result_type = fresh_type t ~level in
+    let result_type = Metavariables.fresh_type t.metavariables ~level in
     Constraints.constrain_type_at_most_exn t.constraints type_true result_type;
     Constraints.constrain_type_at_most_exn t.constraints type_false result_type;
     let overall_effect =
@@ -255,7 +220,8 @@ and infer_value_exn (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
      | Poly poly -> instantiate t poly ~level)
   | Lambda (params, body) ->
     let param_metas =
-      List.map params ~f:(fun param -> param, fresh_type t ~level)
+      List.map params ~f:(fun param ->
+        param, Metavariables.fresh_type t.metavariables ~level)
     in
     let env =
       List.fold param_metas ~init:env ~f:(fun env (param, meta) ->
@@ -267,7 +233,7 @@ and infer_value_exn (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
     let param_types = List.map param_metas ~f:(fun (_, meta) -> meta) in
     Type.Mono.Arrow (param_types, effect_, result)
   | Fix_lambda (name, lambda) ->
-    let meta_self = fresh_type t ~level in
+    let meta_self = Metavariables.fresh_type t.metavariables ~level in
     let env = Context.extend env ~name ~type_:(Mono meta_self) in
     let lambda_type = infer_value_exn t (Lambda lambda) ~env ~level in
     (* [lambda] should be usable as [f_self] *)
@@ -404,7 +370,13 @@ let%expect_test "inference for a simple function" =
        (Effect_at_most (effect_lo (Labels ()))
         (effect_hi (Unknown (Metavariable em2))))
        (Effect_at_most (effect_lo (Labels ()))
-        (effect_hi (Unknown (Metavariable em3)))))))
+        (effect_hi (Unknown (Metavariable em3))))))
+     (metavariables
+      ((type_metavariable_source ((next 9) (prefix tm)))
+       (effect_metavariable_source ((next 4) (prefix em)))
+       (type_metavariable_levels
+        ((tm0 1) (tm1 0) (tm2 0) (tm3 0) (tm4 0) (tm5 0) (tm6 0) (tm7 0) (tm8 0)))
+       (effect_metavariable_levels ((em0 0) (em1 0) (em2 0) (em3 0))))))
     |}];
   let expansion =
     Expansion.create

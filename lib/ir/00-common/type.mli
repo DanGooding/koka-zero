@@ -55,6 +55,12 @@ module Mono : sig
     -> var_to_meta:Metavariable.t Variable.Map.t
     -> effect_var_to_meta:Effect.Metavariable.t Effect.Variable.Map.t
     -> t
+
+  val max_level
+    :  t
+    -> type_metavariable_level:(Metavariable.t -> int)
+    -> effect_metavariable_level:(Effect.Metavariable.t -> int)
+    -> int
 end
 
 (** a polytype has a toplevel forall quantifier *)

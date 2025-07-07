@@ -50,3 +50,4 @@ type t =
 
 val metavariables : t -> Metavariable.Set.t
 val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
+val max_level : t -> metavariable_level:(Metavariable.t -> int) -> int

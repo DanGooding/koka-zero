@@ -5,7 +5,7 @@ open! Import
 *)
 type t [@@deriving sexp_of]
 
-val create : unit -> t
+val create : metavariables:Metavariables.t -> t
 
 (** [constrain_type_at_most_exn t ty1 ty2] adds [ty1 <= ty2] **)
 val constrain_type_at_most_exn : t -> Type.Mono.t -> Type.Mono.t -> unit
