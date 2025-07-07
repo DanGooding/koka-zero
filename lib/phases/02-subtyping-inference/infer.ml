@@ -13,12 +13,13 @@ let create () =
 ;;
 
 let union_effects t effects_ ~level =
+  let open Result.Let_syntax in
   let overall_effect = Metavariables.fresh_effect t.metavariables ~level in
-  List.iter effects_ ~f:(fun effect_ ->
-    Constraints.constrain_effect_at_most_exn
-      t.constraints
-      effect_
-      overall_effect);
+  let%map () =
+    List.map effects_ ~f:(fun effect_ ->
+      Constraints.constrain_effect_at_most t.constraints effect_ overall_effect)
+    |> Result.all_unit
+  in
   overall_effect
 ;;
 
@@ -49,10 +50,11 @@ let unary_operator_result_type : Operator.Unary.t -> Type.Primitive.t = function
   | Operator.Unary.Bool Operator.Bool.Unary.Not -> Type.Primitive.Bool
 ;;
 
-let raise_if_cannot_shadow result ~name =
+let error_if_cannot_shadow result ~name =
   match result with
-  | `Cannot_shadow -> raise_s [%message "cannot shadow" (name : Variable.t)]
-  | `Ok result -> result
+  | `Cannot_shadow ->
+    Or_error.error_s [%message "cannot shadow" (name : Variable.t)]
+  | `Ok result -> Ok result
 ;;
 
 let instantiate (t : t) (poly : Type.Poly.t) ~level =
@@ -122,21 +124,22 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
 
 (** determine the type and effect of an expression, raising if we encounter a type-error.
     This will update [constraints], and won't fully solve them. *)
-let rec infer_expr_exn
+let rec infer_expr
           (t : t)
           (expr : Explicit_syntax.Expr.t)
           ~(env : Context.t)
           ~(level : int)
-  : Type.Mono.t * Effect.t
+  : (Type.Mono.t * Effect.t) Or_error.t
   =
+  let open Result.Let_syntax in
   match expr with
   | Value value ->
-    let type_ = infer_value_exn t value ~env ~level in
+    let%map type_ = infer_value t value ~env ~level in
     let effect_ = Effect.Labels Effect.Label.Set.empty in
     type_, effect_
   | Let (var, subject, body) ->
     let local_level = level + 1 in
-    let type_subject = infer_value_exn t subject ~env ~level:local_level in
+    let%bind type_subject = infer_value t subject ~env ~level:local_level in
     let poly_subject =
       (* generalise only metavariables introduced within [subject] *)
       Type.generalise
@@ -146,118 +149,139 @@ let rec infer_expr_exn
         ~should_generalise_effect_metavariable:(fun meta ->
           Metavariables.effect_level_exn t.metavariables meta >= local_level)
     in
-    let env =
+    let%bind env =
       Context.extend env ~var ~type_:(Poly poly_subject)
-      |> raise_if_cannot_shadow ~name:var
+      |> error_if_cannot_shadow ~name:var
     in
-    infer_expr_exn t body ~env ~level
+    infer_expr t body ~env ~level
   | Let_mono (var, subject, body) ->
-    let type_subject, effect_subject = infer_expr_exn t subject ~env ~level in
-    let env =
+    let%bind type_subject, effect_subject = infer_expr t subject ~env ~level in
+    let%bind env =
       Context.extend env ~var ~type_:(Mono type_subject)
-      |> raise_if_cannot_shadow ~name:var
+      |> error_if_cannot_shadow ~name:var
     in
-    let type_body, effect_body = infer_expr_exn t body ~env ~level in
-    let overall_effect =
+    let%bind type_body, effect_body = infer_expr t body ~env ~level in
+    let%map overall_effect =
       union_effects t [ effect_subject; effect_body ] ~level
     in
     type_body, overall_effect
   | Application (f, args) ->
-    let arg_types_and_effects =
-      List.map args ~f:(fun arg -> infer_expr_exn t arg ~env ~level)
+    let%bind arg_types_and_effects =
+      List.map args ~f:(fun arg -> infer_expr t arg ~env ~level) |> Result.all
     in
     let arg_types, arg_effects = List.unzip arg_types_and_effects in
-    let function_type, function_expr_effect = infer_expr_exn t f ~env ~level in
+    let%bind function_type, function_expr_effect = infer_expr t f ~env ~level in
     let result : Type.Mono.t =
       Metavariables.fresh_type t.metavariables ~level
     in
-    let overall_effect =
+    let%bind overall_effect =
       union_effects t (function_expr_effect :: arg_effects) ~level
     in
-    Constraints.constrain_type_at_most_exn
-      t.constraints
-      function_type
-      (Arrow (arg_types, overall_effect, result));
+    let%map () =
+      Constraints.constrain_type_at_most
+        t.constraints
+        function_type
+        (Arrow (arg_types, overall_effect, result))
+    in
     result, overall_effect
   | Seq (first, second) ->
-    let _type, first_effect = infer_expr_exn t first ~env ~level in
-    let second_type, second_effect = infer_expr_exn t second ~env ~level in
-    let overall_effect =
+    let%bind _type, first_effect = infer_expr t first ~env ~level in
+    let%bind second_type, second_effect = infer_expr t second ~env ~level in
+    let%map overall_effect =
       union_effects t [ first_effect; second_effect ] ~level
     in
     second_type, overall_effect
   | If_then_else (e_cond, e_true, e_false) ->
-    let type_cond, effect_cond = infer_expr_exn t e_cond ~env ~level in
-    let type_true, effect_true = infer_expr_exn t e_true ~env ~level in
-    let type_false, effect_false = infer_expr_exn t e_false ~env ~level in
-    Constraints.constrain_type_at_most_exn
-      t.constraints
-      type_cond
-      (Primitive Bool);
+    let%bind type_cond, effect_cond = infer_expr t e_cond ~env ~level in
+    let%bind type_true, effect_true = infer_expr t e_true ~env ~level in
+    let%bind type_false, effect_false = infer_expr t e_false ~env ~level in
+    let%bind () =
+      Constraints.constrain_type_at_most
+        t.constraints
+        type_cond
+        (Primitive Bool)
+    in
     let result_type = Metavariables.fresh_type t.metavariables ~level in
-    Constraints.constrain_type_at_most_exn t.constraints type_true result_type;
-    Constraints.constrain_type_at_most_exn t.constraints type_false result_type;
-    let overall_effect =
+    let%bind () =
+      Constraints.constrain_type_at_most t.constraints type_true result_type
+    in
+    let%bind () =
+      Constraints.constrain_type_at_most t.constraints type_false result_type
+    in
+    let%map overall_effect =
       union_effects t [ effect_cond; effect_true; effect_false ] ~level
     in
     result_type, overall_effect
   | Operator (left, op, right) ->
     let arg_type = operand_type op |> Type.Mono.Primitive in
     let result_type = operator_result_type op |> Type.Mono.Primitive in
-    let left_type, left_effect = infer_expr_exn t left ~env ~level in
-    let right_type, right_effect = infer_expr_exn t right ~env ~level in
-    Constraints.constrain_type_at_most_exn t.constraints left_type arg_type;
-    Constraints.constrain_type_at_most_exn t.constraints right_type arg_type;
-    let overall_effect = union_effects t [ left_effect; right_effect ] ~level in
+    let%bind left_type, left_effect = infer_expr t left ~env ~level in
+    let%bind right_type, right_effect = infer_expr t right ~env ~level in
+    let%bind () =
+      Constraints.constrain_type_at_most t.constraints left_type arg_type
+    in
+    let%bind () =
+      Constraints.constrain_type_at_most t.constraints right_type arg_type
+    in
+    let%map overall_effect =
+      union_effects t [ left_effect; right_effect ] ~level
+    in
     result_type, overall_effect
   | Unary_operator (uop, arg) ->
     let op_arg_type = unary_operand_type uop |> Type.Mono.Primitive in
     let result_type = unary_operator_result_type uop |> Type.Mono.Primitive in
-    let arg_type, effect_ = infer_expr_exn t arg ~env ~level in
-    Constraints.constrain_type_at_most_exn t.constraints arg_type op_arg_type;
+    let%bind arg_type, effect_ = infer_expr t arg ~env ~level in
+    let%map () =
+      Constraints.constrain_type_at_most t.constraints arg_type op_arg_type
+    in
     result_type, effect_
   | Impure_built_in impure_built_in ->
     infer_impure_built_in t impure_built_in ~env ~level
 
-and infer_value_exn (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
-  : Type.Mono.t
+and infer_value (t : t) (value : Explicit_syntax.Expr.value) ~env ~level
+  : Type.Mono.t Or_error.t
   =
+  let open Result.Let_syntax in
   match value with
   | Variable name ->
     (match (Context.find env name : Context.Binding.t option) with
      | None -> raise_s [%message "name not found" (name : Variable.t)]
      | Some (Value type_) ->
-       (match (type_ : Type.t) with
-        | Mono mono -> mono
-        | Poly poly -> instantiate t poly ~level)
+       return
+         (match (type_ : Type.t) with
+          | Mono mono -> mono
+          | Poly poly -> instantiate t poly ~level)
      | Some (Operation (_, _)) -> failwith "operations not implemented")
   | Lambda (params, body) ->
     let param_metas =
       List.map params ~f:(fun param ->
         param, Metavariables.fresh_type t.metavariables ~level)
     in
-    let env =
-      List.fold param_metas ~init:env ~f:(fun env (param, meta) ->
+    let%bind env =
+      List.fold param_metas ~init:(return env) ~f:(fun env (param, meta) ->
         match (param : Parameter.t) with
         | Wildcard -> env
         | Variable name ->
+          let%bind env = env in
           Context.extend env ~var:name ~type_:(Mono meta)
-          |> raise_if_cannot_shadow ~name)
+          |> error_if_cannot_shadow ~name)
     in
-    let result, effect_ = infer_expr_exn t body ~env ~level in
+    let%map result, effect_ = infer_expr t body ~env ~level in
     let param_types = List.map param_metas ~f:(fun (_, meta) -> meta) in
     Type.Mono.Arrow (param_types, effect_, result)
   | Fix_lambda (var, lambda) ->
     let meta_self = Metavariables.fresh_type t.metavariables ~level in
-    let env =
+    let%bind env =
       Context.extend env ~var ~type_:(Mono meta_self)
-      |> raise_if_cannot_shadow ~name:var
+      |> error_if_cannot_shadow ~name:var
     in
-    let lambda_type = infer_value_exn t (Lambda lambda) ~env ~level in
+    let%bind lambda_type = infer_value t (Lambda lambda) ~env ~level in
     (* [lambda] should be usable as [f_self] *)
-    Constraints.constrain_type_at_most_exn t.constraints lambda_type meta_self;
+    let%map () =
+      Constraints.constrain_type_at_most t.constraints lambda_type meta_self
+    in
     lambda_type
-  | Literal lit -> type_literal lit
+  | Literal lit -> type_literal lit |> return
   | Perform _ -> failwith "todo: perform"
   | Handler _ -> failwith "todo: handler"
 
@@ -272,20 +296,25 @@ and infer_impure_built_in
       (impure_built_in : Explicit_syntax.Expr.impure_built_in)
       ~env
       ~level
-  : Type.Mono.t * Effect.t
+  : (Type.Mono.t * Effect.t) Or_error.t
   =
+  let open Result.Let_syntax in
   match impure_built_in with
   (* these have no actual effect - they are used to implement the [console] effect's
      operations, and not exposed directly to user code *)
-  | Impure_println -> Primitive Unit, Labels Effect.Label.Set.empty
+  | Impure_println ->
+    return (Type.Mono.Primitive Unit, Effect.Labels Effect.Label.Set.empty)
+  | Impure_read_int ->
+    return (Type.Mono.Primitive Int, Effect.Labels Effect.Label.Set.empty)
   | Impure_print_int { value; newline = _ } ->
-    let type_value, effect_ = infer_expr_exn t value ~env ~level in
-    Constraints.constrain_type_at_most_exn
-      t.constraints
-      type_value
-      (Primitive Int);
-    Primitive Unit, effect_
-  | Impure_read_int -> Primitive Int, Labels Effect.Label.Set.empty
+    let%bind type_value, effect_ = infer_expr t value ~env ~level in
+    let%map () =
+      Constraints.constrain_type_at_most
+        t.constraints
+        type_value
+        (Primitive Int)
+    in
+    Type.Mono.Primitive Unit, effect_
 ;;
 
 let%expect_test "inference for a simple function" =
@@ -314,7 +343,7 @@ let%expect_test "inference for a simple function" =
   in
   let inference = create () in
   let type_, effect_ =
-    infer_expr_exn inference expr ~env:Context.empty ~level:0
+    infer_expr inference expr ~env:Context.empty ~level:0 |> Or_error.ok_exn
   in
   print_s [%message (type_ : Type.Mono.t) (effect_ : Effect.t)];
   [%expect
