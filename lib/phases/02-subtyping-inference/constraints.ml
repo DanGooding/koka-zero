@@ -214,7 +214,7 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
      | Primitive p, Primitive p' when [%equal: Type.Primitive.t] p p' ->
        return ()
      | Primitive p, Primitive p' ->
-       raise_s
+       Or_error.error_s
          [%message
            "inconsistent types" (p : Type.Primitive.t) (p' : Type.Primitive.t)]
      | Metavariable m, type_hi ->
@@ -276,7 +276,7 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
      | Variable v, _ | _, Variable v ->
        raise_s [%message "unexpected type variable" (v : Type.Variable.t)]
      | Arrow _, Primitive _ | Primitive _, Arrow _ ->
-       raise_s
+       Or_error.error_s
          [%message
            "type error: cannot relate"
              (type_lo : Type.Mono.t)
