@@ -11,6 +11,7 @@ include struct
   module Keyword = Keyword
   module Operator = Operator
   module Parameter = Parameter
+  module Polar_type = Polar_type
 end
 
 module Explicit_syntax = Koka_zero_ir_explicit_syntax.Explicit_syntax

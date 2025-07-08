@@ -207,7 +207,7 @@ let rec infer_expr
           ~(env : Context.t)
           ~(level : int)
           ~(effect_env : Effect_signature.Context.t)
-  : (Expl.Expr.t * Type.Mono.t * Effect.t) Or_static_error.t
+  : (Effect.t Expl.Expr.t * Type.Mono.t * Effect.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match expr with
@@ -252,16 +252,20 @@ let rec infer_expr
     let result : Type.Mono.t =
       Metavariables.fresh_type t.metavariables ~level
     in
-    let%bind overall_effect =
-      union_effects t (function_expr_effect :: arg_effects) ~level
-    in
-    let%map () =
+    let call_effect = Metavariables.fresh_effect t.metavariables ~level in
+    let%bind () =
       Constraints.constrain_type_at_most
         t.constraints
         function_type
-        (Arrow (arg_types, overall_effect, result))
+        (Arrow (arg_types, call_effect, result))
     in
-    Expl.Expr.Application (f, args), result, overall_effect
+    let%map overall_effect =
+      union_effects
+        t
+        (call_effect :: function_expr_effect :: arg_effects)
+        ~level
+    in
+    Expl.Expr.Application (f, args, call_effect), result, overall_effect
   | Seq (first, second) ->
     let%bind first, _type, first_effect =
       infer_expr t first ~env ~level ~effect_env
@@ -338,7 +342,7 @@ let rec infer_expr
     Expl.Expr.Impure_built_in impure_built_in, type_, effect_
 
 and infer_value (t : t) (value : Min.Expr.value) ~env ~level ~effect_env
-  : (Expl.Expr.value * Type.Mono.t) Or_static_error.t
+  : (Effect.t Expl.Expr.value * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match value with
@@ -379,7 +383,7 @@ and infer_value (t : t) (value : Min.Expr.value) ~env ~level ~effect_env
     Expl.Expr.Handler handler, type_
 
 and infer_lambda t ((params, body) : Min.Expr.lambda) ~env ~level ~effect_env
-  : (Expl.Expr.lambda * Type.Mono.t) Or_static_error.t
+  : (Effect.t Expl.Expr.lambda * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let param_metas =
@@ -404,7 +408,7 @@ and infer_fix_lambda
       ~env
       ~level
       ~effect_env
-  : (Expl.Expr.fix_lambda * Type.Mono.t) Or_static_error.t
+  : (Effect.t Expl.Expr.fix_lambda * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let meta_self = Metavariables.fresh_type t.metavariables ~level in
@@ -433,7 +437,8 @@ and infer_impure_built_in
       ~env
       ~level
       ~effect_env
-  : (Expl.Expr.impure_built_in * Type.Mono.t * Effect.t) Or_static_error.t
+  : (Effect.t Expl.Expr.impure_built_in * Type.Mono.t * Effect.t)
+      Or_static_error.t
   =
   let open Result.Let_syntax in
   match impure_built_in with
@@ -469,7 +474,7 @@ and infer_handler
       ~env
       ~level
       ~(effect_env : Effect_signature.Context.t)
-  : (Expl.Expr.handler * Type.Mono.t) Or_static_error.t
+  : (Effect.t Expl.Expr.handler * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind label, operation_shapes =
@@ -535,7 +540,8 @@ and infer_handler
       Some { Expl.Expr.op_argument = return_clause.op_argument; op_body }
   in
   let%map
-      (operations : (Operation_shape.t * Expl.Expr.op_handler) Variable.Map.t)
+      (operations
+        : (Operation_shape.t * Effect.t Expl.Expr.op_handler) Variable.Map.t)
     =
     Or_static_error.map_mapi
       operations
@@ -617,7 +623,7 @@ and infer_operation_clause
       ~env
       ~level
       ~effect_env
-  : Expl.Expr.op_handler Or_static_error.t
+  : Effect.t Expl.Expr.op_handler Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind env =
@@ -695,7 +701,7 @@ let infer_effect_decl (declaration : Effect_decl.t) ~env ~effect_env
 (** run inference on a function declaration, adding it (generalised) to the
     environment if well typed *)
 let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
-  : (Context.t * Expl.Decl.Fun.t) Or_static_error.t
+  : (Context.t * Effect.t Expl.Decl.Fun.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let f_name, _lambda = f in
@@ -715,7 +721,8 @@ let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
 ;;
 
 let infer_decl t (declaration : Min.Decl.t) ~env ~level ~effect_env
-  : (Context.t * Effect_signature.Context.t * Expl.Decl.t) Or_static_error.t
+  : (Context.t * Effect_signature.Context.t * Effect.t Expl.Decl.t)
+      Or_static_error.t
   =
   let open Result.Let_syntax in
   match declaration with
@@ -728,7 +735,7 @@ let infer_decl t (declaration : Min.Decl.t) ~env ~level ~effect_env
 ;;
 
 let infer_decls t (declarations : Min.Decl.t list) ~env ~level ~effect_env
-  : (Context.t * Effect_signature.Context.t * Expl.Decl.t list)
+  : (Context.t * Effect_signature.Context.t * Effect.t Expl.Decl.t list)
       Or_static_error.t
   =
   let open Result.Let_syntax in
@@ -772,7 +779,8 @@ let check_entry_point t ~env ~level : unit Or_static_error.t =
 ;;
 
 let infer_expr_toplevel (expr : Min.Expr.t) ~declarations
-  : (Polar_type.t * Polar_type.Effect.t * Expl.Expr.t) Or_static_error.t
+  : (Polar_type.t * Polar_type.Effect.t * Polar_type.Effect.t Expl.Expr.t)
+      Or_static_error.t
   =
   let open Result.Let_syntax in
   let t = create () in
@@ -787,11 +795,14 @@ let infer_expr_toplevel (expr : Min.Expr.t) ~declarations
   in
   let polar_type = Expansion.expand_type t.expansion type_ in
   let polar_effect = Expansion.expand_effect t.expansion effect_ in
+  let expr =
+    Expl.Expr.map_effect expr ~f:(Expansion.expand_effect t.expansion)
+  in
   polar_type, polar_effect, expr
 ;;
 
 let infer_program ?(print_constraint_graph = false) { Min.Program.declarations }
-  : Explicit_syntax.Program.t Or_static_error.t
+  : Polar_type.Effect.t Explicit_syntax.Program.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let t = create () in
@@ -800,32 +811,34 @@ let infer_program ?(print_constraint_graph = false) { Min.Program.declarations }
     @ declarations
     @ [ Min.Decl.Fun Min.Program.entry_point ]
   in
-  let%map declarations' =
+  let%map declarations =
     let env = Context.empty in
     let level = 0 in
     let effect_env = Effect_signature.Context.empty in
-    let%bind env, _effect_env, declarations' =
+    let%bind env, _effect_env, declarations =
       infer_decls t declarations ~env ~level ~effect_env
     in
     let%map () = check_entry_point t ~env ~level in
-    declarations'
+    declarations
   in
   if print_constraint_graph then Constraints.print_as_graph t.constraints;
-  { Expl.Program.declarations = declarations' }
+  let program = { Expl.Program.declarations } in
+  Expl.Program.map_effect program ~f:(Expansion.expand_effect t.expansion)
 ;;
 
 let infer_program_without_main { Min.Program.declarations }
-  : Explicit_syntax.Program.t Or_static_error.t
+  : Polar_type.Effect.t Explicit_syntax.Program.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let t = create () in
-  let%map _env, _effect_env, declarations' =
+  let%map _env, _effect_env, declarations =
     let env = Context.empty in
     let level = 0 in
     let effect_env = Effect_signature.Context.empty in
     infer_decls t declarations ~env ~level ~effect_env
   in
-  { Expl.Program.declarations = declarations' }
+  let program = { Expl.Program.declarations } in
+  Expl.Program.map_effect program ~f:(Expansion.expand_effect t.expansion)
 ;;
 
 let%expect_test "inference for a simple function" =
@@ -852,17 +865,10 @@ let%expect_test "inference for a simple function" =
                          , [ Value (Variable (Variable.of_user "f")) ] )
                      , [ Value (Variable (Variable.of_user "y")) ] ) ) )) )
   in
-  let inference = create () in
-  let expr, type_, effect_ =
-    infer_expr
-      inference
-      expr
-      ~env:Context.empty
-      ~level:0
-      ~effect_env:Effect_signature.Context.empty
-    |> Or_static_error.ok_exn
+  let type_, effect_, expr =
+    infer_expr_toplevel expr ~declarations:[] |> Or_static_error.ok_exn
   in
-  print_s [%message (expr : Expl.Expr.t)];
+  print_s [%message (expr : Polar_type.Effect.t Expl.Expr.t)];
   [%expect
     {|
     (expr
@@ -871,65 +877,22 @@ let%expect_test "inference for a simple function" =
        (Lambda
         (((Variable (User x)) (Variable (User f)) (Variable (User y)))
          (Operator
-          (Application (Value (Variable (User id)))
-           ((Value (Variable (User x)))))
+          (Application (Value (Variable (User id))) ((Value (Variable (User x))))
+           (Labels ()))
           (Int Plus)
           (Application
            (Application (Value (Variable (User id)))
-            ((Value (Variable (User f)))))
-           ((Value (Variable (User y)))))))))))
+            ((Value (Variable (User f)))) (Labels ()))
+           ((Value (Variable (User y)))) (Variable e0))))))))
     |}];
-  print_s [%message (type_ : Type.Mono.t) (effect_ : Effect.t)];
+  print_s [%message (type_ : Polar_type.t) (effect_ : Polar_type.Effect.t)];
   [%expect
     {|
     ((type_
-      (Arrow ((Metavariable tm1) (Metavariable tm2) (Metavariable tm3))
-       (Metavariable em3) (Primitive Int)))
-     (effect_ (Labels ())))
-    |}];
-  print_s [%sexp (inference.constraints : Constraints.t)];
-  [%expect
-    {|
-    ((type_constraints
-      ((tm1 ((lower_bounds ()) (upper_bounds ((Metavariable tm4)))))
-       (tm2 ((lower_bounds ()) (upper_bounds ((Metavariable tm6)))))
-       (tm4 ((lower_bounds ()) (upper_bounds ((Metavariable tm5)))))
-       (tm5 ((lower_bounds ()) (upper_bounds ((Primitive Int)))))
-       (tm6 ((lower_bounds ()) (upper_bounds ((Metavariable tm7)))))
-       (tm7
-        ((lower_bounds ())
-         (upper_bounds
-          ((Arrow ((Metavariable tm3)) (Metavariable em2) (Metavariable tm8))))))
-       (tm8 ((lower_bounds ()) (upper_bounds ((Primitive Int)))))))
-     (effect_constraints
-      ((em0 ((lower_bounds ((Labels ()))) (upper_bounds ((Metavariable em3)))))
-       (em1 ((lower_bounds ((Labels ()))) (upper_bounds ((Metavariable em2)))))
-       (em2 ((lower_bounds ((Labels ()))) (upper_bounds ((Metavariable em3)))))
-       (em3 ((lower_bounds ((Labels ()))) (upper_bounds ())))))
-     (already_seen_constraints <opaque>)
-     (metavariables
-      ((type_metavariable_source ((next 9) (prefix tm)))
-       (effect_metavariable_source ((next 4) (prefix em)))
-       (type_metavariable_levels
-        ((tm0 1) (tm1 0) (tm2 0) (tm3 0) (tm4 0) (tm5 0) (tm6 0) (tm7 0) (tm8 0)))
-       (effect_metavariable_levels ((em0 0) (em1 0) (em2 0) (em3 0))))))
-    |}];
-  let polar_type = Expansion.expand_type inference.expansion type_ in
-  let polar_effect = Expansion.expand_effect inference.expansion effect_ in
-  print_s
-    [%message (polar_type : Polar_type.t) (polar_effect : Polar_type.Effect.t)];
-  [%expect
-    {|
-    ((polar_type
       (Arrow
-       ((Intersection ((Intersection ((Intersection ((Primitive Int)))))))
-        (Intersection
-         ((Intersection
-           ((Intersection
-             ((Arrow ((Variable t6)) (Intersection ((Variable e1)))
-               (Intersection ((Primitive Int))))))))))
+       ((Primitive Int) (Arrow ((Variable t6)) (Variable e2) (Primitive Int))
         (Variable t6))
-       (Union ((Labels ()))) (Primitive Int)))
-     (polar_effect (Labels ())))
+       (Labels ()) (Primitive Int)))
+     (effect_ (Labels ())))
     |}]
 ;;

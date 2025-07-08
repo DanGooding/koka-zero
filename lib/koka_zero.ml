@@ -1,6 +1,7 @@
 open! Core
 module Static_error = Koka_zero_util.Static_error
 module Minimal_syntax = Koka_zero_ir_minimal_syntax.Minimal_syntax
+module Polar_type = Koka_zero_ir_common.Polar_type
 module Explicit_syntax = Koka_zero_ir_explicit_syntax.Explicit_syntax
 
 module Evidence_passing_syntax =

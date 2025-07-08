@@ -10,6 +10,7 @@ include struct
   module Keyword = Keyword
   module Operator = Operator
   module Parameter = Parameter
+  module Polar_type = Polar_type
 end
 
 include struct

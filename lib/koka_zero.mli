@@ -1,6 +1,7 @@
 open! Core
 module Static_error = Koka_zero_util.Static_error
 module Minimal_syntax = Koka_zero_ir_minimal_syntax.Minimal_syntax
+module Polar_type = Koka_zero_ir_common.Polar_type
 module Explicit_syntax = Koka_zero_ir_explicit_syntax.Explicit_syntax
 
 module Evidence_passing_syntax =
@@ -24,10 +25,11 @@ val parse_string
 val infer_program
   :  ?print_constraint_graph:bool
   -> Minimal_syntax.Program.t
-  -> Explicit_syntax.Program.t Static_error.Or_static_error.t
+  -> Polar_type.Effect.t Explicit_syntax.Program.t
+       Static_error.Or_static_error.t
 
 val translate
-  :  Explicit_syntax.Program.t
+  :  Polar_type.Effect.t Explicit_syntax.Program.t
   -> Evidence_passing_syntax.Program.t Static_error.Or_static_error.t
 
 val rewrite_program
