@@ -763,10 +763,11 @@ let check_entry_point t ~env ~level : unit Or_error.t =
     Constraints.constrain_type_at_most t.constraints t_actual t_expected
 ;;
 
-let infer_expr_toplevel t (expr : Min.Expr.t) ~declarations
+let infer_expr_toplevel (expr : Min.Expr.t) ~declarations
   : (Polar_type.t * Polar_type.Effect.t * Expl.Expr.t) Or_error.t
   =
   let open Result.Let_syntax in
+  let t = create () in
   let%map expr, type_, effect_ =
     let env = Context.empty in
     let level = 0 in
@@ -781,10 +782,11 @@ let infer_expr_toplevel t (expr : Min.Expr.t) ~declarations
   polar_type, polar_effect, expr
 ;;
 
-let infer_program t { Min.Program.declarations }
+let infer_program { Min.Program.declarations }
   : Explicit_syntax.Program.t Or_error.t
   =
   let open Result.Let_syntax in
+  let t = create () in
   let declarations =
     [ Min.Decl.Effect Effect_decl.console ]
     @ declarations
@@ -803,10 +805,11 @@ let infer_program t { Min.Program.declarations }
   { Expl.Program.declarations = declarations' }
 ;;
 
-let infer_program_without_main t { Min.Program.declarations }
+let infer_program_without_main { Min.Program.declarations }
   : Explicit_syntax.Program.t Or_error.t
   =
   let open Result.Let_syntax in
+  let t = create () in
   let%map _env, _effect_env, declarations' =
     let env = Context.empty in
     let level = 0 in
