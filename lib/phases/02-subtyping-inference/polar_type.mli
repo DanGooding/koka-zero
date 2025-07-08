@@ -23,6 +23,4 @@ type t =
   | Recursive of Type.Variable.t * t
 [@@deriving sexp_of]
 
-(* TODO: gadt with 'p Polarity.flip = Pos2Neg | Neg2Pos *)
-
 val variables : t -> Type.Variable.Set.t
