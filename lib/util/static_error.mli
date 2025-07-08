@@ -7,6 +7,8 @@ module Or_static_error : sig
   type nonrec 'a t = ('a, t) Result.t [@@deriving sexp_of]
 
   val ok_exn : 'a t -> 'a
+
+  include Monad_utils.S with type 'a t := 'a t
 end
 
 val syntax_error : ?at:Source_location.t -> string -> t

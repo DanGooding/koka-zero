@@ -204,22 +204,20 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
     (match type_lo, type_hi with
      | ( Arrow (args_lo, effect_lo, result_lo)
        , Arrow (args_hi, effect_hi, result_hi) ) ->
-       let%bind () =
-         match
-           List.map2 args_lo args_hi ~f:(fun arg_lo arg_hi ->
-             constrain_type_at_most t arg_hi arg_lo)
-         with
-         | Ok results -> Result.all_unit results
-         | Unequal_lengths ->
-           Error
-             (Static_error.type_error_s
-                [%message
-                  "function type has wrong number of arguments"
-                    (args_lo : Type.Mono.t list)
-                    (args_hi : Type.Mono.t list)])
-       in
-       let%bind () = constrain_effect_at_most t effect_lo effect_hi in
-       constrain_type_at_most t result_lo result_hi
+       (match%bind
+          Or_static_error.list_iter2 args_lo args_hi ~f:(fun arg_lo arg_hi ->
+            constrain_type_at_most t arg_hi arg_lo)
+        with
+        | Ok () ->
+          let%bind () = constrain_effect_at_most t effect_lo effect_hi in
+          constrain_type_at_most t result_lo result_hi
+        | Unequal_lengths ->
+          Error
+            (Static_error.type_error_s
+               [%message
+                 "function type has wrong number of arguments"
+                   (args_lo : Type.Mono.t list)
+                   (args_hi : Type.Mono.t list)]))
      | Primitive p, Primitive p' when [%equal: Type.Primitive.t] p p' ->
        return ()
      | Primitive p, Primitive p' ->
@@ -247,9 +245,8 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           (* add [m <= type_hi]*)
           m_bounds.upper_bounds <- type_hi :: m_bounds.upper_bounds;
           (* add transitive closure *)
-          List.map m_bounds.lower_bounds ~f:(fun below_m ->
+          Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
             constrain_type_at_most t below_m type_hi)
-          |> Result.all_unit
         | false ->
           (* need to copy [type_hi] down to [m_level] *)
           let approx_type_hi =
@@ -276,9 +273,8 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           (* add [type_less_than_m <= m] *)
           m_bounds.lower_bounds <- type_lo :: m_bounds.lower_bounds;
           (* add transitive closure *)
-          List.map m_bounds.upper_bounds ~f:(fun above_m ->
+          Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
             constrain_type_at_most t type_lo above_m)
-          |> Result.all_unit
         | false ->
           let approx_type_lo =
             extrude t type_lo ~to_level:m_level ~polarity_positive:true
@@ -369,9 +365,8 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
             Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
           in
           m_bounds.upper_bounds <- above_m :: m_bounds.upper_bounds;
-          List.map m_bounds.lower_bounds ~f:(fun below_m ->
+          Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
             constrain_effect_at_most t below_m above_m)
-          |> Result.all_unit
         | false ->
           let above_approx =
             extrude_effect t above_m ~to_level:m_level ~polarity_positive:false
@@ -391,9 +386,8 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
             Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
           in
           m_bounds.lower_bounds <- below_m :: m_bounds.lower_bounds;
-          List.map m_bounds.upper_bounds ~f:(fun above_m ->
+          Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
             constrain_effect_at_most t below_m above_m)
-          |> Result.all_unit
         | false ->
           let approx_below_m =
             extrude_effect t below_m ~to_level:m_level ~polarity_positive:true
