@@ -181,6 +181,7 @@ let expand_type t type_ =
     type_
     ~polarity_positive:true
     ~in_progress_type_metavariables:Type.Metavariable.Set.empty
+  |> Polar_type.simplify
 ;;
 
 let expand_effect t effect_ =
@@ -189,4 +190,5 @@ let expand_effect t effect_ =
     effect_
     ~polarity_positive:true
     ~in_progress_effect_metavariables:Effect.Metavariable.Set.empty
+  |> Polar_type.Effect.simplify
 ;;
