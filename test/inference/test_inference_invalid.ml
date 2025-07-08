@@ -3,38 +3,67 @@ open! Import
 module UE = Util.Expr
 module UP = Util.Parameter
 
-let%expect_test "occurs check rejects omega combinator" =
-  let expr =
+let%expect_test
+    "recursive types allow the omega combinator - but we can't use it"
+  =
+  let omega =
     E.Value
       (E.Lambda ([ UP.var "x" ], E.Application (UE.var "x", [ UE.var "x" ])))
+  in
+  Util.print_expr_inference_result omega;
+  (* this has type [Rec(t0. t0 -> _ t1) -> _ t1] *)
+  [%expect
+    {|
+    (Ok
+     ((Arrow
+       ((Recursive t0
+         (Intersection ((Arrow ((Variable t0)) (Variable e0) (Variable t1))))))
+       (Union ((Labels ()))) (Variable t1))
+      (Labels ())
+      (Value
+       (Lambda
+        (((Variable (User x)))
+         (Application (Value (Variable (User x))) ((Value (Variable (User x))))))))))
+    |}];
+  (* here we try to type [omega (fun x -> x) ()]
+     which should expand to [(fun x -> x) (fun x -> x) ()] which is just unit.
+     However we get a type error - because it doesn't take [x] as polymorphic
+     (which would require higher kinded polymorphism).
+  *)
+  let expr =
+    E.Application
+      ( E.Application
+          (omega, [ E.Value (E.Lambda ([ UP.var "y" ], UE.var "y")) ])
+      , [ E.Value (E.Literal Unit) ] )
   in
   Util.print_expr_inference_result expr;
   [%expect
     {|
     (Error
-     ((kind Type_error)
-      (message
-        "cannot unify\
-       \n(Metavariable a0)\
-       \nwith\
-       \n(Arrow ((Metavariable a0)) (Metavariable e0) (Metavariable a1))\
-       \n")
-      (location ()))) |}]
+     (("error when expanding constraint" (type_lo (Metavariable tm3))
+       (type_hi
+        (Arrow ((Primitive Unit)) (Unknown (Metavariable em2))
+         (Metavariable tm4))))
+      ("type error: cannot relate" (type_lo (Primitive Unit))
+       (type_hi
+        (Arrow ((Primitive Unit)) (Unknown (Metavariable em2))
+         (Metavariable tm4))))))
+    |}]
 ;;
 
-let%expect_test "if statement's branches must have the same type" =
+let%expect_test "if statement's branch types are unioned" =
   (* if true then 1 else () *)
   let expr = E.If_then_else (UE.lit_bool true, UE.lit_int 1, UE.lit_unit) in
   Util.print_expr_inference_result expr;
+  (* this isn't a type error, however code cannot do anything with the value of
+     type Union [Int; Bool] - since it doesn't know which case applies. *)
   [%expect
     {|
-    (Error
-     ((kind Type_error) (message  "cannot unify\
-                                 \nInt\
-                                 \nwith\
-                                 \nUnit\
-                                 \n")
-      (location ()))) |}]
+    (Ok
+     ((Union ((Primitive Unit) (Primitive Int))) (Union ((Labels ())))
+      (If_then_else (Value (Literal (Bool true))) (Value (Literal (Int 1)))
+       (Value (Literal Unit)))))
+    |}]
 ;;
 
 let%expect_test "fix lambdas name cannot collide with own parameters" =
@@ -46,10 +75,14 @@ let%expect_test "fix lambdas name cannot collide with own parameters" =
   Util.print_expr_inference_result expr;
   [%expect
     {|
-    (Error
-     ((kind Type_error)
-      (message "recursive function's name is shadowed by own parameter f")
-      (location ())))|}]
+    (Ok
+     ((Arrow ((Variable t0) (Variable t1)) (Labels ()) (Primitive Unit))
+      (Labels ())
+      (Value
+       (Fix_lambda
+        ((User f)
+         (((Variable (User g)) (Variable (User f))) (Value (Literal Unit))))))))
+    |}]
 ;;
 
 let%expect_test "cannot shadow functions at toplevel" =
@@ -60,11 +93,7 @@ let%expect_test "cannot shadow functions at toplevel" =
   in
   let program = { M.Program.declarations } in
   Util.print_check_program_without_main_result program;
-  [%expect
-    {|
-    (Error
-     ((kind Type_error) (message "cannot shadow 'foo' at toplevel")
-      (location ()))) |}]
+  [%expect {| (Error "cannot shadow 'foo' at toplevel") |}]
 ;;
 
 let%expect_test "handler must include all operations" =
@@ -85,11 +114,7 @@ let%expect_test "handler must include all operations" =
   in
   let body = Util.Expr.make_handle_expr state_handler_set_only UE.lit_unit in
   Util.print_expr_inference_result ~declarations body;
-  [%expect
-    {|
-    (Error
-     ((kind Type_error)
-      (message "handler does not match any effect: ((User set))") (location ()))) |}]
+  [%expect {| (Error "handler does not match any effect: ((User set))") |}]
 ;;
 
 let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
@@ -110,10 +135,8 @@ let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
   [%expect
     {|
     (Error
-     ((kind Type_error)
-      (message
-       "cannot handle operation `ask` declared as `fun` with `control` clause")
-      (location ()))) |}]
+     "cannot handle operation `ask` declared as `fun` with `control` clause")
+    |}]
 ;;
 
 let%expect_test "`fun` clause cannot use `resume`" =
@@ -130,8 +153,5 @@ let%expect_test "`fun` clause cannot use `resume`" =
   in
   let body = E.Value (E.Handler read_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect
-    {|
-    (Error
-     ((kind Type_error) (message "unbound variable: resume") (location ()))) |}]
+  [%expect {| (Error "unbound variable: resume") |}]
 ;;

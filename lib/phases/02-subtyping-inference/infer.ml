@@ -6,12 +6,19 @@ module Expl = Explicit_syntax
 type t =
   { metavariables : Metavariables.t
   ; constraints : Constraints.t
+  ; expansion : Expansion.t
   }
 
 let create () =
   let metavariables = Metavariables.create () in
   let constraints = Constraints.create ~metavariables in
-  { metavariables; constraints }
+  let expansion =
+    Expansion.create
+      ~constraints
+      ~type_variable_source:(Type.Variable.Name_source.fresh () ~prefix:"t")
+      ~effect_variable_source:(Effect.Variable.Name_source.fresh () ~prefix:"e")
+  in
+  { metavariables; constraints; expansion }
 ;;
 
 let union_effects t effects_ ~level =
@@ -757,7 +764,7 @@ let check_entry_point t ~env ~level : unit Or_error.t =
 ;;
 
 let infer_expr_toplevel t (expr : Min.Expr.t) ~declarations
-  : (Type.Mono.t * Effect.t * Expl.Expr.t) Or_error.t
+  : (Polar_type.t * Polar_type.Effect.t * Expl.Expr.t) Or_error.t
   =
   let open Result.Let_syntax in
   let%map expr, type_, effect_ =
@@ -769,8 +776,9 @@ let infer_expr_toplevel t (expr : Min.Expr.t) ~declarations
     in
     infer_expr t expr ~env ~level ~effect_env
   in
-  (* TODO: convert to a type with only unknown metavariables *)
-  type_, effect_, expr
+  let polar_type = Expansion.expand_type t.expansion type_ in
+  let polar_effect = Expansion.expand_effect t.expansion effect_ in
+  polar_type, polar_effect, expr
 ;;
 
 let infer_program t { Min.Program.declarations }
@@ -901,18 +909,8 @@ let%expect_test "inference for a simple function" =
         ((tm0 1) (tm1 0) (tm2 0) (tm3 0) (tm4 0) (tm5 0) (tm6 0) (tm7 0) (tm8 0)))
        (effect_metavariable_levels ((em0 0) (em1 0) (em2 0) (em3 0))))))
     |}];
-  let type_variable_source = Type.Variable.Name_source.fresh () ~prefix:"t" in
-  let effect_variable_source =
-    Effect.Variable.Name_source.fresh () ~prefix:"e"
-  in
-  let expansion =
-    Expansion.create
-      ~constraints:inference.constraints
-      ~type_variable_source
-      ~effect_variable_source
-  in
-  let polar_type = Expansion.expand_type expansion type_ in
-  let polar_effect = Expansion.expand_effect expansion effect_ in
+  let polar_type = Expansion.expand_type inference.expansion type_ in
+  let polar_effect = Expansion.expand_effect inference.expansion effect_ in
   print_s
     [%message (polar_type : Polar_type.t) (polar_effect : Polar_type.Effect.t)];
   [%expect
