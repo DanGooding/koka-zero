@@ -12,6 +12,7 @@ module Effect : sig
   [@@deriving sexp_of]
 
   val variables : t -> Effect.Variable.Set.t
+  val simplify : t -> t
 end
 
 type t =
@@ -24,3 +25,4 @@ type t =
 [@@deriving sexp_of]
 
 val variables : t -> Type.Variable.Set.t
+val simplify : t -> t

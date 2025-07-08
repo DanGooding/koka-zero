@@ -19,11 +19,12 @@ let%expect_test "identity gets polymorphic type" =
   [%expect
     {|
     (Ok
-     ((Union ((Primitive Unit))) (Union ((Labels ())))
+     ((Primitive Unit) (Labels ())
       (Let (User id) (Lambda (((Variable (User z))) (Value (Variable (User z)))))
        (Application
-        (Application (Value (Variable (User id))) ((Value (Variable (User id)))))
-        ((Value (Literal Unit)))))))
+        (Application (Value (Variable (User id))) ((Value (Variable (User id))))
+         (Labels ()))
+        ((Value (Literal Unit))) (Labels ())))))
     |}]
 ;;
 
@@ -42,14 +43,14 @@ let%expect_test "fix combinator allows recursion" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Recursive t0 (Intersection ((Variable t0)))))
-       (Union ((Labels ()))) (Variable t1))
+     ((Arrow ((Recursive t0 (Variable t0))) (Labels ()) (Variable t1))
       (Labels ())
       (Value
        (Fix_lambda
         ((User f)
          (((Variable (User x)))
-          (Application (Value (Variable (User f))) ((Value (Variable (User x)))))))))))
+          (Application (Value (Variable (User f))) ((Value (Variable (User x))))
+           (Labels ()))))))))
     |}]
 ;;
 
@@ -111,7 +112,7 @@ let%expect_test "int operators" =
   [%expect
     {|
     (Ok
-     ((Primitive Int) (Union ((Labels ())))
+     ((Primitive Int) (Labels ())
       (Operator (Value (Literal (Int 1))) (Int Plus)
        (Operator (Value (Literal (Int 2))) (Int Minus)
         (Operator (Value (Literal (Int 3))) (Int Times)
@@ -138,7 +139,7 @@ let%expect_test "comparsion operators" =
   [%expect
     {|
     (Ok
-     ((Primitive Bool) (Union ((Labels ())))
+     ((Primitive Bool) (Labels ())
       (Operator
        (Operator
         (Operator (Value (Literal (Int 3))) (Int Less_than)
@@ -166,7 +167,7 @@ let%expect_test "multi argument functions" =
   [%expect
     {|
     (Ok
-     ((Union ((Primitive Int))) (Union ((Labels ())))
+     ((Primitive Int) (Labels ())
       (Application
        (Value
         (Lambda
@@ -174,7 +175,8 @@ let%expect_test "multi argument functions" =
           (If_then_else (Value (Variable (User b))) (Value (Variable (User x)))
            (Value (Variable (User y)))))))
        ((Value (Literal (Bool true))) (Value (Literal (Int 1)))
-        (Value (Literal (Int 0)))))))
+        (Value (Literal (Int 0))))
+       (Labels ()))))
     |}]
 ;;
 
@@ -202,11 +204,12 @@ let%expect_test "declared functions are generalised" =
          ((User const_true)
           (()
            (Application (Value (Variable (User id)))
-            ((Value (Literal (Bool true))))))))
+            ((Value (Literal (Bool true)))) (Labels ())))))
         (Fun
          ((User const_three)
           (()
-           (Application (Value (Variable (User id))) ((Value (Literal (Int 3))))))))))))
+           (Application (Value (Variable (User id))) ((Value (Literal (Int 3))))
+            (Labels ())))))))))
     |}]
 ;;
 
@@ -216,7 +219,7 @@ let%expect_test "sequence doesn't require first to be unit" =
   [%expect
     {|
     (Ok
-     ((Primitive Bool) (Union ((Labels ())))
+     ((Primitive Bool) (Labels ())
       (Seq (Value (Literal (Int 0))) (Value (Literal (Bool true))))))
     |}]
 ;;
@@ -269,25 +272,15 @@ let%expect_test "handled effects reflected in subject's effect" =
   [%expect
     {|
     (Ok
-     ((Arrow
-       ((Intersection
-         ((Arrow () (Intersection ((Variable e1)))
-           (Intersection
-            ((Intersection
-              ((Intersection
-                ((Intersection
-                  ((Intersection
-                    ((Intersection
-                      ((Intersection
-                        ((Intersection ((Intersection ((Variable t10)))))))))))))))))))))))
+     ((Arrow ((Arrow () (Variable e2) (Variable t10)))
        (Union
-        ((Handled (exn)
+        ((Labels ())
+         (Handled (exn)
           (Union
-           ((Labels ())
-            (Handled (read)
-             (Union ((Labels ()) (Handled (read) (Union ((Labels ()))))))))))
-         (Labels ())))
-       (Union ((Primitive Unit))))
+           ((Handled (read)
+             (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
+            (Labels ()))))))
+       (Primitive Unit))
       (Labels ())
       (Value
        (Lambda
@@ -328,7 +321,22 @@ let%expect_test "handled effects reflected in subject's effect" =
                             (op_body (Value (Literal (Int 1)))))))))
                        (return_clause ()))))
                     ((Value
-                      (Lambda (() (Application (Value (Variable (User f))) ())))))))))))))))))))))
+                      (Lambda
+                       (()
+                        (Application (Value (Variable (User f))) ()
+                         (Variable e0))))))
+                    (Union ((Labels ()) (Labels ()))))))))
+               (Union
+                ((Handled (read)
+                  (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
+                 (Labels ()))))))))
+          (Union
+           ((Handled (exn)
+             (Union
+              ((Handled (read)
+                (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
+               (Labels ()))))
+            (Labels ())))))))))
     |}]
 ;;
 
@@ -375,9 +383,9 @@ let%expect_test "return clause is typed correctly" =
   [%expect
     {|
     (Ok
-     ((Union ((Primitive Unit)))
+     ((Primitive Unit)
       (Union
-       ((Handled (query) (Union ((Labels ()) (Labels (query))))) (Labels ())))
+       ((Labels ()) (Handled (query) (Union ((Labels (query)) (Labels ()))))))
       (Application
        (Value
         (Handler
@@ -399,7 +407,9 @@ let%expect_test "return clause is typed correctly" =
           (()
            (Application
             (Value (Perform ((operation (User test)) (performed_effect query))))
-            ((Value (Literal (Int 5))))))))))))
+            ((Value (Literal (Int 5)))) (Labels (query)))))))
+       (Union
+        ((Handled (query) (Union ((Labels (query)) (Labels ())))) (Labels ()))))))
     |}]
 ;;
 
@@ -434,13 +444,13 @@ let%expect_test "handlers can delegate to outer handlers" =
   [%expect
     {|
     (Ok
-     ((Union ((Primitive Int)))
+     ((Primitive Int)
       (Union
-       ((Handled (read)
+       ((Labels ())
+        (Handled (read)
          (Union
-          ((Labels ()) (Labels (read))
-           (Handled (read) (Union ((Labels ()) (Labels (read))))))))
-        (Labels ())))
+          ((Handled (read) (Union ((Labels (read)) (Labels ())))) (Labels (read))
+           (Labels ()))))))
       (Application
        (Value
         (Handler
@@ -466,7 +476,7 @@ let%expect_test "handlers can delegate to outer handlers" =
                        (Value
                         (Perform
                          ((operation (User ask)) (performed_effect read))))
-                       ((Value (Literal Unit))))
+                       ((Value (Literal Unit))) (Labels (read)))
                       (Int Plus) (Value (Literal (Int 1))))))))))
                (return_clause ()))))
             ((Value
@@ -475,7 +485,16 @@ let%expect_test "handlers can delegate to outer handlers" =
                 (Application
                  (Value
                   (Perform ((operation (User ask)) (performed_effect read))))
-                 ((Value (Literal Unit))))))))))))))))
+                 ((Value (Literal Unit))) (Labels (read)))))))
+            (Union
+             ((Handled (read) (Union ((Labels (read)) (Labels ()))))
+              (Labels (read)) (Labels ()))))))))
+       (Union
+        ((Handled (read)
+          (Union
+           ((Handled (read) (Union ((Labels (read)) (Labels ()))))
+            (Labels (read)) (Labels ()))))
+         (Labels ()))))))
     |}]
 ;;
 
@@ -493,7 +512,7 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Arrow () (Variable e0) (Intersection ((Variable t1)))))
+     ((Arrow ((Arrow () (Variable e0) (Variable t1)))
        (Union ((Labels ()) (Handled (choose) (Variable e0)))) (Variable t1))
       (Labels ())
       (Value

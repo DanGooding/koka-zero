@@ -15,15 +15,14 @@ let%expect_test
   [%expect
     {|
     (Ok
-     ((Arrow
-       ((Recursive t0
-         (Intersection ((Arrow ((Variable t0)) (Variable e0) (Variable t1))))))
-       (Union ((Labels ()))) (Variable t1))
+     ((Arrow ((Recursive t0 (Arrow ((Variable t0)) (Variable e1) (Variable t1))))
+       (Labels ()) (Variable t1))
       (Labels ())
       (Value
        (Lambda
         (((Variable (User x)))
-         (Application (Value (Variable (User x))) ((Value (Variable (User x))))))))))
+         (Application (Value (Variable (User x))) ((Value (Variable (User x))))
+          (Variable e0)))))))
     |}];
   (* here we try to type [omega (fun x -> x) ()]
      which should expand to [(fun x -> x) (fun x -> x) ()] which is just unit.
@@ -44,10 +43,10 @@ let%expect_test
       (error
        (("error when expanding constraint" (type_lo (Metavariable tm3))
          (type_hi
-          (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))
+          (Arrow ((Primitive Unit)) (Metavariable em4) (Metavariable tm4))))
         ("type error: cannot relate" (type_lo (Primitive Unit))
          (type_hi
-          (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))))
+          (Arrow ((Primitive Unit)) (Metavariable em4) (Metavariable tm4))))))
       (location ())))
     |}]
 ;;
@@ -61,7 +60,7 @@ let%expect_test "if statement's branch types are unioned" =
   [%expect
     {|
     (Ok
-     ((Union ((Primitive Unit) (Primitive Int))) (Union ((Labels ())))
+     ((Union ((Primitive Unit) (Primitive Int))) (Labels ())
       (If_then_else (Value (Literal (Bool true))) (Value (Literal (Int 1)))
        (Value (Literal Unit)))))
     |}]
