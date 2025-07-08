@@ -12,8 +12,9 @@ fun compute-the-answer {
   [%expect
     {|
     (Error
-     ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 2) (char 25)))))) |}];
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 2) (char 25))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
@@ -29,9 +30,10 @@ val n-3 = n - 3;
     {|
     (Error
      ((kind Syntax_error)
-      (message
+      (error
        "malformed identifier: a dash must be preceded by a letter or number, and followed by a letter")
-      (location (((filename ()) (line 2) (char 8)))))) |}];
+      (location (((filename ()) (line 2) (char 8))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
@@ -47,9 +49,10 @@ val n- = n;
     {|
     (Error
      ((kind Syntax_error)
-      (message
+      (error
        "malformed identifier: a dash must be preceded by a letter or number, and followed by a letter")
-      (location (((filename ()) (line 2) (char 7)))))) |}];
+      (location (((filename ()) (line 2) (char 7))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
@@ -64,8 +67,9 @@ let%expect_test "dash at start of identifier" =
   [%expect
     {|
     (Error
-     ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 2) (char 8)))))) |}];
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 2) (char 8))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
@@ -84,8 +88,9 @@ fun op-trailing-lambda-example() {
   [%expect
     {|
     (Error
-     ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 3) (char 9)))))) |}];
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 3) (char 9))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;

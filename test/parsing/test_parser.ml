@@ -20,7 +20,8 @@ let%expect_test "toplevel value declaration" =
   [%expect
     {|
     (Error
-     ((kind Unsupported_feature) (message "toplevel val binding") (location ()))) |}]
+     ((kind Unsupported_feature) (error "toplevel val binding") (location ())))
+    |}]
 ;;
 
 let%expect_test "single expression function" =
@@ -415,8 +416,9 @@ fun wrapper() {
   [%expect
     {|
     (Error
-     ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 4) (char 2)))))) |}];
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 4) (char 2))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
@@ -434,8 +436,9 @@ fun wrapper() {
   [%expect
     {|
     (Error
-     ((kind Syntax_error) (message "parse error")
-      (location (((filename ()) (line 5) (char 2)))))) |}];
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 5) (char 2))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
@@ -1296,7 +1299,8 @@ effect my-effect {
   [%expect
     {|
     (Error
-     ((kind Unsupported_feature) (message "non `control` effect") (location ()))) |}]
+     ((kind Unsupported_feature) (error "non `control` effect") (location ())))
+    |}]
 ;;
 
 let%expect_test "parameterised effect declaration" =
@@ -1356,8 +1360,9 @@ effect my-effect<a :: V> {
   [%expect
     {|
     (Error
-     ((kind Unsupported_feature) (message "type parameters for effect")
-      (location ()))) |}]
+     ((kind Unsupported_feature) (error "type parameters for effect")
+      (location ())))
+    |}]
 ;;
 
 let%expect_test "shorthand effect declaration" =
@@ -1529,7 +1534,8 @@ fun one-operation() {
   [%expect
     {|
     (Error
-     ((kind Unsupported_feature) (message "`execption` effect") (location ()))) |}]
+     ((kind Unsupported_feature) (error "`execption` effect") (location ())))
+    |}]
 ;;
 
 let%expect_test "handle" =
@@ -1642,8 +1648,8 @@ fun square(x : int) : <> int {
   [%expect
     {|
     (Error
-     ((kind Unsupported_feature) (message "return type annotation")
-      (location ()))) |}]
+     ((kind Unsupported_feature) (error "return type annotation") (location ())))
+    |}]
 ;;
 
 let%expect_test "effect annotations" =
@@ -1760,8 +1766,8 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
   [%expect
     {|
     (Error
-     ((kind Unsupported_feature) (message "return type annotation")
-      (location ()))) |}]
+     ((kind Unsupported_feature) (error "return type annotation") (location ())))
+    |}]
 ;;
 
 let%expect_test "apparently unnecessary brackets in arrow types" =
@@ -1818,8 +1824,9 @@ effect control f(x : int) : ( ((x : int, y : int)) -> (() -> (int)) );
   [%expect
     {|
     (Error
-     ((kind Syntax_error) (message "tuple type cannot have parameter labels")
-      (location ()))) |}]
+     ((kind Syntax_error) (error "tuple type cannot have parameter labels")
+      (location ())))
+    |}]
 ;;
 
 let%expect_test "kind annotations" =
@@ -1871,6 +1878,7 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
   [%expect
     {|
     (Error
-     ((kind Unsupported_feature) (message "type parameters for effect")
-      (location ()))) |}]
+     ((kind Unsupported_feature) (error "type parameters for effect")
+      (location ())))
+    |}]
 ;;

@@ -4,6 +4,5 @@ but within a function _defined_ under a handler (statically)
   type error: (("error when expanding constraint"
     (type_lo (Arrow () (Metavariable em16) (Primitive Unit)))
     (type_hi (Arrow () (Labels ()) (Primitive Unit))))
-   ("less-than constraint doesn't hold" (labels (exn))
-    (expected_at_most (console))))
+   ("constraint doesn't hold" (labels (exn)) (expected_at_most (console))))
   [1]

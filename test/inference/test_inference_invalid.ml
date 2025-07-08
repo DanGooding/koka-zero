@@ -40,10 +40,15 @@ let%expect_test
   [%expect
     {|
     (Error
-     (("error when expanding constraint" (type_lo (Metavariable tm3))
-       (type_hi (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))
-      ("type error: cannot relate" (type_lo (Primitive Unit))
-       (type_hi (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))))
+     ((kind Type_error)
+      (error
+       (("error when expanding constraint" (type_lo (Metavariable tm3))
+         (type_hi
+          (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))
+        ("type error: cannot relate" (type_lo (Primitive Unit))
+         (type_hi
+          (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))))
+      (location ())))
     |}]
 ;;
 
@@ -89,7 +94,10 @@ let%expect_test "cannot shadow functions at toplevel" =
   in
   let program = { M.Program.declarations } in
   Util.print_check_program_without_main_result program;
-  [%expect {| (Error "cannot shadow 'foo' at toplevel") |}]
+  [%expect {|
+    (Error
+     ((kind Type_error) (error "cannot shadow 'foo' at toplevel") (location ())))
+    |}]
 ;;
 
 let%expect_test "handler must include all operations" =
@@ -110,7 +118,11 @@ let%expect_test "handler must include all operations" =
   in
   let body = Util.Expr.make_handle_expr state_handler_set_only UE.lit_unit in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {| (Error "handler does not match any effect: ((User set))") |}]
+  [%expect {|
+    (Error
+     ((kind Type_error) (error "handler does not match any effect: ((User set))")
+      (location ())))
+    |}]
 ;;
 
 let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
@@ -131,7 +143,10 @@ let%expect_test "`control` handler is not allowed to implemnent `fun` operation"
   [%expect
     {|
     (Error
-     "cannot handle operation `ask` declared as `fun` with `control` clause")
+     ((kind Type_error)
+      (error
+       "cannot handle operation `ask` declared as `fun` with `control` clause")
+      (location ())))
     |}]
 ;;
 
@@ -149,5 +164,5 @@ let%expect_test "`fun` clause cannot use `resume`" =
   in
   let body = E.Value (E.Handler read_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {| (Error "unbound variable: resume") |}]
+  [%expect {| (Error ((kind Type_error) (error "unbound variable: resume") (location ()))) |}]
 ;;
