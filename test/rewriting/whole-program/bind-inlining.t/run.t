@@ -328,65 +328,56 @@ First show without any rewriting optimisations
               (Variable (Generated mon_74)))))
            Pure))
          Pure)
-        (Application (Variable (Language bind))
-         (((Let (Variable (Generated mon_76)) Pure (Variable (User foo))
-            (Let (Variable (Generated mon_80)) Pure
+        (Let (Variable (Generated mon_92)) Pure
+         (Let (Variable (Generated mon_76)) Pure (Variable (User foo))
+          (Let (Variable (Generated mon_80)) Pure
+           (Lambda
+            ((((Variable (User y)) Pure) ((Variable (Generated mon_77)) Pure))
+             Ctl
+             (Construct_pure
+              (Let (Variable (Generated mon_78)) Pure (Variable (User y))
+               (Let (Variable (Generated mon_79)) Pure (Variable (User y))
+                (Operator (Variable (Generated mon_78)) (Int Times)
+                 (Variable (Generated mon_79))))))))
+           (Let (Variable (Generated mon_84)) Pure
+            (Lambda
+             ((((Variable (User x)) Pure) ((Variable (Generated mon_81)) Pure))
+              Ctl
+              (Construct_pure
+               (Let (Variable (Generated mon_82)) Pure (Variable (User x))
+                (Let (Variable (Generated mon_83)) Pure (Variable (User x))
+                 (Operator (Variable (Generated mon_82)) (Int Plus)
+                  (Variable (Generated mon_83))))))))
+            (Let (Variable (Generated mon_89)) Pure
              (Lambda
-              ((((Variable (User y)) Pure)
-                ((Variable (Generated mon_77)) Pure))
+              ((((Variable (User m)) Pure)
+                ((Variable (Generated mon_85)) Pure))
                Ctl
                (Construct_pure
-                (Let (Variable (Generated mon_78)) Pure (Variable (User y))
-                 (Let (Variable (Generated mon_79)) Pure (Variable (User y))
-                  (Operator (Variable (Generated mon_78)) (Int Times)
-                   (Variable (Generated mon_79))))))))
-             (Let (Variable (Generated mon_84)) Pure
-              (Lambda
-               ((((Variable (User x)) Pure)
-                 ((Variable (Generated mon_81)) Pure))
-                Ctl
-                (Construct_pure
-                 (Let (Variable (Generated mon_82)) Pure (Variable (User x))
-                  (Let (Variable (Generated mon_83)) Pure (Variable (User x))
-                   (Operator (Variable (Generated mon_82)) (Int Plus)
-                    (Variable (Generated mon_83))))))))
-              (Let (Variable (Generated mon_89)) Pure
-               (Lambda
-                ((((Variable (User m)) Pure)
-                  ((Variable (Generated mon_85)) Pure))
-                 Ctl
-                 (Construct_pure
-                  (Lambda
-                   ((((Variable (User n)) Pure)
-                     ((Variable (Generated mon_86)) Pure))
-                    Ctl
-                    (Construct_pure
-                     (Let (Variable (Generated mon_87)) Pure
-                      (Variable (User m))
-                      (Let (Variable (Generated mon_88)) Pure
-                       (Variable (User n))
-                       (Operator (Variable (Generated mon_87)) (Int Minus)
-                        (Variable (Generated mon_88)))))))))))
-               (Let (Variable (Generated mon_90)) Pure (Literal (Int 3))
+                (Lambda
+                 ((((Variable (User n)) Pure)
+                   ((Variable (Generated mon_86)) Pure))
+                  Ctl
+                  (Construct_pure
+                   (Let (Variable (Generated mon_87)) Pure (Variable (User m))
+                    (Let (Variable (Generated mon_88)) Pure (Variable (User n))
+                     (Operator (Variable (Generated mon_87)) (Int Minus)
+                      (Variable (Generated mon_88)))))))))))
+             (Let (Variable (Generated mon_90)) Pure (Literal (Int 3))
+              (Match_ctl_pure
+               (subject
                 (Application (Variable (Generated mon_76))
                  (((Variable (Generated mon_80)) Pure)
                   ((Variable (Generated mon_84)) Pure)
                   ((Variable (Generated mon_89)) Pure)
                   ((Variable (Generated mon_90)) Pure)
                   ((Variable (Generated mon_73)) Pure))
-                 Ctl))))))
-           Ctl)
-          ((Variable (Generated mon_73)) Pure)
-          ((Lambda
-            ((((Variable (Generated mon_91)) Pure)
-              ((Variable (Generated mon_92)) Pure))
-             Ctl
-             (Application (Variable (Generated mon_75))
-              (((Variable (Generated mon_91)) Pure)
-               ((Variable (Generated mon_92)) Pure))
-              Ctl)))
-           Pure))
-         Ctl))))
+                 Ctl))
+               (pure_branch ((Generated mon_91) (Variable (Generated mon_91))))))))))
+         (Application (Variable (Generated mon_75))
+          (((Variable (Generated mon_92)) Pure)
+           ((Variable (Generated mon_73)) Pure))
+          Ctl)))))
      ((Language main)
       ((((Variable (Generated mon_93)) Pure)) Ctl
        (Application (Variable (Language bind))
@@ -977,16 +968,6 @@ Then show with bind-inlining and other rewriting applied
                   (((Variable (User h)) Pure)) Pure)
                  Pure))
                Ctl))))))))))
-     ((Generated opt_42)
-      ((((Variable (Generated mon_75)) Pure)) Pure
-       (Lambda
-        ((((Variable (Generated mon_91)) Pure)
-          ((Variable (Generated mon_92)) Pure))
-         Ctl
-         (Application (Variable (Generated mon_75))
-          (((Variable (Generated mon_91)) Pure)
-           ((Variable (Generated mon_92)) Pure))
-          Ctl)))))
      ((User main)
       ((((Variable (Generated mon_73)) Pure)) Ctl
        (Let (Variable (Generated mon_75)) Pure
@@ -998,81 +979,57 @@ Then show with bind-inlining and other rewriting applied
               (Variable (Generated mon_74)))))
            Pure))
          Pure)
-        (Match_ctl
-         (subject
-          (Let (Variable (Generated mon_76)) Pure (Variable (User foo))
-           (Let (Variable (Generated mon_80)) Pure
+        (Let (Variable (Generated mon_92)) Pure
+         (Let (Variable (Generated mon_76)) Pure (Variable (User foo))
+          (Let (Variable (Generated mon_80)) Pure
+           (Lambda
+            ((((Variable (User y)) Pure) ((Variable (Generated mon_77)) Pure))
+             Ctl
+             (Construct_pure
+              (Let (Variable (Generated mon_78)) Pure (Variable (User y))
+               (Let (Variable (Generated mon_79)) Pure (Variable (User y))
+                (Operator (Variable (Generated mon_78)) (Int Times)
+                 (Variable (Generated mon_79))))))))
+           (Let (Variable (Generated mon_84)) Pure
             (Lambda
-             ((((Variable (User y)) Pure) ((Variable (Generated mon_77)) Pure))
+             ((((Variable (User x)) Pure) ((Variable (Generated mon_81)) Pure))
               Ctl
               (Construct_pure
-               (Let (Variable (Generated mon_78)) Pure (Variable (User y))
-                (Let (Variable (Generated mon_79)) Pure (Variable (User y))
-                 (Operator (Variable (Generated mon_78)) (Int Times)
-                  (Variable (Generated mon_79))))))))
-            (Let (Variable (Generated mon_84)) Pure
+               (Let (Variable (Generated mon_82)) Pure (Variable (User x))
+                (Let (Variable (Generated mon_83)) Pure (Variable (User x))
+                 (Operator (Variable (Generated mon_82)) (Int Plus)
+                  (Variable (Generated mon_83))))))))
+            (Let (Variable (Generated mon_89)) Pure
              (Lambda
-              ((((Variable (User x)) Pure)
-                ((Variable (Generated mon_81)) Pure))
+              ((((Variable (User m)) Pure)
+                ((Variable (Generated mon_85)) Pure))
                Ctl
                (Construct_pure
-                (Let (Variable (Generated mon_82)) Pure (Variable (User x))
-                 (Let (Variable (Generated mon_83)) Pure (Variable (User x))
-                  (Operator (Variable (Generated mon_82)) (Int Plus)
-                   (Variable (Generated mon_83))))))))
-             (Let (Variable (Generated mon_89)) Pure
-              (Lambda
-               ((((Variable (User m)) Pure)
-                 ((Variable (Generated mon_85)) Pure))
-                Ctl
-                (Construct_pure
-                 (Lambda
-                  ((((Variable (User n)) Pure)
-                    ((Variable (Generated mon_86)) Pure))
-                   Ctl
-                   (Construct_pure
-                    (Let (Variable (Generated mon_87)) Pure (Variable (User m))
-                     (Let (Variable (Generated mon_88)) Pure
-                      (Variable (User n))
-                      (Operator (Variable (Generated mon_87)) (Int Minus)
-                       (Variable (Generated mon_88)))))))))))
-              (Let (Variable (Generated mon_90)) Pure (Literal (Int 3))
-               (Application (Variable (Generated mon_76))
-                (((Variable (Generated mon_80)) Pure)
-                 ((Variable (Generated mon_84)) Pure)
-                 ((Variable (Generated mon_89)) Pure)
-                 ((Variable (Generated mon_90)) Pure)
-                 ((Variable (Generated mon_73)) Pure))
-                Ctl)))))))
-         (pure_branch
-          ((Generated mon_91)
-           (Let (Variable (Generated mon_92)) Pure
-            (Variable (Generated mon_73))
-            (Application (Variable (Generated mon_75))
-             (((Variable (Generated mon_91)) Pure)
-              ((Variable (Generated mon_92)) Pure))
-             Ctl))))
-         (yield_branch
-          ((Generated opt_43) (Generated opt_44) (Generated opt_45)
-           (Construct_yield (marker (Variable (Generated opt_43)))
-            (op_clause (Variable (Generated opt_44)))
-            (resumption
-             (Lambda
-              ((((Variable (Generated opt_46)) Pure)
-                ((Variable (Generated opt_47)) Pure))
-               Ctl
-               (Application (Variable (Language bind))
-                (((Application (Variable (Generated opt_45))
-                   (((Variable (Generated opt_46)) Pure)
-                    ((Variable (Generated opt_47)) Pure))
-                   Ctl)
-                  Ctl)
-                 ((Variable (Generated opt_47)) Pure)
-                 ((Application (Variable (Generated opt_42))
-                   (((Variable (Generated mon_75)) Pure)) Pure)
-                  Pure))
-                Ctl)))))))))))
-     ((Generated opt_48)
+                (Lambda
+                 ((((Variable (User n)) Pure)
+                   ((Variable (Generated mon_86)) Pure))
+                  Ctl
+                  (Construct_pure
+                   (Let (Variable (Generated mon_87)) Pure (Variable (User m))
+                    (Let (Variable (Generated mon_88)) Pure (Variable (User n))
+                     (Operator (Variable (Generated mon_87)) (Int Minus)
+                      (Variable (Generated mon_88)))))))))))
+             (Let (Variable (Generated mon_90)) Pure (Literal (Int 3))
+              (Match_ctl_pure
+               (subject
+                (Application (Variable (Generated mon_76))
+                 (((Variable (Generated mon_80)) Pure)
+                  ((Variable (Generated mon_84)) Pure)
+                  ((Variable (Generated mon_89)) Pure)
+                  ((Variable (Generated mon_90)) Pure)
+                  ((Variable (Generated mon_73)) Pure))
+                 Ctl))
+               (pure_branch ((Generated mon_91) (Variable (Generated mon_91))))))))))
+         (Application (Variable (Generated mon_75))
+          (((Variable (Generated mon_92)) Pure)
+           ((Variable (Generated mon_73)) Pure))
+          Ctl)))))
+     ((Generated opt_42)
       (() Pure
        (Lambda
         ((((Variable (Generated mon_102)) Pure)
@@ -1133,22 +1090,22 @@ Then show with bind-inlining and other rewriting applied
           (Let (Variable (Generated mon_103)) Pure
            (Variable (Generated mon_93)) (Construct_pure (Literal Unit)))))
         (yield_branch
-         ((Generated opt_49) (Generated opt_50) (Generated opt_51)
-          (Construct_yield (marker (Variable (Generated opt_49)))
-           (op_clause (Variable (Generated opt_50)))
+         ((Generated opt_43) (Generated opt_44) (Generated opt_45)
+          (Construct_yield (marker (Variable (Generated opt_43)))
+           (op_clause (Variable (Generated opt_44)))
            (resumption
             (Lambda
-             ((((Variable (Generated opt_52)) Pure)
-               ((Variable (Generated opt_53)) Pure))
+             ((((Variable (Generated opt_46)) Pure)
+               ((Variable (Generated opt_47)) Pure))
               Ctl
               (Application (Variable (Language bind))
-               (((Application (Variable (Generated opt_51))
-                  (((Variable (Generated opt_52)) Pure)
-                   ((Variable (Generated opt_53)) Pure))
+               (((Application (Variable (Generated opt_45))
+                  (((Variable (Generated opt_46)) Pure)
+                   ((Variable (Generated opt_47)) Pure))
                   Ctl)
                  Ctl)
-                ((Variable (Generated opt_53)) Pure)
-                ((Application (Variable (Generated opt_48)) () Pure) Pure))
+                ((Variable (Generated opt_47)) Pure)
+                ((Application (Variable (Generated opt_42)) () Pure) Pure))
                Ctl))))))))))))
    (entry_expr
     (Application (Variable (Language main)) ((Nil_evidence_vector Pure)) Ctl)))
