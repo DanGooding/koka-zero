@@ -28,13 +28,31 @@ let raise { kind; error; location } =
 ;;
 
 module Or_static_error = struct
-  type nonrec 'a t = ('a, t) Result.t [@@deriving sexp_of]
+  module T' = struct
+    module T = struct
+      type nonrec 'a t = ('a, t) Result.t [@@deriving sexp_of]
 
-  let ok_exn t =
-    match t with
-    | Ok x -> x
-    | Error err -> raise err
-  ;;
+      let ok_exn t =
+        match t with
+        | Ok x -> x
+        | Error err -> raise err
+      ;;
+
+      let return = Result.return
+      let bind = Result.bind
+
+      let map =
+        let map = Result.map in
+        `Custom map
+      ;;
+    end
+
+    include T
+    include Monad.Make (T)
+  end
+
+  include T'
+  include Monad_utils.Make (T')
 end
 
 let error_of_kind ?at kind error = { kind; error; location = at }

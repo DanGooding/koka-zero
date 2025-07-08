@@ -24,6 +24,30 @@ module Make (M : Monad.S) = struct
     List.concat lists
   ;;
 
+  let list_iter xs ~f = List.map xs ~f |> M.all_unit
+
+  let list_iter2 xs ys ~f =
+    let open M.Let_syntax in
+    match (List.map2 xs ys ~f : _ List.Or_unequal_lengths.t) with
+    | Unequal_lengths -> return List.Or_unequal_lengths.Unequal_lengths
+    | Ok results ->
+      let%map () = M.all_unit results in
+      List.Or_unequal_lengths.Ok ()
+  ;;
+
+  let list_map xs ~f = List.map xs ~f |> M.all
+
+  let map_mapi m ~f =
+    let open M.Let_syntax in
+    Map.fold
+      m
+      ~init:(return (Map.empty (Map.comparator_s m)))
+      ~f:(fun ~key ~data acc ->
+        let%bind acc = acc in
+        let%map data = f ~key ~data in
+        Map.add_exn acc ~key ~data)
+  ;;
+
   let map_fold xs ~init ~f =
     let open M.Let_syntax in
     Map.fold xs ~init:(return init) ~f:(fun ~key ~data acc ->

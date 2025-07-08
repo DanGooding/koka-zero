@@ -21,6 +21,20 @@ module type S = sig
   (** a version of [List.concat_map] which runs in this monad *)
   val list_concat_map : 'a list -> f:('a -> 'b list t) -> 'b list t
 
+  val list_iter : 'a list -> f:('a -> unit t) -> unit t
+  val list_map : 'a list -> f:('a -> 'b t) -> 'b list t
+
+  val list_iter2
+    :  'a list
+    -> 'b list
+    -> f:('a -> 'b -> unit t)
+    -> unit List.Or_unequal_lengths.t t
+
+  val map_mapi
+    :  ('k, 'a, 'cmp) Map.t
+    -> f:(key:'k -> data:'a -> 'b t)
+    -> ('k, 'b, 'cmp) Map.t t
+
   (** a version of [Map.fold] which runs in this monad *)
   val map_fold
     :  ('k, 'v, 'cmp) Map.t

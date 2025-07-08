@@ -25,9 +25,8 @@ let union_effects t effects_ ~level =
   let open Result.Let_syntax in
   let overall_effect = Metavariables.fresh_effect t.metavariables ~level in
   let%map () =
-    List.map effects_ ~f:(fun effect_ ->
+    Or_static_error.list_iter effects_ ~f:(fun effect_ ->
       Constraints.constrain_effect_at_most t.constraints effect_ overall_effect)
-    |> Result.all_unit
   in
   overall_effect
 ;;
@@ -243,8 +242,8 @@ let rec infer_expr
     Expl.Expr.Let_mono (var, subject, body), type_body, overall_effect
   | Application (f, args) ->
     let%bind args_and_types_and_effects =
-      List.map args ~f:(fun arg -> infer_expr t arg ~env ~level ~effect_env)
-      |> Result.all
+      Or_static_error.list_map args ~f:(fun arg ->
+        infer_expr t arg ~env ~level ~effect_env)
     in
     let args, arg_types, arg_effects = List.unzip3 args_and_types_and_effects in
     let%bind f, function_type, function_expr_effect =
@@ -388,11 +387,10 @@ and infer_lambda t ((params, body) : Min.Expr.lambda) ~env ~level ~effect_env
       param, Metavariables.fresh_type t.metavariables ~level)
   in
   let%bind env =
-    List.fold param_metas ~init:(return env) ~f:(fun env (param, meta) ->
+    Or_static_error.list_fold param_metas ~init:env ~f:(fun env (param, meta) ->
       match (param : Parameter.t) with
-      | Wildcard -> env
+      | Wildcard -> return env
       | Variable name ->
-        let%bind env = env in
         Context.extend env ~var:name ~type_:(Mono meta)
         |> error_if_cannot_shadow ~name)
   in
@@ -539,72 +537,70 @@ and infer_handler
   let%map
       (operations : (Operation_shape.t * Expl.Expr.op_handler) Variable.Map.t)
     =
-    Map.mapi operations ~f:(fun ~key:name ~data:(handler_shape, op_handler) ->
-      let declared_shape = Map.find_exn operation_shapes name in
-      let%bind () =
-        check_handler_shape
-          ~handler:handler_shape
-          ~declaration:declared_shape
-          ~name
-      in
-      (* the subject wants a function [a -> <l> b] at the call-site
-         the clause will be a function [A -> f B]
-         where A -> <> B <= a - <l> b
+    Or_static_error.map_mapi
+      operations
+      ~f:(fun ~key:name ~data:(handler_shape, op_handler) ->
+        let declared_shape = Map.find_exn operation_shapes name in
+        let%bind () =
+          check_handler_shape
+            ~handler:handler_shape
+            ~declaration:declared_shape
+            ~name
+        in
+        (* the subject wants a function [a -> <l> b] at the call-site
+           the clause will be a function [A -> f B]
+           where A -> <> B <= a - <l> b
 
-         need a,b separately, check: A -> F B <= a -> fresh() b
-         then eff_handler >= F
-      *)
-      let%bind t_argument, t_answer =
-        match Context.find env name with
-        | Some (Operation { argument; answer; label = _ }) ->
-          return (argument, answer)
-        | Some (Value _) ->
-          raise_s [%message "operation shadowed by value" (name : Variable.t)]
-        | None ->
-          Error
-            (Static_error.type_error_s
-               [%message "operation not in scope" (name : Variable.t)])
-      in
-      let%map op_handler =
-        match (handler_shape : Operation_shape.t) with
-        | Fun ->
-          infer_operation_clause
-            t
-            op_handler
-            ~t_argument
-            ~t_clause:t_answer
-            ~eff_handler
-            ~env
-            ~level
-            ~effect_env
-        | Control ->
-          let t_resume =
-            Type.Mono.Arrow ([ t_answer ], eff_handler, t_handler_result)
-          in
-          let env =
-            match
-              Context.extend env ~var:Keyword.resume ~type_:(Mono t_resume)
-            with
-            | `Ok env_with_resume -> env_with_resume
-            | `Cannot_shadow ->
-              raise_s
-                [%message "`resume` must be shadowable - can nest handlers"]
-          in
-          infer_operation_clause
-            t
-            op_handler
-            ~t_argument
-            ~t_clause:t_handler_result
-            ~eff_handler
-            ~env
-            ~level
-            ~effect_env
-      in
-      handler_shape, op_handler)
-    |> Map.fold ~init:(return Variable.Map.empty) ~f:(fun ~key ~data map ->
-      let%bind data = data in
-      let%map map = map in
-      Map.add_exn map ~key ~data)
+           need a,b separately, check: A -> F B <= a -> fresh() b
+           then eff_handler >= F
+        *)
+        let%bind t_argument, t_answer =
+          match Context.find env name with
+          | Some (Operation { argument; answer; label = _ }) ->
+            return (argument, answer)
+          | Some (Value _) ->
+            raise_s [%message "operation shadowed by value" (name : Variable.t)]
+          | None ->
+            Error
+              (Static_error.type_error_s
+                 [%message "operation not in scope" (name : Variable.t)])
+        in
+        let%map op_handler =
+          match (handler_shape : Operation_shape.t) with
+          | Fun ->
+            infer_operation_clause
+              t
+              op_handler
+              ~t_argument
+              ~t_clause:t_answer
+              ~eff_handler
+              ~env
+              ~level
+              ~effect_env
+          | Control ->
+            let t_resume =
+              Type.Mono.Arrow ([ t_answer ], eff_handler, t_handler_result)
+            in
+            let env =
+              match
+                Context.extend env ~var:Keyword.resume ~type_:(Mono t_resume)
+              with
+              | `Ok env_with_resume -> env_with_resume
+              | `Cannot_shadow ->
+                raise_s
+                  [%message "`resume` must be shadowable - can nest handlers"]
+            in
+            infer_operation_clause
+              t
+              op_handler
+              ~t_argument
+              ~t_clause:t_handler_result
+              ~eff_handler
+              ~env
+              ~level
+              ~effect_env
+        in
+        handler_shape, op_handler)
   in
   ( { Expl.Expr.operations; return_clause; handled_effect = label }
   , Type.Mono.Arrow
@@ -649,19 +645,20 @@ let bind_operations (env : Context.t) ~(declaration : Effect_decl.t)
   =
   let open Result.Let_syntax in
   let { Effect_decl.name = label; operations } = declaration in
-  Map.to_alist operations
-  |> List.fold ~init:(return env) ~f:(fun env (op_name, op) ->
-    let%bind env = env in
-    let { Effect_decl.Operation.shape = _; argument; answer } = op in
-    match
-      Context.extend_operation env ~var:op_name ~argument ~answer ~label
-    with
-    | `Ok env' -> return env'
-    | `Cannot_shadow ->
-      Error
-        (Static_error.type_errorf
-           "operation names must be unique: '%s' is reused"
-           (Variable.to_string_user op_name)))
+  Or_static_error.map_fold
+    operations
+    ~init:env
+    ~f:(fun ~key:op_name ~data:op env ->
+      let { Effect_decl.Operation.shape = _; argument; answer } = op in
+      match
+        Context.extend_operation env ~var:op_name ~argument ~answer ~label
+      with
+      | `Ok env' -> return env'
+      | `Cannot_shadow ->
+        Error
+          (Static_error.type_errorf
+             "operation names must be unique: '%s' is reused"
+             (Variable.to_string_user op_name)))
 ;;
 
 (** add an effect's signature to the effect environment *)
@@ -737,11 +734,10 @@ let infer_decls t (declarations : Min.Decl.t list) ~env ~level ~effect_env
   let open Result.Let_syntax in
   (* importantly this is a left fold *)
   let%map env', effect_env', declarations_rev' =
-    List.fold
+    Or_static_error.list_fold
       declarations
-      ~init:(return (env, effect_env, []))
-      ~f:(fun acc declaration ->
-        let%bind env, effect_env, declarations_rev = acc in
+      ~init:(env, effect_env, [])
+      ~f:(fun (env, effect_env, declarations_rev) declaration ->
         let%map env', effect_env', declaration' =
           infer_decl t declaration ~env ~level ~effect_env
         in
