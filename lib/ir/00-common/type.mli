@@ -33,8 +33,6 @@ module Primitive : sig
     | Bool
     | Unit
   [@@deriving equal, compare, sexp_of, hash]
-
-  val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 end
 
 (** a monotype contains no forall quantifiers *)
@@ -44,8 +42,6 @@ module Mono : sig
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
   [@@deriving sexp_of, compare, hash]
-
-  val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
 
   val max_level
     :  t

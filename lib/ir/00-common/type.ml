@@ -32,10 +32,6 @@ module Primitive = struct
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
-
-  let metavariables = function
-    | Int | Bool | Unit -> Metavariable.Set.empty, Effect.Metavariable.Set.empty
-  ;;
 end
 
 (* TODO: currently have no annotations, but will need to use a variant to
@@ -51,21 +47,6 @@ module Mono = struct
   end (* disable "fragile-match" for generated code *) [@warning "-4"]
 
   include T
-
-  let rec metavariables = function
-    | Metavariable v ->
-      Metavariable.Set.singleton v, Effect.Metavariable.Set.empty
-    | Primitive p -> Primitive.metavariables p
-    | Arrow (t_args, effect_, t_result) ->
-      let arg_metas, arg_effect_metas =
-        List.map t_args ~f:metavariables |> List.unzip
-      in
-      let result_meta, result_effect_meta = metavariables t_result in
-      let effect_meta = Effect.metavariables effect_ in
-      ( Metavariable.Set.union_list (result_meta :: arg_metas)
-      , Effect.Metavariable.Set.union_list
-          (effect_meta :: result_effect_meta :: arg_effect_metas) )
-  ;;
 
   let rec max_level t ~type_metavariable_level ~effect_metavariable_level =
     match t with

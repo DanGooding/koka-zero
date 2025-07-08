@@ -39,12 +39,6 @@ type t =
   | Handled of Set.M(Label).t * Metavariable.t
 [@@deriving sexp_of, compare, hash]
 
-let metavariables = function
-  | Metavariable meta -> Metavariable.Set.singleton meta
-  | Labels _ -> Metavariable.Set.empty
-  | Handled (_, meta) -> Metavariable.Set.singleton meta
-;;
-
 let max_level t ~metavariable_level : int =
   match t with
   | Metavariable meta | Handled (_, meta) -> metavariable_level meta

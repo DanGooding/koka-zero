@@ -41,5 +41,4 @@ type t =
   | Handled of Label.Set.t * Metavariable.t
 [@@deriving sexp_of, compare, hash]
 
-val metavariables : t -> Metavariable.Set.t
 val max_level : t -> metavariable_level:(Metavariable.t -> int) -> int
