@@ -23,15 +23,11 @@ module Metavariable = struct
 end
 
 module Primitive = struct
-  module T = struct
-    type t =
-      | Int
-      | Bool
-      | Unit
-    [@@deriving equal, compare, sexp_of, hash]
-  end (* disable "fragile-match" for generated code *) [@warning "-4"]
-
-  include T
+  type t =
+    | Int
+    | Bool
+    | Unit
+  [@@deriving equal, compare, sexp_of, hash]
 end
 
 (* TODO: currently have no annotations, but will need to use a variant to
