@@ -267,6 +267,18 @@ let rec compile_expr
       ~runtime
       ~effect_reprs
       ~outer_symbol
+  | EPS.Expr.Match_ctl_pure { subject = e_subject; pure_branch } ->
+    let%bind subject =
+      compile_expr_ctl e_subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_match_ctl_pure
+      subject
+      ~pure_branch
+      ~is_tail_position:Is_tail_position.Non_tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   | EPS.Expr.Fresh_marker ->
     let { Runtime.fresh_marker; _ } = runtime in
     let%bind m =
@@ -537,6 +549,18 @@ and compile_tail_position_expr
       ~runtime
       ~effect_reprs
       ~outer_symbol
+  | Match_ctl_pure { subject; pure_branch } ->
+    let%bind subject =
+      compile_expr_ctl subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_match_ctl_pure
+      subject
+      ~pure_branch
+      ~is_tail_position:Is_tail_position.Tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   | Match_op { subject; normal_branch; tail_branch } ->
     let%bind subject =
       compile_expr_pure_packed subject ~env ~runtime ~effect_reprs ~outer_symbol
@@ -724,6 +748,39 @@ and compile_match_ctl
     ~cond_i1:is_yield_i1
     ~compile_true:compile_yield
     ~compile_false:compile_pure
+
+(** like [Match_ctl] but we know statically the tag will be [Pure]. *)
+and compile_match_ctl_pure
+  : type result.
+    Ctl_repr.Maybe_yield_repr.t
+    -> pure_branch:Variable.t * EPS.Expr.t
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t
+    -> result Codegen.t
+  =
+  fun subject
+    ~pure_branch
+    ~is_tail_position
+    ~env
+    ~runtime
+    ~effect_reprs
+    ~outer_symbol ->
+  let open Codegen.Let_syntax in
+  let x_value, body = pure_branch in
+  let%bind content = Ctl_repr.Maybe_yield_repr.get_content subject in
+  let env' =
+    Context.add_local_exn env ~name:x_value ~value:(Pure (Packed content))
+  in
+  compile_maybe_tail_position_expr
+    body
+    ~is_tail_position
+    ~env:env'
+    ~runtime
+    ~effect_reprs
+    ~outer_symbol
 
 (** [compile_match_op subject ~normal_branch ~tail_branch ...] compiles a match
     statement on a [Types.op] pointed to by [subject], calling either
