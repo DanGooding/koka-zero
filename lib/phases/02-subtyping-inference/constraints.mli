@@ -25,3 +25,5 @@ val add_fresh_effect_exn
   -> Effect.Metavariable.t
   -> Effect.t Bounds.t
   -> unit
+
+val print_as_graph : t -> unit

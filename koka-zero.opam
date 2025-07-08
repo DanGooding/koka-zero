@@ -13,6 +13,7 @@ depends: [
   "dune" {>= "2.8"}
   "llvm" {= "18-static"}
   "menhir" {>= "20240715" & < "20250101"}
+  "ocamldot" {>= "1.1" & < "1.2"}
   "ppx_jane" {>= "v0.17" & < "v.0.18"}
   "ppx_expect" {with-test}
   "odoc" {with-doc}
