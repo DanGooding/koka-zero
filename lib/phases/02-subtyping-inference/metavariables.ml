@@ -46,7 +46,7 @@ let fresh_effect_metavariable t ~level : Effect.Metavariable.t =
 ;;
 
 let fresh_effect t ~level : Effect.t =
-  Unknown (Metavariable (fresh_effect_metavariable t ~level))
+  Metavariable (fresh_effect_metavariable t ~level)
 ;;
 
 let type_level_exn t meta = Hashtbl.find_exn t.type_metavariable_levels meta

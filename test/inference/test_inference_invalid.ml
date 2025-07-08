@@ -41,13 +41,9 @@ let%expect_test
     {|
     (Error
      (("error when expanding constraint" (type_lo (Metavariable tm3))
-       (type_hi
-        (Arrow ((Primitive Unit)) (Unknown (Metavariable em2))
-         (Metavariable tm4))))
+       (type_hi (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))
       ("type error: cannot relate" (type_lo (Primitive Unit))
-       (type_hi
-        (Arrow ((Primitive Unit)) (Unknown (Metavariable em2))
-         (Metavariable tm4))))))
+       (type_hi (Arrow ((Primitive Unit)) (Metavariable em2) (Metavariable tm4))))))
     |}]
 ;;
 

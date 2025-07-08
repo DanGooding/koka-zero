@@ -63,7 +63,9 @@ let rec extrude_aux
     let result = extrude_aux t result ~to_level ~polarity_positive ~cache in
     Arrow (args, effect_, result)
   | Metavariable m
-    when Metavariables.type_level_exn t.metavariables m > to_level ->
+    when Metavariables.type_level_exn t.metavariables m <= to_level ->
+    Metavariable m
+  | Metavariable m ->
     (* need to lower m to [level] *)
     let polarity_cache =
       Hashtbl.find_or_add cache m ~default:Bool.Table.create
@@ -97,7 +99,6 @@ let rec extrude_aux
            in
            add_fresh_type_exn t fresh bounds);
        Metavariable fresh)
-  | Metavariable m -> Metavariable m
 
 and extrude_effect_aux
       t
@@ -109,31 +110,40 @@ and extrude_effect_aux
   =
   match effect_ with
   | Labels labels -> Labels labels
-  | Unknown unknown ->
-    Unknown
-      (extrude_unkown_effect_aux t unknown ~to_level ~polarity_positive ~cache)
-  | Handled (labels, unknown) ->
+  | Metavariable meta ->
+    Metavariable
+      (extrude_effect_metavariable_aux
+         t
+         meta
+         ~to_level
+         ~polarity_positive
+         ~cache)
+  | Handled (labels, meta) ->
     Handled
       ( labels
-      , extrude_unkown_effect_aux t unknown ~to_level ~polarity_positive ~cache
-      )
+      , extrude_effect_metavariable_aux
+          t
+          meta
+          ~to_level
+          ~polarity_positive
+          ~cache )
 
-and extrude_unkown_effect_aux
+and extrude_effect_metavariable_aux
       t
-      (effect_ : Effect.Unknown.t)
+      (m : Effect.Metavariable.t)
       ~to_level
       ~polarity_positive
       ~cache
+  : Effect.Metavariable.t
   =
-  match effect_ with
-  | Variable v -> Variable v
-  | Metavariable m
-    when Metavariables.effect_level_exn t.metavariables m > to_level ->
+  match Metavariables.effect_level_exn t.metavariables m > to_level with
+  | false -> m
+  | true ->
     let polarity_cache =
       Hashtbl.find_or_add cache m ~default:Bool.Table.create
     in
     (match Hashtbl.find polarity_cache polarity_positive with
-     | Some fresh -> Metavariable fresh
+     | Some fresh -> fresh
      | None ->
        let fresh =
          Metavariables.fresh_effect_metavariable t.metavariables ~level:to_level
@@ -160,8 +170,7 @@ and extrude_unkown_effect_aux
                { Bounds.lower_bounds; upper_bounds }
            in
            add_fresh_effect_exn t fresh bounds);
-       Metavariable fresh)
-  | Metavariable m -> Metavariable m
+       fresh)
 ;;
 
 let extrude t type_ ~to_level ~polarity_positive =
@@ -300,7 +309,7 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
        (* effect_lo - labels_lo <= labels_hi *)
        constrain_effect_at_most
          t
-         (Unknown effect_lo)
+         (Metavariable effect_lo)
          (Labels (Set.union labels_lo labels_hi))
      | Labels labels_lo, Handled (labels_hi, effect_hi) ->
        (* labels_lo <= effect_hi - labels_hi *)
@@ -316,7 +325,7 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
         | true ->
           (* it's optional whether effect_hi contains labels' or not.
              so the constraint reduces to labels_lo <= effect_hi *)
-          constrain_effect_at_most t (Labels labels_lo) (Unknown effect_hi))
+          constrain_effect_at_most t (Labels labels_lo) (Metavariable effect_hi))
      | Handled (labels_lo, effect_lo), Handled (labels_hi, effect_hi) ->
        (* effect_lo - labels_lo <= effect_hi - labels_hi
         we reduce into multiple simpler but equiavalent constraints to make progress *)
@@ -326,7 +335,7 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
          constrain_effect_at_most
            t
            (Handled (labels_lo, effect_lo))
-           (Unknown effect_hi)
+           (Metavariable effect_hi)
          (* add back the info that [effect_lo] does not contain any of [labels_hi], 
          except possibly those in [labels_lo]:
          effect_lo <= effect_lo - (labels_hi - labels_lo) *)
@@ -338,9 +347,9 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
        in
        constrain_effect_at_most
          t
-         (Unknown effect_lo)
+         (Metavariable effect_lo)
          (Handled (Set.diff labels_hi labels_lo, effect_lo))
-     | Unknown (Metavariable m), above_m ->
+     | Metavariable m, above_m ->
        let m_level = Metavariables.effect_level_exn t.metavariables m in
        let above_m_level =
          Effect.max_level
@@ -361,8 +370,8 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
             extrude_effect t above_m ~to_level:m_level ~polarity_positive:false
           in
           let%bind () = constrain_effect_at_most t above_approx above_m in
-          constrain_effect_at_most t (Unknown (Metavariable m)) above_approx)
-     | below_m, Unknown (Metavariable m) ->
+          constrain_effect_at_most t (Metavariable m) above_approx)
+     | below_m, Metavariable m ->
        let m_level = Metavariables.effect_level_exn t.metavariables m in
        let below_m_level =
          Effect.max_level
@@ -383,11 +392,7 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
             extrude_effect t below_m ~to_level:m_level ~polarity_positive:true
           in
           let%bind () = constrain_effect_at_most t below_m approx_below_m in
-          constrain_effect_at_most t approx_below_m (Unknown (Metavariable m)))
-     | Unknown (Variable v), _ | _, Unknown (Variable v) ->
-       Or_error.error_s
-         [%message
-           "unexpected effect variable in constraint" (v : Effect.Variable.t)])
+          constrain_effect_at_most t approx_below_m (Metavariable m)))
 ;;
 
 let constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t) =
