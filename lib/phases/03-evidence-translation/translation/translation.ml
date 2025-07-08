@@ -43,7 +43,7 @@ let rec translate_expr
     | Expl.Expr.Value v ->
       let%map (`Pure v') = translate_value v in
       Maybe_effectful.Pure v'
-    | Expl.Expr.Application (e_f, e_args, _call_effect) ->
+    | Expl.Expr.Application (e_f, e_args, call_effect) ->
       (* `e_f(e_1, e_2, ..., e_n)` translates to: *)
       (* `(e_f,evv) >>= (\f evv. (e_1,evv) >>= (\x1 evv. (e_2,evv) >>= (\x2 evv.
          ... (e_n, evv) >>= (\xn evv. f(x1, x2, ..., xn, evv) ))))` *)
@@ -59,10 +59,22 @@ let rec translate_expr
           ~evv
           ~f:(fun xs ~evv ->
             let args = xs @ [ evv ] in
-            EPS.Expr.Application
-              (f, List.map args ~f:(fun arg -> arg, EPS.Type.Pure), Ctl)
-            |> Maybe_effectful.Effectful
-            |> return))
+            match Polar_type.Effect.is_total call_effect with
+            | false ->
+              EPS.Expr.Application
+                (f, List.map args ~f:(fun arg -> arg, EPS.Type.Pure), Ctl)
+              |> Maybe_effectful.Effectful
+              |> return
+            | true ->
+              (* optimisation: know this specific instantiation of [f] won't actually perform any effect *)
+              let subject =
+                EPS.Expr.Application
+                  (f, List.map args ~f:(fun arg -> arg, EPS.Type.Pure), Ctl)
+              in
+              let%map x = Generation.fresh_name in
+              let pure_branch = x, EPS.Expr.Variable x in
+              EPS.Expr.Match_ctl_pure { subject; pure_branch }
+              |> Maybe_effectful.Pure))
     | Expl.Expr.Unary_operator (op, e) ->
       let%bind m_e = translate_expr e ~evv in
       Maybe_effectful.make_map_or_let m_e ~evv ~f:(fun x ->

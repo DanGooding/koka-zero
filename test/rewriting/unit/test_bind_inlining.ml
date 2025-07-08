@@ -9,12 +9,15 @@ let%expect_test "bind inlining - simple expression" =
          ( Application
              ( Value (Variable (Variable.of_user "f"))
              , []
-             , Labels Effect.Label.Set.empty )
+             , Labels
+                 (Effect.Label.Set.singleton (Effect.Label.of_string "ask")) )
          , Int Plus
          , Application
              ( Value (Variable (Variable.of_user "g"))
              , []
-             , Labels Effect.Label.Set.empty ) ))
+             , Labels
+                 (Effect.Label.Set.singleton (Effect.Label.of_string "ask")) )
+         ))
       ~evv:Nil_evidence_vector
     |> Or_static_error.ok_exn
   in

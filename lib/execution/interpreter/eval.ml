@@ -150,6 +150,22 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         Map.set env ~key:x ~data:v)
     in
     eval_expr body ~env:env'
+  | Expr.Match_ctl_pure { subject; pure_branch } ->
+    let%bind v_subject = eval_expr subject ~env in
+    let%bind bindings, body =
+      match%bind Typecast.ctl_of_value v_subject with
+      | Value.Pure v ->
+        let x, pure_body = pure_branch in
+        return ([ x, v ], pure_body)
+      | Value.Yield _ ->
+        Interpreter.impossible_error
+          "expression expected to be pure returned Yield"
+    in
+    let env' =
+      List.fold bindings ~init:env ~f:(fun env (x, v) ->
+        Map.set env ~key:x ~data:v)
+    in
+    eval_expr body ~env:env'
   | Expr.Fresh_marker ->
     let%map m = Interpreter.fresh_marker in
     Value.Marker m

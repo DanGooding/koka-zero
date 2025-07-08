@@ -342,6 +342,11 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
     let%map result = rewrite_impure_builtin impure_built_in ~toplevel in
     Rewrite_result.map result ~f:(fun impure_built_in ->
       Expr.Impure_built_in impure_built_in)
+  | Match_ctl_pure { subject; pure_branch = x, pure_body } ->
+    let%bind subject = rewrite_aux subject ~toplevel in
+    let%map pure_body = rewrite_aux pure_body ~toplevel in
+    Rewrite_result.combine subject pure_body ~f:(fun subject pure_body ->
+      Expr.Match_ctl_pure { subject; pure_branch = x, pure_body })
   | Match_ctl _ ->
     (* before this rewriting pass, this appears only within the definition of [bind],
        so there is no need to recurse into this *)

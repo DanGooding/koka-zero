@@ -31,6 +31,10 @@ module Expr = struct
           ; pure_branch : Variable.t * t
           ; yield_branch : Variable.t * Variable.t * Variable.t * t
           }
+      | Match_ctl_pure of
+          { subject : t
+          ; pure_branch : Variable.t * t
+          }
       | Fresh_marker
       | Markers_equal of t * t
       | Effect_label of Effect.Label.t

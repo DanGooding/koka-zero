@@ -71,6 +71,12 @@ and apply_everywhere_below
     let%map yield_body = apply_everywhere ~rewrite yield_body in
     let yield_branch = marker, op_clause, resumption, yield_body in
     Expr.Match_ctl { subject; pure_branch; yield_branch }
+  | Expr.Match_ctl_pure { subject; pure_branch } ->
+    let%bind subject = apply_everywhere ~rewrite subject in
+    let x, pure_body = pure_branch in
+    let%map pure_body = apply_everywhere ~rewrite pure_body in
+    let pure_branch = x, pure_body in
+    Expr.Match_ctl_pure { subject; pure_branch }
   | Expr.Fresh_marker -> Modified.original e
   | Expr.Markers_equal _ -> Modified.original e
   | Expr.Effect_label _ -> Modified.original e

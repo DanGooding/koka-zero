@@ -35,6 +35,13 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
       free_in_bindings [ marker; op_clause; resumption ] yield_body
     in
     Variable.Set.union_list [ subject_free; pure_free; yield_free ]
+  | Expr.Match_ctl_pure { subject; pure_branch } ->
+    let subject_free = free_in_expr subject in
+    let pure_free =
+      let x, pure_body = pure_branch in
+      free_in_binding x pure_body
+    in
+    Variable.Set.union_list [ subject_free; pure_free ]
   | Expr.Fresh_marker | Expr.Markers_equal (_, _) -> Variable.Set.empty
   | Expr.Effect_label _ -> Variable.Set.empty
   | Expr.Construct_op_normal e -> free_in_expr e
