@@ -41,20 +41,11 @@ end
 module Mono : sig
   type t =
     | Arrow of t list * Effect.t * t
-    | Variable of Variable.t
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
   [@@deriving sexp_of, compare, hash]
 
   val metavariables : t -> Metavariable.Set.t * Effect.Metavariable.Set.t
-
-  (** [instantiate_as t var_to_meta] replaces variables with metavariables as
-      described by the map [var_to_meta] *)
-  val instantiate_as
-    :  t
-    -> var_to_meta:Metavariable.t Variable.Map.t
-    -> effect_var_to_meta:Effect.Metavariable.t Effect.Variable.Map.t
-    -> t
 
   val max_level
     :  t

@@ -102,7 +102,6 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
   let rec instantiate_aux (type_ : Type.Mono.t) : Type.Mono.t =
     match type_ with
     | Primitive p -> Primitive p
-    | Variable v -> Variable v
     | Arrow (args, effect_, result) ->
       let args = List.map args ~f:instantiate_aux in
       let effect_ = instantiate_effect_aux effect_ in

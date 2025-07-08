@@ -40,7 +40,6 @@ let rec extrude_aux
   : Type.Mono.t
   =
   match type_ with
-  | Variable v -> Variable v
   | Primitive p -> Primitive p
   | Arrow (args, effect_, result) ->
     let args =
@@ -273,8 +272,6 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           in
           let%bind () = constrain_type_at_most t type_lo approx_type_lo in
           constrain_type_at_most t approx_type_lo (Metavariable m))
-     | Variable v, _ | _, Variable v ->
-       raise_s [%message "unexpected type variable" (v : Type.Variable.t)]
      | Arrow _, Primitive _ | Primitive _, Arrow _ ->
        Or_error.error_s
          [%message

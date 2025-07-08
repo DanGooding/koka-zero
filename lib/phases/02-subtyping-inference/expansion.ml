@@ -54,9 +54,6 @@ let rec expand_type_aux
         ~in_progress_type_metavariables
     in
     Arrow (args, effect_, result)
-  | Variable _ ->
-    (* unclear if we'll encounter this once polymorphism is added *)
-    raise_s [%message "unexpected variable when expanding type"]
   | Metavariable meta ->
     let var =
       Hashtbl.find_or_add t.type_meta_to_var meta ~default:(fun () ->
