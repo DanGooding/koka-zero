@@ -6,6 +6,7 @@ end
 include struct
   open Koka_zero_ir_common
   module Variable = Variable
+  module Effect = Effect
 end
 
 include struct

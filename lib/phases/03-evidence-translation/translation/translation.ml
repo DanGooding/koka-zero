@@ -33,7 +33,9 @@ let provide_evv
     as a free variable [evv]. This is an uncurried form of the monad
     [Mon eff t = Evv eff -> Ctl eff t]. *)
 let rec translate_expr
-  : Expl.Expr.t -> evv:EPS.Expr.t -> Maybe_effectful.t Generation.t
+  :  Polar_type.Effect.t Expl.Expr.t
+  -> evv:EPS.Expr.t
+  -> Maybe_effectful.t Generation.t
   =
   let open Generation.Let_syntax in
   fun e ~evv ->
@@ -41,7 +43,7 @@ let rec translate_expr
     | Expl.Expr.Value v ->
       let%map (`Pure v') = translate_value v in
       Maybe_effectful.Pure v'
-    | Expl.Expr.Application (e_f, e_args) ->
+    | Expl.Expr.Application (e_f, e_args, _call_effect) ->
       (* `e_f(e_1, e_2, ..., e_n)` translates to: *)
       (* `(e_f,evv) >>= (\f evv. (e_1,evv) >>= (\x1 evv. (e_2,evv) >>= (\x2 evv.
          ... (e_n, evv) >>= (\xn evv. f(x1, x2, ..., xn, evv) ))))` *)
@@ -92,7 +94,9 @@ let rec translate_expr
         translate_expr e2 ~evv)
     | Expl.Expr.Impure_built_in impure -> translate_impure_built_in impure ~evv
 
-and translate_value : Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t =
+and translate_value
+  : Polar_type.Effect.t Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t
+  =
   let open Generation.Let_syntax in
   function
   | Expl.Expr.Variable v -> `Pure (EPS.Expr.Variable v) |> return
@@ -130,7 +134,9 @@ and translate_value : Expl.Expr.value -> [ `Pure of EPS.Expr.t ] Generation.t =
     in
     `Pure perform'
 
-and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
+and translate_lambda
+  : Polar_type.Effect.t Expl.Expr.lambda -> EPS.Expr.lambda Generation.t
+  =
   fun (ps, e_body) ->
   let open Generation.Let_syntax in
   let%map x_evv, m_body = provide_evv (translate_expr e_body) in
@@ -138,7 +144,7 @@ and translate_lambda : Expl.Expr.lambda -> EPS.Expr.lambda Generation.t =
   Maybe_effectful.make_lambda ps m_body
 
 and translate_fix_lambda
-  : Expl.Expr.fix_lambda -> EPS.Expr.fix_lambda Generation.t
+  : Polar_type.Effect.t Expl.Expr.fix_lambda -> EPS.Expr.fix_lambda Generation.t
   =
   fun (f, lambda) ->
   let open Generation.Let_syntax in
@@ -148,9 +154,9 @@ and translate_fix_lambda
 (** tranlate an operator expression, taking operands as untranslated expressions
     to allow short-circuiting for boolean operators *)
 and translate_operator
-  :  e_left:Expl.Expr.t
+  :  e_left:Polar_type.Effect.t Expl.Expr.t
   -> Operator.t
-  -> e_right:Expl.Expr.t
+  -> e_right:Polar_type.Effect.t Expl.Expr.t
   -> evv:EPS.Expr.t
   -> Maybe_effectful.t Generation.t
   =
@@ -186,7 +192,8 @@ and translate_operator
             EPS.Expr.If_then_else (x_left, m_right, m_false)))
 
 and translate_handler
-  : Expl.Expr.handler -> [ `Pure of EPS.Expr.t ] Generation.t
+  :  Polar_type.Effect.t Expl.Expr.handler
+  -> [ `Pure of EPS.Expr.t ] Generation.t
   =
   fun handler ->
   let open Generation.Let_syntax in
@@ -204,7 +211,9 @@ and translate_handler
   `Pure (EPS.Expr.Construct_handler { handled_effect; operation_clauses })
 
 and translate_op_handler
-  : Operation_shape.t -> Expl.Expr.op_handler -> EPS.Expr.t Generation.t
+  :  Operation_shape.t
+  -> Polar_type.Effect.t Expl.Expr.op_handler
+  -> EPS.Expr.t Generation.t
   =
   fun shape { Expl.Expr.op_argument; op_body } ->
   let open Generation.Let_syntax in
@@ -228,7 +237,7 @@ and translate_op_handler
     EPS.Expr.Construct_op_tail clause
 
 and translate_impure_built_in
-  :  Expl.Expr.impure_built_in
+  :  Polar_type.Effect.t Expl.Expr.impure_built_in
   -> evv:EPS.Expr.t
   -> Maybe_effectful.t Generation.t
   =
@@ -251,7 +260,9 @@ and translate_impure_built_in
       |> return
 ;;
 
-let translate_fun_decl : Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t =
+let translate_fun_decl
+  : Polar_type.Effect.t Expl.Decl.Fun.t -> EPS.Program.Fun_decl.t Generation.t
+  =
   fun fix_lambda -> translate_fix_lambda fix_lambda
 ;;
 

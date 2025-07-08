@@ -7,17 +7,17 @@ open! Import
 val infer_program
   :  ?print_constraint_graph:bool
   -> Minimal_syntax.Program.t
-  -> Explicit_syntax.Program.t Or_static_error.t
+  -> Polar_type.Effect.t Explicit_syntax.Program.t Or_static_error.t
 
 module Private : sig
-  module Polar_type = Polar_type
-
   (** infer the type and effect of an expression, in the context containing the
       given declarations. exists for testing purposes *)
   val infer_expr_toplevel
     :  Minimal_syntax.Expr.t
     -> declarations:Minimal_syntax.Decl.t list
-    -> (Polar_type.t * Polar_type.Effect.t * Explicit_syntax.Expr.t)
+    -> (Polar_type.t
+       * Polar_type.Effect.t
+       * Polar_type.Effect.t Explicit_syntax.Expr.t)
          Or_static_error.t
 
   (** typecheck a program, converting to a form with necessary types/effects
@@ -26,5 +26,5 @@ module Private : sig
       testing purposes. *)
   val infer_program_without_main
     :  Minimal_syntax.Program.t
-    -> Explicit_syntax.Program.t Or_static_error.t
+    -> Polar_type.Effect.t Explicit_syntax.Program.t Or_static_error.t
 end

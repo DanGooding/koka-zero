@@ -6,9 +6,15 @@ let%expect_test "bind inlining - simple expression" =
     (* f() + g() *)
     Koka_zero_evidence_translation.Private.translate_expr
       (Operator
-         ( Application (Value (Variable (Variable.of_user "f")), [])
+         ( Application
+             ( Value (Variable (Variable.of_user "f"))
+             , []
+             , Labels Effect.Label.Set.empty )
          , Int Plus
-         , Application (Value (Variable (Variable.of_user "g")), []) ))
+         , Application
+             ( Value (Variable (Variable.of_user "g"))
+             , []
+             , Labels Effect.Label.Set.empty ) ))
       ~evv:Nil_evidence_vector
     |> Or_static_error.ok_exn
   in
