@@ -16,6 +16,12 @@ else
     KOKA_OPT_FLAG=""
 fi
 
+if [ -z ${DUMP_CONSTRAINT_GRAPH+x} ]; then
+    DUMP_CONSTRAINT_GRAPH_FLAG=""
+else
+    DUMP_CONSTRAINT_GRAPH_FLAG="-dump-constraint-graph"
+fi
+
 if [ -z ${DUMP_EPS+x} ]; then
     DUMP_EPS_FLAG=""
 else
@@ -48,6 +54,6 @@ if [[ "$BINARY" = "$SOURCE" ]]; then
     BINARY="$BINARY.exe"
 fi
 
-$KOKA_COMPILER compile $SOURCE -o $IR $KOKA_OPT_FLAG $DUMP_EPS_FLAG
+$KOKA_COMPILER compile $SOURCE -o $IR $KOKA_OPT_FLAG $DUMP_EPS_FLAG $DUMP_CONSTRAINT_GRAPH_FLAG
 $LL_C_COMPILER $LL_C_FLAGS $IR $RUNTIME -o $BINARY
 
