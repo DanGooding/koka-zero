@@ -7,24 +7,32 @@ let exit_with_error_messsage message =
   exit 1
 ;;
 
-let typecheck_and_compile_to_expl filename =
+let typecheck_and_compile_to_expl filename ~print_constraint_graph =
   let open Result.Let_syntax in
   let%bind program =
     try In_channel.with_file filename ~f:Koka_zero.parse_channel with
     | Sys_error message -> exit_with_error_messsage message
   in
-  Koka_zero.infer_program program
+  Koka_zero.infer_program program ~print_constraint_graph
 ;;
 
-let compile_to_eps ~optimise filename =
+let compile_to_eps filename ~optimise ~print_constraint_graph =
   let open Result.Let_syntax in
-  let%bind program_explicit = typecheck_and_compile_to_expl filename in
+  let%bind program_explicit =
+    typecheck_and_compile_to_expl filename ~print_constraint_graph
+  in
   let%bind program_eps = Koka_zero.translate program_explicit in
   if optimise then Koka_zero.rewrite_program program_eps else return program_eps
 ;;
 
-let compile ~in_filename ~optimise ~print_eps ~out_filename =
-  match compile_to_eps ~optimise in_filename with
+let compile
+      ~in_filename
+      ~optimise
+      ~print_constraint_graph
+      ~print_eps
+      ~out_filename
+  =
+  match compile_to_eps in_filename ~optimise ~print_constraint_graph with
   | Error error ->
     Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program_eps ->
@@ -44,7 +52,9 @@ let compile ~in_filename ~optimise ~print_eps ~out_filename =
 ;;
 
 let interpret_eps filename =
-  match compile_to_eps ~optimise:false filename with
+  match
+    compile_to_eps ~optimise:false ~print_constraint_graph:false filename
+  with
   | Error error ->
     Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok program ->
@@ -56,46 +66,65 @@ let interpret_eps filename =
      | Ok _unit -> ())
 ;;
 
-let typecheck filename =
-  match typecheck_and_compile_to_expl filename with
+let typecheck filename ~print_constraint_graph =
+  match typecheck_and_compile_to_expl filename ~print_constraint_graph with
   | Error error ->
     Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
   | Ok _program -> ()
 ;;
 
+module Flags = struct
+  open Command.Param
+
+  let filename = anon ("filename" %: string)
+  let out_filename = flag "-o" (required string) ~doc:"output filename"
+
+  let optimise =
+    flag "-optimise" no_arg ~doc:"apply tree rewriting optimisations"
+  ;;
+
+  let print_constraint_graph =
+    flag
+      "-dump-constraint-graph"
+      no_arg
+      ~doc:"print the type constraints as a DOT graphviz graph"
+  ;;
+
+  let print_eps =
+    flag "-dump-eps" no_arg ~doc:"print the intermediate evidence passing AST"
+  ;;
+end
+
 let command_compile =
   Command.basic
     ~summary:"compile a program"
-    [%map_open.Command
-      let filename = anon ("filename" %: string)
-      and out_filename = flag "-o" (required string) ~doc:"output filename"
-      and optimise =
-        flag "-optimise" no_arg ~doc:"apply tree rewriting optimisations"
-      and print_eps =
-        flag
-          "-dump-eps"
-          no_arg
-          ~doc:"print the intermediate evidence passing AST"
-      in
-      fun () -> compile ~in_filename:filename ~optimise ~print_eps ~out_filename]
+    (let%map.Command filename = Flags.filename
+     and out_filename = Flags.out_filename
+     and optimise = Flags.optimise
+     and print_constraint_graph = Flags.print_constraint_graph
+     and print_eps = Flags.print_eps in
+     fun () ->
+       compile
+         ~in_filename:filename
+         ~optimise
+         ~print_constraint_graph
+         ~print_eps
+         ~out_filename)
 ;;
 
 let command_interpret =
   Command.basic
     ~summary:"interpret a program"
-    Command.Param.(
-      map
-        (anon ("filename" %: string))
-        ~f:(fun filename () -> interpret_eps filename))
+    (let%map.Command filename = Flags.filename in
+     fun () -> interpret_eps filename)
 ;;
 
 let command_typecheck =
   Command.basic
     ~summary:"type check a program"
-    Command.Param.(
-      map
-        (anon ("filename" %: string))
-        ~f:(fun filename () -> typecheck filename))
+    (let%map.Command filename = Flags.filename
+     and print_constraint_graph = Flags.print_constraint_graph in
+     fun () -> typecheck filename ~print_constraint_graph)
 ;;
 
 let command =

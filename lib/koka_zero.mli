@@ -22,7 +22,8 @@ val parse_string
   -> Minimal_syntax.Program.t Static_error.Or_static_error.t
 
 val infer_program
-  :  Minimal_syntax.Program.t
+  :  ?print_constraint_graph:bool
+  -> Minimal_syntax.Program.t
   -> Explicit_syntax.Program.t Static_error.Or_static_error.t
 
 val translate

@@ -782,7 +782,7 @@ let infer_expr_toplevel (expr : Min.Expr.t) ~declarations
   polar_type, polar_effect, expr
 ;;
 
-let infer_program { Min.Program.declarations }
+let infer_program ?(print_constraint_graph = false) { Min.Program.declarations }
   : Explicit_syntax.Program.t Or_error.t
   =
   let open Result.Let_syntax in
@@ -802,6 +802,7 @@ let infer_program { Min.Program.declarations }
     let%map () = check_entry_point t ~env ~level in
     declarations'
   in
+  if print_constraint_graph then Constraints.print_as_graph t.constraints;
   { Expl.Program.declarations = declarations' }
 ;;
 

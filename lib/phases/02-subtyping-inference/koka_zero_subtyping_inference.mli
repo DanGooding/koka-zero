@@ -5,7 +5,8 @@ open! Import
     explicit, and adding an entry_point function to call the user's `main()`.
     Returns a [Static_error] upon type errors *)
 val infer_program
-  :  Minimal_syntax.Program.t
+  :  ?print_constraint_graph:bool
+  -> Minimal_syntax.Program.t
   -> Explicit_syntax.Program.t Or_error.t
 
 module Private : sig

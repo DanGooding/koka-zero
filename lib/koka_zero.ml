@@ -14,8 +14,8 @@ module Util = Koka_zero_util
 let parse_channel = Koka_zero_parsing.parse_channel
 let parse_string = Koka_zero_parsing.parse_string
 
-let infer_program program =
-  Koka_zero_subtyping_inference.infer_program program
+let infer_program ?print_constraint_graph program =
+  Koka_zero_subtyping_inference.infer_program ?print_constraint_graph program
   |> Result.map_error ~f:Static_error.type_error_of_error
 ;;
 
