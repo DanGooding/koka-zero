@@ -40,6 +40,13 @@ module Effect = struct
          Handled (handled_labels, t))
     | Recursive (v, t) -> Recursive (v, simplify t)
   ;;
+
+  let is_total t =
+    match simplify t with
+    | Labels labels when Set.is_empty labels -> true
+    | Labels _ | Intersection _ | Union _ | Variable _ | Handled _ | Recursive _
+      -> false
+  ;;
 end
 
 type t =

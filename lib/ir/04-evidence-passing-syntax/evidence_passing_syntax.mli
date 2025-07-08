@@ -34,6 +34,11 @@ module Expr : sig
         ; yield_branch : Variable.t * Variable.t * Variable.t * t
           (* gets one argument per field in Yield *)
         }
+    | Match_ctl_pure of
+        { subject : t
+        ; pure_branch : Variable.t * t
+        }
+    (** [Match_ctl] for when we know statically the [Yield] case won't occur *)
     | Fresh_marker (** evaluates to a new unique marker *)
     | Markers_equal of t * t
     | Effect_label of Effect.Label.t

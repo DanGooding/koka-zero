@@ -13,6 +13,7 @@ module Effect : sig
 
   val variables : t -> Effect.Variable.Set.t
   val simplify : t -> t
+  val is_total : t -> bool
 end
 
 type t =
