@@ -107,76 +107,72 @@ and expand_effect_aux
   =
   match effect_ with
   | Labels labels -> Labels labels
-  | Handled (labels, unknown) ->
+  | Handled (labels, meta) ->
     let effect_ =
-      expand_unknown_effect_aux
+      expand_effect_metavariable_aux
         t
-        unknown
+        meta
         ~polarity_positive
         ~in_progress_effect_metavariables
     in
     Handled (labels, effect_)
-  | Unknown unknown ->
-    expand_unknown_effect_aux
+  | Metavariable meta ->
+    expand_effect_metavariable_aux
       t
-      unknown
+      meta
       ~polarity_positive
       ~in_progress_effect_metavariables
 
-and expand_unknown_effect_aux
+and expand_effect_metavariable_aux
       t
-      (effect_ : Effect.Unknown.t)
+      (meta : Effect.Metavariable.t)
       ~polarity_positive
       ~in_progress_effect_metavariables
   : Polar_type.Effect.t
   =
-  match effect_ with
-  | Variable _ ->
-    raise_s [%message "unexpected effect variable when expanding type"]
-  | Metavariable meta ->
-    (* TODO: avoid duplication with the type case *)
-    let var =
-      Hashtbl.find_or_add t.effect_meta_to_var meta ~default:(fun () ->
-        Effect.Variable.Name_source.next_name t.effect_variable_source)
+  (* TODO: avoid duplication with the type case *)
+  let var =
+    Hashtbl.find_or_add t.effect_meta_to_var meta ~default:(fun () ->
+      Effect.Variable.Name_source.next_name t.effect_variable_source)
+  in
+  match Set.mem in_progress_effect_metavariables meta with
+  | true ->
+    (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
+    Variable var
+  | false ->
+    let bounds =
+      Constraints.get_effect_bounds t.constraints meta
+      |> Option.value_map
+           ~f:(fun (bounds : _ Bounds.t) ->
+             match polarity_positive with
+             | true -> bounds.lower_bounds
+             | false -> bounds.upper_bounds)
+           ~default:[]
     in
-    (match Set.mem in_progress_effect_metavariables meta with
-     | true ->
-       (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
-       Variable var
+    let bound_effects =
+      List.map bounds ~f:(fun bound_effect ->
+        expand_effect_aux
+          t
+          bound_effect
+          ~polarity_positive
+          ~in_progress_effect_metavariables:
+            (Set.add in_progress_effect_metavariables meta))
+    in
+    let is_recursive =
+      List.exists bound_effects ~f:(fun type_ ->
+        Set.mem (Polar_type.Effect.variables type_) var)
+    in
+    let combined : Polar_type.Effect.t =
+      match polarity_positive with
+      | true -> Union bound_effects
+      | false -> Intersection bound_effects
+    in
+    (match is_recursive with
+     | true -> Recursive (var, combined)
      | false ->
-       let bounds =
-         Constraints.get_effect_bounds t.constraints meta
-         |> Option.value_map
-              ~f:(fun (bounds : _ Bounds.t) ->
-                match polarity_positive with
-                | true -> bounds.lower_bounds
-                | false -> bounds.upper_bounds)
-              ~default:[]
-       in
-       let bound_effects =
-         List.map bounds ~f:(fun bound_effect ->
-           expand_effect_aux
-             t
-             bound_effect
-             ~polarity_positive
-             ~in_progress_effect_metavariables:
-               (Set.add in_progress_effect_metavariables meta))
-       in
-       let is_recursive =
-         List.exists bound_effects ~f:(fun type_ ->
-           Set.mem (Polar_type.Effect.variables type_) var)
-       in
-       let combined : Polar_type.Effect.t =
-         match polarity_positive with
-         | true -> Union bound_effects
-         | false -> Intersection bound_effects
-       in
-       (match is_recursive with
-        | true -> Recursive (var, combined)
-        | false ->
-          (match bound_effects with
-           | [] -> Variable var
-           | _ :: _ -> combined)))
+       (match bound_effects with
+        | [] -> Variable var
+        | _ :: _ -> combined))
 ;;
 
 let expand_type t type_ =

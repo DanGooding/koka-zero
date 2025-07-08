@@ -35,19 +35,11 @@ module Label : sig
   include Hashable.S with type t := t
 end
 
-module Unknown : sig
-  type t =
-    | Metavariable of Metavariable.t
-    | Variable of Variable.t
-  [@@deriving sexp_of, compare, hash]
-end
-
 type t =
-  | Unknown of Unknown.t
+  | Metavariable of Metavariable.t
   | Labels of Label.Set.t
-  | Handled of Label.Set.t * Unknown.t
+  | Handled of Label.Set.t * Metavariable.t
 [@@deriving sexp_of, compare, hash]
 
 val metavariables : t -> Metavariable.Set.t
-val instantiate_as : t -> var_to_meta:Metavariable.t Variable.Map.t -> t
 val max_level : t -> metavariable_level:(Metavariable.t -> int) -> int

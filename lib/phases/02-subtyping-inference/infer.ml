@@ -129,17 +129,18 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
   and instantiate_effect_aux (effect_ : Effect.t) : Effect.t =
     match effect_ with
     | Labels labels -> Labels labels
-    | Unknown unknown -> Unknown (instantiate_unknown_effect_aux unknown)
-    | Handled (labels, unknown) ->
-      Handled (labels, instantiate_unknown_effect_aux unknown)
-  and instantiate_unknown_effect_aux (effect_ : Effect.Unknown.t)
-    : Effect.Unknown.t
+    | Metavariable meta ->
+      Metavariable (instantiate_effect_metavariable_aux meta)
+    | Handled (labels, meta) ->
+      Handled (labels, instantiate_effect_metavariable_aux meta)
+  and instantiate_effect_metavariable_aux (meta : Effect.Metavariable.t)
+    : Effect.Metavariable.t
     =
-    match effect_ with
-    | Variable v -> Variable v
-    | Metavariable meta when poly.forall_bound_effects meta ->
+    match poly.forall_bound_effects meta with
+    | false -> meta
+    | true ->
       (match Hashtbl.find fresh_effects meta with
-       | Some meta' -> Metavariable meta'
+       | Some meta' -> meta'
        | None ->
          let meta' =
            Metavariables.fresh_effect_metavariable t.metavariables ~level
@@ -154,8 +155,7 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
              t.constraints
              meta'
              { Bounds.lower_bounds; upper_bounds });
-         Metavariable meta')
-    | Metavariable meta -> Metavariable meta
+         meta')
   in
   instantiate_aux poly.monotype
 ;;
@@ -490,7 +490,7 @@ and infer_handler
   let%bind () =
     Constraints.constrain_effect_at_most
       t.constraints
-      (Handled (Effect.Label.Set.singleton label, Metavariable eff_subject))
+      (Handled (Effect.Label.Set.singleton label, eff_subject))
       eff_handler
   in
   let%bind return_clause =
@@ -599,7 +599,7 @@ and infer_handler
   in
   ( { Expl.Expr.operations; return_clause; handled_effect = label }
   , Type.Mono.Arrow
-      ( [ Arrow ([], Unknown (Metavariable eff_subject), t_subject) ]
+      ( [ Arrow ([], Metavariable eff_subject, t_subject) ]
       , eff_handler
       , t_handler_result ) )
 
@@ -875,7 +875,7 @@ let%expect_test "inference for a simple function" =
     {|
     ((type_
       (Arrow ((Metavariable tm1) (Metavariable tm2) (Metavariable tm3))
-       (Unknown (Metavariable em3)) (Primitive Int)))
+       (Metavariable em3) (Primitive Int)))
      (effect_ (Labels ())))
     |}];
   print_s [%sexp (inference.constraints : Constraints.t)];
@@ -890,19 +890,12 @@ let%expect_test "inference for a simple function" =
        (tm7
         ((lower_bounds ())
          (upper_bounds
-          ((Arrow ((Metavariable tm3)) (Unknown (Metavariable em2))
-            (Metavariable tm8))))))
+          ((Arrow ((Metavariable tm3)) (Metavariable em2) (Metavariable tm8))))))
        (tm8 ((lower_bounds ()) (upper_bounds ((Primitive Int)))))))
      (effect_constraints
-      ((em0
-        ((lower_bounds ((Labels ())))
-         (upper_bounds ((Unknown (Metavariable em3))))))
-       (em1
-        ((lower_bounds ((Labels ())))
-         (upper_bounds ((Unknown (Metavariable em2))))))
-       (em2
-        ((lower_bounds ((Labels ())))
-         (upper_bounds ((Unknown (Metavariable em3))))))
+      ((em0 ((lower_bounds ((Labels ()))) (upper_bounds ((Metavariable em3)))))
+       (em1 ((lower_bounds ((Labels ()))) (upper_bounds ((Metavariable em2)))))
+       (em2 ((lower_bounds ((Labels ()))) (upper_bounds ((Metavariable em3)))))
        (em3 ((lower_bounds ((Labels ()))) (upper_bounds ())))))
      (already_seen_constraints <opaque>)
      (metavariables
