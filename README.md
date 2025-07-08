@@ -1,7 +1,9 @@
 # Koka Zero
 
 Reimplementatin of core [Koka](https://koka-lang.github.io), compiling to
-[LLVM-IR](https://llvm.org/docs/LangRef.html), for my third year dissertation
+[LLVM-IR](https://llvm.org/docs/LangRef.html), for my third-year dissertation.
+
+This uses Algebraic Subtyping rather than Koka's Hindley-Milner inference with effect rows, since the former can give a precise effect to each subexpression of a program, which enables` some optimisations. 
 
 ## Example (a generator producing the Fibonacci sequence)
 ```koka
