@@ -7,7 +7,8 @@ val infer_expr_toplevel
   -> (Polar_type.t * Polar_type.Effect.t * Explicit_syntax.Expr.t) Or_error.t
 
 val infer_program
-  :  Minimal_syntax.Program.t
+  :  ?print_constraint_graph:bool
+  -> Minimal_syntax.Program.t
   -> Explicit_syntax.Program.t Or_error.t
 
 val infer_program_without_main
