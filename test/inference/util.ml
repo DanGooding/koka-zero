@@ -1,5 +1,6 @@
 open Core
 open! Import
+module Polar_type = Koka_zero_subtyping_inference.Private.Polar_type
 
 let print_explicit_program_result result =
   [%sexp (result : Explicit_syntax.Program.t Or_error.t)]
@@ -24,7 +25,8 @@ let print_expr_inference_result ?(declarations = []) expr =
     Koka_zero_subtyping_inference.Private.infer_expr_toplevel expr ~declarations
   in
   [%sexp
-    (result : (Type.Mono.t * Effect.t * Explicit_syntax.Expr.t) Or_error.t)]
+    (result
+     : (Polar_type.t * Polar_type.Effect.t * Explicit_syntax.Expr.t) Or_error.t)]
   |> Sexp.to_string_hum
   |> print_endline
 ;;

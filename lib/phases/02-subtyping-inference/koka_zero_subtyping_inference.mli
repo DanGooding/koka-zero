@@ -9,12 +9,14 @@ val infer_program
   -> Explicit_syntax.Program.t Or_error.t
 
 module Private : sig
+  module Polar_type = Polar_type
+
   (** infer the type and effect of an expression, in the context containing the
       given declarations. exists for testing purposes *)
   val infer_expr_toplevel
     :  Minimal_syntax.Expr.t
     -> declarations:Minimal_syntax.Decl.t list
-    -> (Type.Mono.t * Effect.t * Explicit_syntax.Expr.t) Or_error.t
+    -> (Polar_type.t * Polar_type.Effect.t * Explicit_syntax.Expr.t) Or_error.t
 
   (** typecheck a program, converting to a form with necessary types/effects
       made explicit, but don't add an entry point (allowing the program to not

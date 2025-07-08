@@ -19,11 +19,12 @@ let%expect_test "identity gets polymorphic type" =
   [%expect
     {|
     (Ok
-     ((Primitive Unit) (Metavariable e7)
+     ((Union ((Primitive Unit))) (Union ((Labels ())))
       (Let (User id) (Lambda (((Variable (User z))) (Value (Variable (User z)))))
        (Application
         (Application (Value (Variable (User id))) ((Value (Variable (User id)))))
-        ((Value (Literal Unit))))))) |}]
+        ((Value (Literal Unit)))))))
+    |}]
 ;;
 
 (* TODO: tests to add: static scoping, not generalising free varaibles, not
@@ -41,13 +42,15 @@ let%expect_test "fix combinator allows recursion" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Metavariable a2)) (Metavariable e3) (Metavariable a3))
-      (Metavariable e4)
+     ((Arrow ((Recursive t0 (Intersection ((Variable t0)))))
+       (Union ((Labels ()))) (Variable t1))
+      (Labels ())
       (Value
        (Fix_lambda
         ((User f)
          (((Variable (User x)))
-          (Application (Value (Variable (User f))) ((Value (Variable (User x))))))))))) |}]
+          (Application (Value (Variable (User f))) ((Value (Variable (User x)))))))))))
+    |}]
 ;;
 
 let%expect_test "wildcard parameters affect type" =
@@ -62,29 +65,28 @@ let%expect_test "wildcard parameters affect type" =
          , UE.var "x" ))
   in
   Util.print_expr_inference_result expr;
-  [%expect
-    {| (Error ((kind Type_error) (message "unbound variable: x") (location ()))) |}]
+  [%expect {| (Error "unbound variable: x") |}]
 ;;
 
 let%expect_test "literal unit" =
   let expr = UE.lit_unit in
   Util.print_expr_inference_result expr;
   [%expect
-    {| (Ok ((Primitive Unit) (Metavariable e0) (Value (Literal Unit)))) |}]
+    {| (Ok ((Primitive Unit) (Labels ()) (Value (Literal Unit)))) |}]
 ;;
 
 let%expect_test "literal bool" =
   let expr = UE.lit_bool true in
   Util.print_expr_inference_result expr;
   [%expect
-    {| (Ok ((Primitive Bool) (Metavariable e0) (Value (Literal (Bool true))))) |}]
+    {| (Ok ((Primitive Bool) (Labels ()) (Value (Literal (Bool true))))) |}]
 ;;
 
 let%expect_test "literal int" =
   let expr = UE.lit_int 1 in
   Util.print_expr_inference_result expr;
   [%expect
-    {| (Ok ((Primitive Int) (Metavariable e0) (Value (Literal (Int 1))))) |}]
+    {| (Ok ((Primitive Int) (Labels ()) (Value (Literal (Int 1))))) |}]
 ;;
 
 let%expect_test "int operators" =
@@ -109,13 +111,14 @@ let%expect_test "int operators" =
   [%expect
     {|
     (Ok
-     ((Primitive Int) (Metavariable e5)
+     ((Primitive Int) (Union ((Labels ())))
       (Operator (Value (Literal (Int 1))) (Int Plus)
        (Operator (Value (Literal (Int 2))) (Int Minus)
         (Operator (Value (Literal (Int 3))) (Int Times)
          (Operator (Value (Literal (Int 4))) (Int Divide)
           (Operator (Value (Literal (Int 5))) (Int Modulo)
-           (Value (Literal (Int 7)))))))))) |}]
+           (Value (Literal (Int 7))))))))))
+    |}]
 ;;
 
 let%expect_test "comparsion operators" =
@@ -135,7 +138,7 @@ let%expect_test "comparsion operators" =
   [%expect
     {|
     (Ok
-     ((Primitive Bool) (Metavariable e5)
+     ((Primitive Bool) (Union ((Labels ())))
       (Operator
        (Operator
         (Operator (Value (Literal (Int 3))) (Int Less_than)
@@ -145,7 +148,8 @@ let%expect_test "comparsion operators" =
          (Value (Literal (Int 5)))))
        (Bool Or)
        (Operator (Value (Literal (Int 3))) (Int Equals)
-        (Value (Literal (Int 5))))))) |}]
+        (Value (Literal (Int 5)))))))
+    |}]
 ;;
 
 let%expect_test "multi argument functions" =
@@ -162,7 +166,7 @@ let%expect_test "multi argument functions" =
   [%expect
     {|
     (Ok
-     ((Primitive Int) (Metavariable e7)
+     ((Union ((Primitive Int))) (Union ((Labels ())))
       (Application
        (Value
         (Lambda
@@ -170,7 +174,8 @@ let%expect_test "multi argument functions" =
           (If_then_else (Value (Variable (User b))) (Value (Variable (User x)))
            (Value (Variable (User y)))))))
        ((Value (Literal (Bool true))) (Value (Literal (Int 1)))
-        (Value (Literal (Int 0))))))) |}]
+        (Value (Literal (Int 0)))))))
+    |}]
 ;;
 
 let%expect_test "declared functions are generalised" =
@@ -201,7 +206,8 @@ let%expect_test "declared functions are generalised" =
         (Fun
          ((User const_three)
           (()
-           (Application (Value (Variable (User id))) ((Value (Literal (Int 3)))))))))))) |}]
+           (Application (Value (Variable (User id))) ((Value (Literal (Int 3))))))))))))
+    |}]
 ;;
 
 let%expect_test "sequence doesn't require first to be unit" =
@@ -210,8 +216,9 @@ let%expect_test "sequence doesn't require first to be unit" =
   [%expect
     {|
     (Ok
-     ((Primitive Bool) (Metavariable e1)
-      (Seq (Value (Literal (Int 0))) (Value (Literal (Bool true)))))) |}]
+     ((Primitive Bool) (Union ((Labels ())))
+      (Seq (Value (Literal (Int 0))) (Value (Literal (Bool true))))))
+    |}]
 ;;
 
 let%expect_test "local function can shadow toplevel" =
@@ -236,7 +243,8 @@ let%expect_test "local function can shadow toplevel" =
          ((User bar)
           (()
            (Let (User foo) (Lambda (() (Value (Literal Unit))))
-            (Value (Literal Unit)))))))))) |}]
+            (Value (Literal Unit))))))))))
+    |}]
 ;;
 
 let%expect_test "handled effects reflected in subject's effect" =
@@ -262,10 +270,25 @@ let%expect_test "handled effects reflected in subject's effect" =
     {|
     (Ok
      ((Arrow
-       ((Arrow () (Row (Open (Non_empty ((exn 1) (read 2))) (Metavariable e19)))
-         (Primitive Unit)))
-       (Metavariable e19) (Primitive Unit))
-      (Metavariable e20)
+       ((Intersection
+         ((Arrow () (Intersection ((Variable e1)))
+           (Intersection
+            ((Intersection
+              ((Intersection
+                ((Intersection
+                  ((Intersection
+                    ((Intersection
+                      ((Intersection
+                        ((Intersection ((Intersection ((Variable t10)))))))))))))))))))))))
+       (Union
+        ((Handled (exn)
+          (Union
+           ((Labels ())
+            (Handled (read)
+             (Union ((Labels ()) (Handled (read) (Union ((Labels ()))))))))))
+         (Labels ())))
+       (Union ((Primitive Unit))))
+      (Labels ())
       (Value
        (Lambda
         (((Variable (User f)))
@@ -305,7 +328,8 @@ let%expect_test "handled effects reflected in subject's effect" =
                             (op_body (Value (Literal (Int 1)))))))))
                        (return_clause ()))))
                     ((Value
-                      (Lambda (() (Application (Value (Variable (User f))) ()))))))))))))))))))))) |}]
+                      (Lambda (() (Application (Value (Variable (User f))) ())))))))))))))))))))))
+    |}]
 ;;
 
 let%expect_test "return clause is typed correctly" =
@@ -351,7 +375,9 @@ let%expect_test "return clause is typed correctly" =
   [%expect
     {|
     (Ok
-     ((Primitive Unit) (Metavariable e13)
+     ((Union ((Primitive Unit)))
+      (Union
+       ((Handled (query) (Union ((Labels ()) (Labels (query))))) (Labels ())))
       (Application
        (Value
         (Handler
@@ -373,7 +399,8 @@ let%expect_test "return clause is typed correctly" =
           (()
            (Application
             (Value (Perform ((operation (User test)) (performed_effect query))))
-            ((Value (Literal (Int 5)))))))))))) |}]
+            ((Value (Literal (Int 5))))))))))))
+    |}]
 ;;
 
 let%expect_test "handlers can delegate to outer handlers" =
@@ -407,7 +434,13 @@ let%expect_test "handlers can delegate to outer handlers" =
   [%expect
     {|
     (Ok
-     ((Primitive Int) (Metavariable e19)
+     ((Union ((Primitive Int)))
+      (Union
+       ((Handled (read)
+         (Union
+          ((Labels ()) (Labels (read))
+           (Handled (read) (Union ((Labels ()) (Labels (read))))))))
+        (Labels ())))
       (Application
        (Value
         (Handler
@@ -442,7 +475,8 @@ let%expect_test "handlers can delegate to outer handlers" =
                 (Application
                  (Value
                   (Perform ((operation (User ask)) (performed_effect read))))
-                 ((Value (Literal Unit)))))))))))))))) |}]
+                 ((Value (Literal Unit))))))))))))))))
+    |}]
 ;;
 
 let%expect_test "`fun` handler can implemnent `control` operation" =
@@ -459,11 +493,9 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
   [%expect
     {|
     (Ok
-     ((Arrow
-       ((Arrow () (Row (Open (Non_empty ((choose 1))) (Metavariable e0)))
-         (Metavariable a1)))
-       (Metavariable e0) (Metavariable a1))
-      (Metavariable e3)
+     ((Arrow ((Arrow () (Variable e0) (Intersection ((Variable t1)))))
+       (Union ((Labels ()) (Handled (choose) (Variable e0)))) (Variable t1))
+      (Labels ())
       (Value
        (Handler
         ((handled_effect choose)
@@ -471,5 +503,6 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
           (((User choose)
             (Fun
              ((op_argument Wildcard) (op_body (Value (Literal (Bool true)))))))))
-         (return_clause ())))))) |}]
+         (return_clause ()))))))
+    |}]
 ;;
