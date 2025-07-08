@@ -62,7 +62,8 @@ let unary_operator_result_type : Operator.Unary.t -> Type.Primitive.t = function
 let error_if_cannot_shadow result ~name =
   match result with
   | `Cannot_shadow ->
-    Or_error.error_s [%message "cannot shadow" (name : Variable.t)]
+    Static_error.syntax_error_s [%message "cannot shadow" (name : Variable.t)]
+    |> Error
   | `Ok result -> Ok result
 ;;
 
@@ -75,11 +76,11 @@ let infer_and_generalise
          -> env:Context.t
          -> level:int
          -> effect_env:Effect_signature.Context.t
-         -> ('w * Type.Mono.t) Or_error.t)
+         -> ('w * Type.Mono.t) Or_static_error.t)
       ~env
       ~level
       ~effect_env
-  : ('w * Type.Poly.t) Or_error.t
+  : ('w * Type.Poly.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let local_level = level + 1 in
@@ -163,7 +164,7 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
 let lookup_effect_for_handler
       (handler : Min.Expr.handler)
       ~(effect_env : Effect_signature.Context.t)
-  : (Effect.Label.t * Operation_shape.t Variable.Map.t) Or_error.t
+  : (Effect.Label.t * Operation_shape.t Variable.Map.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let signature = Effect_signature.t_of_handler handler in
@@ -175,24 +176,28 @@ let lookup_effect_for_handler
     let signature_str =
       Effect_signature.sexp_of_t signature |> Sexp.to_string_hum
     in
-    Or_error.errorf "handler does not match any effect: %s" signature_str
+    Error
+      (Static_error.type_errorf
+         "handler does not match any effect: %s"
+         signature_str)
 ;;
 
 let check_handler_shape
       ~(handler : Operation_shape.t)
       ~(declaration : Operation_shape.t)
       ~name
-  : unit Or_error.t
+  : unit Or_static_error.t
   =
   let open Result.Let_syntax in
   if Operation_shape.can_implement ~handler ~declaration
   then return ()
   else
-    Or_error.errorf
-      "cannot handle operation `%s` declared as `%s` with `%s` clause"
-      (Variable.to_string_user name)
-      (Operation_shape.to_string declaration)
-      (Operation_shape.to_string handler)
+    Error
+      (Static_error.type_errorf
+         "cannot handle operation `%s` declared as `%s` with `%s` clause"
+         (Variable.to_string_user name)
+         (Operation_shape.to_string declaration)
+         (Operation_shape.to_string handler))
 ;;
 
 (** determine the type and effect of an expression, raising if we encounter a type-error.
@@ -203,7 +208,7 @@ let rec infer_expr
           ~(env : Context.t)
           ~(level : int)
           ~(effect_env : Effect_signature.Context.t)
-  : (Expl.Expr.t * Type.Mono.t * Effect.t) Or_error.t
+  : (Expl.Expr.t * Type.Mono.t * Effect.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match expr with
@@ -334,14 +339,17 @@ let rec infer_expr
     Expl.Expr.Impure_built_in impure_built_in, type_, effect_
 
 and infer_value (t : t) (value : Min.Expr.value) ~env ~level ~effect_env
-  : (Expl.Expr.value * Type.Mono.t) Or_error.t
+  : (Expl.Expr.value * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match value with
   | Variable name ->
     (match (Context.find env name : Context.Binding.t option) with
      | None ->
-       Or_error.errorf "unbound variable: %s" (Variable.to_string_user name)
+       Error
+         (Static_error.type_errorf
+            "unbound variable: %s"
+            (Variable.to_string_user name))
      | Some (Value type_) ->
        let type_ =
          match (type_ : Type.t) with
@@ -372,7 +380,7 @@ and infer_value (t : t) (value : Min.Expr.value) ~env ~level ~effect_env
     Expl.Expr.Handler handler, type_
 
 and infer_lambda t ((params, body) : Min.Expr.lambda) ~env ~level ~effect_env
-  : (Expl.Expr.lambda * Type.Mono.t) Or_error.t
+  : (Expl.Expr.lambda * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let param_metas =
@@ -398,7 +406,7 @@ and infer_fix_lambda
       ~env
       ~level
       ~effect_env
-  : (Expl.Expr.fix_lambda * Type.Mono.t) Or_error.t
+  : (Expl.Expr.fix_lambda * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let meta_self = Metavariables.fresh_type t.metavariables ~level in
@@ -427,7 +435,7 @@ and infer_impure_built_in
       ~env
       ~level
       ~effect_env
-  : (Expl.Expr.impure_built_in * Type.Mono.t * Effect.t) Or_error.t
+  : (Expl.Expr.impure_built_in * Type.Mono.t * Effect.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match impure_built_in with
@@ -463,7 +471,7 @@ and infer_handler
       ~env
       ~level
       ~(effect_env : Effect_signature.Context.t)
-  : (Expl.Expr.handler * Type.Mono.t) Or_error.t
+  : (Expl.Expr.handler * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind label, operation_shapes =
@@ -553,8 +561,9 @@ and infer_handler
         | Some (Value _) ->
           raise_s [%message "operation shadowed by value" (name : Variable.t)]
         | None ->
-          Or_error.error_s
-            [%message "operation not in scope" (name : Variable.t)]
+          Error
+            (Static_error.type_error_s
+               [%message "operation not in scope" (name : Variable.t)])
       in
       let%map op_handler =
         match (handler_shape : Operation_shape.t) with
@@ -612,7 +621,7 @@ and infer_operation_clause
       ~env
       ~level
       ~effect_env
-  : Expl.Expr.op_handler Or_error.t
+  : Expl.Expr.op_handler Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind env =
@@ -636,7 +645,7 @@ and infer_operation_clause
 
 (** add an effect's operations to the context *)
 let bind_operations (env : Context.t) ~(declaration : Effect_decl.t)
-  : Context.t Or_error.t
+  : Context.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let { Effect_decl.name = label; operations } = declaration in
@@ -649,31 +658,33 @@ let bind_operations (env : Context.t) ~(declaration : Effect_decl.t)
     with
     | `Ok env' -> return env'
     | `Cannot_shadow ->
-      Or_error.errorf
-        "operation names must be unique: '%s' is reused"
-        (Variable.to_string_user op_name))
+      Error
+        (Static_error.type_errorf
+           "operation names must be unique: '%s' is reused"
+           (Variable.to_string_user op_name)))
 ;;
 
 (** add an effect's signature to the effect environment *)
 let bind_effect_signature
       (effect_env : Effect_signature.Context.t)
       ~(declaration : Effect_decl.t)
-  : Effect_signature.Context.t Or_error.t
+  : Effect_signature.Context.t Or_static_error.t
   =
   let open Result.Let_syntax in
   match Effect_signature.Context.extend_decl effect_env declaration with
   | `Ok effect_env -> return effect_env
   | `Duplicate ->
     let { Effect_decl.name; _ } = declaration in
-    Or_error.errorf
-      "effect '%s' is already defined"
-      (Effect.Label.to_string name)
+    Error
+      (Static_error.type_errorf
+         "effect '%s' is already defined"
+         (Effect.Label.to_string name))
 ;;
 
 (** check an effect declaration, adding its signature and operations to the
     contexts if correct *)
 let infer_effect_decl (declaration : Effect_decl.t) ~env ~effect_env
-  : (Context.t * Effect_signature.Context.t * Effect_decl.t) Or_error.t
+  : (Context.t * Effect_signature.Context.t * Effect_decl.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let%bind env =
@@ -687,7 +698,7 @@ let infer_effect_decl (declaration : Effect_decl.t) ~env ~effect_env
 (** run inference on a function declaration, adding it (generalised) to the
     environment if well typed *)
 let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
-  : (Context.t * Expl.Decl.Fun.t) Or_error.t
+  : (Context.t * Expl.Decl.Fun.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let f_name, _lambda = f in
@@ -698,15 +709,16 @@ let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
     match Context.extend_toplevel env ~var:f_name ~type_:(Type.Poly poly_f) with
     | `Ok env' -> return env'
     | `Cannot_shadow ->
-      Or_error.errorf
-        "cannot shadow '%s' at toplevel"
-        (Variable.to_string_user f_name)
+      Error
+        (Static_error.type_errorf
+           "cannot shadow '%s' at toplevel"
+           (Variable.to_string_user f_name))
   in
   env', f
 ;;
 
 let infer_decl t (declaration : Min.Decl.t) ~env ~level ~effect_env
-  : (Context.t * Effect_signature.Context.t * Expl.Decl.t) Or_error.t
+  : (Context.t * Effect_signature.Context.t * Expl.Decl.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   match declaration with
@@ -719,7 +731,8 @@ let infer_decl t (declaration : Min.Decl.t) ~env ~level ~effect_env
 ;;
 
 let infer_decls t (declarations : Min.Decl.t list) ~env ~level ~effect_env
-  : (Context.t * Effect_signature.Context.t * Expl.Decl.t list) Or_error.t
+  : (Context.t * Effect_signature.Context.t * Expl.Decl.t list)
+      Or_static_error.t
   =
   let open Result.Let_syntax in
   (* importantly this is a left fold *)
@@ -740,7 +753,7 @@ let infer_decls t (declarations : Min.Decl.t list) ~env ~level ~effect_env
 
 (** Constrain [Keywords.entry_point] to be a total function [() -> <> ()], skipping if
     not present *)
-let check_entry_point t ~env ~level : unit Or_error.t =
+let check_entry_point t ~env ~level : unit Or_static_error.t =
   let open Result.Let_syntax in
   match Context.find env Keyword.entry_point with
   | None -> return ()
@@ -763,7 +776,7 @@ let check_entry_point t ~env ~level : unit Or_error.t =
 ;;
 
 let infer_expr_toplevel (expr : Min.Expr.t) ~declarations
-  : (Polar_type.t * Polar_type.Effect.t * Expl.Expr.t) Or_error.t
+  : (Polar_type.t * Polar_type.Effect.t * Expl.Expr.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let t = create () in
@@ -782,7 +795,7 @@ let infer_expr_toplevel (expr : Min.Expr.t) ~declarations
 ;;
 
 let infer_program ?(print_constraint_graph = false) { Min.Program.declarations }
-  : Explicit_syntax.Program.t Or_error.t
+  : Explicit_syntax.Program.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let t = create () in
@@ -806,7 +819,7 @@ let infer_program ?(print_constraint_graph = false) { Min.Program.declarations }
 ;;
 
 let infer_program_without_main { Min.Program.declarations }
-  : Explicit_syntax.Program.t Or_error.t
+  : Explicit_syntax.Program.t Or_static_error.t
   =
   let open Result.Let_syntax in
   let t = create () in
@@ -851,7 +864,7 @@ let%expect_test "inference for a simple function" =
       ~env:Context.empty
       ~level:0
       ~effect_env:Effect_signature.Context.empty
-    |> Or_error.ok_exn
+    |> Or_static_error.ok_exn
   in
   print_s [%message (expr : Expl.Expr.t)];
   [%expect

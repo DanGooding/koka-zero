@@ -194,7 +194,7 @@ let extrude_effect t effect_ ~to_level ~polarity_positive =
 (** add constraints for [type_lo <= type_hi]
     fails if we find something unsatisfiable - i.e. a type error *)
 let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
-  : unit Or_error.t
+  : unit Or_static_error.t
   =
   let open Result.Let_syntax in
   let constraint_ = Constraint.Type_at_most { type_lo; type_hi } in
@@ -211,20 +211,24 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
          with
          | Ok results -> Result.all_unit results
          | Unequal_lengths ->
-           Or_error.error_s
-             [%message
-               "function type has wrong number of arguments"
-                 (args_lo : Type.Mono.t list)
-                 (args_hi : Type.Mono.t list)]
+           Error
+             (Static_error.type_error_s
+                [%message
+                  "function type has wrong number of arguments"
+                    (args_lo : Type.Mono.t list)
+                    (args_hi : Type.Mono.t list)])
        in
        let%bind () = constrain_effect_at_most t effect_lo effect_hi in
        constrain_type_at_most t result_lo result_hi
      | Primitive p, Primitive p' when [%equal: Type.Primitive.t] p p' ->
        return ()
      | Primitive p, Primitive p' ->
-       Or_error.error_s
-         [%message
-           "inconsistent types" (p : Type.Primitive.t) (p' : Type.Primitive.t)]
+       Error
+         (Static_error.type_error_s
+            [%message
+              "inconsistent types"
+                (p : Type.Primitive.t)
+                (p' : Type.Primitive.t)])
      | Metavariable m, type_hi ->
        let m_level = Metavariables.type_level_exn t.metavariables m in
        let hi_level =
@@ -282,14 +286,15 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           let%bind () = constrain_type_at_most t type_lo approx_type_lo in
           constrain_type_at_most t approx_type_lo (Metavariable m))
      | Arrow _, Primitive _ | Primitive _, Arrow _ ->
-       Or_error.error_s
-         [%message
-           "type error: cannot relate"
-             (type_lo : Type.Mono.t)
-             (type_hi : Type.Mono.t)])
+       Error
+         (Static_error.type_error_s
+            [%message
+              "type error: cannot relate"
+                (type_lo : Type.Mono.t)
+                (type_hi : Type.Mono.t)]))
 
 and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
-  : unit Or_error.t
+  : unit Or_static_error.t
   =
   let open Result.Let_syntax in
   let constraint_ = Constraint.Effect_at_most { effect_lo; effect_hi } in
@@ -300,11 +305,12 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
      | Labels labels_lo, Labels labels_hi
        when Set.is_subset labels_lo ~of_:labels_hi -> return ()
      | Labels labels_lo, Labels labels_hi ->
-       Or_error.error_s
-         [%message
-           "less-than constraint doesn't hold"
-             ~labels:(labels_lo : Effect.Label.Set.t)
-             ~expected_at_most:(labels_hi : Effect.Label.Set.t)]
+       Error
+         (Static_error.type_error_s
+            [%message
+              "constraint doesn't hold"
+                ~labels:(labels_lo : Effect.Label.Set.t)
+                ~expected_at_most:(labels_hi : Effect.Label.Set.t)])
      | Handled (labels_lo, effect_lo), Labels labels_hi ->
        (* effect_lo - labels_lo <= labels_hi *)
        constrain_effect_at_most
@@ -317,11 +323,12 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
         | false ->
           (* we're requiring that a row containing L is <= a row not containing L
              for L being the intersection. This can never hold. *)
-          Or_error.error_s
-            [%message
-              "less-than constraint doesn't hold"
-                ~labels:(labels_lo : Effect.Label.Set.t)
-                ~expected_not_to_contain:(labels_hi : Effect.Label.Set.t)]
+          Error
+            (Static_error.type_error_s
+               [%message
+                 "less-than constraint doesn't hold"
+                   ~labels:(labels_lo : Effect.Label.Set.t)
+                   ~expected_not_to_contain:(labels_hi : Effect.Label.Set.t)])
         | true ->
           (* it's optional whether effect_hi contains labels' or not.
              so the constraint reduces to labels_lo <= effect_hi *)
@@ -397,24 +404,26 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
 
 let constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t) =
   constrain_type_at_most t type_lo type_hi
-  |> Or_error.tag_s_lazy
-       ~tag:
-         (lazy
-           [%message
-             "error when expanding constraint"
-               (type_lo : Type.Mono.t)
-               (type_hi : Type.Mono.t)])
+  |> Result.map_error
+       ~f:
+         (Static_error.tag_s
+            ~tag:
+              [%message
+                "error when expanding constraint"
+                  (type_lo : Type.Mono.t)
+                  (type_hi : Type.Mono.t)])
 ;;
 
 let constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t) =
   constrain_effect_at_most t effect_lo effect_hi
-  |> Or_error.tag_s_lazy
-       ~tag:
-         (lazy
-           [%message
-             "error when expanding constraint"
-               (effect_lo : Effect.t)
-               (effect_hi : Effect.t)])
+  |> Result.map_error
+       ~f:
+         (Static_error.tag_s
+            ~tag:
+              [%message
+                "error when expanding constraint"
+                  (effect_lo : Effect.t)
+                  (effect_hi : Effect.t)])
 ;;
 
 let to_graph t : Odot.graph =

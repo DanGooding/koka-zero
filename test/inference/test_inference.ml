@@ -65,7 +65,7 @@ let%expect_test "wildcard parameters affect type" =
          , UE.var "x" ))
   in
   Util.print_expr_inference_result expr;
-  [%expect {| (Error "unbound variable: x") |}]
+  [%expect {| (Error ((kind Type_error) (error "unbound variable: x") (location ()))) |}]
 ;;
 
 let%expect_test "literal unit" =
