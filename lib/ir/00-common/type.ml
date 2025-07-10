@@ -91,15 +91,15 @@ module Mono = struct
     (* add edges to child nodes *)
     match t with
     | Primitive _ | Metavariable _ -> ()
-    | Arrow (args, _effect_, result) ->
+    | Arrow (args, effect_, result) ->
       List.iter args ~f:(fun arg -> add_tree_to_graph arg graph);
-      (* Effect.add_tree_to_graph effect_ graph; *)
+      Effect.add_tree_to_graph effect_ graph;
       add_tree_to_graph result graph;
       let children =
         List.mapi args ~f:(fun i arg ->
           let label = [%string "arg%{i#Int}"] in
           label, node_id arg)
-        (* @ [ "effect", Effect.node_id effect_ ] *)
+        @ [ "effect", Effect.node_id effect_ ]
         @ [ "result", node_id result ]
       in
       List.iter children ~f:(fun (label, child_id) ->

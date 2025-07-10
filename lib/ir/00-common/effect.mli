@@ -42,3 +42,5 @@ type t =
 [@@deriving sexp_of, compare, hash]
 
 val max_level : t -> metavariable_level:(Metavariable.t -> int) -> int
+val node_id : t -> Dot_graph.Node_id.t
+val add_tree_to_graph : t -> Dot_graph.t -> unit
