@@ -51,6 +51,7 @@ module Mono : sig
     -> int
 
   val node_id : t -> Dot_graph.Node_id.t
+  val add_tree_to_graph : t -> Dot_graph.t -> unit
 end
 
 (** a polytype has a toplevel forall quantifier *)
