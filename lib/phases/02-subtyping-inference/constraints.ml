@@ -422,28 +422,35 @@ let constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t) =
 
 let to_graph t : Dot_graph.t =
   let graph = Dot_graph.create () in
+  let add_constraints meta (bounds : _ Bounds.t) ~node_id ~add_tree_to_graph =
+    let meta_id = node_id meta in
+    let disambiguator = Dot_graph.Edge_disambiguator.of_string "at-most" in
+    add_tree_to_graph meta graph;
+    List.iter bounds.lower_bounds ~f:(fun lower_bound ->
+      let lower_bound_id = node_id lower_bound in
+      add_tree_to_graph lower_bound graph;
+      Dot_graph.add_edge graph ~from:lower_bound_id ~to_:meta_id ~disambiguator);
+    List.iter bounds.upper_bounds ~f:(fun upper_bound ->
+      let upper_bound_id = node_id upper_bound in
+      add_tree_to_graph upper_bound graph;
+      Dot_graph.add_edge graph ~from:meta_id ~to_:upper_bound_id ~disambiguator)
+  in
   Hashtbl.iteri
     t.type_constraints
     ~f:(fun ~key:meta ~data:(bounds : _ Bounds.t) ->
-      let meta_id = Type.Mono.node_id (Metavariable meta) in
-      let disambiguator = Dot_graph.Edge_disambiguator.of_string "at-most" in
-      Type.Mono.add_tree_to_graph (Metavariable meta) graph;
-      List.iter bounds.lower_bounds ~f:(fun lower_bound ->
-        let lower_bound_id = Type.Mono.node_id lower_bound in
-        Type.Mono.add_tree_to_graph lower_bound graph;
-        Dot_graph.add_edge
-          graph
-          ~from:lower_bound_id
-          ~to_:meta_id
-          ~disambiguator);
-      List.iter bounds.upper_bounds ~f:(fun upper_bound ->
-        let upper_bound_id = Type.Mono.node_id upper_bound in
-        Type.Mono.add_tree_to_graph upper_bound graph;
-        Dot_graph.add_edge
-          graph
-          ~from:meta_id
-          ~to_:upper_bound_id
-          ~disambiguator));
+      add_constraints
+        (Type.Mono.Metavariable meta)
+        bounds
+        ~node_id:Type.Mono.node_id
+        ~add_tree_to_graph:Type.Mono.add_tree_to_graph);
+  Hashtbl.iteri
+    t.effect_constraints
+    ~f:(fun ~key:meta ~data:(bounds : _ Bounds.t) ->
+      add_constraints
+        (Effect.Metavariable meta)
+        bounds
+        ~node_id:Effect.node_id
+        ~add_tree_to_graph:Effect.add_tree_to_graph);
   graph
 ;;
 
