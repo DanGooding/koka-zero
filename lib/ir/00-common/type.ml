@@ -29,6 +29,13 @@ module Primitive = struct
     | Bool
     | Unit
   [@@deriving equal, compare, sexp_of, hash]
+
+  let node_label t =
+    match t with
+    | Int -> "int"
+    | Bool -> "bool"
+    | Unit -> "unit"
+  ;;
 end
 
 (* TODO: currently have no annotations, but will need to use a variant to
@@ -64,6 +71,39 @@ module Mono = struct
 
   let node_id t =
     [%sexp (t : t)] |> Sexp.to_string_mach |> Dot_graph.Node_id.of_string
+  ;;
+
+  let node_label t =
+    match t with
+    | Arrow _ -> "Arrow"
+    | Metavariable meta -> Metavariable.to_string meta
+    | Primitive p -> Primitive.node_label p
+  ;;
+
+  let rec add_tree_to_graph t graph =
+    let parent_id = node_id t in
+    Dot_graph.add_node graph parent_id ~attrs:[ "label", node_label t ];
+    (* add edges to child nodes *)
+    match t with
+    | Primitive _ | Metavariable _ -> ()
+    | Arrow (args, _effect_, result) ->
+      List.iter args ~f:(fun arg -> add_tree_to_graph arg graph);
+      (* Effect.add_tree_to_graph effect_ graph; *)
+      add_tree_to_graph result graph;
+      let children =
+        List.mapi args ~f:(fun i arg ->
+          let label = [%string "arg%{i#Int}"] in
+          label, node_id arg)
+        (* @ [ "effect", Effect.node_id effect_ ] *)
+        @ [ "result", node_id result ]
+      in
+      List.iter children ~f:(fun (label, child_id) ->
+        Dot_graph.add_edge
+          graph
+          ~from:parent_id
+          ~to_:child_id
+          ~disambiguator:(Dot_graph.Edge_disambiguator.of_string label)
+          ~attrs:[ "label", label; "style", "dashed" ])
   ;;
 end
 

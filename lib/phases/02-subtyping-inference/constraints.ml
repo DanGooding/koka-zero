@@ -426,16 +426,24 @@ let to_graph t : Dot_graph.t =
     t.type_constraints
     ~f:(fun ~key:meta ~data:(bounds : _ Bounds.t) ->
       let meta_id = Type.Mono.node_id (Metavariable meta) in
-      Dot_graph.add_node
-        graph
-        meta_id
-        ~attrs:[ "label", Sexp.to_string [%sexp (meta : Type.Metavariable.t)] ];
+      let disambiguator = Dot_graph.Edge_disambiguator.of_string "at-most" in
+      Type.Mono.add_tree_to_graph (Metavariable meta) graph;
       List.iter bounds.lower_bounds ~f:(fun lower_bound ->
         let lower_bound_id = Type.Mono.node_id lower_bound in
-        Dot_graph.add_edge graph ~from:lower_bound_id ~to_:meta_id);
+        Type.Mono.add_tree_to_graph lower_bound graph;
+        Dot_graph.add_edge
+          graph
+          ~from:lower_bound_id
+          ~to_:meta_id
+          ~disambiguator);
       List.iter bounds.upper_bounds ~f:(fun upper_bound ->
         let upper_bound_id = Type.Mono.node_id upper_bound in
-        Dot_graph.add_edge graph ~from:meta_id ~to_:upper_bound_id));
+        Type.Mono.add_tree_to_graph upper_bound graph;
+        Dot_graph.add_edge
+          graph
+          ~from:meta_id
+          ~to_:upper_bound_id
+          ~disambiguator));
   graph
 ;;
 
