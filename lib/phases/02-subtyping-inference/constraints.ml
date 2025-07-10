@@ -420,42 +420,27 @@ let constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t) =
                   (effect_hi : Effect.t)])
 ;;
 
-let to_graph t : Odot.graph =
-  let node_id (type_ : Type.Mono.t) : string =
+let to_graph t : Dot_graph.t =
+  let graph = Dot_graph.create () in
+  let node_id (type_ : Type.Mono.t) =
     Sexp.to_string_hum [%sexp (type_ : Type.Mono.t)]
+    |> Dot_graph.Node_id.of_string
   in
-  let edge_stmt (from_id : string) (to_id : string) : Odot.edge_stmt =
-    ( Edge_node_id (Double_quoted_id from_id, None)
-    , [ Edge_node_id (Double_quoted_id to_id, None) ]
-    , [] )
-  in
-  let edges = ref [] in
-  let nodes = String.Hash_set.create () in
-  (* attrs for types, effects, metavariables vs types.
-     could perhaps add secondary edges from types to their metavariables *)
   Hashtbl.iteri
     t.type_constraints
     ~f:(fun ~key:meta ~data:(bounds : _ Bounds.t) ->
       let meta_id = node_id (Metavariable meta) in
-      Hash_set.add nodes meta_id;
+      Dot_graph.add_node graph meta_id;
       List.iter bounds.lower_bounds ~f:(fun lower_bound ->
         let lower_bound_id = node_id lower_bound in
-        Hash_set.add nodes lower_bound_id;
-        edges := edge_stmt lower_bound_id meta_id :: !edges);
+        Dot_graph.add_edge graph ~from:lower_bound_id ~to_:meta_id);
       List.iter bounds.upper_bounds ~f:(fun upper_bound ->
         let upper_bound_id = node_id upper_bound in
-        Hash_set.add nodes upper_bound_id;
-        edges := edge_stmt meta_id upper_bound_id :: !edges));
-  let nodes =
-    Hash_set.to_list nodes
-    |> List.map ~f:(fun id -> Odot.Stmt_node ((Double_quoted_id id, None), []))
-  in
-  let edges = List.map !edges ~f:(fun edge -> Odot.Stmt_edge edge) in
-  { strict = false; kind = Digraph; id = None; stmt_list = nodes @ edges }
+        Dot_graph.add_edge graph ~from:meta_id ~to_:upper_bound_id));
+  graph
 ;;
 
 let print_as_graph t =
   let graph = to_graph t in
-  Odot.print Out_channel.stdout graph;
-  Out_channel.newline Out_channel.stdout
+  Dot_graph.write graph Out_channel.stdout
 ;;
