@@ -430,7 +430,10 @@ let to_graph t : Dot_graph.t =
     t.type_constraints
     ~f:(fun ~key:meta ~data:(bounds : _ Bounds.t) ->
       let meta_id = node_id (Metavariable meta) in
-      Dot_graph.add_node graph meta_id;
+      Dot_graph.add_node
+        graph
+        meta_id
+        ~attrs:[ "label", Sexp.to_string [%sexp (meta : Type.Metavariable.t)] ];
       List.iter bounds.lower_bounds ~f:(fun lower_bound ->
         let lower_bound_id = node_id lower_bound in
         Dot_graph.add_edge graph ~from:lower_bound_id ~to_:meta_id);
