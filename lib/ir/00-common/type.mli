@@ -1,4 +1,5 @@
 open Core
+open! Import
 
 (* TODO: [Variable] currently have no annotations, but will need to use a
    variant to namespace user names from generated names *)
@@ -48,6 +49,8 @@ module Mono : sig
     -> type_metavariable_level:(Metavariable.t -> int)
     -> effect_metavariable_level:(Effect.Metavariable.t -> int)
     -> int
+
+  val node_id : t -> Dot_graph.Node_id.t
 end
 
 (** a polytype has a toplevel forall quantifier *)

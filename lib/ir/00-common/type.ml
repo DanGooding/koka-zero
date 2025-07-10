@@ -1,4 +1,5 @@
 open Core
+open! Import
 
 module Variable = struct
   module T = struct
@@ -59,6 +60,10 @@ module Mono = struct
       in
       List.max_elt (effect_level :: type_levels) ~compare:[%compare: int]
       |> Option.value ~default:0
+  ;;
+
+  let node_id t =
+    [%sexp (t : t)] |> Sexp.to_string_mach |> Dot_graph.Node_id.of_string
   ;;
 end
 

@@ -422,23 +422,19 @@ let constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t) =
 
 let to_graph t : Dot_graph.t =
   let graph = Dot_graph.create () in
-  let node_id (type_ : Type.Mono.t) =
-    Sexp.to_string_hum [%sexp (type_ : Type.Mono.t)]
-    |> Dot_graph.Node_id.of_string
-  in
   Hashtbl.iteri
     t.type_constraints
     ~f:(fun ~key:meta ~data:(bounds : _ Bounds.t) ->
-      let meta_id = node_id (Metavariable meta) in
+      let meta_id = Type.Mono.node_id (Metavariable meta) in
       Dot_graph.add_node
         graph
         meta_id
         ~attrs:[ "label", Sexp.to_string [%sexp (meta : Type.Metavariable.t)] ];
       List.iter bounds.lower_bounds ~f:(fun lower_bound ->
-        let lower_bound_id = node_id lower_bound in
+        let lower_bound_id = Type.Mono.node_id lower_bound in
         Dot_graph.add_edge graph ~from:lower_bound_id ~to_:meta_id);
       List.iter bounds.upper_bounds ~f:(fun upper_bound ->
-        let upper_bound_id = node_id upper_bound in
+        let upper_bound_id = Type.Mono.node_id upper_bound in
         Dot_graph.add_edge graph ~from:meta_id ~to_:upper_bound_id));
   graph
 ;;
