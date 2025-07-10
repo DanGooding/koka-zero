@@ -1,5 +1,4 @@
 open! Core
-open! Import
 
 module Node_id : sig
   type t [@@deriving sexp_of]

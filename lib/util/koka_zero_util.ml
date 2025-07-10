@@ -5,3 +5,4 @@ module Non_empty_list = Non_empty_list
 module Has_multiset = Has_multiset
 module Monad_utils = Monad_utils
 module String_utils = String_utils
+module Dot_graph = Dot_graph
