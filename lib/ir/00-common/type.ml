@@ -82,7 +82,12 @@ module Mono = struct
 
   let rec add_tree_to_graph t graph =
     let parent_id = node_id t in
-    Dot_graph.add_node graph parent_id ~attrs:[ "label", node_label t ];
+    let shape =
+      match t with
+      | Metavariable _ -> []
+      | Primitive _ | Arrow _ -> [ "shape", "box" ]
+    in
+    Dot_graph.add_node graph parent_id ~attrs:([ "label", node_label t ] @ shape);
     (* add edges to child nodes *)
     match t with
     | Primitive _ | Metavariable _ -> ()
