@@ -1,5 +1,4 @@
 open! Core
-open! Import
 
 module Attrs = struct
   type t = (string * string) list [@@deriving sexp_of]
