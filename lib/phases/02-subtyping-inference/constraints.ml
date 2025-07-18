@@ -39,6 +39,8 @@ let rec extrude_aux
           ~to_level
           ~polarity_positive
           ~(cache : Type.Metavariable.t Bool.Table.t Type.Metavariable.Table.t)
+          ~(effect_cache :
+             Effect.Metavariable.t Bool.Table.t Effect.Metavariable.Table.t)
   : Type.Mono.t
   =
   match type_ with
@@ -52,18 +54,20 @@ let rec extrude_aux
              t
              ~to_level
              ~polarity_positive:(not polarity_positive)
-             ~cache)
+             ~cache
+             ~effect_cache)
     in
     let effect_ =
-      (* TODO: shouldn't this be shared between all recursive calls? *)
       extrude_effect_aux
         t
         effect_
         ~to_level
         ~polarity_positive
-        ~cache:(Effect.Metavariable.Table.create ())
+        ~cache:effect_cache
     in
-    let result = extrude_aux t result ~to_level ~polarity_positive ~cache in
+    let result =
+      extrude_aux t result ~to_level ~polarity_positive ~cache ~effect_cache
+    in
     Arrow (args, effect_, result)
   | Metavariable m
     when Metavariables.type_level_exn t.metavariables m <= to_level ->
@@ -100,14 +104,26 @@ let rec extrude_aux
              let lower_bounds =
                List.map
                  lower_bounds
-                 ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
+                 ~f:
+                   (extrude_aux
+                      t
+                      ~to_level
+                      ~polarity_positive
+                      ~cache
+                      ~effect_cache)
              in
              { Bounds.lower_bounds; upper_bounds }
            | false ->
              let upper_bounds =
                List.map
                  upper_bounds
-                 ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
+                 ~f:
+                   (extrude_aux
+                      t
+                      ~to_level
+                      ~polarity_positive
+                      ~cache
+                      ~effect_cache)
              in
              { Bounds.lower_bounds; upper_bounds }
          in
@@ -214,6 +230,7 @@ let extrude t type_ ~to_level ~polarity_positive =
     ~to_level
     ~polarity_positive
     ~cache:(Type.Metavariable.Table.create ())
+    ~effect_cache:(Effect.Metavariable.Table.create ())
 ;;
 
 let extrude_effect t effect_ ~to_level ~polarity_positive =
