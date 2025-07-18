@@ -74,7 +74,11 @@ let rec extrude_aux
      | Some extruded -> Metavariable extruded
      | None ->
        let fresh =
-         Metavariables.fresh_type_metavariable t.metavariables ~level:to_level
+         Metavariables.fresh_type_metavariable
+           t.metavariables
+           ~level:to_level
+           ~location:
+             (Instantiation (Metavariables.type_location_exn t.metavariables m))
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
        Option.iter
@@ -146,7 +150,12 @@ and extrude_effect_metavariable_aux
      | Some fresh -> fresh
      | None ->
        let fresh =
-         Metavariables.fresh_effect_metavariable t.metavariables ~level:to_level
+         Metavariables.fresh_effect_metavariable
+           t.metavariables
+           ~level:to_level
+           ~location:
+             (Instantiation
+                (Metavariables.effect_location_exn t.metavariables m))
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
        Option.iter
