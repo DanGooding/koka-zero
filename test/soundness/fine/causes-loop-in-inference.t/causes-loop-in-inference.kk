@@ -36,7 +36,7 @@ fun triangular_worker() {
   else {
     val current = get(());
     decrement();
-    current + triangular()
+    current + triangular_worker()
   }
 }
 
