@@ -1,0 +1,249 @@
+samples/streams.kk
+
+spinning in:
+
+    frame #12: 0x00000001045b79c8 main.exe`camlBase__Hashtbl.create_inner_4164 + 248
+    frame #13: 0x00000001045ba390 main.exe`camlBase__Hashtbl.fun_4397 + 48
+    frame #14: 0x00000001040da098 main.exe`camlKoka_zero_subtyping_inference__Constraints.extrude_effect_metavariable_aux_3588 + 184
+    frame #15: 0x00000001040d9f10 main.exe`camlKoka_zero_subtyping_inference__Constraints.extrude_effect_aux_3587 + 56
+  * frame #16: 0x00000001040db680 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 496
+      must be one of the Metavariable cases
+      just returned from camlKoka_zero_subtyping_inference__Constraints.extrude_effect_4357
+    frame #17: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+      just retunred from recursive call
+    frame #18: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #19: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #20: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #21: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #22: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #23: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #24: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #25: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #26: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #27: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #28: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+    frame #29: 0x00000001040db6e0 main.exe`camlKoka_zero_subtyping_inference__Constraints.constrain_effect_at_most_4364 + 592
+
+
+
+
+em26(1) <= em25(2)
+(constrain_effect_at_most(effect_lo(Metavariable em26))(lo_max_level 1)(effect_hi(Metavariable em25))(hi_max_level 2))
+
+extrude em25 2->1
+(extrude_effect(effect_(Metavariable em25))(to_level 1)(polarity_positive false))
+
+((m em25) (bounds ()))
+
+em27(1) <= em25(2)
+(constrain_effect_at_most(effect_lo(Metavariable em27))(lo_max_level 1)(effect_hi(Metavariable em25))(hi_max_level 2))
+(extrude_effect(effect_(Metavariable em25))(to_level 1)(polarity_positive false))
+((m em25) (bounds ()))
+
+(constrain_effect_at_most(effect_lo(Metavariable em28))(lo_max_level 1)(effect_hi(Metavariable em25))(hi_max_level 2))
+(extrude_effect(effect_(Metavariable em25))(to_level 1)(polarity_positive false))
+((m em25) (bounds ()))
+
+
+
+
+Q:
+- should the extrude cache be shared?
+  - is it global? is it per invocation? is it memoised by the arguments
+  surely it at least _can_ be shared (extrude em25 2->1 should always have the same answer...)
+
+- should there be a special Metavariable <= Metavariable case? is the current behaviour even symmetric?
+
+Metavariable a <= (Metavariable b) when level(b) <= level(a)
+-> add [a <= Metavariable b]
+
+Metavariable a <= (Metavariable b) when level(b) > level(a)
+-> add [a <= approx] [ <= Metavariable b](which fails again)
+
+
+(Metavariable a) <= Metavariable b when level(a) <= level(b)
+-> add [Metavariable a <= b]
+
+(Metavariable a) <= Metavariable b when level(a) > level(b)
+-> add [Metavariable a <= approx] which fails again [approx <= b]
+
+
+
+
+have em26(1) <= em25(2)
+surely this must be okay in one of the two directions??
+
+add:
+em26(1) <= approx(1) <= em25(2)
+
+but then approx(1) <= em25(2) has the same issue
+
+so what is the constraint?
+- metavariables cannot have bounds at higher levels?
+  then surely we can fix by adding em26(1) as a bound on em25(2)
+
+- completeness is concerning 
+
+
+
+[x] with two metavariables, add whichever bound reflects the level ordering
+[ ] work out if that's actually complete or consistent
+- I suspect not: <= reflects dataflow, 
+and the fact that A<=B means A is used in positive position and B is used in negative position
+
+
+what's actually going on with constraints?
+do metavariables actually have polarity?
+
+
+Lambda (f, x) -> f x
+means:
+
+f: m1, em1
+x: m2, em2
+
+m1 <= m2 -> em3 m3
+-> m1.upper = [m2 -> em3 m3]
+
+result : m3  (no constraints)
+effect : em4
+em1, em2, em3 <= em4
+
+can add either:
+em1.upper = [em4] (a)
+em4.lower = [em1] (b)
+
+
+later, we'll call the lambda, so will add
+em4 <= ... <= <>
+
+which will hit (Meta emN <= Labels _)
+-> emN.upper += <>
+  -> emN.lower[i] <= <>
+
+
+
+have added left-to-right order:
+m1 <= m2 <= m3 <= <>
+
+if add 
+  m1.upper = [m2]
+
+  m2.upper = [m3]
+  -> m2.lower <= m3
+    doesn't exist; won't propagate :/
+
+  m3.upper = [<>]
+  -> m3.lower <= <>
+    doesn't exist; won't propagate :/
+
+instead, add:
+  m2.lower = [m1]
+
+  m3.lower = [m2]
+  -> m2 <= m3.upper
+    curently empty...
+
+  m3.upper = [<>]
+  -> m3.lower <= <>
+    -> m2 <= <>
+      m2.upper = [<>]
+
+
+-----
+
+
+have:
+
+
+handle ask {
+  perform ask() + 1
+}
+: <>
+
+so 
+
+<ask> <= m1
+<> <= m1
+  m1.lower = [<ask>, <>]
+
+Handled(<ask>, m1) <= m2
+  m2.lower = [Handled(<ask>, m1)]
+  (m2.upper empty)
+
+m2 <= <>
+  m2.upper = [<>]
+  m2.lower <= <>
+  -> Handled(<ask>, m1) <= <>
+    m1 <= <ask>
+    -> m1.upper = [<ask>]
+      m1.lower <= <ask>
+        ok
+
+
+so the flow is:
+m1 lower
+m2 lower (m1)
+m2 upper
+-> sets upper on m2 lower
+  m1 upper
+  -> sets upper on m1 lower
+    ok
+
+added in this order...
+A <= m1 <= D
+B <= m2 <= C
+
+
+
+so when we have m3 <= m4, options are:
+[ ] add just m4.lower (usually done first)
+[ ] add just m3.upper
+[ ] add both
+
+idea is that if we're in the lower-bounding phase, we should do that
+otherwise we should add the upper bound.
+
+
+
+
+
+
+[x] add the same fix to type metavariables
+[ ] share code with the metavariable vs effect case
+  Bounds.add_lower/add_upper
+
+[ ] work out why only the streams example causes this issue
+- it seems streams actually doesn't compile, 
+but with the Meta<=Meta fix it does typecheck
+
+verifier error: Function return type does not match operand type of return inst!
+  ret i8 %not
+ ptrFunction return type does not match operand type of return inst!
+  ret i8 %not
+ ptr
+
+[ ] add streams as a test case
+[ ] convert other samples to test cases
+
+[ ] expect tests that show the order of adding constraints
+[ ] show the source of each metavariable
+- infer naturally does this by attaching types/effects to expressions
+- should we just store a sexp?
+  - tag when extrude?
+  - and when instantiate
+
+- parameter is a valid location
+- f_self is a valid location
+
+- handler subject is a valid location
+
+lower <= metavariable (level, location) <= upper
+
+[ ] refactor metavariables to have one hashtbl containing a record
+[ ]  perhaps metavariable info should be stored on the metavariable itself
+- level & location are constant
+- then Effect.sexp_of_t can include these
+
+
+[ ] thread actual source-code ranges through expr
