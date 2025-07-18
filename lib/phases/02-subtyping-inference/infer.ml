@@ -21,9 +21,11 @@ let create () =
   { metavariables; constraints; expansion }
 ;;
 
-let union_effects t effects_ ~level =
+let union_effects t effects_ ~level ~location =
   let open Result.Let_syntax in
-  let overall_effect = Metavariables.fresh_effect t.metavariables ~level in
+  let overall_effect =
+    Metavariables.fresh_effect t.metavariables ~level ~location
+  in
   let%map () =
     Or_static_error.list_iter effects_ ~f:(fun effect_ ->
       Constraints.constrain_effect_at_most t.constraints effect_ overall_effect)
@@ -112,7 +114,10 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
        | Some meta' -> Metavariable meta'
        | None ->
          let meta' =
-           Metavariables.fresh_type_metavariable t.metavariables ~level
+           Metavariables.fresh_type_metavariable
+             t.metavariables
+             ~level
+             ~location:(Metavariables.type_location_exn t.metavariables meta)
          in
          Hashtbl.add_exn fresh_types ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
@@ -143,7 +148,10 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
        | Some meta' -> meta'
        | None ->
          let meta' =
-           Metavariables.fresh_effect_metavariable t.metavariables ~level
+           Metavariables.fresh_effect_metavariable
+             t.metavariables
+             ~level
+             ~location:(Metavariables.effect_location_exn t.metavariables meta)
          in
          Hashtbl.add_exn fresh_effects ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
@@ -237,7 +245,11 @@ let rec infer_expr
       infer_expr t body ~env ~level ~effect_env
     in
     let%map overall_effect =
-      union_effects t [ effect_subject; effect_body ] ~level
+      union_effects
+        t
+        [ effect_subject; effect_body ]
+        ~level
+        ~location:(Expr expr)
     in
     Expl.Expr.Let_mono (var, subject, body), type_body, overall_effect
   | Application (f, args) ->
@@ -245,14 +257,21 @@ let rec infer_expr
       Or_static_error.list_map args ~f:(fun arg ->
         infer_expr t arg ~env ~level ~effect_env)
     in
-    let args, arg_types, arg_effects = List.unzip3 args_and_types_and_effects in
-    let%bind f, function_type, function_expr_effect =
+    let args', arg_types, arg_effects =
+      List.unzip3 args_and_types_and_effects
+    in
+    let%bind f', function_type, function_expr_effect =
       infer_expr t f ~env ~level ~effect_env
     in
     let result : Type.Mono.t =
-      Metavariables.fresh_type t.metavariables ~level
+      Metavariables.fresh_type t.metavariables ~level ~location:(Expr expr)
     in
-    let call_effect = Metavariables.fresh_effect t.metavariables ~level in
+    let call_effect =
+      Metavariables.fresh_effect
+        t.metavariables
+        ~level
+        ~location:(Application (f, args))
+    in
     let%bind () =
       Constraints.constrain_type_at_most
         t.constraints
@@ -264,8 +283,9 @@ let rec infer_expr
         t
         (call_effect :: function_expr_effect :: arg_effects)
         ~level
+        ~location:(Expr expr)
     in
-    Expl.Expr.Application (f, args, call_effect), result, overall_effect
+    Expl.Expr.Application (f', args', call_effect), result, overall_effect
   | Seq (first, second) ->
     let%bind first, _type, first_effect =
       infer_expr t first ~env ~level ~effect_env
@@ -274,7 +294,11 @@ let rec infer_expr
       infer_expr t second ~env ~level ~effect_env
     in
     let%map overall_effect =
-      union_effects t [ first_effect; second_effect ] ~level
+      union_effects
+        t
+        [ first_effect; second_effect ]
+        ~level
+        ~location:(Expr expr)
     in
     Expl.Expr.Seq (first, second), second_type, overall_effect
   | If_then_else (e_cond, e_true, e_false) ->
@@ -293,7 +317,9 @@ let rec infer_expr
         type_cond
         (Primitive Bool)
     in
-    let result_type = Metavariables.fresh_type t.metavariables ~level in
+    let result_type =
+      Metavariables.fresh_type t.metavariables ~level ~location:(Expr expr)
+    in
     let%bind () =
       Constraints.constrain_type_at_most t.constraints type_true result_type
     in
@@ -301,7 +327,11 @@ let rec infer_expr
       Constraints.constrain_type_at_most t.constraints type_false result_type
     in
     let%map overall_effect =
-      union_effects t [ effect_cond; effect_true; effect_false ] ~level
+      union_effects
+        t
+        [ effect_cond; effect_true; effect_false ]
+        ~level
+        ~location:(Expr expr)
     in
     ( Expl.Expr.If_then_else (e_cond, e_true, e_false)
     , result_type
@@ -322,7 +352,7 @@ let rec infer_expr
       Constraints.constrain_type_at_most t.constraints right_type arg_type
     in
     let%map overall_effect =
-      union_effects t [ left_effect; right_effect ] ~level
+      union_effects t [ left_effect; right_effect ] ~level ~location:(Expr expr)
     in
     Expl.Expr.Operator (left, op, right), result_type, overall_effect
   | Unary_operator (uop, arg) ->
@@ -388,7 +418,11 @@ and infer_lambda t ((params, body) : Min.Expr.lambda) ~env ~level ~effect_env
   let open Result.Let_syntax in
   let param_metas =
     List.map params ~f:(fun param ->
-      param, Metavariables.fresh_type t.metavariables ~level)
+      ( param
+      , Metavariables.fresh_type
+          t.metavariables
+          ~level
+          ~location:(Parameter param) ))
   in
   let%bind env =
     Or_static_error.list_fold param_metas ~init:env ~f:(fun env (param, meta) ->
@@ -411,7 +445,9 @@ and infer_fix_lambda
   : (Effect.t Expl.Expr.fix_lambda * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
-  let meta_self = Metavariables.fresh_type t.metavariables ~level in
+  let meta_self =
+    Metavariables.fresh_type t.metavariables ~level ~location:(F_self var)
+  in
   let%bind env =
     Context.extend env ~var ~type_:(Mono meta_self)
     |> error_if_cannot_shadow ~name:var
@@ -492,12 +528,30 @@ and infer_handler
     and
     f >= Handled({label}, e)
   *)
-  let t_subject = Metavariables.fresh_type t.metavariables ~level in
-  let eff_subject =
-    Metavariables.fresh_effect_metavariable t.metavariables ~level
+  let t_subject =
+    Metavariables.fresh_type
+      t.metavariables
+      ~level
+      ~location:(Handler_subject handler)
   in
-  let t_handler_result = Metavariables.fresh_type t.metavariables ~level in
-  let eff_handler = Metavariables.fresh_effect t.metavariables ~level in
+  let eff_subject =
+    Metavariables.fresh_effect_metavariable
+      t.metavariables
+      ~level
+      ~location:(Handler_subject handler)
+  in
+  let t_handler_result =
+    Metavariables.fresh_type
+      t.metavariables
+      ~level
+      ~location:(Handler_result handler)
+  in
+  let eff_handler =
+    Metavariables.fresh_effect
+      t.metavariables
+      ~level
+      ~location:(Handler_result handler)
+  in
   let%bind () =
     Constraints.constrain_effect_at_most
       t.constraints
