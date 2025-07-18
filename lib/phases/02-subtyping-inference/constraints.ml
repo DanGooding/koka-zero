@@ -253,7 +253,6 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
             extrude t type_hi ~to_level:m_level ~polarity_positive:false
           in
           (* m (level_m) <= approx_type_hi (level_m) <= type_hi *)
-          let%bind () = constrain_type_at_most t approx_type_hi type_hi in
           constrain_type_at_most t (Metavariable m) approx_type_hi)
      | type_lo, Metavariable m ->
        let m_level = Metavariables.type_level_exn t.metavariables m in
@@ -279,7 +278,6 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           let approx_type_lo =
             extrude t type_lo ~to_level:m_level ~polarity_positive:true
           in
-          let%bind () = constrain_type_at_most t type_lo approx_type_lo in
           constrain_type_at_most t approx_type_lo (Metavariable m))
      | Arrow _, Primitive _ | Primitive _, Arrow _ ->
        Error
@@ -371,7 +369,6 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
           let above_approx =
             extrude_effect t above_m ~to_level:m_level ~polarity_positive:false
           in
-          let%bind () = constrain_effect_at_most t above_approx above_m in
           constrain_effect_at_most t (Metavariable m) above_approx)
      | below_m, Metavariable m ->
        let m_level = Metavariables.effect_level_exn t.metavariables m in
@@ -392,7 +389,6 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
           let approx_below_m =
             extrude_effect t below_m ~to_level:m_level ~polarity_positive:true
           in
-          let%bind () = constrain_effect_at_most t below_m approx_below_m in
           constrain_effect_at_most t approx_below_m (Metavariable m)))
 ;;
 
