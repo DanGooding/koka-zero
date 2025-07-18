@@ -198,22 +198,24 @@ and extrude_effect_metavariable_aux
        let fresh_bounds =
          match bounds with
          | None -> Bounds.create ()
-         | Some { Bounds.lower_bounds; upper_bounds } ->
+         | Some bounds ->
            (match polarity_positive with
             | true ->
               let lower_bounds =
                 List.map
-                  lower_bounds
+                  bounds.lower_bounds
                   ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
               in
-              { Bounds.lower_bounds; upper_bounds }
+              bounds.upper_bounds <- Metavariable fresh :: bounds.upper_bounds;
+              { Bounds.lower_bounds; upper_bounds = [] }
             | false ->
               let upper_bounds =
                 List.map
-                  upper_bounds
+                  bounds.upper_bounds
                   ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
               in
-              { Bounds.lower_bounds; upper_bounds })
+              bounds.lower_bounds <- Metavariable fresh :: bounds.upper_bounds;
+              { Bounds.lower_bounds = []; upper_bounds })
        in
        add_fresh_effect_exn t fresh fresh_bounds;
        fresh)
