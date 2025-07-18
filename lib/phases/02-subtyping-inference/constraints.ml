@@ -1,6 +1,8 @@
 open! Core
 open! Import
 
+let debug () = Sys.getenv "DEBUG_PRINT_CONSTRAINTS" |> Option.is_some
+
 type t =
   { type_constraints : Type.Mono.t Bounds.t Type.Metavariable.Table.t
   ; effect_constraints : Effect.t Bounds.t Effect.Metavariable.Table.t
@@ -53,6 +55,7 @@ let rec extrude_aux
              ~cache)
     in
     let effect_ =
+      (* TODO: shouldn't this be shared between all recursive calls? *)
       extrude_effect_aux
         t
         effect_
@@ -81,27 +84,34 @@ let rec extrude_aux
              (Instantiation (Metavariables.type_location_exn t.metavariables m))
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
-       Option.iter
-         (get_type_bounds t m)
-         ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
-           let bounds =
-             match polarity_positive with
-             | true ->
-               let lower_bounds =
-                 List.map
-                   lower_bounds
-                   ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
-               in
-               { Bounds.lower_bounds; upper_bounds }
-             | false ->
-               let upper_bounds =
-                 List.map
-                   upper_bounds
-                   ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
-               in
-               { Bounds.lower_bounds; upper_bounds }
-           in
-           add_fresh_type_exn t fresh bounds);
+       let bounds = get_type_bounds t m in
+       if debug ()
+       then (
+         let sexp_of_type_ = Metavariables.sexp_of_type t.metavariables in
+         print_s
+           [%message
+             "extruding"
+               ~meta:(Metavariable m : type_)
+               (bounds : type_ Bounds.t option)]);
+       Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
+         let bounds =
+           match polarity_positive with
+           | true ->
+             let lower_bounds =
+               List.map
+                 lower_bounds
+                 ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
+             in
+             { Bounds.lower_bounds; upper_bounds }
+           | false ->
+             let upper_bounds =
+               List.map
+                 upper_bounds
+                 ~f:(extrude_aux t ~to_level ~polarity_positive ~cache)
+             in
+             { Bounds.lower_bounds; upper_bounds }
+         in
+         add_fresh_type_exn t fresh bounds);
        Metavariable fresh)
 
 and extrude_effect_aux
@@ -158,31 +168,46 @@ and extrude_effect_metavariable_aux
                 (Metavariables.effect_location_exn t.metavariables m))
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
-       Option.iter
-         (get_effect_bounds t m)
-         ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
-           let bounds =
-             match polarity_positive with
-             | true ->
-               let lower_bounds =
-                 List.map
-                   lower_bounds
-                   ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
-               in
-               { Bounds.lower_bounds; upper_bounds }
-             | false ->
-               let upper_bounds =
-                 List.map
-                   upper_bounds
-                   ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
-               in
-               { Bounds.lower_bounds; upper_bounds }
-           in
-           add_fresh_effect_exn t fresh bounds);
+       let bounds = get_effect_bounds t m in
+       if debug ()
+       then (
+         let sexp_of_effect_ = Metavariables.sexp_of_effect t.metavariables in
+         print_s
+           [%message
+             "extruding"
+               ~meta:(Metavariable m : effect_)
+               (bounds : effect_ Bounds.t option)]);
+       Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
+         let bounds =
+           match polarity_positive with
+           | true ->
+             let lower_bounds =
+               List.map
+                 lower_bounds
+                 ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
+             in
+             { Bounds.lower_bounds; upper_bounds }
+           | false ->
+             let upper_bounds =
+               List.map
+                 upper_bounds
+                 ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
+             in
+             { Bounds.lower_bounds; upper_bounds }
+         in
+         add_fresh_effect_exn t fresh bounds);
        fresh)
 ;;
 
 let extrude t type_ ~to_level ~polarity_positive =
+  if debug ()
+  then
+    print_s
+      [%message
+        "extrude type"
+          ~type_:(Metavariables.sexp_of_type t.metavariables type_ : Sexp.t)
+          (to_level : int)
+          (polarity_positive : bool)];
   extrude_aux
     t
     type_
@@ -192,6 +217,15 @@ let extrude t type_ ~to_level ~polarity_positive =
 ;;
 
 let extrude_effect t effect_ ~to_level ~polarity_positive =
+  if debug ()
+  then
+    print_s
+      [%message
+        "extrude effect"
+          ~effect_:
+            (Metavariables.sexp_of_effect t.metavariables effect_ : Sexp.t)
+          (to_level : int)
+          (polarity_positive : bool)];
   extrude_effect_aux
     t
     effect_
@@ -206,6 +240,13 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
   : unit Or_static_error.t
   =
   let open Result.Let_syntax in
+  if debug ()
+  then
+    print_s
+      [%message
+        "constrain_type_at_most"
+          ~type_lo:(Metavariables.sexp_of_type t.metavariables type_lo : Sexp.t)
+          ~type_hi:(Metavariables.sexp_of_type t.metavariables type_hi : Sexp.t)];
   let constraint_ = Constraint.Type_at_most { type_lo; type_hi } in
   match Hash_set.strict_add t.already_seen_constraints constraint_ with
   | Error _already_present -> return ()
@@ -300,6 +341,15 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
   : unit Or_static_error.t
   =
   let open Result.Let_syntax in
+  if debug ()
+  then
+    print_s
+      [%message
+        "constrain_effect_at_most"
+          ~effect_lo:
+            (Metavariables.sexp_of_effect t.metavariables effect_lo : Sexp.t)
+          ~effect_hi:
+            (Metavariables.sexp_of_effect t.metavariables effect_hi : Sexp.t)];
   let constraint_ = Constraint.Effect_at_most { effect_lo; effect_hi } in
   match Hash_set.strict_add t.already_seen_constraints constraint_ with
   | Error _already_present -> return ()
