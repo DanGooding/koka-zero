@@ -1,35 +1,10 @@
-
-effect control yield-int(x : int) : ();
-
-// yield n, n+1, n+2, ...
-fun integers-from(n) {
-  yield-int(n);
-  integers-from(n + 1);
-}
-
-// yield 0, 1, 2, ...
-fun naturals() {
-  integers-from(0);
-}
-
-// yield elements satisfying `p` only
-fun filter(p, generate) {
-  with control yield-int(x) {
-    if p(x) then { yield-int(x); };
-    resume(());
-  };
-  generate();
-}
-
-
-// state (no module system yet)
 effect state-int {
   control get(_ : ()) : int;
   control set(i : int) : ();
 }
 
 fun state(init, action) {
-  fun thread-state() {
+  fun thread-through-state() {
     with handler {
       control get(_) { fn(s) { resume(s)(s) } };
       control set(s) { fn(_) { resume(())(s) } };
@@ -37,7 +12,7 @@ fun state(init, action) {
     val x = action();
     fn(s) { x };
   };
-  thread-state()(init);
+  thread-through-state()(init);
 }
 
 // apply f to state
@@ -55,93 +30,23 @@ fun decrement() {
   modify fn(x) { x - 1 };
 }
 
-// apply `f` to every element
-fun map(f, generate) {
-  with fun yield-int(x) {
-    yield-int(f(x));
-  };
-  generate();
-}
-
-// yield the first `n` elements only
-fun take(n, generate) {
-  with state(n);  // remaining to yield
-  with control yield-int(x) {
-    val remaining = get(());
-    if remaining > 0
-    then {
-      set(remaining - 1);
-      yield-int(x);  // propagate
-      resume(());
-    }else {
-       (); // don't yield any further
-    }
-  };
-  generate();
-}
-
-// yield elements until one doesn't satisfy `p` (exclusive)
-fun take-while(p, generate) {
-  with control yield-int(x){
-    if p(x) then {
-      yield-int(x);
-      resume(());
-    }else {
-      ();
-    };
-  };
-  generate();
-}
-
-// reduce a stream to a single value (a 'left' fold)
-fun fold(x0, f, generate) {
-  with control yield-int(x) {
-     // TODO: try the state trick for tail-recursion
-     f(x0, resume(()));
-  };
-  generate();
-}
-
-// is `p` true for every element?
-fun all(p, generate) {
-  with control yield-int(x) {
-    if p(x)
-    then resume(())
-    else False
-  };
-  generate();
-  True;
-}
-
-// is `p` true for any element?
-fun any(p, generate) {
-  !all(fn(x) { !p(x); }, generate);
-}
-
-fun is-prime(n) {
-  if n <= 1 then False
+fun triangular_worker() {
+  if (get(()) == 0)
+  then 0
   else {
-    // a very inefficient test
-    with all(fn(d) { n % d != 0 });
-    with take-while(fn(d) { d < n });
-    integers-from(2);
-  };
+    val current = get(());
+    decrement();
+    current + triangular()
+  }
 }
 
-fun print-yielded(generate) {
-  with control yield-int(x) {
-      println-int(x);
-      resume(());
-    };
-  generate();
+fun triangular(n) {
+  with state(n);
+  triangular_worker();
 }
 
 fun main() {
-  // print primes up to 30:
-  with print-yielded;
-  with take-while(fn(x) { x < 30 });
-  with filter(is-prime);
-  naturals();
+  triangular(10).println-int
 }
 
 
