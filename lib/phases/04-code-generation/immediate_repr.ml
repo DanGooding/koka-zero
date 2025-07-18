@@ -69,7 +69,8 @@ module Bool = struct
     match op with
     | Not ->
       let%bind (Unpacked true_) = const_true () in
-      Codegen.use_builder (Llvm.build_xor b true_ "not")
+      let%bind result = Codegen.use_builder (Llvm.build_xor b true_ "not") in
+      to_opaque (Unpacked result)
   ;;
 end
 
