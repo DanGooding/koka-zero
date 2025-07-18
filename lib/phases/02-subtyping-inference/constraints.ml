@@ -97,37 +97,39 @@ let rec extrude_aux
              "extruding"
                ~meta:(Metavariable m : type_)
                (bounds : type_ Bounds.t option)]);
-       Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
-         let bounds =
-           match polarity_positive with
-           | true ->
-             let lower_bounds =
-               List.map
-                 lower_bounds
-                 ~f:
-                   (extrude_aux
-                      t
-                      ~to_level
-                      ~polarity_positive
-                      ~cache
-                      ~effect_cache)
-             in
-             { Bounds.lower_bounds; upper_bounds }
-           | false ->
-             let upper_bounds =
-               List.map
-                 upper_bounds
-                 ~f:
-                   (extrude_aux
-                      t
-                      ~to_level
-                      ~polarity_positive
-                      ~cache
-                      ~effect_cache)
-             in
-             { Bounds.lower_bounds; upper_bounds }
-         in
-         add_fresh_type_exn t fresh bounds);
+       let fresh_bounds =
+         match bounds with
+         | None -> Bounds.create ()
+         | Some { Bounds.lower_bounds; upper_bounds } ->
+           (match polarity_positive with
+            | true ->
+              let lower_bounds =
+                List.map
+                  lower_bounds
+                  ~f:
+                    (extrude_aux
+                       t
+                       ~to_level
+                       ~polarity_positive
+                       ~cache
+                       ~effect_cache)
+              in
+              { Bounds.lower_bounds; upper_bounds }
+            | false ->
+              let upper_bounds =
+                List.map
+                  upper_bounds
+                  ~f:
+                    (extrude_aux
+                       t
+                       ~to_level
+                       ~polarity_positive
+                       ~cache
+                       ~effect_cache)
+              in
+              { Bounds.lower_bounds; upper_bounds })
+       in
+       add_fresh_type_exn t fresh fresh_bounds;
        Metavariable fresh)
 
 and extrude_effect_aux
@@ -193,25 +195,27 @@ and extrude_effect_metavariable_aux
              "extruding"
                ~meta:(Metavariable m : effect_)
                (bounds : effect_ Bounds.t option)]);
-       Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
-         let bounds =
-           match polarity_positive with
-           | true ->
-             let lower_bounds =
-               List.map
-                 lower_bounds
-                 ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
-             in
-             { Bounds.lower_bounds; upper_bounds }
-           | false ->
-             let upper_bounds =
-               List.map
-                 upper_bounds
-                 ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
-             in
-             { Bounds.lower_bounds; upper_bounds }
-         in
-         add_fresh_effect_exn t fresh bounds);
+       let fresh_bounds =
+         match bounds with
+         | None -> Bounds.create ()
+         | Some { Bounds.lower_bounds; upper_bounds } ->
+           (match polarity_positive with
+            | true ->
+              let lower_bounds =
+                List.map
+                  lower_bounds
+                  ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
+              in
+              { Bounds.lower_bounds; upper_bounds }
+            | false ->
+              let upper_bounds =
+                List.map
+                  upper_bounds
+                  ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
+              in
+              { Bounds.lower_bounds; upper_bounds })
+       in
+       add_fresh_effect_exn t fresh fresh_bounds;
        fresh)
 ;;
 
