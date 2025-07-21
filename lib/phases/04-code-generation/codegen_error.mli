@@ -15,7 +15,7 @@ val unsupported_feature_error : string -> t
 *)
 val verifier_error : string -> t
 
-val string_of_t : t -> string
+val to_string : t -> string
 
 module Or_codegen_error : sig
   type nonrec 'a t = ('a, t) Result.t

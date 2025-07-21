@@ -12,7 +12,7 @@ module Kind = struct
 
   include T
 
-  let string_of_t = function
+  let to_string = function
     | Impossible_error -> "impossible error"
     | Unsupported_feature_error -> "unsupported feature"
     | IO_error -> "i/o error"
@@ -32,10 +32,7 @@ let unsupported_feature_error message =
 ;;
 
 let io_error message = { kind = Kind.IO_error; message }
-
-let string_of_t { kind; message } =
-  sprintf "%s: %s" (Kind.string_of_t kind) message
-;;
+let to_string { kind; message } = sprintf "%s: %s" (Kind.to_string kind) message
 
 module Or_runtime_error = struct
   type nonrec 'a t = ('a, t) Result.t
