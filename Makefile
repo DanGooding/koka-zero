@@ -5,10 +5,6 @@
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(eval $(ARGS):;@:)
 
-.PHONY: all
-all:
-	opam exec -- dune build --root . @install
-
 .PHONY: deps
 deps: ## Install development dependencies
 	opam install -y dune-release ocamlformat utop ocaml-lsp-server merlin ocp-indent
@@ -26,18 +22,9 @@ lock: ## Generate a lock file
 build: ## Build the project, including non installable libraries and executables
 	opam exec -- dune build --root .
 
-.PHONY: install
-install: all ## Install the packages on the system
-	opam exec -- dune install --root .
-
-.PHONY: start
-start: all ## Run the produced executable
+.PHONY: exec
+exec:  ## Run the produced executable
 	opam exec -- dune exec --root . bin/main.exe -- $(ARGS)
-
-.PHONY: debug
-debug: ## Debug the main executable
-	opam exec -- dune build --root . bin/main.bc
-	opam exec -- ocamldebug _build/default/bin/main.bc
 
 .PHONY: test
 test: ## Run the unit tests
@@ -50,14 +37,6 @@ promote: ## Accept corrections to expect tests
 .PHONY: clean
 clean: ## Clean build artifacts and other generated files
 	opam exec -- dune clean --root .
-
-.PHONY: doc
-doc: ## Generate odoc documentation
-	opam exec -- dune build --root . @doc
-
-.PHONY: servedoc
-servedoc: doc ## Open odoc documentation with default web browser
-	xdg-open _build/default/_doc/_html/index.html
 
 .PHONY: fmt
 fmt: ## Format the codebase with ocamlformat
