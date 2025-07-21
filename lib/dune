@@ -12,6 +12,7 @@
   koka-zero.evidence-passing.rewriting
   koka-zero.ir.evidence-passing
   koka-zero.interpreter
-  koka-zero.code-generation)
+  koka-zero.code-generation
+  koka-zero.clang-invocation)
  (preprocess
   (pps ppx_jane)))

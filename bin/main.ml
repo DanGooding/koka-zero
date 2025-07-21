@@ -25,7 +25,7 @@ let compile_to_eps filename ~optimise ~print_constraint_graph =
   if optimise then Koka_zero.rewrite_program program_eps else return program_eps
 ;;
 
-let compile
+let compile_to_ir
       ~in_filename
       ~optimise
       ~print_constraint_graph
@@ -51,6 +51,38 @@ let compile
      | Ok () -> ())
 ;;
 
+let compile_to_exe
+      ~in_filename
+      ~optimise
+      ~print_constraint_graph
+      ~print_eps
+      ~koka_zero_config
+  =
+  let ir_filename =
+    String.chop_suffix_if_exists in_filename ~suffix:".kk" ^ ".ll"
+  in
+  compile_to_ir
+    ~in_filename
+    ~out_filename:ir_filename
+    ~optimise
+    ~print_constraint_graph
+    ~print_eps;
+  let exe_filename =
+    match String.chop_suffix in_filename ~suffix:".kk" with
+    | Some base -> base
+    | None -> in_filename ^ ".exe"
+  in
+  match
+    Koka_zero.compile_ir_to_exe
+      ~ir_filename
+      ~exe_filename
+      ~config:koka_zero_config
+      ~optimise
+  with
+  | Ok () -> ()
+  | Error error -> exit_with_error_messsage (Error.to_string_hum error)
+;;
+
 let interpret_eps filename =
   match
     compile_to_eps ~optimise:false ~print_constraint_graph:false filename
@@ -73,11 +105,25 @@ let typecheck filename ~print_constraint_graph =
   | Ok _program -> ()
 ;;
 
+let print_example_config () =
+  print_s
+    [%sexp
+      (Koka_zero.Koka_zero_config.example
+       : Koka_zero.Koka_zero_config.Stable.V1.t)]
+;;
+
 module Flags = struct
   open Command.Param
 
-  let filename = anon ("filename" %: string)
+  let in_filename = anon ("filename" %: string)
   let out_filename = flag "-o" (required string) ~doc:"output filename"
+
+  let config_filename =
+    flag
+      "-config"
+      (required string)
+      ~doc:"language config file - sexp containing paths to required libraries"
+  ;;
 
   let optimise =
     flag "-optimise" no_arg ~doc:"apply tree rewriting optimisations"
@@ -96,16 +142,37 @@ module Flags = struct
 end
 
 let command_compile =
-  Command.basic
+  Command.basic_or_error
     ~summary:"compile a program"
-    (let%map.Command filename = Flags.filename
+    (let%map.Command in_filename = Flags.in_filename
+     and config_filename = Flags.config_filename
+     and optimise = Flags.optimise
+     and print_constraint_graph = Flags.print_constraint_graph
+     and print_eps = Flags.print_eps in
+     fun () ->
+       let open Result.Let_syntax in
+       let%map koka_zero_config =
+         Koka_zero.Koka_zero_config.load config_filename
+       in
+       compile_to_exe
+         ~in_filename
+         ~optimise
+         ~print_constraint_graph
+         ~print_eps
+         ~koka_zero_config)
+;;
+
+let command_compile_to_ir =
+  Command.basic
+    ~summary:"compile a program, stopping at the IR phase"
+    (let%map.Command in_filename = Flags.in_filename
      and out_filename = Flags.out_filename
      and optimise = Flags.optimise
      and print_constraint_graph = Flags.print_constraint_graph
      and print_eps = Flags.print_eps in
      fun () ->
-       compile
-         ~in_filename:filename
+       compile_to_ir
+         ~in_filename
          ~optimise
          ~print_constraint_graph
          ~print_eps
@@ -115,24 +182,32 @@ let command_compile =
 let command_interpret =
   Command.basic
     ~summary:"interpret a program"
-    (let%map.Command filename = Flags.filename in
-     fun () -> interpret_eps filename)
+    (let%map.Command in_filename = Flags.in_filename in
+     fun () -> interpret_eps in_filename)
 ;;
 
 let command_typecheck =
   Command.basic
     ~summary:"type check a program"
-    (let%map.Command filename = Flags.filename
+    (let%map.Command in_filename = Flags.in_filename
      and print_constraint_graph = Flags.print_constraint_graph in
-     fun () -> typecheck filename ~print_constraint_graph)
+     fun () -> typecheck in_filename ~print_constraint_graph)
+;;
+
+let command_example_config =
+  Command.basic
+    ~summary:"print an example config file"
+    (Command.Param.return @@ fun () -> print_example_config ())
 ;;
 
 let command =
   Command.group
     ~summary:"Koka compiler"
     [ "compile", command_compile
+    ; "compile-to-ir", command_compile_to_ir
     ; "interpret", command_interpret
     ; "check", command_typecheck
+    ; "example-config", command_example_config
     ]
 ;;
 
