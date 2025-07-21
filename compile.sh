@@ -6,7 +6,4 @@ set -e
 # then the path to that must be passed in
 PROJECT_ROOT="${PROJECT_ROOT:-.}"
 
-KOKA_COMPILER="${KOKA_COMPILER:-$PROJECT_ROOT/_build/default/bin/main.exe}"
-KOKA_CONFIG="$PROJECT_ROOT/koka-zero-config.sexp"
-
-"$KOKA_COMPILER" compile -config "$KOKA_CONFIG" "$@"
+opam exec -- dune exec -- bin/main.exe compile -config "$PROJECT_ROOT/koka-zero-config.sexp" "$@"
