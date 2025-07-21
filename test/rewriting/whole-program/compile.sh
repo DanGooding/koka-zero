@@ -2,5 +2,14 @@
 
 set -e
 
-KOKA_COMPILER=koka-zero $PROJECT_ROOT/compile.sh "$@"
+# This script is a little weird, since it runs in the working directory
+# of each test case. The test cases each set PROJECT_ROOT, and we could make
+# them set TEST_ROOT too, which might neaten this up.
 
+CONFIG=koka-zero-config.sexp
+
+sed "s|PROJECT_ROOT|$PROJECT_ROOT|g" \
+  "$PROJECT_ROOT/test/rewriting/whole-program/koka-zero-config-template.sexp" \
+  > $CONFIG
+
+koka-zero compile -config "$CONFIG" "$@"
