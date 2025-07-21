@@ -52,10 +52,10 @@ make  # build the project
 # which may prompt to run:
 dune external-lib-deps --missing --root . @install  # install dependencies
 ```
-The language runtime uses the [Boehm Garbage Collector](https://hboehm.info/gc/)
-for memory management. `$GC` in `compile.sh` should be updated to
+The language runtime uses `libgc` - the [Boehm Garbage Collector](https://hboehm.info/gc/)
+for memory management. `gc_path` in `koka-zero-config.sexp` should be updated to
 point to your system's install (e.g. `/home/xyz/gc`). To compile without garbage
-collection, set `$DISABLE_GC` (i.e. `DISABLE_GC=1 ./compile.sh ...`).
+collection, set `(gc_path ())`.
 
 
 ### Testing
