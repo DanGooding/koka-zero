@@ -2,7 +2,7 @@
  (applies_to :whole_subtree)
  (deps
   compile.sh
-  ../../../compile.sh
+  koka-zero-config-template.sexp
   %{bin:koka-zero}
   ../../../lib/execution/runtime/runtime.c
   ../../../lib/execution/runtime/runtime.h))
