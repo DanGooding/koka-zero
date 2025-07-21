@@ -1,19 +1,21 @@
 open! Core
 
-(** print the given message to stderr and exit the process with a nonzero return
-    code (failure) *)
-let exit_with_error_messsage message =
-  eprintf "%s\n" message;
-  exit 1
+let error_of_static_error (result : 'a Koka_zero.Static_error.Or_static_error.t)
+  : 'a Or_error.t
+  =
+  Result.map_error result ~f:(fun static_error ->
+    Koka_zero.Static_error.to_string static_error |> Error.of_string)
 ;;
 
 let typecheck_and_compile_to_expl filename ~print_constraint_graph =
   let open Result.Let_syntax in
   let%bind program =
-    try In_channel.with_file filename ~f:Koka_zero.parse_channel with
-    | Sys_error message -> exit_with_error_messsage message
+    match In_channel.with_file filename ~f:Koka_zero.parse_channel with
+    | program -> error_of_static_error program
+    | exception Sys_error message -> Or_error.error_string message
   in
   Koka_zero.infer_program program ~print_constraint_graph
+  |> error_of_static_error
 ;;
 
 let compile_to_eps filename ~optimise ~print_constraint_graph =
@@ -21,8 +23,12 @@ let compile_to_eps filename ~optimise ~print_constraint_graph =
   let%bind program_explicit =
     typecheck_and_compile_to_expl filename ~print_constraint_graph
   in
-  let%bind program_eps = Koka_zero.translate program_explicit in
-  if optimise then Koka_zero.rewrite_program program_eps else return program_eps
+  let%bind program_eps =
+    Koka_zero.translate program_explicit |> error_of_static_error
+  in
+  if optimise
+  then Koka_zero.rewrite_program program_eps |> error_of_static_error
+  else return program_eps
 ;;
 
 let compile_to_ir
@@ -32,23 +38,20 @@ let compile_to_ir
       ~print_eps
       ~out_filename
   =
-  match compile_to_eps in_filename ~optimise ~print_constraint_graph with
-  | Error error ->
-    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
-  | Ok program_eps ->
-    if print_eps
-    then
-      Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
-    else ();
-    (match
-       Koka_zero.compile_program
-         program_eps
-         ~module_name:in_filename
-         ~filename:out_filename
-     with
-     | Error error ->
-       Koka_zero.Codegen_error.string_of_t error |> exit_with_error_messsage
-     | Ok () -> ())
+  let open Result.Let_syntax in
+  let%bind program_eps =
+    compile_to_eps in_filename ~optimise ~print_constraint_graph
+  in
+  if print_eps
+  then
+    Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
+  else ();
+  Koka_zero.compile_program
+    program_eps
+    ~module_name:in_filename
+    ~filename:out_filename
+  |> Result.map_error ~f:(fun error ->
+    Error.of_string [%string "codegen error: %{error#Koka_zero.Codegen_error}"])
 ;;
 
 let compile_to_exe
@@ -58,51 +61,50 @@ let compile_to_exe
       ~print_eps
       ~koka_zero_config
   =
+  let open Result.Let_syntax in
   let ir_filename =
     String.chop_suffix_if_exists in_filename ~suffix:".kk" ^ ".ll"
   in
-  compile_to_ir
-    ~in_filename
-    ~out_filename:ir_filename
-    ~optimise
-    ~print_constraint_graph
-    ~print_eps;
+  let%bind () =
+    compile_to_ir
+      ~in_filename
+      ~out_filename:ir_filename
+      ~optimise
+      ~print_constraint_graph
+      ~print_eps
+  in
   let exe_filename =
     match String.chop_suffix in_filename ~suffix:".kk" with
     | Some base -> base
     | None -> in_filename ^ ".exe"
   in
-  match
-    Koka_zero.compile_ir_to_exe
-      ~ir_filename
-      ~exe_filename
-      ~config:koka_zero_config
-      ~optimise
-  with
-  | Ok () -> ()
-  | Error error -> exit_with_error_messsage (Error.to_string_hum error)
+  Koka_zero.compile_ir_to_exe
+    ~ir_filename
+    ~exe_filename
+    ~config:koka_zero_config
+    ~optimise
 ;;
 
 let interpret_eps filename =
-  match
+  let open Result.Let_syntax in
+  let%bind program =
     compile_to_eps ~optimise:false ~print_constraint_graph:false filename
-  with
+  in
+  match Koka_zero.interpret_program program with
+  | Ok _unit -> Ok ()
   | Error error ->
-    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
-  | Ok program ->
-    (match Koka_zero.interpret_program program with
-     | Error error ->
-       Koka_zero.Runtime_error.string_of_t error
-       |> Koka_zero.Util.String_utils.limit_length ~limit:1000
-       |> eprintf "runtime error: %s\n"
-     | Ok _unit -> ())
+    Koka_zero.Runtime_error.to_string error
+    |> Koka_zero.Util.String_utils.limit_length ~limit:1000
+    |> sprintf "runtime error: %s\n"
+    |> Or_error.error_string
 ;;
 
 let typecheck filename ~print_constraint_graph =
-  match typecheck_and_compile_to_expl filename ~print_constraint_graph with
-  | Error error ->
-    Koka_zero.Static_error.string_of_t error |> exit_with_error_messsage
-  | Ok _program -> ()
+  let open Result.Let_syntax in
+  let%map _program =
+    typecheck_and_compile_to_expl filename ~print_constraint_graph
+  in
+  ()
 ;;
 
 let print_example_config () =
@@ -151,7 +153,7 @@ let command_compile =
      and print_eps = Flags.print_eps in
      fun () ->
        let open Result.Let_syntax in
-       let%map koka_zero_config =
+       let%bind koka_zero_config =
          Koka_zero.Koka_zero_config.load config_filename
        in
        compile_to_exe
@@ -163,7 +165,7 @@ let command_compile =
 ;;
 
 let command_compile_to_ir =
-  Command.basic
+  Command.basic_or_error
     ~summary:"compile a program, stopping at the IR phase"
     (let%map.Command in_filename = Flags.in_filename
      and out_filename = Flags.out_filename
@@ -180,14 +182,14 @@ let command_compile_to_ir =
 ;;
 
 let command_interpret =
-  Command.basic
+  Command.basic_or_error
     ~summary:"interpret a program"
     (let%map.Command in_filename = Flags.in_filename in
      fun () -> interpret_eps in_filename)
 ;;
 
 let command_typecheck =
-  Command.basic
+  Command.basic_or_error
     ~summary:"type check a program"
     (let%map.Command in_filename = Flags.in_filename
      and print_constraint_graph = Flags.print_constraint_graph in

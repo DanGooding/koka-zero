@@ -7,7 +7,7 @@ module Kind = struct
     | Type_error
   [@@deriving sexp_of]
 
-  let string_of_t = function
+  let to_string = function
     | Syntax_error -> "syntax error"
     | Unsupported_feature -> "unsupported feature"
     | Type_error -> "type error"
@@ -22,7 +22,7 @@ type t =
 [@@deriving sexp_of]
 
 let raise { kind; error; location } =
-  let kind = Kind.string_of_t kind in
+  let kind = Kind.to_string kind in
   raise_s
     [%message kind (error : Error.t) (location : Source_location.t option)]
 ;;
@@ -79,15 +79,15 @@ let type_error ?at message =
 let type_errorf ?at format = Printf.ksprintf (type_error ?at) format
 let tag_s t ~tag = { t with error = Error.tag_s t.error ~tag }
 
-let string_of_t t =
+let to_string t =
   let { kind; error; location } = t in
   let location_part =
     match location with
-    | Some location -> Source_location.string_of_t location ^ " "
+    | Some location -> Source_location.to_string location ^ " "
     | None -> ""
   in
   let description_part =
-    let kind = Kind.string_of_t kind in
+    let kind = Kind.to_string kind in
     sprintf "%s: %s" kind (Error.to_string_hum error)
   in
   location_part ^ description_part

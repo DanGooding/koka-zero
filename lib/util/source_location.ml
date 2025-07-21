@@ -17,7 +17,7 @@ let t_of_lexing_position (pos : Lexing.position) =
   { filename; line; char }
 ;;
 
-let string_of_t t =
+let to_string t =
   let { filename; line; char } = t in
   let filename_part =
     match filename with

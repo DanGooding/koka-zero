@@ -10,7 +10,7 @@ val unsupported_feature_error : string -> t
 (** reports an error performing a built-in io operation *)
 val io_error : string -> t
 
-val string_of_t : t -> string
+val to_string : t -> string
 
 module Or_runtime_error : sig
   type nonrec 'a t = ('a, t) Result.t

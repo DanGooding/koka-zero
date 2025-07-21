@@ -18,7 +18,7 @@ val type_error : ?at:Source_location.t -> string -> t
 val type_error_s : ?at:Source_location.t -> Sexp.t -> t
 val type_errorf : ?at:Source_location.t -> ('a, unit, string, t) format4 -> 'a
 val type_error_of_error : ?at:Source_location.t -> Error.t -> t
-val string_of_t : t -> string
+val to_string : t -> string
 val tag_s : t -> tag:Sexp.t -> t
 
 (** swap the order of a nested [ Or_static_error option ], preserving the inner
