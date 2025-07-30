@@ -1,9 +1,9 @@
 # Koka Zero
 
-Reimplementatin of core [Koka](https://koka-lang.github.io), compiling to
+Reimplementation of core [Koka](https://koka-lang.github.io), compiling to
 [LLVM-IR](https://llvm.org/docs/LangRef.html), for my third-year dissertation.
 
-This uses Algebraic Subtyping rather than Koka's Hindley-Milner inference with effect rows, since the former can give a precise effect to each subexpression of a program, which enables` some optimisations. 
+This uses Algebraic Subtyping rather than Koka's Hindley-Milner inference with effect rows, since the former can give a precise effect to each subexpression of a program, which enables some optimisations. 
 
 ## Example (a generator producing the Fibonacci sequence)
 ```koka
@@ -41,21 +41,18 @@ Requirements:
 - optional: `libgc` - the [Boehm Garbage Collector](https://hboehm.info/gc/)
 
 ```sh
-make install-deps  # creates a fresh opam switch to install ocaml & the project's dependencies
+# creates a fresh opam switch to install ocaml & the project's dependencies
+make install-deps  
 make build
 ```
 
+### Configuation
 `koka-zero-config.sexp` points to the compilation dependencies which aren't captured by opam.
 These should be updated to point to the current install of `clang`, 
 the `runtime.c` file within this project, and `libgc`.
 The latter is [Boehm Garbage Collector](https://hboehm.info/gc/), linked against
 for memory management. To compile without garbage collection, set `(gc_path ())`.
 
-
-### Testing
-```sh
-make test
-```
 
 ## Usage
 
@@ -70,4 +67,9 @@ The compiler binary is in `bin/main.exe` - `compile.sh` is a wrapper that calls 
 Or run the interpreter with:
 ```sh
 make start -- interpret samples/fib.kk
+```
+
+### Running the Tests
+```sh
+make test
 ```
