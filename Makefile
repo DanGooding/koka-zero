@@ -1,22 +1,17 @@
-.DEFAULT_GOAL := all
+.DEFAULT_GOAL := build
 
 # pass arguments as:
 # $ make start -- arg1 arg2 arg3
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(eval $(ARGS):;@:)
 
-.PHONY: deps
-deps: ## Install development dependencies
-	opam install -y dune-release ocamlformat utop ocaml-lsp-server merlin ocp-indent
-	opam install --deps-only --with-test --with-doc -y .
-
-.PHONY: create_switch
-create_switch: ## Create an opam switch without any dependency
+_opam/.opam-switch: ## Create a fresh opam installation environment
 	opam switch create . ocaml-base-compiler.5.3.0 --no-install -y
 
-.PHONY: lock
-lock: ## Generate a lock file
-	opam lock -y .
+.PHONY: install-deps
+install-deps: _opam/.opam-switch ## first development dependencies, then project's dependencies
+	opam install -y dune-release ocamlformat utop ocaml-lsp-server merlin ocp-indent
+	opam install --deps-only --with-test --with-doc -y .
 
 .PHONY: build
 build: ## Build the project, including non installable libraries and executables
@@ -50,10 +45,6 @@ watch: ## Watch for the filesystem and rebuild on every change
 utop: ## Run a REPL and link with the project's libraries
 	opam exec -- dune utop --root . lib -- -implicit-bindings
 
-.PHONY: release
-release: all ## Run the release script
-	opam exec -- dune-release tag
-	opam exec -- dune-release distrib
-	opam exec -- dune-release publish distrib -y
-	opam exec -- dune-release opam pkg
-	opam exec -- dune-release opam submit --no-auto-open -y
+.PHONY: lock
+lock: ## Generate a lock file
+	opam lock -y .

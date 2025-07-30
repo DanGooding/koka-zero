@@ -36,26 +36,20 @@ fun main() {
 
 ## Setup
 Requirements:
-- [opam](https://opam.ocaml.org/)
-- [LLVM and clang](https://releases.llvm.org/)
-- optional: [Boehm Garbage Collector](https://hboehm.info/gc/)
+- [`opam`](https://opam.ocaml.org/) the OCaml package manager
+- [LLVM toolchain including `clang`](https://releases.llvm.org/)
+- optional: `libgc` - the [Boehm Garbage Collector](https://hboehm.info/gc/)
 
 ```sh
-# optional:
-make create_switch  # create a new opam switch
-eval $(opam env)
+make install-deps  # creates a fresh opam switch to install ocaml & the project's dependencies
+make build
 ```
 
-```sh
-make deps  # install development dependencies (dune)
-make  # build the project
-# which may prompt to run:
-dune external-lib-deps --missing --root . @install  # install dependencies
-```
-The language runtime uses `libgc` - the [Boehm Garbage Collector](https://hboehm.info/gc/)
-for memory management. `gc_path` in `koka-zero-config.sexp` should be updated to
-point to your system's install (e.g. `/home/xyz/gc`). To compile without garbage
-collection, set `(gc_path ())`.
+`koka-zero-config.sexp` points to the compilation dependencies which aren't captured by opam.
+These should be updated to point to the current install of `clang`, 
+the `runtime.c` file within this project, and `libgc`.
+The latter is [Boehm Garbage Collector](https://hboehm.info/gc/), linked against
+for memory management. To compile without garbage collection, set `(gc_path ())`.
 
 
 ### Testing
@@ -63,26 +57,17 @@ collection, set `(gc_path ())`.
 make test
 ```
 
-
-
 ## Usage
 
-Compile: first to textual llvm-ir, then via `clang` to an executable
+The compiler binary is in `bin/main.exe` - `compile.sh` is a wrapper that calls it with the 
+`koka-zero-config.sexp`.
+
 ```sh
 ./compile.sh samples/reader.kk
 ./reader
 ```
 
-Or interpret a koka program with:
+Or run the interpreter with:
 ```sh
 make start -- interpret samples/fib.kk
-```
-
-## Development
-
-Debug the compiler using OCaml debugger with:
-```sh
-make debug
-set arguments "compile" "samples/hello.kk" "-o" "hello.ll"
-run
 ```
