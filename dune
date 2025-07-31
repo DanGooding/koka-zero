@@ -1,4 +1,13 @@
 (env
  (dev
   (flags
-   (:standard -w +A-48-42-44-40-70-66-58 -warn-error +A-3))))
+   (:standard -w +A-40-42-44-48-58-66-70))))
+
+; enable all warnings except:
+; 40 [name-out-of-scope] we rely on type-based disambiguation
+; 42 [disambiguated-name] ditto
+; 44 [open-shadow-identifier] Core intentionally shadows items in the standard library
+; 48 [eliminated-optional-arguments] convenience
+; 58 [no-cmx-file] Odot library has none
+; 66 [unused-open-bang] open! is intended to be open regardless of usage
+; 70 [missing-mli] intf_ml files, tests and library interfaces lack mlis
