@@ -57,13 +57,32 @@ let compile_to_ir
 let compile_to_exe
       ~in_filename
       ~optimise
+      ~exe_filename
+      ~where_to_save_temps
       ~print_constraint_graph
       ~print_eps
       ~koka_zero_config
   =
   let open Result.Let_syntax in
+  let exe_filename =
+    match exe_filename with
+    | Some exe_filename -> exe_filename
+    | None ->
+      (match String.chop_suffix in_filename ~suffix:".kk" with
+       | Some base -> base
+       | None -> in_filename ^ ".exe")
+  in
   let ir_filename =
-    String.chop_suffix_if_exists in_filename ~suffix:".kk" ^ ".ll"
+    let temp_dir =
+      match where_to_save_temps with
+      | `With_input -> Filename.dirname in_filename
+      | `With_output -> Filename.dirname exe_filename
+    in
+    let in_basename = Filename.basename in_filename in
+    let temp_basename =
+      String.chop_suffix_if_exists in_basename ~suffix:".kk" ^ ".ll"
+    in
+    temp_dir ^/ temp_basename
   in
   let%bind () =
     compile_to_ir
@@ -72,11 +91,6 @@ let compile_to_exe
       ~optimise
       ~print_constraint_graph
       ~print_eps
-  in
-  let exe_filename =
-    match String.chop_suffix in_filename ~suffix:".kk" with
-    | Some base -> base
-    | None -> in_filename ^ ".exe"
   in
   Koka_zero.compile_ir_to_exe
     ~ir_filename
@@ -125,13 +139,34 @@ module Flags = struct
   open Command.Param
 
   let in_filename = anon ("filename" %: string)
-  let out_filename = flag "-o" (required string) ~doc:"output filename"
+  let out_filename = flag "-o" (required string) ~doc:"FILE output filename"
+
+  let exe_filename =
+    flag
+      "-o"
+      (optional string)
+      ~doc:"FILE exe output filename - default is derived from input filename"
+  ;;
+
+  let where_to_save_temps =
+    let arg_type =
+      Arg_type.of_alist_exn
+        [ "input", `With_input; "output", `With_output ]
+        ~list_values_in_help:true
+    in
+    flag
+      "-save-temps-with"
+      (optional_with_default `With_input arg_type)
+      ~doc:"intput|output where to save temporary files"
+  ;;
 
   let config_filename =
     flag
       "-config"
       (required string)
-      ~doc:"language config file - sexp containing paths to required libraries"
+      ~doc:
+        "FILE language config file - sexp containing paths to required \
+         libraries"
   ;;
 
   let optimise =
@@ -173,6 +208,8 @@ let command_compile =
     (let%map.Command in_filename = Flags.in_filename
      and config_filename = Flags.config_filename
      and optimise = Flags.optimise
+     and exe_filename = Flags.exe_filename
+     and where_to_save_temps = Flags.where_to_save_temps
      and print_constraint_graph = Flags.print_constraint_graph
      and print_eps = Flags.print_eps in
      fun () ->
@@ -183,6 +220,8 @@ let command_compile =
        compile_to_exe
          ~in_filename
          ~optimise
+         ~exe_filename
+         ~where_to_save_temps
          ~print_constraint_graph
          ~print_eps
          ~koka_zero_config)
