@@ -42,6 +42,7 @@ Requirements:
 
 ```sh
 # creates a fresh opam switch to install ocaml & the project's dependencies
+make switch
 make install-deps  
 make build
 ```
