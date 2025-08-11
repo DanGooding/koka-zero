@@ -34,6 +34,28 @@ RUN \
   --mount=type=bind,source=dune-project,target=dune-project \
   make build
 
+FROM alpine:3.22 AS build-libgc
+WORKDIR /build
+
+RUN apk add git
+
+RUN git clone https://github.com/bdwgc/libatomic_ops.git --branch v7.8.2 --depth 1
+RUN git clone https://github.com/bdwgc/bdwgc.git --branch v8.2.8 --depth 1
+
+RUN ln -s /build/libatomic_ops /build/bdwgc/libatomic_ops
+WORKDIR /build/bdwgc
+
+RUN apk add autoconf automake libtool make
+RUN apk add clang
+
+RUN autoreconf -vif
+RUN automake --add-missing
+
+RUN ./configure
+RUN make
+RUN make install
+
+
 FROM alpine:3.22 AS run-koka-compiler
 WORKDIR /app
 # this container is suitable for running the compiler
@@ -46,12 +68,23 @@ COPY \
   ./lib/execution/runtime/ \
   runtime/
 
-RUN apk add clang
+ARG GC_SRC_PATH="/usr/local"
+ARG GC_DEST_PATH="/usr/local"
 
-# TODO: get libgc headers + objects
-# and include -gc in the config
+COPY --from=build-libgc \
+  ${GC_SRC_PATH}/lib/libgc.so* \
+  ${GC_DEST_PATH}/lib
+
+COPY --from=build-libgc \
+  ${GC_SRC_PATH}/include \
+  ${GC_DEST_PATH}/include
+
+RUN apk add clang
 
 RUN /app/koka-zero create-config \
   -clang /usr/bin/clang \
-  -runtime runtime/runtime.c \
+  -runtime /app/runtime/runtime.c \
+  -gc ${GC_DEST_PATH} \
   -o koka-zero-config.sexp
+
+CMD [ "/bin/sh", "-c", "sleep inf" ]
