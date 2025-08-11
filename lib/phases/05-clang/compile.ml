@@ -42,7 +42,7 @@ let compile_ir_to_exe
   let gc_flags =
     match config.gc_path with
     | None ->
-      eprintf "compiling without garbage collector";
+      eprintf "compiling without garbage collector\n";
       []
     | Some gc_path ->
       [ "-DENABLE_GC"
