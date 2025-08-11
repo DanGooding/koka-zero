@@ -28,5 +28,10 @@ let example =
 let load filename =
   Or_error.try_with (fun () ->
     let contents = In_channel.read_all filename in
-    Sexp.of_string_conv_exn contents [%of_sexp: t])
+    Sexp.of_string_conv_exn contents [%of_sexp: Stable.V1.t])
+;;
+
+let write t filename =
+  let data = Sexp.to_string_hum ([%sexp_of: Stable.V1.t] t) in
+  Or_error.try_with (fun () -> Out_channel.write_all filename ~data)
 ;;
