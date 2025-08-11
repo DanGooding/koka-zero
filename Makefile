@@ -8,10 +8,13 @@ $(eval $(ARGS):;@:)
 _opam/.opam-switch: ## Create a fresh opam installation environment
 	opam switch create . ocaml-base-compiler.5.3.0 --no-install -y
 
+.PHONY: switch
+switch: _opam/.opam-switch
+
 .PHONY: install-deps
-install-deps: _opam/.opam-switch ## first development dependencies, then project's dependencies
-	opam install -y dune-release ocamlformat utop ocaml-lsp-server merlin ocp-indent
-	opam install --deps-only --with-test --with-doc -y .
+install-deps:  ## first development dependencies, then project's dependencies
+	opam install dune-release ocamlformat utop ocaml-lsp-server merlin ocp-indent --confirm-level=unsafe-yes
+	opam install --deps-only --with-test --with-doc --confirm-level=unsafe-yes .
 
 .PHONY: build
 build: ## Build the project, including non installable libraries and executables
