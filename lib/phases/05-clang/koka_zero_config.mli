@@ -9,6 +9,7 @@ type t =
 [@@deriving sexp_of]
 
 val load : Filename.t -> t Or_error.t
+val write : t -> Filename.t -> unit Or_error.t
 
 (** an example config that works on my machine *)
 val example : t

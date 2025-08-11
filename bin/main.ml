@@ -107,6 +107,13 @@ let typecheck filename ~print_constraint_graph =
   ()
 ;;
 
+let create_config ~clang_exe ~runtime_path ~gc_path ~out_filename =
+  let config =
+    { Koka_zero.Koka_zero_config.clang_exe; runtime_path; gc_path }
+  in
+  Koka_zero.Koka_zero_config.write config out_filename
+;;
+
 let print_example_config () =
   print_s
     [%sexp
@@ -140,6 +147,23 @@ module Flags = struct
 
   let print_eps =
     flag "-dump-eps" no_arg ~doc:"print the intermediate evidence passing AST"
+  ;;
+
+  let clang_exe =
+    flag "-clang" (required string) ~doc:"FILE path to clang binary"
+  ;;
+
+  let runtime_path =
+    flag "-runtime" (required string) ~doc:"FILE path to koka runtime.c file"
+  ;;
+
+  let gc_path =
+    flag
+      "-gc"
+      (optional string)
+      ~doc:
+        "DIR path to libgc include/ and lib/ subdirectories. If excluded, will \
+         compile without garbage collection."
   ;;
 end
 
@@ -202,6 +226,16 @@ let command_example_config =
     (Command.Param.return @@ fun () -> print_example_config ())
 ;;
 
+let command_create_config =
+  Command.basic_or_error
+    ~summary:"create and populate config file"
+    (let%map.Command clang_exe = Flags.clang_exe
+     and runtime_path = Flags.runtime_path
+     and gc_path = Flags.gc_path
+     and out_filename = Flags.out_filename in
+     fun () -> create_config ~clang_exe ~runtime_path ~gc_path ~out_filename)
+;;
+
 let command =
   Command.group
     ~summary:"Koka compiler"
@@ -210,6 +244,7 @@ let command =
     ; "interpret", command_interpret
     ; "check", command_typecheck
     ; "example-config", command_example_config
+    ; "create-config", command_create_config
     ]
 ;;
 
