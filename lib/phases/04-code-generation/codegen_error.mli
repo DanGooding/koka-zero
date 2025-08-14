@@ -1,6 +1,6 @@
 open Core
 
-type t [@@deriving sexp]
+type t [@@deriving sexp_of]
 
 (** reports an error which should have been caught at the type inference stage -
     essentially a nicer [assert false].
@@ -14,6 +14,9 @@ val unsupported_feature_error : string -> t
 (** reports an invaid function/module, with a validation report as its message
 *)
 val verifier_error : string -> t
+
+(** reports failure to write out the .ll file *)
+val write_error : string -> t
 
 val to_string : t -> string
 
