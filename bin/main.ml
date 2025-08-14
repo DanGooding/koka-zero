@@ -1,10 +1,12 @@
 open! Core
 module Or_static_error = Koka_zero.Static_error.Or_static_error
 
+(** represents two failure modes:
+    Static_error: the user gave us bad koka code,
+    internal Error: internal bugs / unwriteable output directories etc. *)
 module Or_static_or_internal_error = struct
   type 'a t = 'a Or_static_error.t Or_error.t [@@deriving sexp_of]
 
-  (* TODO: Command wrapper? *)
   let exit (t : unit t) =
     match t with
     | Ok (Ok ()) -> exit 0
@@ -14,6 +16,14 @@ module Or_static_or_internal_error = struct
     | Error internal_error ->
       Stdio.prerr_endline (Error.to_string_hum internal_error);
       exit 2
+  ;;
+
+  let command_basic ~summary ?readme param =
+    Command.basic
+      ~summary
+      ?readme
+      (let%map.Command run = param in
+       fun () -> run () |> exit)
   ;;
 end
 
@@ -218,7 +228,7 @@ module Flags = struct
 end
 
 let command_compile =
-  Command.basic_or_error
+  Or_static_or_internal_error.command_basic
     ~summary:"compile a program"
     (let%map.Command in_filename = Flags.in_filename
      and config_filename = Flags.config_filename
@@ -239,12 +249,11 @@ let command_compile =
          ~where_to_save_temps
          ~print_constraint_graph
          ~print_eps
-         ~koka_zero_config
-       |> Or_static_or_internal_error.exit)
+         ~koka_zero_config)
 ;;
 
 let command_compile_to_ir =
-  Command.basic_or_error
+  Or_static_or_internal_error.command_basic
     ~summary:"compile a program, stopping at the IR phase"
     (let%map.Command in_filename = Flags.in_filename
      and out_filename = Flags.out_filename
@@ -257,15 +266,14 @@ let command_compile_to_ir =
          ~optimise
          ~print_constraint_graph
          ~print_eps
-         ~out_filename
-       |> Or_static_or_internal_error.exit)
+         ~out_filename)
 ;;
 
 let command_interpret =
-  Command.basic_or_error
+  Or_static_or_internal_error.command_basic
     ~summary:"interpret a program"
     (let%map.Command in_filename = Flags.in_filename in
-     fun () -> interpret_eps in_filename |> Or_static_or_internal_error.exit)
+     fun () -> interpret_eps in_filename)
 ;;
 
 let command_typecheck =
