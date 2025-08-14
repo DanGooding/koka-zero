@@ -8,6 +8,7 @@ module Or_static_error : sig
 
   val ok_exn : 'a t -> 'a
 
+  include Monad.S with type 'a t := 'a t
   include Monad_utils.S with type 'a t := 'a t
 end
 
