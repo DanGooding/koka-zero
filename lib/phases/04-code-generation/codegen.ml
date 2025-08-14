@@ -50,20 +50,15 @@ end
 include T'
 include Monad_utils.Make (T')
 
-let dump_module { Mutable_state.module_; _ } state =
-  Llvm.dump_module module_;
-  Result.Ok ((), state)
-;;
-
-let write_module ~filename { Mutable_state.module_; _ } state =
-  Llvm.print_module filename module_;
-  Result.Ok ((), state)
-;;
-
 (** run a computation, in a fresh context, then cleanup that context. The
     computation may only return unit to reduce the chance of leaking a deleted
     context object *)
-let run ~module_id (t : unit t) : unit Or_codegen_error.t =
+let run
+      (t : unit t)
+      ~module_id
+      ~(consume_module : Llvm.llmodule -> unit Or_codegen_error.t)
+  : unit Or_codegen_error.t
+  =
   let mstate = Mutable_state.create_initial ~module_id in
   Llvm.enable_pretty_stacktrace ();
   Llvm.install_fatal_error_handler (fun message ->
@@ -72,27 +67,27 @@ let run ~module_id (t : unit t) : unit Or_codegen_error.t =
   let state = State.initial in
   let result = t mstate state in
   let { Mutable_state.module_; builder = _; context = _ } = mstate in
+  let consume_result = consume_module module_ in
   Llvm.dispose_module module_;
-  let%map.Result (), _state = result in
+  let%map.Result (), _state = result
+  and () = consume_result in
   ()
 ;;
 
 let run_then_write_module ~module_id ~filename (t : unit t)
   : unit Or_codegen_error.t
   =
-  let open Let_syntax in
-  run
-    ~module_id
-    (let%bind () = t in
-     write_module ~filename)
+  run t ~module_id ~consume_module:(fun module_ ->
+    match Llvm.print_module filename module_ with
+    | () -> Ok ()
+    | exception Llvm.IoError err -> Error (Codegen_error.write_error err))
 ;;
 
 let run_then_dump_module ~module_id (t : unit t) : unit Or_codegen_error.t =
-  let open Let_syntax in
-  run
-    ~module_id
-    (let%bind () = t in
-     dump_module)
+  run t ~module_id ~consume_module:(fun module_ ->
+    match Llvm.dump_module module_ with
+    | () -> Ok ()
+    | exception Llvm.IoError err -> Error (Codegen_error.write_error err))
 ;;
 
 let use_builder f { Mutable_state.builder; _ } state =

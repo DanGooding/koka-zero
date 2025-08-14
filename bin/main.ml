@@ -70,6 +70,7 @@ let compile_to_ir
      with
      | Ok () -> Ok (Ok ())
      | Error codegen_error ->
+       (* codegen errors are not user errors *)
        Or_error.error_string
          [%string "codegen error: %{codegen_error#Koka_zero.Codegen_error}"])
 ;;
