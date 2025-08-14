@@ -1,34 +1,39 @@
 open! Core
+module Or_static_error = Koka_zero.Static_error.Or_static_error
 
-let error_of_static_error (result : 'a Koka_zero.Static_error.Or_static_error.t)
-  : 'a Or_error.t
-  =
-  Result.map_error result ~f:(fun static_error ->
-    Koka_zero.Static_error.to_string static_error |> Error.of_string)
-;;
+module Or_static_or_internal_error = struct
+  type 'a t = 'a Or_static_error.t Or_error.t [@@deriving sexp_of]
+
+  (* TODO: Command wrapper? *)
+  let exit (t : unit t) =
+    match t with
+    | Ok (Ok ()) -> exit 0
+    | Ok (Error static_error) ->
+      Stdio.prerr_endline (Koka_zero.Static_error.to_string static_error);
+      exit 1
+    | Error internal_error ->
+      Stdio.prerr_endline (Error.to_string_hum internal_error);
+      exit 2
+  ;;
+end
 
 let typecheck_and_compile_to_expl filename ~print_constraint_graph =
-  let open Result.Let_syntax in
-  let%bind program =
+  let%map.Or_error program =
     match In_channel.with_file filename ~f:Koka_zero.parse_channel with
-    | program -> error_of_static_error program
+    | program -> Ok program
     | exception Sys_error message -> Or_error.error_string message
   in
+  let%bind.Or_static_error program = program in
   Koka_zero.infer_program program ~print_constraint_graph
-  |> error_of_static_error
 ;;
 
 let compile_to_eps filename ~optimise ~print_constraint_graph =
-  let open Result.Let_syntax in
-  let%bind program_explicit =
+  let%map.Or_error program_explicit =
     typecheck_and_compile_to_expl filename ~print_constraint_graph
   in
-  let%bind program_eps =
-    Koka_zero.translate program_explicit |> error_of_static_error
-  in
-  if optimise
-  then Koka_zero.rewrite_program program_eps |> error_of_static_error
-  else return program_eps
+  let%bind.Or_static_error program_explicit = program_explicit in
+  let%bind.Or_static_error program_eps = Koka_zero.translate program_explicit in
+  if optimise then Koka_zero.rewrite_program program_eps else Ok program_eps
 ;;
 
 let compile_to_ir
@@ -38,20 +43,25 @@ let compile_to_ir
       ~print_eps
       ~out_filename
   =
-  let open Result.Let_syntax in
-  let%bind program_eps =
+  match%bind.Or_error
     compile_to_eps in_filename ~optimise ~print_constraint_graph
-  in
-  if print_eps
-  then
-    Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
-  else ();
-  Koka_zero.compile_program
-    program_eps
-    ~module_name:in_filename
-    ~filename:out_filename
-  |> Result.map_error ~f:(fun error ->
-    Error.of_string [%string "codegen error: %{error#Koka_zero.Codegen_error}"])
+  with
+  | Error static_error -> Ok (Error static_error)
+  | Ok program_eps ->
+    if print_eps
+    then
+      Koka_zero.Evidence_passing_syntax.Program.sexp_of_t program_eps |> print_s
+    else ();
+    (match
+       Koka_zero.compile_program
+         program_eps
+         ~module_name:in_filename
+         ~filename:out_filename
+     with
+     | Ok () -> Ok (Ok ())
+     | Error codegen_error ->
+       Or_error.error_string
+         [%string "codegen error: %{codegen_error#Koka_zero.Codegen_error}"])
 ;;
 
 let compile_to_exe
@@ -63,7 +73,6 @@ let compile_to_exe
       ~print_eps
       ~koka_zero_config
   =
-  let open Result.Let_syntax in
   let exe_filename =
     match exe_filename with
     | Some exe_filename -> exe_filename
@@ -84,40 +93,46 @@ let compile_to_exe
     in
     temp_dir ^/ temp_basename
   in
-  let%bind () =
+  match%bind.Or_error
     compile_to_ir
       ~in_filename
       ~out_filename:ir_filename
       ~optimise
       ~print_constraint_graph
       ~print_eps
-  in
-  Koka_zero.compile_ir_to_exe
-    ~ir_filename
-    ~exe_filename
-    ~config:koka_zero_config
-    ~optimise
+  with
+  | Error static_error -> Ok (Error static_error)
+  | Ok () ->
+    let%map.Or_error () =
+      Koka_zero.compile_ir_to_exe
+        ~ir_filename
+        ~exe_filename
+        ~config:koka_zero_config
+        ~optimise
+    in
+    Ok ()
 ;;
 
 let interpret_eps filename =
-  let open Result.Let_syntax in
-  let%bind program =
+  match%bind.Or_error
     compile_to_eps ~optimise:false ~print_constraint_graph:false filename
-  in
-  match Koka_zero.interpret_program program with
-  | Ok _unit -> Ok ()
-  | Error error ->
-    Koka_zero.Runtime_error.to_string error
-    |> Koka_zero.Util.String_utils.limit_length ~limit:1000
-    |> sprintf "runtime error: %s\n"
-    |> Or_error.error_string
+  with
+  | Error static_error -> Ok (Error static_error)
+  | Ok program ->
+    (match Koka_zero.interpret_program program with
+     | Ok _unit -> Ok (Ok ())
+     | Error error ->
+       Koka_zero.Runtime_error.to_string error
+       |> Koka_zero.Util.String_utils.limit_length ~limit:1000
+       |> sprintf "runtime error: %s\n"
+       |> Or_error.error_string)
 ;;
 
 let typecheck filename ~print_constraint_graph =
-  let open Result.Let_syntax in
-  let%map _program =
+  let%map.Or_error maybe_program =
     typecheck_and_compile_to_expl filename ~print_constraint_graph
   in
+  let%map.Or_static_error _program = maybe_program in
   ()
 ;;
 
@@ -224,7 +239,8 @@ let command_compile =
          ~where_to_save_temps
          ~print_constraint_graph
          ~print_eps
-         ~koka_zero_config)
+         ~koka_zero_config
+       |> Or_static_or_internal_error.exit)
 ;;
 
 let command_compile_to_ir =
@@ -241,14 +257,15 @@ let command_compile_to_ir =
          ~optimise
          ~print_constraint_graph
          ~print_eps
-         ~out_filename)
+         ~out_filename
+       |> Or_static_or_internal_error.exit)
 ;;
 
 let command_interpret =
   Command.basic_or_error
     ~summary:"interpret a program"
     (let%map.Command in_filename = Flags.in_filename in
-     fun () -> interpret_eps in_filename)
+     fun () -> interpret_eps in_filename |> Or_static_or_internal_error.exit)
 ;;
 
 let command_typecheck =
@@ -256,7 +273,9 @@ let command_typecheck =
     ~summary:"type check a program"
     (let%map.Command in_filename = Flags.in_filename
      and print_constraint_graph = Flags.print_constraint_graph in
-     fun () -> typecheck in_filename ~print_constraint_graph)
+     fun () ->
+       typecheck in_filename ~print_constraint_graph
+       |> Or_static_or_internal_error.exit)
 ;;
 
 let command_example_config =
