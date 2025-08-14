@@ -2,16 +2,18 @@ open! Core
 open! Import
 
 let run () ~prog ~args ~allow_output =
-  let { Core_unix.Process_info.pid; stdin = _; stdout; stderr } =
-    Core_unix.create_process ~prog ~args
-  in
-  let output = Core_unix.in_channel_of_descr stdout in
-  let error_output = Core_unix.in_channel_of_descr stderr in
-  let result = Core_unix.waitpid pid in
-  let output = In_channel.input_all output in
-  let error_output = In_channel.input_all error_output in
-  let result = Core_unix.Exit_or_signal.or_error result in
-  match result, output, error_output with
+  match
+    let { Core_unix.Process_info.pid; stdin = _; stdout; stderr } =
+      Core_unix.create_process ~prog ~args
+    in
+    let output = Core_unix.in_channel_of_descr stdout in
+    let error_output = Core_unix.in_channel_of_descr stderr in
+    let result = Core_unix.waitpid pid in
+    let output = In_channel.input_all output in
+    let error_output = In_channel.input_all error_output in
+    let result = Core_unix.Exit_or_signal.or_error result in
+    result, output, error_output
+  with
   | Ok (), "", "" -> Ok ()
   | Ok (), _stdout, "" when allow_output -> Ok ()
   | Ok (), stdout, "" ->
@@ -30,6 +32,10 @@ let run () ~prog ~args ~allow_output =
           (result : unit Or_error.t)
           (stdout : string)
           (stderr : string)]
+  | exception exn ->
+    Or_error.error_s
+      [%message
+        "failed to run" (prog : string) (args : string list) (exn : Exn.t)]
 ;;
 
 let compile_ir_to_exe
