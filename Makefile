@@ -20,6 +20,10 @@ install-deps:  ## first development dependencies, then project's dependencies
 build: ## Build the project, including non installable libraries and executables
 	opam exec -- dune build --root .
 
+.PHONY: release-build
+release-build: ## Build with optimizations
+	opam exec -- dune build --root . --profile=release
+
 .PHONY: exec
 exec:  ## Run the produced executable
 	opam exec -- dune exec --root . bin/main.exe -- $(ARGS)
