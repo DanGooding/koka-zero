@@ -32,7 +32,7 @@ RUN \
   --mount=type=bind,source=bin,target=bin \
   --mount=type=bind,source=dune,target=dune \
   --mount=type=bind,source=dune-project,target=dune-project \
-  make build
+  make release-build
 
 FROM alpine:3.22 AS build-libgc
 WORKDIR /build
@@ -86,5 +86,3 @@ RUN /app/koka-zero create-config \
   -runtime /app/runtime/runtime.c \
   -gc ${GC_DEST_PATH} \
   -o koka-zero-config.sexp
-
-CMD [ "/bin/sh", "-c", "sleep inf" ]
