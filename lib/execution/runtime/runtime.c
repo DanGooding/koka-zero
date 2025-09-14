@@ -65,31 +65,6 @@ void kkr_report_run_stats(void) {
           1000000000L +
       (finish_monotonic_time.tv_nsec - start_monotonic_time.tv_nsec);
 
-  // time waiting in the run queue
-  pid_t pid = getpid();
-
-  char schedstat_filename[256];
-  snprintf(schedstat_filename, sizeof(schedstat_filename), "/proc/%d/schedstat",
-           pid);
-  FILE *sched_file = fopen(schedstat_filename, "r");
-  if (sched_file == NULL) {
-    fprintf(stderr, "kkr_report_run_stats: failed to open %s\n",
-            schedstat_filename);
-    return;
-  }
-
-  long running_time_ns;
-  long runnable_waiting_time_ns;
-  err = fscanf(sched_file, "%ld %ld", &running_time_ns,
-               &runnable_waiting_time_ns);
-  fclose(sched_file);
-
-  if (err != 2) {
-    fprintf(stderr, "kkr_report_run_stats: failed to parse %s\n",
-            schedstat_filename);
-    return;
-  }
-
   FILE *output_file = fopen(output_filename, "w");
   if (output_file == NULL) {
     fprintf(stderr, "kkr_report_run_stats: failed to open %s\n",
@@ -97,13 +72,12 @@ void kkr_report_run_stats(void) {
     return;
   }
 
-  int written = fprintf(
-      output_file,
-      "{\"user_time_ns\": %ld, \"sys_time_ns\": %ld, \"elapsed_time_ns\": %ld, "
-      "\"running_time_ns\": %ld, \"runnable_waiting_time_ns\": %ld, "
-      "\"total_stdin_wait_time_ns\": %ld}\n",
-      user_time_ns, sys_time_ns, elapsed_time_ns, running_time_ns,
-      runnable_waiting_time_ns, total_stdin_wait_time_ns);
+  int written = fprintf(output_file,
+                        "{ \"user_time_ns\": %ld, \"sys_time_ns\": %ld, "
+                        "\"elapsed_time_ns\": %ld, "
+                        "\"stdin_wait_time_ns\": %ld }\n",
+                        user_time_ns, sys_time_ns, elapsed_time_ns,
+                        total_stdin_wait_time_ns);
   if (written < 0) {
     fprintf(stderr, "kkr_report_run_stats: failed to write to %s\n",
             output_filename);
