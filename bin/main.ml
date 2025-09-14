@@ -83,6 +83,7 @@ let compile_to_exe
       ~print_constraint_graph
       ~print_eps
       ~koka_zero_config
+      ~enable_run_stats
   =
   let exe_filename =
     match exe_filename with
@@ -120,6 +121,7 @@ let compile_to_exe
         ~exe_filename
         ~config:koka_zero_config
         ~optimise
+        ~enable_run_stats
     in
     Ok ()
 ;;
@@ -226,6 +228,15 @@ module Flags = struct
         "DIR path to libgc include/ and lib/ subdirectories. If excluded, will \
          compile without garbage collection."
   ;;
+
+  let enable_run_stats =
+    flag
+      "-enable-run-stats"
+      no_arg
+      ~doc:
+        "report running-time statistics to the filename in env var \
+         KOKA_WRITE_RUN_STATS"
+  ;;
 end
 
 let command_compile =
@@ -237,7 +248,8 @@ let command_compile =
      and exe_filename = Flags.exe_filename
      and where_to_save_temps = Flags.where_to_save_temps
      and print_constraint_graph = Flags.print_constraint_graph
-     and print_eps = Flags.print_eps in
+     and print_eps = Flags.print_eps
+     and enable_run_stats = Flags.enable_run_stats in
      fun () ->
        let open Result.Let_syntax in
        let%bind koka_zero_config =
@@ -250,7 +262,8 @@ let command_compile =
          ~where_to_save_temps
          ~print_constraint_graph
          ~print_eps
-         ~koka_zero_config)
+         ~koka_zero_config
+         ~enable_run_stats)
 ;;
 
 let command_compile_to_ir =
