@@ -1574,7 +1574,7 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
   in
   let main_start_block = Llvm.entry_block main_function in
   let%bind () = Codegen.use_builder (Llvm.position_at_end main_start_block) in
-  let { Runtime.init; _ } = runtime in
+  let { Runtime.init; on_finish; _ } = runtime in
   let%bind _void =
     Runtime.Function.build_call init ~args:(Array.of_list []) ""
   in
@@ -1587,6 +1587,9 @@ let compile_program : EPS.Program.t -> unit Codegen.t =
       ~outer_symbol:Symbol_name.main
       ~runtime
       ~effect_reprs
+  in
+  let%bind _void =
+    Runtime.Function.build_call on_finish ~args:(Array.of_list []) ""
   in
   (* return 0 *)
   let%bind i32 = Codegen.use_context Llvm.i32_type in

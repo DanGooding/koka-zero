@@ -16,6 +16,7 @@ type t =
   { init : Function.t
   ; exit : Function.t
   ; exit_with_message : Function.t
+  ; on_finish : Function.t
   ; malloc : Function.t
   ; fresh_marker : Function.t
   ; nil_evidence_vector : Function.t
