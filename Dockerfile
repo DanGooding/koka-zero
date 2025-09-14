@@ -59,6 +59,7 @@ RUN make install
 FROM alpine:3.22 AS run-koka-compiler
 WORKDIR /app
 # this container is suitable for running the compiler
+RUN apk add clang
 
 COPY --from=build-koka-compiler \
   /build/_build/default/bin/main.exe \
@@ -78,8 +79,6 @@ COPY --from=build-libgc \
 COPY --from=build-libgc \
   ${GC_SRC_PATH}/include \
   ${GC_DEST_PATH}/include
-
-RUN apk add clang
 
 RUN /app/koka-zero create-config \
   -clang /usr/bin/clang \
