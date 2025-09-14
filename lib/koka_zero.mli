@@ -52,4 +52,5 @@ val compile_ir_to_exe
   -> config:Koka_zero_config.t
   -> exe_filename:string
   -> optimise:bool
+  -> enable_run_stats:bool
   -> unit Or_error.t

@@ -1,18 +1,125 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #ifdef ENABLE_GC
 #include "gc.h"
 #endif
+
+#ifdef ENABLE_RUN_STATS
+#include <sys/resource.h>
+#include <time.h>
+#include <unistd.h>
+#endif
+
 #include "runtime.h"
 
+#ifdef ENABLE_RUN_STATS
+static const char *const kkr_run_stats_env_var = "KOKA_WRITE_RUN_STATS";
+static struct timespec start_monotonic_time;
+#endif
+
 void kkr_init(void) {
+#ifdef ENABLE_RUN_STATS
+  if (getenv(kkr_run_stats_env_var) != NULL) {
+    int err = clock_gettime(CLOCK_MONOTONIC, &start_monotonic_time);
+    if (err != 0) {
+      fprintf(stderr, "kkr_init: clock_gettime failed\n");
+      exit(1);
+    }
+  }
+#endif
 #ifdef ENABLE_GC
   GC_INIT();
 #endif
 }
 
-void kkr_exit(void) { exit(1); }
+#ifdef ENABLE_RUN_STATS
+void kkr_report_run_stats(void) {
+  char *output_filename = getenv(kkr_run_stats_env_var);
+  if (output_filename == NULL) return;
+
+  // user & sytem cpu time
+  struct rusage usage_stats;
+  if (getrusage(RUSAGE_SELF, &usage_stats) != 0) {
+    fprintf(stderr, "kkr_report_run_stats: getrusage failed\n");
+    return;
+  }
+
+  long user_time_ns = usage_stats.ru_utime.tv_sec * 1000000000L +
+                      usage_stats.ru_utime.tv_usec * 1000L;
+  long sys_time_ns = usage_stats.ru_stime.tv_sec * 1000000000L +
+                     usage_stats.ru_stime.tv_usec * 1000L;
+
+  // real elapsed time
+  struct timespec finish_monotonic_time;
+  int err = clock_gettime(CLOCK_MONOTONIC, &finish_monotonic_time);
+  if (err != 0) {
+    fprintf(stderr, "kkr_report_run_stats: clock_gettime failed\n");
+    return;
+  }
+
+  long elapsed_time_ns =
+      (finish_monotonic_time.tv_sec - start_monotonic_time.tv_sec) *
+          1000000000L +
+      (finish_monotonic_time.tv_nsec - start_monotonic_time.tv_nsec);
+
+  // time waiting in the run queue
+  pid_t pid = getpid();
+
+  char schedstat_filename[256];
+  snprintf(schedstat_filename, sizeof(schedstat_filename), "/proc/%d/schedstat",
+           pid);
+  FILE *sched_file = fopen(schedstat_filename, "r");
+  if (sched_file == NULL) {
+    fprintf(stderr, "kkr_report_run_stats: failed to open %s\n",
+            schedstat_filename);
+    return;
+  }
+
+  long running_time_ns;
+  long runnable_waiting_time_ns;
+  err = fscanf(sched_file, "%ld %ld", &running_time_ns,
+               &runnable_waiting_time_ns);
+  fclose(sched_file);
+
+  if (err != 2) {
+    fprintf(stderr, "kkr_report_run_stats: failed to parse %s\n",
+            schedstat_filename);
+    return;
+  }
+
+  FILE *output_file = fopen(output_filename, "w");
+  if (output_file == NULL) {
+    fprintf(stderr, "kkr_report_run_stats: failed to open %s\n",
+            output_filename);
+    return;
+  }
+
+  int written = fprintf(
+      output_file,
+      "{\"user_time_ns\": %ld, \"sys_time_ns\": %ld, \"elapsed_time_ns\": %ld, "
+      "\"running_time_ns\": %ld, \"runnable_waiting_time_ns\": %ld}\n",
+      user_time_ns, sys_time_ns, elapsed_time_ns, running_time_ns,
+      runnable_waiting_time_ns);
+  if (written < 0) {
+    fprintf(stderr, "kkr_report_run_stats: failed to write to %s\n",
+            output_filename);
+  }
+  fclose(output_file);
+}
+#endif
+
+void kkr_on_finish(void) {
+#ifdef ENABLE_RUN_STATS
+  kkr_report_run_stats();
+#endif
+}
+
+void kkr_exit(void) {
+  kkr_on_finish();
+  exit(1);
+}
 
 void kkr_exit_with_message(const uint8_t *message) {
   fprintf(stderr, "runtime error: %s\n", message);
