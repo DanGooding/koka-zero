@@ -43,6 +43,7 @@ let compile_ir_to_exe
       ~(config : Koka_zero_config.t)
       ~exe_filename
       ~optimise
+      ~enable_run_stats
   =
   let opt_flag = Option.some_if optimise "-O3" |> Option.to_list in
   let gc_flags, gc_lib =
@@ -57,8 +58,11 @@ let compile_ir_to_exe
         ]
       , [ "-lgc" ] )
   in
+  let run_stats_flags =
+    if enable_run_stats then [ "-DENABLE_RUN_STATS" ] else []
+  in
   let warning_flags = [ "-Wall"; "-Wno-override-module" ] in
-  let flags = warning_flags @ opt_flag @ gc_flags in
+  let flags = warning_flags @ opt_flag @ gc_flags @ run_stats_flags in
   let inputs = [ ir_filename; config.runtime_path ] in
   (* it's important for linking that gc library is listed _after_ user code *)
   let args = flags @ inputs @ gc_lib @ [ "-o"; exe_filename ] in

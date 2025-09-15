@@ -13,6 +13,7 @@ type t =
   { init : Function.t
   ; exit : Function.t
   ; exit_with_message : Function.t
+  ; on_finish : Function.t
   ; malloc : Function.t
   ; fresh_marker : Function.t
   ; nil_evidence_vector : Function.t
@@ -53,6 +54,10 @@ let declare =
   let%bind exit_with_message =
     let name = Symbol_name.of_runtime_exn "kkr_exit_with_message" in
     declare_function name void_type [ ptr ]
+  in
+  let%bind on_finish =
+    let name = Symbol_name.of_runtime_exn "kkr_on_finish" in
+    declare_function name void_type []
   in
   let%bind malloc =
     let name = Symbol_name.of_runtime_exn "kkr_malloc" in
@@ -95,6 +100,7 @@ let declare =
   { init
   ; exit
   ; exit_with_message
+  ; on_finish
   ; malloc
   ; fresh_marker
   ; nil_evidence_vector
