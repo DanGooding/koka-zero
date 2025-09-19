@@ -649,8 +649,8 @@ Then show with bind-inlining and other rewriting applied
         ((((Variable (Generated mon_51)) Pure)
           ((Variable (Generated mon_52)) Pure))
          Ctl
-         (Construct_pure
-          (Let (Variable (Generated mon_53)) Pure (Literal (Int 0))
+         (Let (Variable (Generated mon_53)) Pure (Literal (Int 0))
+          (Construct_pure
            (Operator (Variable (Generated mon_51)) (Int Greater_than)
             (Variable (Generated mon_53)))))))))
      ((Generated opt_7)
@@ -787,8 +787,8 @@ Then show with bind-inlining and other rewriting applied
              ((Generated mon_51)
               (Let (Variable (Generated mon_52)) Pure
                (Variable (Generated mon_45))
-               (Construct_pure
-                (Let (Variable (Generated mon_53)) Pure (Literal (Int 0))
+               (Let (Variable (Generated mon_53)) Pure (Literal (Int 0))
+                (Construct_pure
                  (Operator (Variable (Generated mon_51)) (Int Greater_than)
                   (Variable (Generated mon_53))))))))
             (yield_branch
@@ -984,18 +984,18 @@ Then show with bind-inlining and other rewriting applied
            (Lambda
             ((((Variable (User y)) Pure) ((Variable (Generated mon_77)) Pure))
              Ctl
-             (Construct_pure
-              (Let (Variable (Generated mon_78)) Pure (Variable (User y))
-               (Let (Variable (Generated mon_79)) Pure (Variable (User y))
+             (Let (Variable (Generated mon_78)) Pure (Variable (User y))
+              (Let (Variable (Generated mon_79)) Pure (Variable (User y))
+               (Construct_pure
                 (Operator (Variable (Generated mon_78)) (Int Times)
                  (Variable (Generated mon_79))))))))
            (Let (Variable (Generated mon_84)) Pure
             (Lambda
              ((((Variable (User x)) Pure) ((Variable (Generated mon_81)) Pure))
               Ctl
-              (Construct_pure
-               (Let (Variable (Generated mon_82)) Pure (Variable (User x))
-                (Let (Variable (Generated mon_83)) Pure (Variable (User x))
+              (Let (Variable (Generated mon_82)) Pure (Variable (User x))
+               (Let (Variable (Generated mon_83)) Pure (Variable (User x))
+                (Construct_pure
                  (Operator (Variable (Generated mon_82)) (Int Plus)
                   (Variable (Generated mon_83))))))))
             (Let (Variable (Generated mon_89)) Pure
@@ -1008,9 +1008,9 @@ Then show with bind-inlining and other rewriting applied
                  ((((Variable (User n)) Pure)
                    ((Variable (Generated mon_86)) Pure))
                   Ctl
-                  (Construct_pure
-                   (Let (Variable (Generated mon_87)) Pure (Variable (User m))
-                    (Let (Variable (Generated mon_88)) Pure (Variable (User n))
+                  (Let (Variable (Generated mon_87)) Pure (Variable (User m))
+                   (Let (Variable (Generated mon_88)) Pure (Variable (User n))
+                    (Construct_pure
                      (Operator (Variable (Generated mon_87)) (Int Minus)
                       (Variable (Generated mon_88)))))))))))
              (Let (Variable (Generated mon_90)) Pure (Literal (Int 3))
@@ -1049,9 +1049,9 @@ Then show with bind-inlining and other rewriting applied
                    ((((Variable (Language x)) Pure)
                      ((Variable (Generated mon_94)) Pure))
                     Ctl
-                    (Construct_pure
-                     (Let (Variable (Generated mon_95)) Pure
-                      (Variable (Language x))
+                    (Let (Variable (Generated mon_95)) Pure
+                     (Variable (Language x))
+                     (Construct_pure
                       (Impure_built_in
                        (Impure_print_int (value (Variable (Generated mon_95)))
                         (newline false)))))))))
@@ -1066,9 +1066,9 @@ Then show with bind-inlining and other rewriting applied
                    ((((Variable (Language x)) Pure)
                      ((Variable (Generated mon_97)) Pure))
                     Ctl
-                    (Construct_pure
-                     (Let (Variable (Generated mon_98)) Pure
-                      (Variable (Language x))
+                    (Let (Variable (Generated mon_98)) Pure
+                     (Variable (Language x))
+                     (Construct_pure
                       (Impure_built_in
                        (Impure_print_int (value (Variable (Generated mon_98)))
                         (newline true)))))))))

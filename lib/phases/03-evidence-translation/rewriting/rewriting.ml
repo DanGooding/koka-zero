@@ -6,7 +6,7 @@ let rewrite_program (program : Evidence_passing_syntax.Program.t) =
   (* bind inlining need only be applied once. *)
   let%map program = Bind_inlining.rewrite_program program in
   (* other rewrites are applied repeatedly until it stops changing *)
-  let rewrites = [ Monad_identify.left_unit ] in
+  let rewrites = [ Monad_identify.left_unit; Constructor_sinking.sink_pure ] in
   Modified.apply_while_changes
     ~f:(fun program ->
       Modified.list_fold rewrites ~init:program ~f:(fun program rewrite ->
