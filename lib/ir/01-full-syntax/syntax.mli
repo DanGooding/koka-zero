@@ -125,13 +125,13 @@ type parameter =
   }
 [@@deriving sexp_of]
 
-type pattern =
+type irrefutable_pattern =
   | Pattern_id of Identifier.t
   | Pattern_wildcard
 [@@deriving sexp_of]
 
 type annotated_pattern =
-  { pattern : pattern
+  { pattern : irrefutable_pattern
   ; scheme : type_scheme option
   }
 [@@deriving sexp_of]
@@ -139,7 +139,7 @@ type annotated_pattern =
 (** a function parameter, which may be annotated, and perform an irrefutable
     pattern match *)
 type pattern_parameter =
-  { pattern : pattern
+  { pattern : irrefutable_pattern
   ; type_ : type_ option
   }
 [@@deriving sexp_of]
@@ -213,11 +213,18 @@ type binary_operator =
   | Greater_equal
 [@@deriving sexp_of]
 
+type pattern =
+  | Irrefutable_pattern of irrefutable_pattern
+  | Pattern_literal of literal
+  | Pattern_constructor of Constructor_id.t * pattern list
+[@@deriving sexp_of]
+
 (** an expression - evaluates to a value *)
 type expr =
   | Return of expr
   | If_then_else of expr * block * block
   | If_then of expr * block
+  | Match of expr * (pattern * block) list
   | Handler of effect_handler
   | Handle of
       { subject : expr (** this expression evaluates to a 0 argument function *)

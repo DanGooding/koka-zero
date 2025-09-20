@@ -2045,8 +2045,8 @@ let%expect_test "list matching" =
     {|
 fun f(x) {
   match x {
-    Cons(a, aa) -> { println-int(a) };
-    Nil -> ();
+    Cons(a, Cons(b, c)) -> { println-int(a); };
+    Nil -> ()
   }
 }
 |}
@@ -2054,12 +2054,49 @@ fun f(x) {
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
-    (Error
-     ((kind Syntax_error) (error "parse error")
-      (location (((filename ()) (line 3) (char 8))))))
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Top_fun
+         ((id (Var f))
+          (fn
+           ((type_parameters ())
+            (parameters (((pattern (Pattern_id (Var x))) (type_ ()))))
+            (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Match (Identifier (Var x))
+                (((Pattern_constructor Cons
+                   ((Irrefutable_pattern (Pattern_id (Var a)))
+                    (Pattern_constructor Cons
+                     ((Irrefutable_pattern (Pattern_id (Var b)))
+                      (Irrefutable_pattern (Pattern_id (Var c)))))))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Var println-int))
+                     ((Identifier (Var a)))))))
+                 ((Pattern_constructor Nil ())
+                  ((statements ()) (last (Literal Unit)))))))))))))))))
     |}];
   Util.print_simplification_result syntax;
-  [%expect {||}]
+  [%expect
+    {|
+    (Ok
+     ((declarations
+       ((Fun
+         ((User f)
+          (((Variable (User x)))
+           (Match (Value (Variable (User x)))
+            (((Construction List_cons
+               ((Parameter (Variable (User a)))
+                (Construction List_cons
+                 ((Parameter (Variable (User b)))
+                  (Parameter (Variable (User c)))))))
+              (Application (Value (Variable (User println-int)))
+               ((Value (Variable (User a))))))
+             ((Construction List_nil ()) (Value (Literal Unit))))))))))))
+    |}]
 ;;
 
 let%expect_test "list as effect argument" =

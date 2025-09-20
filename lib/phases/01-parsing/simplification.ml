@@ -283,7 +283,9 @@ let simplify_parameter
   p, t
 ;;
 
-let simplify_pattern : Syntax.pattern -> Parameter.t Or_static_error.t =
+let simplify_irrefutable_pattern
+  : Syntax.irrefutable_pattern -> Parameter.t Or_static_error.t
+  =
   let open Result.Let_syntax in
   function
   | Syntax.Pattern_id x ->
@@ -296,7 +298,7 @@ let simplify_annotated_pattern { Syntax.pattern; scheme }
   : Parameter.t Or_static_error.t
   =
   let open Result.Let_syntax in
-  let%bind p = simplify_pattern pattern in
+  let%bind p = simplify_irrefutable_pattern pattern in
   let%bind t =
     Option.map scheme ~f:simplify_type_scheme
     |> Static_error.Or_static_error.all_option
@@ -309,12 +311,29 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
   : (Parameter.t * Type.Mono.t option) Or_static_error.t
   =
   let open Result.Let_syntax in
-  let%bind p = simplify_pattern pattern in
+  let%bind p = simplify_irrefutable_pattern pattern in
   let%map type_' =
     Option.map type_ ~f:simplify_type_as_type
     |> Static_error.Or_static_error.all_option
   in
   p, type_'
+;;
+
+let rec simplify_pattern (pattern : Syntax.pattern)
+  : Pattern.t Or_static_error.t
+  =
+  let open Result.Let_syntax in
+  match pattern with
+  | Irrefutable_pattern p ->
+    let%map p = simplify_irrefutable_pattern p in
+    Pattern.Parameter p
+  | Pattern_literal lit ->
+    let lit = simplify_literal lit in
+    Pattern.Literal lit |> Ok
+  | Pattern_constructor (constructor, args) ->
+    let%bind constructor = simplify_constructor_id constructor in
+    let%map args = List.map args ~f:simplify_pattern |> Result.all in
+    Pattern.Construction (constructor, args)
 ;;
 
 let simplify_operation_parameter
@@ -371,6 +390,16 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
   | Syntax.If_then (e_cond, block_yes) ->
     let block_no = Syntax.singleton_block (Syntax.Literal Syntax.Unit) in
     Syntax.If_then_else (e_cond, block_yes, block_no) |> simplify_expr
+  | Syntax.Match (subject, cases) ->
+    let%bind subject' = simplify_expr subject in
+    let%map cases' =
+      List.map cases ~f:(fun (pattern, block) ->
+        let%bind pattern' = simplify_pattern pattern in
+        let%map block' = simplify_block block in
+        pattern', block')
+      |> Result.all
+    in
+    Min.Expr.Match (subject', cases')
   | Syntax.Handler handler ->
     let%map handler' = simplify_effect_handler handler in
     Min.Expr.Handler handler' |> Min.Expr.Value
@@ -479,6 +508,7 @@ and simplify_application (e_f : Syntax.expr) (e_args : Syntax.expr list)
   | Return _
   | If_then_else _
   | If_then _
+  | Match _
   | Handler _
   | Handle _
   | Fn _

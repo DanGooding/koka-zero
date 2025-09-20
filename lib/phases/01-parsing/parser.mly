@@ -199,11 +199,14 @@ let close_after_desugaring app : expr =
 %type <pattern_parameter> pparameter
 (* %type <expr list> aexprs *)
 %type <expr> aexpr
+%type <expr> matchexpr
+%type <pattern * block> matchrule
+%type <(pattern * block) list> matchrules
 %type <type_scheme option> annot
 %type <Identifier.t> identifier
 %type <Var_id.t> varid
 %type <annotated_pattern> apattern
-%type <pattern> pattern
+%type <irrefutable_pattern> irrefutablepattern
 %type <expr> handlerexpr
 %type <effect_handler> opclauses
 %type <operation_handler> opclausex
@@ -593,7 +596,8 @@ expr:
 basicexpr:
   | e = ifexpr
     { e }
-  (* | matchexpr *)
+  | e = matchexpr
+    { e }
   | e = handlerexpr
     { e }
   | e = fnexpr
@@ -605,9 +609,10 @@ basicexpr:
 
 (* keyword expressions *)
 
-(* matchexpr: *)
-(*   | MATCH ntlexpr "{" semi* matchrules "}" *)
-(*   ; *)
+matchexpr:
+  | MATCH; subject = ntlexpr; "{"; semi*; rules = matchrules; "}"
+  { Match (subject, rules) }
+  ;
 
 (* %type <expr> fnexpr *)
 fnexpr:
@@ -923,7 +928,7 @@ parameter:
     { { id; type_ } : parameter }
   (* | paramid ":" paramtype "=" expr *)
   ;
-
+ 
 (* %type <parameter_id> paramid *)
 paramid:
   | id = identifier
@@ -951,9 +956,9 @@ pparameters:
 
 (* %type <pattern_parameter> pparameter *)
 pparameter:
-  | pattern = pattern
+  | pattern = irrefutablepattern
     { { pattern; type_ = None } }
-  | pattern = pattern; ":"; type_ = paramtype
+  | pattern = irrefutablepattern; ":"; type_ = paramtype
     { let type_ = Some type_ in
       { pattern; type_ }
     }
@@ -1064,18 +1069,18 @@ conid:
 -- Matching
 ----------------------------------------------------------*)
 
-(* matchrules: *)
-(*   | list(matchrule semi+) *)
-(*   ; *)
+matchrules:
+  | rule = matchrule; semi*
+  { [ rule ] }
+  | rule = matchrule; semi+; rules = matchrules
+    { rule :: rules }
+  ;
 
-(* matchrule: *)
-(*   | patterns1 "|" expr "->" blockexpr *)
-(*   | patterns1 "->" blockexpr *)
-(*   ; *)
-
-(* patterns1: *)
-(*   | separated_nonempy_list(",", pattern) *)
-(*   ; *)
+matchrule:
+(* | patterns1 "|" expr "->" blockexpr *)
+  | ps = pattern; "->"; b = blockexpr
+    { ps, b }
+  ;
 
 (* apatterns: *)
 (*   | separated_list(",", apattern) *)
@@ -1084,25 +1089,41 @@ conid:
 (* %type <annotated_pattern> apattern *)
 apattern:
   (* annotated pattern *)
-  | pattern = pattern; scheme = annot
+  | pattern = irrefutablepattern; scheme = annot
     { { pattern; scheme } }
   ;
 
-(* %type <pattern> pattern *)
-pattern:
+(* %type <irrefutable_pattern> irrefutablepattern *)
+irrefutablepattern:
   | id = identifier
     { Pattern_id id }
-  (* (* named pattern *) *)
-  (* | identifier AS pattern *)
-  (* | conid *)
-  (* | conid "(" patargs ")" *)
-  (* (* unit, parenthesized, and tuple pattern *) *)
-  (* | "(" apatterns ")" *)
-  (* (* list pattern *) *)
-  (* | "[" apatterns "]" *)
-  (* | literal *)
   | WILDCARD
     { Pattern_wildcard }
+  ;
+
+pattern:
+  | p = irrefutablepattern
+    { Irrefutable_pattern p }
+  (* (* named pattern *) *)
+  (* | identifier AS pattern *)
+  | con = conid
+    { Pattern_constructor (con, []) }
+  | con = conid; "("; args = separated_list(",", pattern); ")"
+    { Pattern_constructor (con, args) }
+  | lit = literal
+    { Pattern_literal lit }
+  | "["; args = separated_list(",", pattern); "]"
+    { 
+      let rec make_list = function
+        | [] -> Pattern_constructor (Constructor_id.of_string "Nil", [])
+        | x :: xs ->
+          let tail = make_list xs in
+          Pattern_constructor (
+            Constructor_id.of_string "Cons",
+            [x; tail])
+      in
+      make_list args
+    }
   ;
 
 (* patargs:
