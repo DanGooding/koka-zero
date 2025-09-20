@@ -1,13 +1,6 @@
 open! Core
 open! Import
 
-module Constructor_id : sig
-  type t =
-    | List_nil
-    | List_cons
-  [@@deriving sexp_of]
-end
-
 module Expr : sig
   type t =
     | Value of value
@@ -21,7 +14,7 @@ module Expr : sig
         efficiently. There is no value restriction of [e_x], since it is not
         generalised *)
     | Application of t * t list
-    | Construction of Constructor_id.t * t list
+    | Construction of Constructor.t * t list
     | Seq of t * t
     (** evaluates first expression, then second. both may be of any type *)
     | If_then_else of t * t * t
