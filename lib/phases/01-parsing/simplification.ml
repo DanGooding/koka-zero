@@ -319,9 +319,7 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
   p, type_'
 ;;
 
-let rec simplify_pattern (pattern : Syntax.pattern)
-  : Pattern.t Or_static_error.t
-  =
+let simplify_pattern (pattern : Syntax.pattern) : Pattern.t Or_static_error.t =
   let open Result.Let_syntax in
   match pattern with
   | Irrefutable_pattern p ->
@@ -332,7 +330,16 @@ let rec simplify_pattern (pattern : Syntax.pattern)
     Pattern.Literal lit |> Ok
   | Pattern_constructor (constructor, args) ->
     let%bind constructor = simplify_constructor_id constructor in
-    let%map args = List.map args ~f:simplify_pattern |> Result.all in
+    let%map args =
+      List.map args ~f:(fun arg ->
+        match (arg : Syntax.pattern) with
+        | Irrefutable_pattern p -> simplify_irrefutable_pattern p
+        | Pattern_literal _ | Pattern_constructor _ ->
+          Static_error.unsupported_feature
+            "nested match patterns not yet implemented"
+          |> Error)
+      |> Result.all
+    in
     Pattern.Construction (constructor, args)
 ;;
 
