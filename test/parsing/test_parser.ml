@@ -2045,7 +2045,7 @@ let%expect_test "list matching" =
     {|
 fun f(x) {
   match x {
-    Cons(a, Cons(b, c)) -> { println-int(a); };
+    Cons(a, b) -> { println-int(a); };
     Nil -> ()
   }
 }
@@ -2069,9 +2069,7 @@ fun f(x) {
                (Match (Identifier (Var x))
                 (((Pattern_constructor Cons
                    ((Irrefutable_pattern (Pattern_id (Var a)))
-                    (Pattern_constructor Cons
-                     ((Irrefutable_pattern (Pattern_id (Var b)))
-                      (Irrefutable_pattern (Pattern_id (Var c)))))))
+                    (Irrefutable_pattern (Pattern_id (Var b)))))
                   ((statements ())
                    (last
                     (Application (Identifier (Var println-int))
@@ -2088,11 +2086,7 @@ fun f(x) {
          ((User f)
           (((Variable (User x)))
            (Match (Value (Variable (User x)))
-            (((Construction List_cons
-               ((Parameter (Variable (User a)))
-                (Construction List_cons
-                 ((Parameter (Variable (User b)))
-                  (Parameter (Variable (User c)))))))
+            (((Construction List_cons ((Variable (User a)) (Variable (User b))))
               (Application (Value (Variable (User println-int)))
                ((Value (Variable (User a))))))
              ((Construction List_nil ()) (Value (Literal Unit))))))))))))
