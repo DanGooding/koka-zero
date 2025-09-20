@@ -75,6 +75,12 @@ let rec translate_expr
               let pure_branch = x, EPS.Expr.Variable x in
               EPS.Expr.Match_ctl_pure { subject; pure_branch }
               |> Maybe_effectful.Pure))
+    | Expl.Expr.Construction (constructor, e_args) ->
+      List.map e_args ~f:translate_expr
+      |> Maybe_effectful.make_bind_or_let_many ~evv ~f:(fun xs ~evv:_ ->
+        EPS.Expr.Construction (constructor, xs)
+        |> Maybe_effectful.Pure
+        |> return)
     | Expl.Expr.Unary_operator (op, e) ->
       let%bind m_e = translate_expr e ~evv in
       Maybe_effectful.make_map_or_let m_e ~evv ~f:(fun x ->

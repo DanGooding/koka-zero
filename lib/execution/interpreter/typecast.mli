@@ -10,6 +10,7 @@ val evidence_vector_of_value : Value.t -> Value.evidence_vector Interpreter.t
 val evidence_of_value : Value.t -> Value.evidence Interpreter.t
 val bool_of_value : Value.t -> bool Interpreter.t
 val int_of_value : Value.t -> int Interpreter.t
+val list_of_value : Value.t -> Value.t list Interpreter.t
 
 val zip_arguments
   :  params:'a list

@@ -2,6 +2,7 @@ module Or_runtime_error = Runtime_error.Or_runtime_error
 
 include struct
   open Koka_zero_ir_common
+  module Constructor = Constructor
   module Effect_label = Effect.Label
   module Literal = Literal
   module Operator = Operator

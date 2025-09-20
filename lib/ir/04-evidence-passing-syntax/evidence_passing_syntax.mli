@@ -18,6 +18,7 @@ module Expr : sig
     | Lambda of lambda
     | Fix_lambda of fix_lambda
     | Application of t * (t * Type.t) list * Type.t
+    | Construction of Constructor.t * t list
     | Literal of Literal.t
     | If_then_else of t * t * t
     | Operator of t * Operator.t * t

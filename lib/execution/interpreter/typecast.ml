@@ -80,6 +80,14 @@ let int_of_value =
 (* disable "fragile match" warning *) [@@warning "-4"]
 ;;
 
+let list_of_value =
+  let open Interpreter.Let_syntax in
+  function
+  | Value.List elements -> return elements
+  | v -> Interpreter.type_error ~expected:"list" Value.sexp_of_t v
+(* disable "fragile match" warning *) [@@warning "-4"]
+;;
+
 let zip_arguments ~params ~args =
   let open Interpreter.Let_syntax in
   match List.zip params args with

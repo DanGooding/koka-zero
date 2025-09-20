@@ -236,6 +236,10 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
       ~f:(fun e_fun e_args -> Expr.Application (e_fun, e_args, type_))
   | Variable _ | Literal _ | Fresh_marker | Effect_label _ | Nil_evidence_vector
     -> return (Rewrite_result.return expr)
+  | Construction (constructor, args) ->
+    let%map args = Generation.list_map args ~f:(rewrite_aux ~toplevel) in
+    Rewrite_result.all args
+    |> Rewrite_result.map ~f:(fun args -> Expr.Construction (constructor, args))
   | Let (param, type_, e_subject, e_body) ->
     let%bind subject_result = rewrite_aux e_subject ~toplevel in
     let%map body_result = rewrite_aux e_body ~toplevel in

@@ -7,6 +7,7 @@ end
 
 type t =
   | Primitive of primitive
+  | List of t list
   | Closure of closure
   | Ctl of ctl
   | Effect_label of Effect_label.t
