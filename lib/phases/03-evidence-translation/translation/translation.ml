@@ -134,7 +134,6 @@ and translate_value
       { Expl.Expr.operation = op_name; performed_effect = label } ->
     let%map selector =
       Generation.make_lambda_expr_1 Pure (fun h ->
-        (* TODO: can we just carry indicies around, rather than select *)
         EPS.Expr.Select_operation (label, op_name, h) |> return)
     in
     let label' : EPS.Expr.t = translate_effect_label label in

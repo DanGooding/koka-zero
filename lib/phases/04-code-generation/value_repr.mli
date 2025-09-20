@@ -11,8 +11,6 @@ module Unpacked : sig
     type t =
       | Code_pointer of Llvm.llvalue
       | Closure of Llvm.llvalue
-        (* TODO: ideally we could remember the static code address also,
-           so that recursive calls in closures can be compiled as known calls. *)
     [@@deriving sexp_of]
 
     val pack : t -> Packed.t Codegen.t

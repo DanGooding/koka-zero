@@ -419,14 +419,9 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
            t
            (Handled (labels_lo, effect_lo))
            (Metavariable effect_hi)
-         (* add back the info that [effect_lo] does not contain any of [labels_hi], 
-         except possibly those in [labels_lo]:
-         effect_lo <= effect_lo - (labels_hi - labels_lo) *)
-         (* TODO: can we actually make use of this constraint? 
-         perhaps instead, for each upper bound effect_lo <= above
-         add: effect_lo <= Handled(diff, above)
-         (we'll want to add this for subsequently added bounds too)
-      *)
+         (* add back the info that [effect_lo] does not contain any of [labels_hi],
+            except possibly those in [labels_lo]:
+            effect_lo <= effect_lo - (labels_hi - labels_lo) *)
        in
        constrain_effect_at_most
          t

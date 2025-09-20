@@ -2,6 +2,7 @@ open Core
 open Import
 
 module Locals = struct
+  (* order is currently important - shadowed names are not removed *)
   type t = (Variable.t * Ctl_repr.t) list
 
   let find t v =
@@ -11,8 +12,6 @@ module Locals = struct
 
   let mem t v = find t v |> Option.is_some
   let add t ~name ~value = (name, value) :: t
-
-  (* TODO: filter shadowed names out? *)
 end
 
 module Return_value_pointer = struct

@@ -4,8 +4,6 @@ module UE = Util.Expr
 module UP = Util.Parameter
 
 let%expect_test "identity gets polymorphic type" =
-  (* TODO: once introduce declarations, add a better test than this (expressions
-     never have polymorphic type themselves) *)
   let expr =
     (* let id = \x. x in id id () *)
     (* tests id can be applied to functions, and units *)
@@ -27,9 +25,6 @@ let%expect_test "identity gets polymorphic type" =
         ((Value (Literal Unit))) (Labels ())))))
     |}]
 ;;
-
-(* TODO: tests to add: static scoping, not generalising free varaibles, not
-   generalising lambdas *)
 
 let%expect_test "fix combinator allows recursion" =
   let expr =

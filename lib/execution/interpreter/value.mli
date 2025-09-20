@@ -22,7 +22,7 @@ and ctl =
   | Pure of t
   | Yield of
       { marker : Marker.t
-      ; op_clause : t (* TODO: is this at least a closure? *)
+      ; op_clause : t
       ; resumption : t
       }
 [@@deriving sexp_of]

@@ -140,9 +140,7 @@ let pattern_parameter_of_binder : binder -> pattern_parameter =
 
 (* operations: *)
 
-(* TODO: better name *)
 type operation_shape =
-  (* TODO: name fields? *)
   | Shape_val of type_
   | Shape_fun of parameter list * type_
   | Shape_except of parameter list * type_
@@ -164,9 +162,7 @@ type effect_declaration =
   }
 [@@deriving sexp_of]
 
-type type_declaration =
-  (* TODO: records/Effect.t *)
-  | Effect_declaration of effect_declaration
+type type_declaration = Effect_declaration of effect_declaration
 (* | Type *)
 [@@deriving sexp_of]
 
@@ -207,7 +203,6 @@ type expr =
   | If_then_else of expr * block * block
   | If_then of expr * block
   (* | Match *)
-  (* TODO: which of [handle]/[handler] is the logical primitive? *)
   | Handler of effect_handler
   | Handle of
       { subject : expr
@@ -261,7 +256,6 @@ and operation_handler =
       ; type_ : type_ option
       ; value : block
       }
-  (* TODO: sharing between different shapes? *)
   | Op_fun of
       { id : Var_id.t
       ; parameters : operation_parameter list

@@ -48,9 +48,6 @@
 
 (using menhir 2.0)
 
-;; don't require `dune__exe__` prefix when debugging
-;; TODO: check the loss of namespacing is not an issue
-
 (wrapped_executables false)
 
 ;; enable cram .t tests

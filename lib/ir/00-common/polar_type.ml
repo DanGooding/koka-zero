@@ -69,7 +69,7 @@ let rec variables t =
   | Recursive (v, type_) -> Set.remove (variables type_) v
 ;;
 
-(* TODO: this could be much more sophisticated,
+(* this could be much more sophisticated,
    notably there are many cases where we can remove variables *)
 let rec simplify t =
   match t with

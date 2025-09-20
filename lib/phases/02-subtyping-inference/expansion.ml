@@ -130,7 +130,6 @@ and expand_effect_metavariable_aux
       ~in_progress_effect_metavariables
   : Polar_type.Effect.t
   =
-  (* TODO: avoid duplication with the type case *)
   let var =
     Hashtbl.find_or_add t.effect_meta_to_var meta ~default:(fun () ->
       Effect.Variable.Name_source.next_name t.effect_variable_source)

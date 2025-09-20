@@ -235,7 +235,8 @@ let simplify_annotated_pattern { Syntax.pattern; scheme }
   let open Result.Let_syntax in
   let p = simplify_pattern pattern in
   let%bind t =
-    Option.map scheme ~f:simplify_type_scheme |> Static_error.all_option
+    Option.map scheme ~f:simplify_type_scheme
+    |> Static_error.Or_static_error.all_option
   in
   let%map () = restrict_to_none t ~description:"type annotation on pattern" in
   p
@@ -247,7 +248,8 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
   let open Result.Let_syntax in
   let p = simplify_pattern pattern in
   let%map type_' =
-    Option.map type_ ~f:simplify_type_as_type |> Static_error.all_option
+    Option.map type_ ~f:simplify_type_as_type
+    |> Static_error.Or_static_error.all_option
   in
   p, type_'
 ;;
@@ -260,7 +262,8 @@ let simplify_operation_parameter
   let open Result.Let_syntax in
   let p' = simplify_parameter_id id in
   let%map type_' =
-    Option.map type_ ~f:simplify_type_as_type |> Static_error.all_option
+    Option.map type_ ~f:simplify_type_as_type
+    |> Static_error.Or_static_error.all_option
   in
   p', type_'
 ;;
@@ -380,8 +383,10 @@ and simplify_statement_preceding
 and simplify_block { Syntax.statements; last } : Min.Expr.t Or_static_error.t =
   let open Result.Let_syntax in
   let%bind last = simplify_expr last in
-  Static_error.list_fold_right statements ~init:last ~f:(fun statement e ->
-    simplify_statement_preceding statement e)
+  Static_error.Or_static_error.list_fold_right
+    statements
+    ~init:last
+    ~f:(fun statement e -> simplify_statement_preceding statement e)
 
 and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
   : Min.Expr.lambda Or_static_error.t

@@ -92,24 +92,3 @@ let to_string t =
   in
   location_part ^ description_part
 ;;
-
-(* TODO move into [Monad_utils.S2] *)
-let all_option = function
-  | None -> Result.Ok None
-  | Some (Result.Ok x) -> Result.Ok (Some x)
-  | Some (Result.Error err) -> Result.Error err
-;;
-
-let all_non_empty (Non_empty_list.Cons (t, ts)) =
-  let open Result.Let_syntax in
-  let%bind x = t in
-  let%map xs = Result.all ts in
-  Non_empty_list.Cons (x, xs)
-;;
-
-let list_fold_right xs ~init ~f =
-  let open Result.Let_syntax in
-  List.fold_right xs ~init:(return init) ~f:(fun x acc ->
-    let%bind acc = acc in
-    f x acc)
-;;

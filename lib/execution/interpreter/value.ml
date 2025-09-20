@@ -22,7 +22,7 @@ module T = struct
     | Pure of t
     | Yield of
         { marker : Marker.t
-        ; op_clause : t (* TODO: is this at least a closure? *)
+        ; op_clause : t
         ; resumption : t
         }
   [@@deriving sexp_of]
@@ -48,7 +48,6 @@ module T = struct
   and hnd =
     { handled_effect : Effect_label.t
     ; operation_clauses : op Variable.Map.t
-      (* TODO: return_clause omitted for now *)
     }
   [@@deriving sexp_of]
 
