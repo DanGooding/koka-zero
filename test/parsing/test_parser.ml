@@ -1882,3 +1882,65 @@ effect eff<a :: X, b :: X, c :: E, d :: V> {
       (location ())))
     |}]
 ;;
+
+let%expect_test "list literals" =
+  let code =
+    {|
+fun f() {
+  val xs = [1, 2, 3]
+  xs
+}
+|}
+  in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect {||}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
+;;
+
+let%expect_test "list constructors" =
+  let code =
+    {|
+fun g() {
+  val ws = Nil
+  val xs = Cons(1, Cons(2, Nil))
+  val ys = Cons(3, xs)
+  ys
+}
+|}
+  in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect {| |}];
+  Util.print_simplification_result syntax;
+  [%expect {||}]
+;;
+
+let%expect_test "list matching" =
+  let code =
+    {|
+fun f(x) {
+  match x with
+    Cons(a, aa) -> { println-int(a) }
+    Nil -> ()
+}
+|}
+  in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect {| |}];
+  Util.print_simplification_result syntax;
+  [%expect {||}]
+;;
+
+let%expect_test "list as effect argument" =
+  let code =
+    {|
+effect eff {
+  control choose(xs : list<int>) : int;
+}
+|}
+  in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect {| |}];
+  Util.print_simplification_result syntax;
+  [%expect {||}]
+;;
