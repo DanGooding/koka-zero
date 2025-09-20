@@ -97,7 +97,7 @@ rule read =
   | "else"                      { ELSE }
   | "elif"                      { ELIF }
   | "with"                      { WITH }
-  (* | "match"                     { MATCH } *)
+  | "match"                     { MATCH }
   | "return"                    { RETURN }
 
   (* | "as"                        { AS } *)
@@ -151,8 +151,8 @@ rule read =
   | ')' { CLOSE_ROUND }
   | '{' { OPEN_CURLY }
   | '}' { CLOSE_CURLY }
-  (* | '[' { OPEN_SQUARE } *)
-  (* | ']' { CLOSE_SQUARE } *)
+  | '[' { OPEN_SQUARE }
+  | ']' { CLOSE_SQUARE }
   | ';' { SEMI }
   | ',' { COMMA }
   | '<' { LESS_THAN }
@@ -181,7 +181,7 @@ rule read =
   | sign digit+             { INT (int_of_string (Lexing.lexeme lexbuf)) }
 
   (* Identifiers and operators *)
-  (* | con_id           { CONID (lex_identifier lexbuf) } *)
+  | con_id           { CONID (lex_identifier lexbuf) }
   | id               { ID (lex_identifier lexbuf) }
   (* | '(' operator ')' { IDOP (Lexing.lexeme lexbuf) } *)
   (* | operator         { OP (Lexing.lexeme lexbuf) } *)
