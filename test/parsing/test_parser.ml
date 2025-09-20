@@ -2044,9 +2044,10 @@ let%expect_test "list matching" =
   let code =
     {|
 fun f(x) {
-  match x with
+  match x {
     Cons(a, aa) -> { println-int(a) };
     Nil -> ();
+  }
 }
 |}
   in
