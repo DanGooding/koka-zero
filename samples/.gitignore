@@ -1,0 +1,7 @@
+# ignore executables, but keep files with extensions
+*
+!*.*
+
+# do actually want to ignore these build artifacts
+*.ll
+*.s
