@@ -2,9 +2,6 @@ open Core
 open Import
 module EPS = Evidence_passing_syntax
 
-(* TODO: need a type system for telling when llvalues are
-   pointers(opaque/typed)/values/*)
-
 (** get an effect's representation, or fail with a codegen impossible_error if
     not found *)
 let lookup_effect_repr
@@ -141,7 +138,7 @@ let rec compile_expr
   let open Codegen.Let_syntax in
   match e with
   | EPS.Expr.Variable v ->
-    (* TODO: note this will be duplicated for each access, although common
+    (* note this will be duplicated for each access, although common
        subexpression elimination should easily remove it *)
     Context.compile_get env v
   | EPS.Expr.Let (param, type_, subject, body) ->

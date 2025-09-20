@@ -48,10 +48,6 @@ module Expr : sig
   (** handler clause for a single operation - part of a [handler] *)
   and op_handler =
     { op_argument : Parameter.t
-      (* TODO: extend to multiple args (requires checking against
-         declaration, and makes translation harder - each operation in an
-         effect needs to pass a differnt amount of arguments through
-         yield) *)
     ; op_body : t
     }
   [@@deriving sexp_of]

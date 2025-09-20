@@ -74,7 +74,6 @@ module Expr = struct
     let op_ask =
       let shape = Operation_shape.Control in
       let argument = Type.Mono.Primitive Type.Primitive.Unit in
-      (* TODO: this should be forall a. a, once polymorphic effects are added *)
       let answer = Type.Mono.Primitive Type.Primitive.Unit in
       { Effect_decl.Operation.shape; argument; answer }
     in
@@ -87,7 +86,6 @@ module Expr = struct
     let op_ask =
       let shape = Operation_shape.Fun in
       let argument = Type.Mono.Primitive Type.Primitive.Int in
-      (* TODO: this should be forall a. a, once polymorphic effects are added *)
       let answer = Type.Mono.Primitive Type.Primitive.Bool in
       { Effect_decl.Operation.shape; argument; answer }
     in

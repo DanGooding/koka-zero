@@ -21,8 +21,7 @@ and apply_everywhere_below
   fun ~rewrite e ->
   let open Modified.Let_syntax in
   match e with
-  | Expr.Variable _ ->
-    Modified.original e (* TODO: have to be careful to not use wrong [e]*)
+  | Expr.Variable _ -> Modified.original e
   | Expr.Let (v, t, subject, body) ->
     let%bind subject = apply_everywhere ~rewrite subject in
     let%map body = apply_everywhere ~rewrite body in

@@ -22,9 +22,7 @@ let eval_op_expr
      | Operator.Int.Minus -> left - right |> Value.Int
      | Operator.Int.Times -> left * right |> Value.Int
      | Operator.Int.Divide -> left / right |> Value.Int
-     | Operator.Int.Modulo ->
-       left % right |> Value.Int
-       (* TODO: don't inherit OCaml's behaviour for modulo of a negative *)
+     | Operator.Int.Modulo -> left % right |> Value.Int
      | Operator.Int.Equals -> left = right |> Value.Bool
      | Operator.Int.Not_equal -> left <> right |> Value.Bool
      | Operator.Int.Less_than -> left < right |> Value.Bool
@@ -284,8 +282,6 @@ and eval_lambda
   =
   fun lambda ~env ->
   let open Interpreter.Let_syntax in
-  (* TODO: capturing the entire environment like this, and creating a new map
-     upon every binding (rather than sharing tails) is hideously inefficient *)
   (Value.Lambda lambda, env) |> return
 
 and eval_fix_lambda

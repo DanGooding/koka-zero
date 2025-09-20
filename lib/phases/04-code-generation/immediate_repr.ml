@@ -120,10 +120,7 @@ module Int = struct
       | Plus -> `Int Llvm.build_add
       | Minus -> `Int Llvm.build_sub
       | Times -> `Int Llvm.build_mul
-      (* TODO: these both have undefined behaviour for division/modulo by zero!
-         would prefer to exit or raise a koka exn *)
       | Divide -> `Int Llvm.build_sdiv
-      (* TODO: good behaviour for modulo of a negative *)
       | Modulo -> `Int Llvm.build_srem
       | Equals -> `Bool Llvm.Icmp.Eq
       | Not_equal -> `Bool Llvm.Icmp.Ne

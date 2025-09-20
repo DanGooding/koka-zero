@@ -1,9 +1,6 @@
 open Core
 open! Import
 
-(* TODO: [Variable] currently have no annotations, but will need to use a
-   variant to namespace user names from generated names *)
-
 module Variable : sig
   (** a variable standing for a type, either free, or quantified in a [Poly.t]*)
   type t [@@deriving sexp_of]

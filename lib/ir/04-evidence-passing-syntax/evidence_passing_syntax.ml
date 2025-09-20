@@ -50,9 +50,6 @@ module Expr = struct
           ; operation_clauses : t Variable.Map.t
           }
       | Select_operation of Effect.Label.t * Variable.t * t
-      (* TODO: perhaps this should be a function? (otherwise it needs to be
-         wrapped at every usage) - TODO: or should this already be changed to an
-         index into a record? *)
       | Nil_evidence_vector
       | Cons_evidence_vector of
           { label : t

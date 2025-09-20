@@ -57,8 +57,6 @@ module Expr : sig
     | Select_operation of Effect.Label.t * Variable.t * t
     (** primitive to get an operation from a handler's runtime
         representation **)
-    (* TODO: note evidence vectors are not first class - can have more sensible
-       primitives if desired *)
     | Nil_evidence_vector
     | Cons_evidence_vector of
         { label : t

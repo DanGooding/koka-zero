@@ -38,9 +38,6 @@ module Primitive = struct
   ;;
 end
 
-(* TODO: currently have no annotations, but will need to use a variant to
-   namespace user names from generated names *)
-
 module Mono = struct
   module T = struct
     type t =

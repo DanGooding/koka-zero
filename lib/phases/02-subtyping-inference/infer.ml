@@ -179,7 +179,6 @@ let lookup_effect_for_handler
   | Some (lab_handled, operation_shapes) ->
     return (lab_handled, operation_shapes)
   | None ->
-    (* TODO: use actual to_string to give nice output *)
     let signature_str =
       Effect_signature.sexp_of_t signature |> Sexp.to_string_hum
     in

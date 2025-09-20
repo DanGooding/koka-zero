@@ -13,7 +13,6 @@ val original : 'a -> 'a t
 (** inject a value marked as modified*)
 val modified : 'a -> 'a t
 
-(* TODO: or return value in both branches? *)
 val inspect : 'a t -> [ `Modified of 'a | `Unchanged ]
 val value : 'a t -> 'a
 

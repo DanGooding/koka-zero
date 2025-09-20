@@ -44,8 +44,6 @@ let make_bind_or_let
     (* bind [expr] [evv] (fun x evv -> [f x]) *)
     let%map rhs =
       Generation.make_lambda_expr_2 Ctl (fun x evv ->
-        (* TODO: if [result] is [Pure] emit a call to [map]
-           instead of [bind] - if [map] is cheaper *)
         let%map result = f x ~evv in
         to_effectful result)
     in

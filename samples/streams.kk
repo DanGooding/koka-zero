@@ -96,7 +96,6 @@ fun take-while(p, generate) {
 // reduce a stream to a single value (a 'left' fold)
 fun fold(x0, f, generate) {
   with control yield-int(x) {
-     // TODO: try the state trick for tail-recursion
      f(x0, resume(()));
   };
   generate();
