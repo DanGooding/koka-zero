@@ -112,19 +112,19 @@ type parameter =
   }
 [@@deriving sexp_of]
 
-type pattern =
+type irrefutable_pattern =
   | Pattern_id of Identifier.t
   | Pattern_wildcard
 [@@deriving sexp_of]
 
 type annotated_pattern =
-  { pattern : pattern
+  { pattern : irrefutable_pattern
   ; scheme : type_scheme option
   }
 [@@deriving sexp_of]
 
 type pattern_parameter =
-  { pattern : pattern
+  { pattern : irrefutable_pattern
   ; type_ : type_ option
   }
 [@@deriving sexp_of]
@@ -201,11 +201,17 @@ type binary_operator =
   | Greater_equal
 [@@deriving sexp_of]
 
+type pattern =
+  | Irrefutable_pattern of irrefutable_pattern
+  | Pattern_literal of literal
+  | Pattern_constructor of Constructor_id.t * pattern list
+[@@deriving sexp_of]
+
 type expr =
   | Return of expr
   | If_then_else of expr * block * block
   | If_then of expr * block
-  (* | Match *)
+  | Match of expr * (pattern * block) list
   | Handler of effect_handler
   | Handle of
       { subject : expr
@@ -329,7 +335,7 @@ let insert_with_callback : callback:fn -> expr -> expr =
   | Return _
   | If_then_else (_, _, _)
   | If_then (_, _)
-  | Handler _ | Handle _ | Fn _
+  | Match _ | Handler _ | Handle _ | Fn _
   | Binary_op (_, _, _)
   | Unary_op (_, _)
   | Identifier _ | Literal _ -> Application (e, [ Fn callback ])

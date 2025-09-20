@@ -10,6 +10,7 @@ module Expr = struct
     | Construction of Constructor.t * t list
     | Seq of t * t
     | If_then_else of t * t * t
+    | Match of t * (Pattern.t * t) list
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
     | Impure_built_in of impure_built_in
