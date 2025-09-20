@@ -37,10 +37,42 @@ let simplify_var_id_to_effect_label (x : Syntax.Var_id.t) : Effect.Label.t =
   Effect.Label.of_string (Syntax.Var_id.to_string x)
 ;;
 
+let simplify_constructor_id (id : Syntax.Constructor_id.t)
+  : Min.Constructor_id.t Or_static_error.t
+  =
+  match Syntax.Constructor_id.to_string id with
+  | "Nil" -> Ok List_nil
+  | "Cons" -> Ok List_cons
+  | _ ->
+    Error
+      (Static_error.syntax_error_s
+         [%message "unkown constructor name" (id : Syntax.Constructor_id.t)])
+;;
+
 (** convert an [Identifier.t] to the [Minimal_syntax] equivalent *)
-let simplify_identifier (x : Syntax.Identifier.t) : Variable.t =
+let simplify_identifier_as_expr (x : Syntax.Identifier.t)
+  : Min.Expr.t Or_static_error.t
+  =
+  let open Or_static_error.Let_syntax in
   match x with
-  | Syntax.Identifier.Var x -> simplify_var_id x
+  | Syntax.Identifier.Var x ->
+    let x' = simplify_var_id x in
+    Min.Expr.Variable x' |> Min.Expr.Value |> Result.Ok
+  | Constructor c ->
+    let%map c' = simplify_constructor_id c in
+    Min.Expr.Construction (c', [])
+;;
+
+let simplify_identifier_as_name (x : Syntax.Identifier.t)
+  : Variable.t Or_static_error.t
+  =
+  match x with
+  | Syntax.Identifier.Var x -> simplify_var_id x |> Ok
+  | Constructor c ->
+    Static_error.syntax_error_s
+      [%message
+        "expected name but got constructor" (c : Syntax.Constructor_id.t)]
+    |> Error
 ;;
 
 (** convert a [Syntax.type_], to a [Type.Mono.t] failing if it is actually an
@@ -189,7 +221,10 @@ and simplify_parameter_type { Syntax.parameter_id; type_ }
   : (Variable.t option * Type.Mono.t) Or_static_error.t
   =
   let open Result.Let_syntax in
-  let id = Option.map parameter_id ~f:simplify_identifier in
+  let%bind id =
+    Option.map parameter_id ~f:simplify_identifier_as_name
+    |> Or_static_error.all_option
+  in
   let%map t = simplify_type_as_type type_ in
   id, t
 
@@ -209,9 +244,14 @@ let simplify_literal (lit : Syntax.literal) : Literal.t =
   | Syntax.Bool b -> Literal.Bool b
 ;;
 
-let simplify_parameter_id : Syntax.parameter_id -> Parameter.t = function
-  | Syntax.Parameter_id x -> simplify_identifier x |> Parameter.Variable
-  | Syntax.Parameter_wildcard -> Parameter.Wildcard
+let simplify_parameter_id : Syntax.parameter_id -> Parameter.t Or_static_error.t
+  =
+  let open Result.Let_syntax in
+  function
+  | Syntax.Parameter_id x ->
+    let%map x' = simplify_identifier_as_name x in
+    Parameter.Variable x'
+  | Syntax.Parameter_wildcard -> Ok Parameter.Wildcard
 ;;
 
 let simplify_parameter
@@ -219,21 +259,25 @@ let simplify_parameter
   =
   fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
-  let p = simplify_parameter_id id in
+  let%bind p = simplify_parameter_id id in
   let%map t = simplify_type_as_type type_ in
   p, t
 ;;
 
-let simplify_pattern : Syntax.pattern -> Parameter.t = function
-  | Syntax.Pattern_id x -> simplify_identifier x |> Parameter.Variable
-  | Syntax.Pattern_wildcard -> Parameter.Wildcard
+let simplify_pattern : Syntax.pattern -> Parameter.t Or_static_error.t =
+  let open Result.Let_syntax in
+  function
+  | Syntax.Pattern_id x ->
+    let%map x' = simplify_identifier_as_name x in
+    Parameter.Variable x'
+  | Syntax.Pattern_wildcard -> Ok Parameter.Wildcard
 ;;
 
 let simplify_annotated_pattern { Syntax.pattern; scheme }
   : Parameter.t Or_static_error.t
   =
   let open Result.Let_syntax in
-  let p = simplify_pattern pattern in
+  let%bind p = simplify_pattern pattern in
   let%bind t =
     Option.map scheme ~f:simplify_type_scheme
     |> Static_error.Or_static_error.all_option
@@ -246,7 +290,7 @@ let simplify_pattern_parameter { Syntax.pattern; type_ }
   : (Parameter.t * Type.Mono.t option) Or_static_error.t
   =
   let open Result.Let_syntax in
-  let p = simplify_pattern pattern in
+  let%bind p = simplify_pattern pattern in
   let%map type_' =
     Option.map type_ ~f:simplify_type_as_type
     |> Static_error.Or_static_error.all_option
@@ -260,7 +304,7 @@ let simplify_operation_parameter
   =
   fun { Syntax.id; type_ } ->
   let open Result.Let_syntax in
-  let p' = simplify_parameter_id id in
+  let%bind p' = simplify_parameter_id id in
   let%map type_' =
     Option.map type_ ~f:simplify_type_as_type
     |> Static_error.Or_static_error.all_option
@@ -318,13 +362,8 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
   | Syntax.Fn f ->
     let%map lambda = simplify_fn f in
     Min.Expr.Lambda lambda |> Min.Expr.Value
-  | Syntax.Application (e_f, e_args) ->
-    let%bind e_f' = simplify_expr e_f in
-    let%map e_args' = List.map e_args ~f:simplify_expr |> Result.all in
-    Min.Expr.Application (e_f', e_args')
-  | Syntax.Identifier x ->
-    let x' = simplify_identifier x in
-    Min.Expr.Variable x' |> Min.Expr.Value |> Result.Ok
+  | Syntax.Application (e_f, e_args) -> simplify_application e_f e_args
+  | Syntax.Identifier x -> simplify_identifier_as_expr x
   | Syntax.Literal lit ->
     let lit' = simplify_literal lit in
     Min.Expr.Literal lit' |> Min.Expr.Value |> Result.Ok
@@ -345,8 +384,8 @@ and simplify_fun_declaration { Syntax.id; fn }
   : Min.Decl.Fun.t Or_static_error.t
   =
   let open Result.Let_syntax in
-  let%map lambda = simplify_fn fn in
-  let f_name = simplify_identifier id in
+  let%bind lambda = simplify_fn fn in
+  let%map f_name = simplify_identifier_as_name id in
   f_name, lambda
 
 and simplify_declaration_preceding
@@ -407,6 +446,30 @@ and simplify_fn { Syntax.type_parameters; parameters; result_type; body }
   in
   let%map body' = simplify_block body in
   names, body'
+
+and simplify_application (e_f : Syntax.expr) (e_args : Syntax.expr list)
+  : Min.Expr.t Or_static_error.t
+  =
+  let open Or_static_error.Let_syntax in
+  let%bind e_args' = List.map e_args ~f:simplify_expr |> Result.all in
+  match (e_f : Syntax.expr) with
+  | Identifier (Constructor constructor_id) ->
+    let%map constructor_id' = simplify_constructor_id constructor_id in
+    Min.Expr.Construction (constructor_id', e_args')
+  | Identifier (Var _)
+  | Return _
+  | If_then_else _
+  | If_then _
+  | Handler _
+  | Handle _
+  | Fn _
+  | Binary_op _
+  | Unary_op _
+  | Application _
+  | Literal _
+  | Annotated_expr _ ->
+    let%map e_f' = simplify_expr e_f in
+    Min.Expr.Application (e_f', e_args')
 
 and simplify_effect_handler (Syntax.Effect_handler op_handlers)
   : Min.Expr.handler Or_static_error.t

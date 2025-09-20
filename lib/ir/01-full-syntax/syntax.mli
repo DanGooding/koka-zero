@@ -4,13 +4,17 @@ open Koka_zero_util
 (* Names: *)
 
 module Var_id : Identifiable.S
+module Constructor_id : Identifiable.S
 module Wildcard_id : Identifiable.S
 
 module Identifier : sig
   (** augments a [Var_id.t] with information about which kind of name it is.
       This information is derived from the string (capitalisation etc.), so the
       variants can be collapsed back together without issues of collision. *)
-  type t = Var of Var_id.t [@@deriving compare, sexp_of]
+  type t =
+    | Var of Var_id.t
+    | Constructor of Constructor_id.t
+  [@@deriving compare, sexp_of]
 
   include Comparable.S_plain with type t := t
 end

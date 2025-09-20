@@ -4,14 +4,16 @@ open Koka_zero_util
 (* Names: *)
 
 module Var_id : Identifiable.S = String
+module Constructor_id : Identifiable.S = String
 module Wildcard_id : Identifiable.S = String
 
 module Identifier = struct
   module T = struct
-    type t = Var of Var_id.t
-    (* | Wildcard of Wildcard_id.t *)
-    (* | Operator of Operator_id.t *)
-    (* | Constructor of Constructor_id.t *)
+    type t =
+      | Var of Var_id.t
+      (* | Wildcard of Wildcard_id.t *)
+      (* | Operator of Operator_id.t *)
+      | Constructor of Constructor_id.t
     [@@deriving compare, sexp_of]
   end
 

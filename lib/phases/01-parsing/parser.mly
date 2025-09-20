@@ -13,7 +13,7 @@
 
 %token EOF
 
-%token <string> ID (* CONID OP IDOP *)
+%token <string> ID CONID (* OP IDOP *)
 %token <string> WILDCARD
 
 %token <int> INT
@@ -25,7 +25,7 @@
 (* string literals define nicer syntax for use in the production rules
    they do not determine when the lexer produces these tokens *)
 %token OPEN_ROUND  "(" CLOSE_ROUND  ")"
-(* %token OPEN_SQUARE "[" CLOSE_SQUARE "]" *)
+%token OPEN_SQUARE "[" CLOSE_SQUARE "]"
 %token OPEN_CURLY  "{" CLOSE_CURLY  "}"
 
 %token LESS_THAN "<" GREATER_THAN ">"
@@ -40,7 +40,7 @@
 
 %token IF THEN ELSE ELIF
 %token WITH
-(* %token MATCH *)
+%token MATCH
 %token RARROW "->" LARROW "<-"
 
 %token FUN FN VAL (* VAR *) CONTROL EXCEPT
@@ -838,7 +838,8 @@ auxntlappexpr:
 atom:
   | id = identifier
     { Identifier id }
-  (* | constructor *)
+  | con = constructor
+    { Identifier con }
   | lit = literal
     { Literal lit }
   (* | mask *)
@@ -1013,23 +1014,25 @@ varid:
   (* | ID_NAMED        { Var_id.of_string "named"; } *)
   ;
 
-(* %type <Constructor_id.t> constructor *)
-(* constructor: *)
-(*   | conid *)
-(*   ; *)
+(* %type <Identifier.t> constructor *)
+constructor:
+  | c = conid
+    { Identifier.Constructor c }
+  ;
 
 
 (* %type <Constructor_id.t> conid *)
-(* conid: *)
-(*   | id = CONID *)
-(*     { Constructor_id.of_string id } *)
+conid:
+  | id = CONID
+    { Constructor_id.of_string id }
 (*   | KIND_E *)
 (*     { Constructor_id.of_string "E" } *)
 (*   | KIND_X *)
 (*     { Constructor_id.of_string "X" } *)
 (*   | KIND_V *)
 (*     { Constructor_id.of_string "V" } *)
-(*   ; *)
+(*     { Constructor_id.of_string "V" } *)
+  ;
 
 (* %type <Operator.t> op *)
 (* op: *)

@@ -1887,13 +1887,18 @@ let%expect_test "list literals" =
   let code =
     {|
 fun f() {
-  val xs = [1, 2, 3]
+  val xs = [1, 2, 3];
   xs
 }
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
-  [%expect {||}];
+  [%expect
+    {|
+    (Error
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 3) (char 13))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
@@ -1902,17 +1907,63 @@ let%expect_test "list constructors" =
   let code =
     {|
 fun g() {
-  val ws = Nil
-  val xs = Cons(1, Cons(2, Nil))
-  val ys = Cons(3, xs)
+  val ws = Nil;
+  val xs = Cons(1, Cons(2, Nil));
+  val ys = Cons(3, xs);
   ys
 }
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
-  [%expect {| |}];
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Top_fun
+         ((id (Var g))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val ((pattern (Pattern_id (Var ws))) (scheme ()))
+                  ((statements ()) (last (Identifier (Constructor Nil))))))
+                (Declaration
+                 (Val ((pattern (Pattern_id (Var xs))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Constructor Cons))
+                     ((Literal (Int 1))
+                      (Application (Identifier (Constructor Cons))
+                       ((Literal (Int 2)) (Identifier (Constructor Nil))))))))))
+                (Declaration
+                 (Val ((pattern (Pattern_id (Var ys))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Constructor Cons))
+                     ((Literal (Int 3)) (Identifier (Var xs))))))))))
+              (last (Identifier (Var ys)))))))))))))
+    |}];
   Util.print_simplification_result syntax;
-  [%expect {||}]
+  [%expect
+    {|
+    (Ok
+     ((declarations
+       ((Fun
+         ((User g)
+          (()
+           (Let_mono (User ws) (Construction List_nil ())
+            (Let_mono (User xs)
+             (Construction List_cons
+              ((Value (Literal (Int 1)))
+               (Construction List_cons
+                ((Value (Literal (Int 2))) (Construction List_nil ())))))
+             (Let_mono (User ys)
+              (Construction List_cons
+               ((Value (Literal (Int 3))) (Value (Variable (User xs)))))
+              (Value (Variable (User ys)))))))))))))
+    |}]
 ;;
 
 let%expect_test "list matching" =
@@ -1920,13 +1971,18 @@ let%expect_test "list matching" =
     {|
 fun f(x) {
   match x with
-    Cons(a, aa) -> { println-int(a) }
-    Nil -> ()
+    Cons(a, aa) -> { println-int(a) };
+    Nil -> ();
 }
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
-  [%expect {| |}];
+  [%expect
+    {|
+    (Error
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 3) (char 8))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect {||}]
 ;;
@@ -1940,7 +1996,28 @@ effect eff {
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
-  [%expect {| |}];
+  [%expect
+    {|
+    (Ok
+     (Program
+      ((Type_declaration
+        (Effect_declaration
+         ((id eff) (type_parameters ()) (kind ())
+          (operations
+           (((id choose) (type_parameters ())
+             (shape
+              (Shape_control
+               (((id (Parameter_id (Var xs)))
+                 (type_
+                  (Type_atom (constructor (Variable_or_name list))
+                   (arguments
+                    ((Type_atom (constructor Type_int) (arguments ()))))))))
+               (Type_atom (constructor Type_int) (arguments ())))))))))))))
+    |}];
   Util.print_simplification_result syntax;
-  [%expect {||}]
+  [%expect
+    {|
+    (Error
+     ((kind Unsupported_feature) (error "parameterised types") (location ())))
+    |}]
 ;;
