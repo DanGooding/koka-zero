@@ -1887,7 +1887,10 @@ let%expect_test "list literals" =
   let code =
     {|
 fun f() {
+  val empty = [];
   val xs = [1, 2, 3];
+  val z = [1];
+  val nested = [[1, 2], [3], []];
   xs
 }
 |}
@@ -1895,12 +1898,82 @@ fun f() {
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
-    (Error
-     ((kind Syntax_error) (error "parse error")
-      (location (((filename ()) (line 3) (char 13))))))
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Top_fun
+         ((id (Var f))
+          (fn
+           ((type_parameters ()) (parameters ()) (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val ((pattern (Pattern_id (Var empty))) (scheme ()))
+                  ((statements ()) (last (Identifier (Constructor Nil))))))
+                (Declaration
+                 (Val ((pattern (Pattern_id (Var xs))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Constructor Cons))
+                     ((Literal (Int 1))
+                      (Application (Identifier (Constructor Cons))
+                       ((Literal (Int 2))
+                        (Application (Identifier (Constructor Cons))
+                         ((Literal (Int 3)) (Identifier (Constructor Nil))))))))))))
+                (Declaration
+                 (Val ((pattern (Pattern_id (Var z))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Constructor Cons))
+                     ((Literal (Int 1)) (Identifier (Constructor Nil))))))))
+                (Declaration
+                 (Val ((pattern (Pattern_id (Var nested))) (scheme ()))
+                  ((statements ())
+                   (last
+                    (Application (Identifier (Constructor Cons))
+                     ((Application (Identifier (Constructor Cons))
+                       ((Literal (Int 1))
+                        (Application (Identifier (Constructor Cons))
+                         ((Literal (Int 2)) (Identifier (Constructor Nil))))))
+                      (Application (Identifier (Constructor Cons))
+                       ((Application (Identifier (Constructor Cons))
+                         ((Literal (Int 3)) (Identifier (Constructor Nil))))
+                        (Application (Identifier (Constructor Cons))
+                         ((Identifier (Constructor Nil))
+                          (Identifier (Constructor Nil))))))))))))))
+              (last (Identifier (Var xs)))))))))))))
     |}];
   Util.print_simplification_result syntax;
-  [%expect {| |}]
+  [%expect {|
+    (Ok
+     ((declarations
+       ((Fun
+         ((User f)
+          (()
+           (Let_mono (User empty) (Construction List_nil ())
+            (Let_mono (User xs)
+             (Construction List_cons
+              ((Value (Literal (Int 1)))
+               (Construction List_cons
+                ((Value (Literal (Int 2)))
+                 (Construction List_cons
+                  ((Value (Literal (Int 3))) (Construction List_nil ())))))))
+             (Let_mono (User z)
+              (Construction List_cons
+               ((Value (Literal (Int 1))) (Construction List_nil ())))
+              (Let_mono (User nested)
+               (Construction List_cons
+                ((Construction List_cons
+                  ((Value (Literal (Int 1)))
+                   (Construction List_cons
+                    ((Value (Literal (Int 2))) (Construction List_nil ())))))
+                 (Construction List_cons
+                  ((Construction List_cons
+                    ((Value (Literal (Int 3))) (Construction List_nil ())))
+                   (Construction List_cons
+                    ((Construction List_nil ()) (Construction List_nil ())))))))
+               (Value (Variable (User xs))))))))))))))
+    |}]
 ;;
 
 let%expect_test "list constructors" =

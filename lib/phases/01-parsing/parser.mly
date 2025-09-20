@@ -459,8 +459,6 @@ binder:
 funid:
   | id = identifier
     { id }
-  (* TODO: how can a function name be [,,,]? *)
-  (* | "[" commas "]"     { Var_id.of_string "[]"; } *)
   (* TODO: are literals as function names needed? *)
   (* | STRING             { Var_id.of_string $1; } *)
   ;
@@ -845,6 +843,18 @@ atom:
   (* | mask *)
   | "("; e = aexpr; ")"
     { e }
+  | "["; elements = separated_list(",", atom); "]"
+    { 
+      let rec make_list = function
+        | [] -> Identifier (Constructor (Constructor_id.of_string "Nil"))
+        | x :: xs ->
+          let tail = make_list xs in
+          Application(
+            Identifier (Constructor (Constructor_id.of_string "Cons")),
+            [x; tail])
+      in
+      make_list elements
+    }
   (* not yet supported: *)
     (* unit, parenthesized (possibly annotated) expression, tuple expression *)
     (* list expression (elements may be terminated with comma instead of
