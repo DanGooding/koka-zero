@@ -126,6 +126,7 @@ rule read =
 
   | "int"                       { TYPE_INT }
   | "bool"                      { TYPE_BOOL }
+  | "list"                      { TYPE_LIST }
 
   (* literals *)
   | "True"                      { BOOL true }

@@ -118,16 +118,35 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
     let%bind _t = simplify_type_scheme s in
     Static_error.unsupported_feature "higher rank types" |> Result.Error
   | Syntax.Type_atom { constructor; arguments } ->
-    let%bind () =
-      restrict_to_empty arguments ~description:"parameterised types"
-    in
     (match constructor with
      (* variables / wildcards require closing over in a Type.Poly *)
      | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
        Static_error.unsupported_feature "wildcards/names/variables in types"
        |> Result.Error
-     | Syntax.Type_int -> Type.Mono.Primitive Type.Primitive.Int |> Result.Ok
-     | Syntax.Type_bool -> Type.Mono.Primitive Type.Primitive.Bool |> Result.Ok)
+     | Syntax.Type_int ->
+       let%bind () =
+         restrict_to_empty
+           arguments
+           ~description:"type `int` takes zero parameters"
+       in
+       Type.Mono.Primitive Type.Primitive.Int |> Result.Ok
+     | Syntax.Type_bool ->
+       let%bind () =
+         restrict_to_empty
+           arguments
+           ~description:"type `bool` takes zero parameters"
+       in
+       Type.Mono.Primitive Type.Primitive.Bool |> Result.Ok
+     | Syntax.Type_list ->
+       let%map argument =
+         match arguments with
+         | [ arg ] -> simplify_type_as_type arg
+         | _ ->
+           Static_error.syntax_error_s
+             [%message "wrong number of arguments for type list, expected one"]
+           |> Error
+       in
+       Type.Mono.List argument)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_feature "kind annotation on type" |> Result.Error
 
@@ -158,7 +177,7 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
        (* TODO: this will need to be supported *)
        Static_error.unsupported_feature "wildcards/names/variables in effects"
        |> Result.Error
-     | Syntax.Type_int | Syntax.Type_bool ->
+     | Syntax.Type_int | Type_bool | Type_list ->
        let message =
          sprintf
            "expected effect, found type %s"
@@ -194,7 +213,7 @@ and simplify_type_as_effect_label
        Static_error.syntax_error
          "polymorphism over effect labels is not permitted"
        |> Result.Error
-     | Syntax.Type_int | Syntax.Type_bool ->
+     | Syntax.Type_int | Type_bool | Type_list ->
        let message =
          sprintf
            "expected effect label, found type %s"

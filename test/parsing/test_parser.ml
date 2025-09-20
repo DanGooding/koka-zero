@@ -1944,7 +1944,8 @@ fun f() {
               (last (Identifier (Var xs)))))))))))))
     |}];
   Util.print_simplification_result syntax;
-  [%expect {|
+  [%expect
+    {|
     (Ok
      ((declarations
        ((Fun
@@ -2064,7 +2065,7 @@ let%expect_test "list as effect argument" =
   let code =
     {|
 effect eff {
-  control choose(xs : list<int>) : int;
+  control choose(xs : list<int>) : list<list<bool>>;
 }
 |}
   in
@@ -2082,15 +2083,25 @@ effect eff {
               (Shape_control
                (((id (Parameter_id (Var xs)))
                  (type_
-                  (Type_atom (constructor (Variable_or_name list))
+                  (Type_atom (constructor Type_list)
                    (arguments
                     ((Type_atom (constructor Type_int) (arguments ()))))))))
-               (Type_atom (constructor Type_int) (arguments ())))))))))))))
+               (Type_atom (constructor Type_list)
+                (arguments
+                 ((Type_atom (constructor Type_list)
+                   (arguments
+                    ((Type_atom (constructor Type_bool) (arguments ())))))))))))))))))))
     |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
-    (Error
-     ((kind Unsupported_feature) (error "parameterised types") (location ())))
+    (Ok
+     ((declarations
+       ((Effect
+         ((name eff)
+          (operations
+           (((User choose)
+             ((shape Control) (argument (List (Primitive Int)))
+              (answer (List (List (Primitive Bool))))))))))))))
     |}]
 ;;

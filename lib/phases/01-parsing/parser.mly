@@ -74,6 +74,7 @@
 
 %token TYPE_BOOL
 %token TYPE_INT
+%token TYPE_LIST
 
 
 (* precedence declarations are in increasing order,
@@ -1298,6 +1299,8 @@ typecon:
     { Type_int }
   | TYPE_BOOL
     { Type_bool }
+  | TYPE_LIST
+    { Type_list }
   (* these unapplied forms don't seem to actually exist *)
   (* | "(" commas1 ")"                (\* tuple constructor *\) *)
   (* | "[" "]"                        (\* list constructor *\) *)
