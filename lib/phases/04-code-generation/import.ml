@@ -3,6 +3,7 @@ module Or_codegen_error = Codegen_error.Or_codegen_error
 
 include struct
   open Koka_zero_ir_common
+  module Constructor = Constructor
   module Variable = Variable
   module Operator = Operator
   module Literal = Literal

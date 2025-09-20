@@ -158,3 +158,49 @@ module Op = struct
   include T
   include Struct.Make (T)
 end
+
+module List = struct
+  module Tag = struct
+    let type_ = Codegen.use_context Llvm.i8_type
+
+    let const_tag i =
+      let open Codegen.Let_syntax in
+      let%map type_ = type_ in
+      Llvm.const_int type_ i
+    ;;
+
+    let const_nil = const_tag 0
+    let const_cons = const_tag 1
+  end
+
+  module T = struct
+    type t = unit
+
+    module Field = struct
+      type t =
+        | Tag
+        | Head
+        | Tail
+      [@@deriving equal]
+
+      let all () = [ Tag; Head; Tail ]
+
+      let name t =
+        match t with
+        | Tag -> "list_tag"
+        | Head -> "list_head"
+        | Tail -> "list_tail"
+      ;;
+
+      let type_ t =
+        match t with
+        | Tag -> Tag.type_
+        | Head -> Types.pointer
+        | Tail -> Types.pointer
+      ;;
+    end
+  end
+
+  include T
+  include Struct.Make (T)
+end
