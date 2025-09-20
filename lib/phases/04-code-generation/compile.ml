@@ -1,5 +1,5 @@
-open Core
-open Import
+open! Core
+open! Import
 module EPS = Evidence_passing_syntax
 
 (** get an effect's representation, or fail with a codegen impossible_error if
@@ -126,6 +126,49 @@ let compile_match_corrupted_tag ~runtime () : [> `Exits ] Codegen.t =
   `Exits
 ;;
 
+let compile_construction
+      ~(constructor : Constructor.t)
+      ~(args : Llvm.llvalue list)
+      ~runtime
+  : Llvm.llvalue Codegen.t
+  =
+  let open Codegen.Let_syntax in
+  match constructor, args with
+  | List_nil, [] ->
+    let%bind list_ptr = Structs.List.heap_allocate () ~name:"nil" ~runtime in
+    let%bind tag = Structs.List.Tag.const_nil in
+    let%bind ptr_type = Types.pointer in
+    let%map () =
+      Structs.List.populate
+        ()
+        list_ptr
+        ~f:(fun (field : Structs.List.Field.t) ->
+          match field with
+          | Tag -> tag
+          | Head | Tail -> Llvm.const_null ptr_type)
+    in
+    list_ptr
+  | List_cons, [ head; tail ] ->
+    let%bind list_ptr = Structs.List.heap_allocate () ~name:"cons" ~runtime in
+    let%bind tag = Structs.List.Tag.const_cons in
+    let%map () =
+      Structs.List.populate
+        ()
+        list_ptr
+        ~f:(fun (field : Structs.List.Field.t) ->
+          match field with
+          | Tag -> tag
+          | Head -> head
+          | Tail -> tail)
+    in
+    list_ptr
+  | (List_nil | List_cons), _ ->
+    Codegen.impossible_error
+      (Sexp.to_string
+         [%message
+           "wrong number of args for constructor" (constructor : Constructor.t)])
+;;
+
 (** produces code to evaluate the given expression *)
 let rec compile_expr
           (e : EPS.Expr.t)
@@ -177,6 +220,14 @@ let rec compile_expr
       return_type
       ~is_tail_position:Is_tail_position.Non_tail_position
       ~env
+  | EPS.Expr.Construction (constructor, e_args) ->
+    let%bind args =
+      Codegen.list_map
+        e_args
+        ~f:(compile_expr_pure_packed ~env ~runtime ~effect_reprs ~outer_symbol)
+    in
+    let%map constructed = compile_construction ~constructor ~args ~runtime in
+    Ctl_repr.Pure (Packed constructed)
   | EPS.Expr.Literal lit ->
     let%map lit = compile_literal lit in
     Ctl_repr.Pure (Packed lit)
@@ -577,6 +628,7 @@ and compile_tail_position_expr
   | Literal _
   | Operator _
   | Unary_operator _
+  | Construction _
   | Construct_pure _
   | Construct_yield _
   | Fresh_marker

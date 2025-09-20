@@ -59,3 +59,19 @@ module Op : sig
 
   include Struct.Struct_S with module Field := Field and type t = unit
 end
+
+module List : sig
+  module Tag : sig
+    val const_nil : Llvm.llvalue Codegen.t
+    val const_cons : Llvm.llvalue Codegen.t
+  end
+
+  module Field : sig
+    type t =
+      | Tag
+      | Head
+      | Tail
+  end
+
+  include Struct.Struct_S with module Field := Field and type t = unit
+end
