@@ -77,6 +77,7 @@ and type_constructor =
   (* builtin types *)
   | Type_int
   | Type_bool
+  | Type_list
 [@@deriving sexp_of]
 
 and parameter_type =

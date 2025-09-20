@@ -39,6 +39,7 @@ module Mono : sig
     | Arrow of t list * Effect.t * t
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
+    | List of t
   [@@deriving sexp_of, compare, hash]
 
   val max_level

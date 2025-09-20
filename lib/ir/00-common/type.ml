@@ -39,20 +39,18 @@ module Primitive = struct
 end
 
 module Mono = struct
-  module T = struct
-    type t =
-      | Arrow of t list * Effect.t * t
-      | Metavariable of Metavariable.t
-      | Primitive of Primitive.t
-    [@@deriving sexp_of, compare, hash]
-  end (* disable "fragile-match" for generated code *) [@warning "-4"]
-
-  include T
+  type t =
+    | Arrow of t list * Effect.t * t
+    | Metavariable of Metavariable.t
+    | Primitive of Primitive.t
+    | List of t
+  [@@deriving sexp_of, compare, hash]
 
   let rec max_level t ~type_metavariable_level ~effect_metavariable_level =
     match t with
     | Primitive _ -> 0
     | Metavariable meta -> type_metavariable_level meta
+    | List t -> max_level t ~type_metavariable_level ~effect_metavariable_level
     | Arrow (args, effect_, result) ->
       let type_levels =
         List.map
@@ -73,6 +71,7 @@ module Mono = struct
   let node_label t =
     match t with
     | Arrow _ -> "Arrow"
+    | List _ -> "List"
     | Metavariable meta -> Metavariable.to_string meta
     | Primitive p -> Primitive.node_label p
   ;;
@@ -82,12 +81,20 @@ module Mono = struct
     let shape =
       match t with
       | Metavariable _ -> []
-      | Primitive _ | Arrow _ -> [ "shape", "box" ]
+      | Primitive _ | Arrow _ | List _ -> [ "shape", "box" ]
     in
     Dot_graph.add_node graph parent_id ~attrs:([ "label", node_label t ] @ shape);
     (* add edges to child nodes *)
     match t with
     | Primitive _ | Metavariable _ -> ()
+    | List element ->
+      add_tree_to_graph element graph;
+      Dot_graph.add_edge
+        graph
+        ~from:parent_id
+        ~to_:(node_id element)
+        ~disambiguator:(Dot_graph.Edge_disambiguator.of_string "element")
+        ~attrs:[ "style", "dashed" ]
     | Arrow (args, effect_, result) ->
       List.iter args ~f:(fun arg -> add_tree_to_graph arg graph);
       Effect.add_tree_to_graph effect_ graph;
