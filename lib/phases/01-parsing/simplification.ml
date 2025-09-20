@@ -38,7 +38,7 @@ let simplify_var_id_to_effect_label (x : Syntax.Var_id.t) : Effect.Label.t =
 ;;
 
 let simplify_constructor_id (id : Syntax.Constructor_id.t)
-  : Min.Constructor_id.t Or_static_error.t
+  : Constructor.t Or_static_error.t
   =
   match Syntax.Constructor_id.to_string id with
   | "Nil" -> Ok List_nil
