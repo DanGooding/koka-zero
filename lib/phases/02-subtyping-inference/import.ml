@@ -2,6 +2,7 @@ include Koka_zero_util
 
 include struct
   open Koka_zero_ir_common
+  module Constructor = Constructor
   module Effect = Effect
   module Effect_decl = Effect_decl
   module Keyword = Keyword

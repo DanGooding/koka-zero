@@ -86,7 +86,7 @@ let sexp_of_type t (type_ : Type.Mono.t) =
     let level = type_level_exn t meta in
     let location = type_location_exn t meta in
     [%sexp { meta : Type.Metavariable.t; level : int; location : Location.t }]
-  | Primitive _ | Arrow _ ->
+  | Primitive _ | Arrow _ | List _ ->
     let max_level =
       Type.Mono.max_level
         type_

@@ -20,6 +20,7 @@ type t =
   | Variable of Type.Variable.t
   | Primitive of Type.Primitive.t
   | Arrow of t list * Effect.t * t
+  | List of t
   | Union of t list
   | Intersection of t list
   | Recursive of Type.Variable.t * t
