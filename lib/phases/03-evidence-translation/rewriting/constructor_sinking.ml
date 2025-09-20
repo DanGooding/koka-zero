@@ -26,6 +26,7 @@ let rec add_pure_at_tail (expr : Expr.t) : Expr.t =
     Match_op { subject; normal_branch; tail_branch }
   | Fresh_marker | Nil_evidence_vector | Variable _ | Lambda _ | Fix_lambda _
   | Application (_, _, _)
+  | Construction (_, _)
   | Literal _
   | Operator (_, _, _)
   | Unary_operator (_, _)

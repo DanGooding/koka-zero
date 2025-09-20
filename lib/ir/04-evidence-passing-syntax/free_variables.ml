@@ -16,6 +16,7 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
   | Expr.Fix_lambda fix_lambda -> free_in_fix_lambda fix_lambda
   | Expr.Application (e_f, e_args, _ty) ->
     free_in_exprs (e_f :: List.map e_args ~f:(fun (param, _type) -> param))
+  | Expr.Construction (_, args) -> free_in_exprs args
   | Expr.Literal _ -> Variable.Set.empty
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     free_in_exprs [ e_cond; e_yes; e_no ]

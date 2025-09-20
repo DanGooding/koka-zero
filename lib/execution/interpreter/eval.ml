@@ -48,6 +48,20 @@ let eval_unary_op_expr
     (not v) |> Value.Bool
 ;;
 
+let eval_construct (constructor : Constructor.t) (args : Value.t list)
+  : Value.t Interpreter.t
+  =
+  let open Interpreter.Let_syntax in
+  match constructor, args with
+  | List_nil, [] -> Value.List [] |> return
+  | List_cons, [ head; tail ] ->
+    let%map tail = Typecast.list_of_value tail in
+    Value.List (head :: tail)
+  | (List_nil | List_cons), _ ->
+    Interpreter.impossible_error
+      (sprintf "wrong number of arguments for constructor")
+;;
+
 let rec lookup_evidence
   : Value.evidence_vector -> Effect_label.t -> Value.evidence option
   =
@@ -102,6 +116,11 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     in
     let params, _type, e_body = lambda in
     eval_call ~f_env ~params ~e_body ~v_args
+  | Expr.Construction (constructor, e_args) ->
+    let%bind v_args =
+      Interpreter.list_map e_args ~f:(fun arg -> eval_expr arg ~env)
+    in
+    eval_construct constructor v_args
   | Expr.Literal lit -> eval_literal lit |> Value.Primitive |> return
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     let%bind v_cond = eval_expr e_cond ~env in

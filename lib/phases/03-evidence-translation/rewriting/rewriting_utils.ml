@@ -40,6 +40,11 @@ and apply_everywhere_below
       |> Modified.all
     in
     Expr.Application (f, args, type_)
+  | Expr.Construction (constructor, args) ->
+    let%map args =
+      Modified.list_map args ~f:(fun arg -> apply_everywhere arg ~rewrite)
+    in
+    Expr.Construction (constructor, args)
   | Expr.Literal _ -> Modified.original e
   | Expr.If_then_else (cond, yes, no) ->
     let%bind cond = apply_everywhere ~rewrite cond in

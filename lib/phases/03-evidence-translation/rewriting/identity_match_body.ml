@@ -36,7 +36,7 @@ let remove_identity_match =
     | Let (_, _, _, _)
     | Lambda _ | Fix_lambda _
     | Application (_, _, _)
-    | Literal _
+    | Construction _ | Literal _
     | If_then_else (_, _, _)
     | Operator (_, _, _)
     | Unary_operator (_, _)
