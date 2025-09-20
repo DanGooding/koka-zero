@@ -7,6 +7,7 @@ module Expr = struct
     | Let of Variable.t * 'e value * 'e t
     | Let_mono of Variable.t * 'e t * 'e t
     | Application of 'e t * 'e t list * 'e
+    | Construction of Constructor.t * 'e t list
     | Seq of 'e t * 'e t
     | If_then_else of 'e t * 'e t * 'e t
     | Operator of 'e t * Operator.t * 'e t
@@ -64,6 +65,8 @@ module Expr = struct
     | Application (fun_, args, effect_) ->
       Application
         (map_effect fun_ ~f, List.map args ~f:(map_effect ~f), f effect_)
+    | Construction (constructor, args) ->
+      Construction (constructor, List.map args ~f:(map_effect ~f))
     | Seq (first, second) -> Seq (map_effect first ~f, map_effect second ~f)
     | If_then_else (cond, yes, no) ->
       If_then_else (map_effect cond ~f, map_effect yes ~f, map_effect no ~f)

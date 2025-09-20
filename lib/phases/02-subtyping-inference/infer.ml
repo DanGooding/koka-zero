@@ -104,6 +104,9 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
   let rec instantiate_aux (type_ : Type.Mono.t) : Type.Mono.t =
     match type_ with
     | Primitive p -> Primitive p
+    | List element ->
+      let element = instantiate_aux element in
+      List element
     | Arrow (args, effect_, result) ->
       let args = List.map args ~f:instantiate_aux in
       let effect_ = instantiate_effect_aux effect_ in
@@ -285,6 +288,52 @@ let rec infer_expr
         ~location:(Expr expr)
     in
     Expl.Expr.Application (f', args', call_effect), result, overall_effect
+  | Construction (constructor, args) ->
+    let%bind args =
+      Or_static_error.list_map args ~f:(infer_expr t ~env ~level ~effect_env)
+    in
+    (match constructor, args with
+     | List_nil, [] ->
+       let element =
+         Metavariables.fresh_type t.metavariables ~level ~location:(Expr expr)
+       in
+       let effect_ =
+         Metavariables.fresh_effect t.metavariables ~level ~location:(Expr expr)
+       in
+       Ok
+         ( Expl.Expr.Construction (constructor, [])
+         , Type.Mono.List element
+         , effect_ )
+     | List_cons, [ head_arg; tail_arg ] ->
+       let head_expr, head_type, head_effect = head_arg in
+       let tail_expr, tail_type, tail_effect = tail_arg in
+       let element_type =
+         Metavariables.fresh_type t.metavariables ~level ~location:(Expr expr)
+       in
+       let list_type = Type.Mono.List element_type in
+       let%bind () =
+         Constraints.constrain_type_at_most t.constraints head_type element_type
+       in
+       let%bind () =
+         Constraints.constrain_type_at_most t.constraints tail_type list_type
+       in
+       let%map overall_effect =
+         union_effects
+           t
+           [ head_effect; tail_effect ]
+           ~level
+           ~location:(Expr expr)
+       in
+       ( Expl.Expr.Construction (constructor, [ head_expr; tail_expr ])
+       , list_type
+       , overall_effect )
+     | (List_nil | List_cons), _ ->
+       Static_error.type_error_s
+         [%message
+           "Wrong number of arguments for constructor"
+             (constructor : Constructor.t)
+             ~num:(List.length args : int)]
+       |> Error)
   | Seq (first, second) ->
     let%bind first, _type, first_effect =
       infer_expr t first ~env ~level ~effect_env

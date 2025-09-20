@@ -29,6 +29,15 @@ let rec expand_type_aux
   =
   match type_ with
   | Primitive p -> Primitive p
+  | List element ->
+    let element =
+      expand_type_aux
+        t
+        element
+        ~polarity_positive:true
+        ~in_progress_type_metavariables
+    in
+    List element
   | Arrow (args, effect_, result) ->
     let args =
       List.map
