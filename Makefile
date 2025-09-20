@@ -36,6 +36,10 @@ test: ## Run the unit tests
 promote: ## Accept corrections to expect tests
 	opam exec -- dune promote --root .
 
+.PHONY: docker-image
+docker-image: ## Build Dockerfile for the local architecture
+	docker build -t run-koka-compiler .
+
 .PHONY: clean
 clean: ## Clean build artifacts and other generated files
 	opam exec -- dune clean --root .
