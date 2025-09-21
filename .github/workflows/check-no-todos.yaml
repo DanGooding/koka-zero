@@ -1,0 +1,14 @@
+name: check-no-todos
+
+on:
+  push
+
+jobs:
+  Check-No-TODOs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Grep for TODOs
+        uses: DanGooding/check-no-todos-action@037469b851c2e2c43a52d8adcc3cb7d439749577
