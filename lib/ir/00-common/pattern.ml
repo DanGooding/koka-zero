@@ -22,3 +22,11 @@ let scrutinee t : Scrutinee.t option =
   | Literal Unit -> Some (Primitive Unit)
   | Construction ((List_nil | List_cons), _) -> Some List
 ;;
+
+let bound_variables t =
+  match t with
+  | Parameter p -> Parameter.bound_variables p
+  | Literal _ -> Variable.Set.empty
+  | Construction (_, ps) ->
+    List.map ps ~f:Parameter.bound_variables |> Variable.Set.union_list
+;;

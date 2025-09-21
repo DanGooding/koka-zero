@@ -8,3 +8,4 @@ type t =
 [@@deriving sexp_of]
 
 val variable_opt : t -> Variable.t option
+val bound_variables : t -> Variable.Set.t

@@ -15,3 +15,4 @@ type t =
 [@@deriving sexp_of]
 
 val scrutinee : t -> Scrutinee.t option
+val bound_variables : t -> Variable.Set.t

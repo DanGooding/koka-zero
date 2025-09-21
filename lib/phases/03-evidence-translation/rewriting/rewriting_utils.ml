@@ -51,6 +51,14 @@ and apply_everywhere_below
     let%bind yes = apply_everywhere ~rewrite yes in
     let%map no = apply_everywhere ~rewrite no in
     Expr.If_then_else (cond, yes, no)
+  | Expr.Match (subject, scrutinee, cases) ->
+    let%bind subject = apply_everywhere ~rewrite subject in
+    let%map cases =
+      Modified.list_map cases ~f:(fun (pattern, body) ->
+        let%map body = apply_everywhere ~rewrite body in
+        pattern, body)
+    in
+    Expr.Match (subject, scrutinee, cases)
   | Expr.Operator (left, op, right) ->
     let%bind left = apply_everywhere ~rewrite left in
     let%map right = apply_everywhere ~rewrite right in

@@ -28,6 +28,39 @@ let combine t t' ~f =
     Effectful (f e e')
 ;;
 
+let combine_many ts ~f =
+  let pure, effectful =
+    List.partition_map ts ~f:(function
+      | Pure p -> First p
+      | Effectful e -> Second e)
+  in
+  match effectful with
+  | [] ->
+    (* all pure *)
+    Pure (f pure)
+  | _ :: _ ->
+    (* at least one effectful *)
+    let ts = List.map ts ~f:to_effectful in
+    Effectful (f ts)
+;;
+
+let combine_many_with_info ts ~f =
+  let pure, effectful =
+    List.partition_map ts ~f:(fun (info, t) ->
+      match t with
+      | Pure p -> First (info, p)
+      | Effectful e -> Second (info, e))
+  in
+  match effectful with
+  | [] ->
+    (* all pure *)
+    Pure (f pure)
+  | _ :: _ ->
+    (* at least one effectful *)
+    let ts = List.map ts ~f:(fun (info, t) -> info, to_effectful t) in
+    Effectful (f ts)
+;;
+
 let make_bind_or_let
       t
       ~evv
