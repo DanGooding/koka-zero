@@ -2,6 +2,33 @@ open! Core
 open! Import
 open Evidence_passing_syntax
 
+let case_reconstructs_pattern ((pattern, body) : Pattern.t * Expr.t) =
+  match pattern with
+  | Parameter Wildcard -> false
+  | Parameter (Variable v) ->
+    (match[@warning "-4"] body with
+     | Variable v' when [%equal: Variable.t] v v' -> true
+     | _ -> false)
+  | Literal lit ->
+    (match[@warning "-4"] body with
+     | Literal lit' when [%equal: Literal.t] lit lit' -> true
+     | _ -> false)
+  | Construction (List_nil, []) ->
+    (match[@warning "-4"] body with
+     | Construction (List_nil, []) -> true
+     | _ -> false)
+  | Construction (List_cons, [ Variable head; Variable tail ]) ->
+    (match[@warning "-4"] body with
+     | Construction (List_cons, [ Variable head'; Variable tail' ])
+       when [%equal: Variable.t * Variable.t] (head, tail) (head', tail') ->
+       true
+     | _ -> false)
+  | Construction ((List_nil | List_cons), _) ->
+    raise_s
+      [%message
+        "invalid number of arguments for constructor" (pattern : Pattern.t)]
+;;
+
 let remove_identity_match =
   Modified.original_for_none (fun expr ->
     match (expr : Expr.t) with
@@ -31,6 +58,9 @@ let remove_identity_match =
         ; tail_branch = t, Construct_op_tail (Variable t')
         }
       when [%equal: Variable.t * Variable.t] (n, t) (n', t') -> Some subject
+    | Match (subject, _, cases)
+      when List.for_all cases ~f:case_reconstructs_pattern -> Some subject
+    | Match _ -> None
     | Match_op _ -> None
     | Fresh_marker | Nil_evidence_vector | Variable _
     | Let (_, _, _, _)

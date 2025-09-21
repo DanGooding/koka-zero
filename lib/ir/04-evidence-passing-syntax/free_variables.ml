@@ -25,7 +25,7 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
     let case_free =
       List.map cases ~f:(fun (pattern, body) ->
         let pattern_bound = Pattern.bound_variables pattern in
-        free_in_bindings pattern_bound body)
+        free_in_bindings_set pattern_bound body)
     in
     Variable.Set.union_list (subject_free :: case_free)
   | Expr.Operator (e_left, _, e_right) -> free_in_exprs [ e_left; e_right ]
