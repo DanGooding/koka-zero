@@ -163,15 +163,6 @@ module Compile_switch = struct
             in
             `Result result)
     in
-    let%bind () =
-      List.map results_and_end_blocks ~f:(fun (_result, end_block) ->
-        let%bind () = Codegen.use_builder (Llvm.position_at_end end_block) in
-        let%map _br_end =
-          Codegen.use_builder (Llvm.build_br post_switch_block)
-        in
-        ())
-      |> Codegen.all_unit
-    in
     (* connect back together *)
     let%bind () =
       Codegen.use_builder (Llvm.position_at_end post_switch_block)
