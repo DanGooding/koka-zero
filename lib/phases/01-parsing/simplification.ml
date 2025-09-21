@@ -174,7 +174,6 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
     (match constructor with
      (* variables / wildcards require closing over in a Type.Poly *)
      | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
-       (* TODO: this will need to be supported *)
        Static_error.unsupported_feature "wildcards/names/variables in effects"
        |> Result.Error
      | Syntax.Type_int | Type_bool | Type_list ->
@@ -598,8 +597,6 @@ and simplify_operation_handler
     let shape = Operation_shape.Fun in
     `Op (id', shape), { Min.Expr.op_argument; op_body }
   | Syntax.Op_except { id = _; parameters = _; body = _ } ->
-    (* TODO: doesn't gain any performance over control by default (special
-       implementation wouldn't collection resumption) *)
     Static_error.unsupported_feature "`execption` effect" |> Result.Error
   | Syntax.Op_val { id = _; type_ = _; value = _ } ->
     (* need to first evaluate `value`, then capture it in the handler (fairly
@@ -658,7 +655,6 @@ let simplify_effect_declaration { Syntax.id; type_parameters; kind; operations }
   let%bind () =
     restrict_to_empty type_parameters ~description:"type parameters for effect"
   in
-  (* TODO: effect would never have outer kind annotation? *)
   let%bind () =
     restrict_to_none kind ~description:"kind annotation for effect"
   in
