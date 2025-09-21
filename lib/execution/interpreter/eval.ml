@@ -62,6 +62,45 @@ let eval_construct (constructor : Constructor.t) (args : Value.t list)
       (sprintf "wrong number of arguments for constructor")
 ;;
 
+let bind_parameter (param : Parameter.t) (value : Value.t) ~env : Value.context =
+  match param with
+  | Wildcard -> env
+  | Variable v -> Map.set env ~key:v ~data:value
+;;
+
+let matches_pattern (subject : Value.t) (pattern : Pattern.t) ~env
+  : Value.context option
+  =
+  match pattern with
+  | Parameter p -> bind_parameter p subject ~env |> Some
+  | Literal (Int i) ->
+    (match[@warning "-4"] subject with
+     | Primitive (Int i') when i = i' -> Some env
+     | _ -> None)
+  | Literal (Bool b) ->
+    (match[@warning "-4"] subject with
+     | Primitive (Bool b') when [%equal: Bool.t] b b' -> Some env
+     | _ -> None)
+  | Literal Unit ->
+    (match[@warning "-4"] subject with
+     | Primitive Unit -> Some env
+     | _ -> None)
+  | Construction (List_nil, []) ->
+    (match[@warning "-4"] subject with
+     | List [] -> Some env
+     | _ -> None)
+  | Construction (List_cons, [ head; tail ]) ->
+    (match[@warning "-4"] subject with
+     | List (head' :: tail') ->
+       let env = bind_parameter head head' ~env in
+       let env = bind_parameter tail (List tail') ~env in
+       Some env
+     | _ -> None)
+  | Construction ((List_nil | List_cons), _) ->
+    raise_s
+      [%message "invalid number of args for constructor" (pattern : Pattern.t)]
+;;
+
 let rec lookup_evidence
   : Value.evidence_vector -> Effect_label.t -> Value.evidence option
   =
@@ -88,11 +127,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
        Interpreter.impossible_error message)
   | Expr.Let (p, _type, e_subject, e_body) ->
     let%bind v_subject = eval_expr e_subject ~env in
-    let env' =
-      match p with
-      | Parameter.Wildcard -> env
-      | Parameter.Variable v -> Map.set env ~key:v ~data:v_subject
-    in
+    let env' = bind_parameter p v_subject ~env in
     eval_expr e_body ~env:env'
   | Expr.Lambda lambda ->
     let%map closure = eval_lambda lambda ~env in
@@ -127,6 +162,19 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     let%bind cond = Typecast.bool_of_value v_cond in
     let e_body = if cond then e_yes else e_no in
     eval_expr e_body ~env
+  | Expr.Match (subject, _, cases) ->
+    let%bind subject = eval_expr subject ~env in
+    (match
+       List.find_map cases ~f:(fun (pattern, body) ->
+         matches_pattern subject pattern ~env
+         |> Option.map ~f:(fun env -> env, body))
+     with
+     | Some (env, body) -> eval_expr body ~env
+     | None ->
+       let patterns = List.map cases ~f:(fun (pattern, _) -> pattern) in
+       Interpreter.no_matching_pattern_error
+         (Sexp.to_string
+            [%message (subject : Value.t) (patterns : Pattern.t list)]))
   | Expr.Operator (e_left, op, e_right) ->
     (* no short circuiting - but that has already been prevented by bind
        sequencing in [translation] *)
