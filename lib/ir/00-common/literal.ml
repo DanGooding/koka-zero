@@ -5,4 +5,4 @@ type t =
   | Int of int
   | Bool of bool
   | Unit
-[@@deriving sexp_of]
+[@@deriving equal, sexp_of]
