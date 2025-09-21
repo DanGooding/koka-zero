@@ -29,7 +29,6 @@ module Primitive : sig
   type t =
     | Int
     | Bool
-    | Unit
   [@@deriving equal, compare, sexp_of, hash]
 end
 
@@ -40,6 +39,7 @@ module Mono : sig
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
     | List of t
+    | Tuple of t list
   [@@deriving sexp_of, compare, hash]
 
   val max_level

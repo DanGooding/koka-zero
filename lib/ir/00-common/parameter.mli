@@ -5,7 +5,7 @@ open! Import
 type t =
   | Variable of Variable.t
   | Wildcard
+  | Tuple of t list
 [@@deriving sexp_of]
 
-val variable_opt : t -> Variable.t option
 val bound_variables : t -> Variable.Set.t

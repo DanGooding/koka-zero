@@ -21,22 +21,22 @@ let console =
   let operations =
     [ ( Variable.of_user "println"
       , { Operation.shape = Operation_shape.Fun
-        ; argument = Type.Mono.Primitive Type.Primitive.Unit
-        ; answer = Type.Mono.Primitive Type.Primitive.Unit
+        ; argument = Type.Mono.Tuple []
+        ; answer = Type.Mono.Tuple []
         } )
     ; ( Variable.of_user "println-int"
       , { Operation.shape = Operation_shape.Fun
         ; argument = Type.Mono.Primitive Type.Primitive.Int
-        ; answer = Type.Mono.Primitive Type.Primitive.Unit
+        ; answer = Type.Mono.Tuple []
         } )
     ; ( Variable.of_user "print-int"
       , { Operation.shape = Operation_shape.Fun
         ; argument = Type.Mono.Primitive Type.Primitive.Int
-        ; answer = Type.Mono.Primitive Type.Primitive.Unit
+        ; answer = Type.Mono.Tuple []
         } )
     ; ( Variable.of_user "read-int"
       , { Operation.shape = Operation_shape.Fun
-        ; argument = Type.Mono.Primitive Type.Primitive.Unit
+        ; argument = Type.Mono.Tuple []
         ; answer = Type.Mono.Primitive Type.Primitive.Int
         } )
     ]
