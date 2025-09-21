@@ -69,3 +69,9 @@ val compile_get : t -> Variable.t -> Ctl_repr.t Codegen.t
 
 (** add another local binding to the context *)
 val add_local_exn : t -> name:Variable.t -> value:Ctl_repr.t -> t
+
+val add_local_parameter_exn
+  :  t
+  -> parameter:Parameter.t
+  -> value:Ctl_repr.t
+  -> t
