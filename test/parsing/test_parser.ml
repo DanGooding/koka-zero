@@ -524,7 +524,7 @@ fun if-example() {
 ;;
 
 let%expect_test "nested if statements" =
-  (* TODO: note that indentation is ignored - a dangling `else` always
+  (* note that indentation is ignored - a dangling `else` always
      associates to the innermost `if`. This may be unintuitive and perhaps
      should be changed. see koka's layout algorithm, which warns when
      indentation doesn't match the parse *)

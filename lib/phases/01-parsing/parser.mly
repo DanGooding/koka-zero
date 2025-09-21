@@ -252,7 +252,6 @@ semi:
   { () }
   ;
 
-(* TODO inline this? *)
 semi_terminated_list(X):
   | xs = list(x = X; semi+ { x })
     { xs }
@@ -293,13 +292,10 @@ topdecls:
   | ts = list(topdecl)
     { ts }
   ;
-(* TODO: error recovery? [(topdecl | error) semi+] *)
 
 (* %type <toplevel_declaration> topdecl *)
 topdecl:
   | p = puredecl { Pure_declaration p }
-  (* TODO: keep aliases? *)
-  (* | aliasdecl                            { printDecl("alias",$2); } *)
   | t = typedecl { Type_declaration t }
   ;
 
@@ -444,7 +440,6 @@ puredecl:
     { Top_fun f }
   ;
 
-(* TODO: update puredecl to include this? *)
 (* %type <fun_declaration> fundecl *)
 fundecl:
   | id = funid; fn = funbody
@@ -463,7 +458,6 @@ binder:
 funid:
   | id = identifier
     { id }
-  (* TODO: are literals as function names needed? *)
   (* | STRING             { Var_id.of_string $1; } *)
   ;
 
@@ -488,7 +482,6 @@ funbody:
 -- Statements
 ----------------------------------------------------------*)
 
-(* TODO: error recovery? {statement | error} *)
 (* %type <block> block *)
 block:
   (* must end with an expression statement (and not a declaration) *)
@@ -872,7 +865,6 @@ literal:
     { Int i }
   | b = BOOL
     { Bool b }
-  (* TODO: better to add tuples with elements to `atom` *)
   | "("; ")"
     { Unit }
   (* | FLOAT | CHAR | STRING *)
@@ -914,8 +906,6 @@ parameters:
     { [] }
   ;
 
-(* TODO: other productions (constructor) require the
-   nonempty property, but just [list] is okay for now *)
 (* %type <parameter list> parameters1 *)
 parameters1:
   | ps = separated_nonempty_list(",", parameter)
@@ -941,7 +931,6 @@ paramid:
 paramtype:
   | t = type_
     { t }
-  (* TODO: is this just for optional parameters? *)
   (* | '?' type_ *)
   ;
 
@@ -979,7 +968,6 @@ pparameter:
 
 (* %type <expr> aexpr *)
 aexpr:
-  (* TODO: annot is nullable - this may cause a conflict? *)
   | e = expr; scheme = annot
     { match scheme with
       | Some scheme -> Annotated_expr(e, scheme)
@@ -1004,12 +992,6 @@ annot:
 (* operator: *)
 (*   | op *)
 (*   ; *)
-
-(* TODO: until add user defined operators,
-   operators are not a first class concept
-
-   note this loses prefix syntax: [xs.fold(0, (+))]
-*)
 
 (* %type <Identifier.t> identifier *)
 identifier:
@@ -1248,7 +1230,6 @@ typeparams:
     { [] }
   ;
 
-(* TODO: currently discarding the 'nonempty' invariant *)
 (* %type <type_parameter list> typeparams1 *)
 typeparams1:
   | "<"; ps = tbinders; ">"
@@ -1258,8 +1239,6 @@ typeparams1:
 (* 'mono' types *)
 (* %type <type_> tarrow *)
 tarrow:
-  (* TODO: the grammar leaves a lot of decisions until after parsing
-     - perhaps move these back into the parser *)
   | source = tatomic; "->"; result = tresult
     { Arrow(source, result) }
   | t = tatomic
@@ -1296,8 +1275,6 @@ tbasic:
   (* unit, parenthesis, tuple, named parameters *)
   | "("; ts = tparams; ")"
     { Parameters_or_tuple ts }
-  (* TODO: [] as the list type doesn't seem to actually be supported *)
-  (* | "[" anntype "]"                (\* list type *\) *)
   ;
 
 (* %type <type_> typeapp *)
@@ -1322,11 +1299,6 @@ typecon:
     { Type_bool }
   | TYPE_LIST
     { Type_list }
-  (* these unapplied forms don't seem to actually exist *)
-  (* | "(" commas1 ")"                (\* tuple constructor *\) *)
-  (* | "[" "]"                        (\* list constructor *\) *)
-  (* function constructor *)
-  (* | "(" "->" ")" *)
   ;
 
 

@@ -196,10 +196,8 @@ rule read =
 
 and read_single_line_comment =
   parse
-  (* TODO: ensure newlines handled the same in all modes *)
   | newline { LexerUtil.newline lexbuf; read lexbuf }
   | eof { EOF }
-  (* TODO: match as much as possible for effciency? *)
   | _ { read_single_line_comment lexbuf }
 
 (** Read a comment delimited by /* */.
@@ -216,7 +214,6 @@ and read_multi_line_comment depth =
   | newline { LexerUtil.newline lexbuf; read_multi_line_comment depth lexbuf }
   (* allow end of file to terminate a comment *)
   | eof { EOF }
-  (* TODO: match as much as possible for effciency? *)
   | _ { read_multi_line_comment depth lexbuf }
 
 
