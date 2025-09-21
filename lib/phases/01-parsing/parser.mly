@@ -840,8 +840,11 @@ atom:
   | lit = literal
     { Literal lit }
   (* | mask *)
-  | "("; e = aexpr; ")"
-    { e }
+  | "("; elements = separated_list(",", atom); ")"
+    { match elements with
+      | [e] -> e
+      | _   -> Application (Identifier (Constructor (Constructor_id.tuple), elements))
+    }
   | "["; elements = separated_list(",", atom); "]"
     { 
       let rec make_list = function
@@ -854,10 +857,6 @@ atom:
       in
       make_list elements
     }
-  (* not yet supported: *)
-    (* unit, parenthesized (possibly annotated) expression, tuple expression *)
-    (* list expression (elements may be terminated with comma instead of
-       separated) *)
 
 (* %type <literal> literal *)
 literal:
@@ -865,8 +864,6 @@ literal:
     { Int i }
   | b = BOOL
     { Bool b }
-  | "("; ")"
-    { Unit }
   (* | FLOAT | CHAR | STRING *)
   ;
 
@@ -1081,6 +1078,11 @@ irrefutablepattern:
     { Pattern_id id }
   | WILDCARD
     { Pattern_wildcard }
+  | "("; ps = separated_list(",", irrefutablepattern); ")"
+    { match ps with
+      | [p] -> p
+      | _   -> Pattern_tuple ps
+    }
   ;
 
 pattern:

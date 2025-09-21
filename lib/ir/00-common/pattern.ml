@@ -5,6 +5,7 @@ module Scrutinee = struct
   type t =
     | Primitive of Type.Primitive.t
     | List
+    | Tuple
   [@@deriving equal, sexp_of]
 end
 
@@ -19,7 +20,7 @@ let scrutinee t : Scrutinee.t option =
   | Parameter _ -> None
   | Literal (Int _) -> Some (Primitive Int)
   | Literal (Bool _) -> Some (Primitive Bool)
-  | Literal Unit -> Some (Primitive Unit)
+  | Construction (Tuple, _) -> Some Tuple
   | Construction ((List_nil | List_cons), _) -> Some List
 ;;
 

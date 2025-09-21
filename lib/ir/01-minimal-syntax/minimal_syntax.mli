@@ -8,7 +8,7 @@ module Expr : sig
     (** [Let] provides polymorphic binding over total terms, although I
         currently restrict this to values for the evidence translation step
         (this may be unnecessary) *)
-    | Let_mono of Variable.t * t * t
+    | Let_mono of Parameter.t * t * t
     (** [Let_mono] provides monomorphic binding, [Let_mono(x, e_x, e)] is
         equivalent to [(fun x -> e) e_x], but can be implemented more
         efficiently. There is no value restriction of [e_x], since it is not

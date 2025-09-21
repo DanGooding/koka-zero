@@ -43,6 +43,8 @@ let simplify_constructor_id (id : Syntax.Constructor_id.t)
   match Syntax.Constructor_id.to_string id with
   | "Nil" -> Ok List_nil
   | "Cons" -> Ok List_cons
+  | _ when [%equal: Syntax.Constructor_id.t] id Syntax.Constructor_id.tuple ->
+    Ok Tuple
   | _ ->
     Error
       (Static_error.syntax_error_s
@@ -101,12 +103,9 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
       |> Result.Error
     else (
       match ts with
-      | [] -> Type.Mono.Primitive Type.Primitive.Unit |> Result.Ok
       (* brackets for precedence only *)
       | [ t ] -> Result.Ok t
-      | _ts ->
-        Static_error.unsupported_feature "tuples other than unit"
-        |> Result.Error)
+      | _ -> Type.Mono.Tuple ts |> Ok)
   | Syntax.Effect_row r ->
     let message =
       sprintf
@@ -257,7 +256,6 @@ and simplify_type_result { Syntax.effect_; result }
 
 let simplify_literal (lit : Syntax.literal) : Literal.t =
   match lit with
-  | Syntax.Unit -> Literal.Unit
   | Syntax.Int i -> Literal.Int i
   | Syntax.Bool b -> Literal.Bool b
 ;;
@@ -282,7 +280,7 @@ let simplify_parameter
   p, t
 ;;
 
-let simplify_irrefutable_pattern
+let rec simplify_irrefutable_pattern
   : Syntax.irrefutable_pattern -> Parameter.t Or_static_error.t
   =
   let open Result.Let_syntax in
@@ -291,6 +289,11 @@ let simplify_irrefutable_pattern
     let%map x' = simplify_identifier_as_name x in
     Parameter.Variable x'
   | Syntax.Pattern_wildcard -> Ok Parameter.Wildcard
+  | Pattern_tuple elements ->
+    let%map elements =
+      Or_static_error.list_map elements ~f:simplify_irrefutable_pattern
+    in
+    Parameter.Tuple elements
 ;;
 
 let simplify_annotated_pattern { Syntax.pattern; scheme }
@@ -394,7 +397,11 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%map block_no' = simplify_block block_no in
     Min.Expr.If_then_else (e_cond', block_yes', block_no')
   | Syntax.If_then (e_cond, block_yes) ->
-    let block_no = Syntax.singleton_block (Syntax.Literal Syntax.Unit) in
+    let block_no =
+      Syntax.singleton_block
+        (Syntax.Application
+           (Identifier (Constructor Syntax.Constructor_id.tuple), []))
+    in
     Syntax.If_then_else (e_cond, block_yes, block_no) |> simplify_expr
   | Syntax.Match (subject, cases) ->
     let%bind subject' = simplify_expr subject in
@@ -456,9 +463,7 @@ and simplify_declaration_preceding
   | Syntax.Val (pattern, block) ->
     let%bind p = simplify_annotated_pattern pattern in
     let%map e_x = simplify_block block in
-    (match p with
-     | Parameter.Variable x -> Min.Expr.Let_mono (x, e_x, e)
-     | Parameter.Wildcard -> Min.Expr.Seq (e_x, e))
+    Min.Expr.Let_mono (p, e_x, e)
 
 (** given the simplification of the tail of a block, and a statement (its head)
     produce the resulting expression *)

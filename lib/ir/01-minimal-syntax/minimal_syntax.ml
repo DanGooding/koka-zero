@@ -5,7 +5,7 @@ module Expr = struct
   type t =
     | Value of value
     | Let of Variable.t * value * t
-    | Let_mono of Variable.t * t * t
+    | Let_mono of Parameter.t * t * t
     | Application of t * t list
     | Construction of Constructor.t * t list
     | Seq of t * t
@@ -121,6 +121,6 @@ module Program = struct
           ( Expr.Application
               ( Expr.Value (Expr.Handler console_handler)
               , [ Expr.Value (Expr.Variable Keyword.main) ] )
-          , Expr.Value (Expr.Literal Literal.Unit) ) ) )
+          , Expr.Construction (Constructor.Tuple, []) ) ) )
   ;;
 end

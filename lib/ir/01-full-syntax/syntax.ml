@@ -4,7 +4,13 @@ open Koka_zero_util
 (* Names: *)
 
 module Var_id : Identifiable.S = String
-module Constructor_id : Identifiable.S = String
+
+module Constructor_id = struct
+  include String
+
+  let tuple = "$#tuple"
+end
+
 module Wildcard_id : Identifiable.S = String
 
 module Identifier = struct
@@ -115,6 +121,7 @@ type parameter =
 type irrefutable_pattern =
   | Pattern_id of Identifier.t
   | Pattern_wildcard
+  | Pattern_tuple of irrefutable_pattern list
 [@@deriving sexp_of]
 
 type annotated_pattern =
@@ -178,7 +185,6 @@ type operation_parameter =
 (* expressions: *)
 
 type literal =
-  | Unit
   | Int of int
   | Bool of bool
 [@@deriving sexp_of]

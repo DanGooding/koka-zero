@@ -2178,3 +2178,21 @@ fun f(t) {
   Util.print_simplification_result syntax;
   [%expect {| |}]
 ;;
+
+let%expect_test "tuple types" =
+  let code =
+    {|
+effect control foo(x : (int, int)) : (bool, int, (), (int, int))
+}
+|}
+  in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect
+    {|
+    (Error
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 4) (char 7))))))
+    |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
+;;

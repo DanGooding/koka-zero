@@ -4,14 +4,11 @@ open! Import
 type t =
   | Variable of Variable.t
   | Wildcard
+  | Tuple of t list
 [@@deriving sexp_of]
 
-let variable_opt = function
-  | Variable v -> Some v
-  | Wildcard -> None
-;;
-
-let bound_variables = function
+let rec bound_variables = function
   | Variable v -> Variable.Set.singleton v
   | Wildcard -> Variable.Set.empty
+  | Tuple ts -> List.map ts ~f:bound_variables |> Variable.Set.union_list
 ;;

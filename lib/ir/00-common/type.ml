@@ -27,14 +27,12 @@ module Primitive = struct
   type t =
     | Int
     | Bool
-    | Unit
   [@@deriving equal, compare, sexp_of, hash]
 
   let node_label t =
     match t with
     | Int -> "int"
     | Bool -> "bool"
-    | Unit -> "unit"
   ;;
 end
 
@@ -44,6 +42,7 @@ module Mono = struct
     | Metavariable of Metavariable.t
     | Primitive of Primitive.t
     | List of t
+    | Tuple of t list
   [@@deriving sexp_of, compare, hash]
 
   let rec max_level t ~type_metavariable_level ~effect_metavariable_level =
@@ -51,6 +50,12 @@ module Mono = struct
     | Primitive _ -> 0
     | Metavariable meta -> type_metavariable_level meta
     | List t -> max_level t ~type_metavariable_level ~effect_metavariable_level
+    | Tuple ts ->
+      List.map
+        ts
+        ~f:(max_level ~type_metavariable_level ~effect_metavariable_level)
+      |> List.max_elt ~compare:[%compare: int]
+      |> Option.value ~default:0
     | Arrow (args, effect_, result) ->
       let type_levels =
         List.map
@@ -72,8 +77,24 @@ module Mono = struct
     match t with
     | Arrow _ -> "Arrow"
     | List _ -> "List"
+    | Tuple _ -> "Tuple"
     | Metavariable meta -> Metavariable.to_string meta
     | Primitive p -> Primitive.node_label p
+  ;;
+
+  let node_children t : ([ `Type of t | `Effect of Effect.t ] * string) list =
+    match t with
+    | Primitive _ | Metavariable _ -> []
+    | List element -> [ `Type element, "element" ]
+    | Tuple element_types ->
+      List.mapi element_types ~f:(fun i element ->
+        `Type element, [%string "[%{i#Int}]"])
+    | Arrow (args, effect_, result) ->
+      List.mapi args ~f:(fun i arg ->
+        let label = [%string "arg%{i#Int}"] in
+        `Type arg, label)
+      @ [ `Effect effect_, "effect" ]
+      @ [ `Type result, "result" ]
   ;;
 
   let rec add_tree_to_graph t graph =
@@ -81,38 +102,25 @@ module Mono = struct
     let shape =
       match t with
       | Metavariable _ -> []
-      | Primitive _ | Arrow _ | List _ -> [ "shape", "box" ]
+      | Primitive _ | Arrow _ | List _ | Tuple _ -> [ "shape", "box" ]
     in
     Dot_graph.add_node graph parent_id ~attrs:([ "label", node_label t ] @ shape);
-    (* add edges to child nodes *)
-    match t with
-    | Primitive _ | Metavariable _ -> ()
-    | List element ->
-      add_tree_to_graph element graph;
+    let children = node_children t in
+    List.iter children ~f:(fun (child, label) ->
+      (match child with
+       | `Type child -> add_tree_to_graph child graph
+       | `Effect child -> Effect.add_tree_to_graph child graph);
+      let child_id =
+        match child with
+        | `Type child -> node_id child
+        | `Effect child -> Effect.node_id child
+      in
       Dot_graph.add_edge
         graph
         ~from:parent_id
-        ~to_:(node_id element)
-        ~disambiguator:(Dot_graph.Edge_disambiguator.of_string "element")
-        ~attrs:[ "style", "dashed" ]
-    | Arrow (args, effect_, result) ->
-      List.iter args ~f:(fun arg -> add_tree_to_graph arg graph);
-      Effect.add_tree_to_graph effect_ graph;
-      add_tree_to_graph result graph;
-      let children =
-        List.mapi args ~f:(fun i arg ->
-          let label = [%string "arg%{i#Int}"] in
-          label, node_id arg)
-        @ [ "effect", Effect.node_id effect_ ]
-        @ [ "result", node_id result ]
-      in
-      List.iter children ~f:(fun (label, child_id) ->
-        Dot_graph.add_edge
-          graph
-          ~from:parent_id
-          ~to_:child_id
-          ~disambiguator:(Dot_graph.Edge_disambiguator.of_string label)
-          ~attrs:[ "label", label; "style", "dashed" ])
+        ~to_:child_id
+        ~disambiguator:(Dot_graph.Edge_disambiguator.of_string label)
+        ~attrs:[ "label", label; "style", "dashed" ])
   ;;
 end
 

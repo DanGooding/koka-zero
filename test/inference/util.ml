@@ -43,13 +43,10 @@ end
 
 module Expr = struct
   let var x = E.Value (E.Variable (Variable.of_user x))
-  let lit_unit = E.Value (E.Literal Literal.Unit)
+  let lit_unit = E.Construction (Tuple, [])
   let lit_bool b = E.Value (E.Literal (Literal.Bool b))
   let lit_int i = E.Value (E.Literal (Literal.Int i))
-
-  let decl_main =
-    M.Decl.Fun (Keyword.main, ([], E.Value (E.Literal Literal.Unit)))
-  ;;
+  let decl_main = M.Decl.Fun (Keyword.main, ([], E.Construction (Tuple, [])))
 
   (** construct the desugared equiavlent of the `handle h (subject ())`
       construct *)
@@ -61,7 +58,7 @@ module Expr = struct
     let name = Effect.Label.of_string "read" in
     let op_ask =
       let shape = Operation_shape.Fun in
-      let argument = Type.Mono.Primitive Type.Primitive.Unit in
+      let argument = Type.Mono.Tuple [] in
       let answer = Type.Mono.Primitive Type.Primitive.Int in
       { Effect_decl.Operation.shape; argument; answer }
     in
@@ -73,8 +70,8 @@ module Expr = struct
     let name = Effect.Label.of_string "exn" in
     let op_ask =
       let shape = Operation_shape.Control in
-      let argument = Type.Mono.Primitive Type.Primitive.Unit in
-      let answer = Type.Mono.Primitive Type.Primitive.Unit in
+      let argument = Type.Mono.Tuple [] in
+      let answer = Type.Mono.Tuple [] in
       { Effect_decl.Operation.shape; argument; answer }
     in
     let operations = Variable.Map.singleton (Variable.of_user "throw") op_ask in
@@ -97,14 +94,14 @@ module Expr = struct
     let name = Effect.Label.of_string "state" in
     let op_get =
       let shape = Operation_shape.Fun in
-      let argument = Type.Mono.Primitive Type.Primitive.Unit in
+      let argument = Type.Mono.Tuple [] in
       let answer = Type.Mono.Primitive Type.Primitive.Int in
       { Effect_decl.Operation.shape; argument; answer }
     in
     let op_set =
       let shape = Operation_shape.Fun in
       let argument = Type.Mono.Primitive Type.Primitive.Int in
-      let answer = Type.Mono.Primitive Type.Primitive.Unit in
+      let answer = Type.Mono.Tuple [] in
       { Effect_decl.Operation.shape; argument; answer }
     in
     let operations =
@@ -118,7 +115,7 @@ module Expr = struct
     let name = Effect.Label.of_string "choose" in
     let op_ask =
       let shape = Operation_shape.Control in
-      let argument = Type.Mono.Primitive Type.Primitive.Unit in
+      let argument = Type.Mono.Tuple [] in
       let answer = Type.Mono.Primitive Type.Primitive.Bool in
       { Effect_decl.Operation.shape; argument; answer }
     in
