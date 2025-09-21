@@ -286,3 +286,9 @@ let add_local_exn t ~name ~value =
   let locals = Locals.add t.locals ~name ~value in
   { t with locals }
 ;;
+
+let add_local_parameter_exn t ~parameter ~value =
+  match (parameter : Parameter.t) with
+  | Wildcard -> t
+  | Variable v -> add_local_exn t ~name:v ~value
+;;

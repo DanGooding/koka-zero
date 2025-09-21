@@ -245,6 +245,19 @@ let rec compile_expr
       ~runtime
       ~effect_reprs
       ~outer_symbol
+  | EPS.Expr.Match (subject, scrutinee, cases) ->
+    let%bind subject =
+      compile_expr_pure_packed subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_match
+      subject
+      scrutinee
+      cases
+      ~is_tail_position:Is_tail_position.Non_tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   | EPS.Expr.Unary_operator (op, e) ->
     let%bind arg =
       compile_expr_pure_packed e ~env ~runtime ~effect_reprs ~outer_symbol
@@ -584,6 +597,19 @@ and compile_tail_position_expr
       ~runtime
       ~effect_reprs
       ~outer_symbol
+  | Match (subject, scrutinee, cases) ->
+    let%bind subject =
+      compile_expr_pure_packed subject ~env ~runtime ~effect_reprs ~outer_symbol
+    in
+    compile_match
+      subject
+      scrutinee
+      cases
+      ~is_tail_position:Is_tail_position.Tail_position
+      ~env
+      ~runtime
+      ~effect_reprs
+      ~outer_symbol
   | Match_ctl { subject; pure_branch; yield_branch } ->
     let%bind subject =
       compile_expr_ctl subject ~env ~runtime ~effect_reprs ~outer_symbol
@@ -715,9 +741,7 @@ and compile_let
     compile_expr subject ~env ~runtime ~effect_reprs ~outer_symbol
   in
   let env' =
-    match param with
-    | Parameter.Wildcard -> env
-    | Parameter.Variable v -> Context.add_local_exn env ~name:v ~value:subject
+    Context.add_local_parameter_exn env ~parameter:param ~value:subject
   in
   compile_maybe_tail_position_expr
     body
@@ -726,6 +750,159 @@ and compile_let
     ~runtime
     ~effect_reprs
     ~outer_symbol
+
+and compile_match
+  : type result.
+    Llvm.llvalue
+    -> Pattern.Scrutinee.t
+    -> (Pattern.t * EPS.Expr.t) list
+    -> is_tail_position:result Is_tail_position.t
+    -> env:Context.t
+    -> runtime:Runtime.t
+    -> effect_reprs:Effect_repr.t Effect_label.Map.t
+    -> outer_symbol:Symbol_name.t
+    -> result Codegen.t
+  =
+  fun subject
+    scrutinee
+    cases
+    ~is_tail_position
+    ~env
+    ~runtime
+    ~effect_reprs
+    ~outer_symbol ->
+  let open Codegen.Let_syntax in
+  (* build the llvalue we'll switch on *)
+  let%bind (scrutinee : Llvm.llvalue) =
+    match (scrutinee : Pattern.Scrutinee.t) with
+    | List -> Structs.List.project () subject Tag
+    | Primitive type_ ->
+      (match type_ with
+       | Int ->
+         let%map (Unpacked i) = Immediate_repr.Int.of_opaque subject in
+         i
+       | Bool ->
+         let%map (Unpacked b) = Immediate_repr.Bool.of_opaque subject in
+         b
+       | Unit -> Immediate_repr.Unit.const_opaque ())
+  in
+  let cases =
+    List.map cases ~f:(fun (pattern, body) ->
+      match pattern with
+      | Parameter parameter ->
+        (* this case accepts any scrutinee *)
+        let expect = `Any in
+        let add_bindings env =
+          Context.add_local_parameter_exn
+            env
+            ~parameter
+            ~value:(Pure (Packed subject))
+          |> return
+        in
+        let label = "any" in
+        expect, label, add_bindings, body
+      | Literal literal ->
+        let expect =
+          match literal with
+          | Int i ->
+            let%map (Unpacked v) = Immediate_repr.Int.const i in
+            v
+          | Bool b ->
+            let%map (Unpacked v) = Immediate_repr.Bool.const_bool b in
+            v
+          | Unit -> Immediate_repr.Unit.const_opaque ()
+        in
+        let add_bindings env = return env in
+        let label =
+          match literal with
+          | Int i -> Int.to_string i
+          | Bool b -> Bool.to_string b
+          | Unit -> "unit"
+        in
+        `Exactly expect, label, add_bindings, body
+      | Construction (constructor, args) ->
+        let expect =
+          match constructor, args with
+          | List_nil, [] -> Structs.List.Tag.const_nil
+          | List_cons, [ _; _ ] -> Structs.List.Tag.const_cons
+          | (List_nil | List_cons), _ ->
+            Codegen.impossible_error "wrong number of arguments for constructor"
+        in
+        let add_bindings env =
+          match constructor, args with
+          | List_nil, [] -> return env
+          | List_cons, [ head; tail ] ->
+            let%bind head_value = Structs.List.project () subject Head in
+            let%map tail_value = Structs.List.project () subject Tail in
+            Context.add_local_parameter_exn
+              env
+              ~parameter:head
+              ~value:(Pure (Packed head_value))
+            |> Context.add_local_parameter_exn
+                 ~parameter:tail
+                 ~value:(Pure (Packed tail_value))
+          | (List_nil | List_cons), _ ->
+            Codegen.impossible_error "wrong number of arguments for constructor"
+        in
+        let label =
+          match constructor with
+          | List_nil -> "nil"
+          | List_cons -> "cons"
+        in
+        `Exactly expect, label, add_bindings, body)
+  in
+  let non_default, default_and_rest =
+    List.split_while cases ~f:(fun (expect, _, _, _) ->
+      match expect with
+      | `Exactly _ -> true
+      | `Any -> false)
+  in
+  let default = List.hd default_and_rest in
+  let%bind table =
+    Codegen.list_map non_default ~f:(fun (expect, label, add_bindings, body) ->
+      let compile_body () =
+        let%bind env = add_bindings env in
+        compile_maybe_tail_position_expr
+          body
+          ~is_tail_position
+          ~env
+          ~runtime
+          ~effect_reprs
+          ~outer_symbol
+      in
+      match expect with
+      | `Any ->
+        raise_s
+          [%message
+            "unxpected default case in non-default cases" (body : EPS.Expr.t)]
+      | `Exactly expected ->
+        let%map expected = expected in
+        expected, label, compile_body)
+  in
+  let compile_default =
+    match default with
+    | None -> compile_match_corrupted_tag ~runtime
+    | Some (_any, _name, add_bindings, body) ->
+      let compile_default () =
+        let%bind env = add_bindings env in
+        let%map result =
+          compile_maybe_tail_position_expr
+            body
+            ~is_tail_position
+            ~env
+            ~runtime
+            ~effect_reprs
+            ~outer_symbol
+        in
+        `Result result
+      in
+      compile_default
+  in
+  Is_tail_position.compile_switch
+    is_tail_position
+    scrutinee
+    ~table
+    ~compile_default
 
 (** [compile_match_ctl subject ~pure_branch ~yield_branch ...] generates code to
     branch on the ctl varaint poitned to by [Types.opaque_pointer]:[subject],

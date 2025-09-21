@@ -8,6 +8,7 @@ include struct
   module Operator = Operator
   module Literal = Literal
   module Parameter = Parameter
+  module Pattern = Pattern
   module Effect_label = Effect.Label
 end
 
