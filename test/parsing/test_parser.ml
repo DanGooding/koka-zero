@@ -2137,3 +2137,44 @@ effect eff {
               (answer (List (List (Primitive Bool))))))))))))))
     |}]
 ;;
+
+let%expect_test "tuples" =
+  let code =
+    {|
+fun g(q, (x,y)) {
+  val (a,b,c) = q;
+  (x + 1, y + 1, 0)
+}
+|}
+  in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect
+    {|
+    (Error
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 2) (char 11))))))
+    |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
+;;
+
+let%expect_test "tuple pattern matching" =
+  let code =
+    {|
+fun f(t) {
+  match t {
+    (x, y) -> x + y;
+  }
+}
+|}
+  in
+  let syntax = Util.print_parse_to_syntax_result code in
+  [%expect
+    {|
+    (Error
+     ((kind Syntax_error) (error "parse error")
+      (location (((filename ()) (line 4) (char 7))))))
+    |}];
+  Util.print_simplification_result syntax;
+  [%expect {| |}]
+;;
