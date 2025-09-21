@@ -16,6 +16,13 @@ val map : t -> f:(EPS.Expr.t -> EPS.Expr.t) -> t
 (** produce a [Pure] term if both inputs are pure *)
 val combine : t -> t -> f:(EPS.Expr.t -> EPS.Expr.t -> EPS.Expr.t) -> t
 
+val combine_many : t list -> f:(EPS.Expr.t list -> EPS.Expr.t) -> t
+
+val combine_many_with_info
+  :  ('a * t) list
+  -> f:(('a * EPS.Expr.t) list -> EPS.Expr.t)
+  -> t
+
 (** [make_bind_or_let (Effectful e) ~evv ~f:(fun x ~evv -> e')] builds
     the expression [(e, evv) >>= fun (x: Pure, evv) -> e'].
     For [Pure] terms it builds a let binding instead *)

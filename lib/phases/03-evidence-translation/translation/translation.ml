@@ -94,6 +94,16 @@ let rec translate_expr
         let%map e_no' = translate_expr e_no ~evv in
         Maybe_effectful.combine e_yes' e_no' ~f:(fun e_yes' e_no' ->
           EPS.Expr.If_then_else (cond, e_yes', e_no')))
+    | Expl.Expr.Match (subject, scrutinee, cases) ->
+      let%bind subject = translate_expr subject ~evv in
+      Maybe_effectful.make_bind_or_let subject ~evv ~f:(fun subject ~evv ->
+        let%map cases =
+          Generation.list_map cases ~f:(fun (pattern, case) ->
+            let%map case = translate_expr case ~evv in
+            pattern, case)
+        in
+        Maybe_effectful.combine_many_with_info cases ~f:(fun cases ->
+          EPS.Expr.Match (subject, scrutinee, cases)))
     | Expl.Expr.Let (x, v_subject, e_body) ->
       let%bind (`Pure subject') = translate_value v_subject in
       let%map m_body = translate_expr e_body ~evv in

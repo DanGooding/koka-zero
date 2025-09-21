@@ -20,6 +20,14 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
   | Expr.Literal _ -> Variable.Set.empty
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     free_in_exprs [ e_cond; e_yes; e_no ]
+  | Expr.Match (subject, _, cases) ->
+    let subject_free = free_in_expr subject in
+    let case_free =
+      List.map cases ~f:(fun (pattern, body) ->
+        let pattern_bound = Pattern.bound_variables pattern in
+        free_in_bindings pattern_bound body)
+    in
+    Variable.Set.union_list (subject_free :: case_free)
   | Expr.Operator (e_left, _, e_right) -> free_in_exprs [ e_left; e_right ]
   | Expr.Unary_operator (_, e) -> free_in_expr e
   | Expr.Construct_pure e -> free_in_expr e
@@ -77,9 +85,10 @@ and free_in_exprs : Expr.t list -> Variable.Set.t =
 (** [free_in_bindings vs e] gives the free varaibles of [e] which aren't in [vs]
 *)
 and free_in_bindings : Variable.t list -> Expr.t -> Variable.Set.t =
-  fun vs e ->
+  fun vs e -> free_in_bindings_set (Variable.Set.of_list vs) e
+
+and free_in_bindings_set vs e =
   let e_free = free_in_expr e in
-  let vs = Variable.Set.of_list vs in
   Set.diff e_free vs
 
 (** [free_in_binding v e] gives the free varaibles of [e] except for [v] *)

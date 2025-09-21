@@ -255,6 +255,16 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
       false_result
       ~f:(fun e_cond e_true e_false ->
         Expr.If_then_else (e_cond, e_true, e_false))
+  | Match (e_subject, scrutinee, cases) ->
+    let%bind e_subject = rewrite_aux e_subject ~toplevel in
+    let%map cases =
+      Generation.list_map cases ~f:(fun (pattern, body) ->
+        let%map body = rewrite_aux body ~toplevel in
+        Rewrite_result.map body ~f:(fun body -> pattern, body))
+    in
+    let cases = Rewrite_result.all cases in
+    Rewrite_result.combine e_subject cases ~f:(fun subject cases ->
+      Expr.Match (subject, scrutinee, cases))
   | Operator (e_left, op, e_right) ->
     let%bind left_result = rewrite_aux e_left ~toplevel in
     let%map right_result = rewrite_aux e_right ~toplevel in

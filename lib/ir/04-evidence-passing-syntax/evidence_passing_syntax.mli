@@ -21,6 +21,7 @@ module Expr : sig
     | Construction of Constructor.t * t list
     | Literal of Literal.t
     | If_then_else of t * t * t
+    | Match of t * Pattern.Scrutinee.t * (Pattern.t * t) list
     | Operator of t * Operator.t * t
     | Unary_operator of Operator.Unary.t * t
     | Construct_pure of t
