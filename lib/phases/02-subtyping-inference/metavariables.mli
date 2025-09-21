@@ -5,6 +5,7 @@ module Location : sig
   type t =
     | Expr of Minimal_syntax.Expr.t
     | Parameter of Parameter.t
+    | Pattern of Pattern.t
     | F_self of Variable.t (** the name of a recursive function *)
     | Application of Minimal_syntax.Expr.t * Minimal_syntax.Expr.t list
     (** the effect resulting specifically from the call, not from evaluating the arguments
@@ -14,6 +15,7 @@ module Location : sig
     | Handler_result of Minimal_syntax.Expr.handler
     (** when a handler wraps a function and is run, this is the result type/effect
     *)
+    | List_element of t (** for a type `list<a>` this is the element type `a` *)
     | Instantiation of t
   [@@deriving sexp_of]
 end

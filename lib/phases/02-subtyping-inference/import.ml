@@ -11,6 +11,7 @@ include struct
   module Operation_shape = Operation_shape
   module Operator = Operator
   module Parameter = Parameter
+  module Pattern = Pattern
   module Polar_type = Polar_type
   module Type = Type
   module Variable = Variable
