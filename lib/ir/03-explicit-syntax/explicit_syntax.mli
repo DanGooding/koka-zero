@@ -14,6 +14,7 @@ module Expr : sig
     | Seq of 'e t * 'e t
     (** evaluates first expression, then second. both may be of any type *)
     | If_then_else of 'e t * 'e t * 'e t
+    | Match of 'e t * Pattern.Scrutinee.t * (Pattern.t * 'e t) list
     | Operator of 'e t * Operator.t * 'e t
     | Unary_operator of Operator.Unary.t * 'e t
     | Impure_built_in of 'e impure_built_in

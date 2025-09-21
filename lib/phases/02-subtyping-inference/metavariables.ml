@@ -5,10 +5,12 @@ module Location = struct
   type t =
     | Expr of Minimal_syntax.Expr.t
     | Parameter of Parameter.t
+    | Pattern of Pattern.t
     | F_self of Variable.t
     | Application of Minimal_syntax.Expr.t * Minimal_syntax.Expr.t list
     | Handler_subject of Minimal_syntax.Expr.handler
     | Handler_result of Minimal_syntax.Expr.handler
+    | List_element of t
     | Instantiation of t
   [@@deriving sexp_of]
 end

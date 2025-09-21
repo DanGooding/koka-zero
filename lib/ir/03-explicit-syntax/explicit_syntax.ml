@@ -10,6 +10,7 @@ module Expr = struct
     | Construction of Constructor.t * 'e t list
     | Seq of 'e t * 'e t
     | If_then_else of 'e t * 'e t * 'e t
+    | Match of 'e t * Pattern.Scrutinee.t * (Pattern.t * 'e t) list
     | Operator of 'e t * Operator.t * 'e t
     | Unary_operator of Operator.Unary.t * 'e t
     | Impure_built_in of 'e impure_built_in
@@ -70,6 +71,12 @@ module Expr = struct
     | Seq (first, second) -> Seq (map_effect first ~f, map_effect second ~f)
     | If_then_else (cond, yes, no) ->
       If_then_else (map_effect cond ~f, map_effect yes ~f, map_effect no ~f)
+    | Match (subject, scrutinee, cases) ->
+      Match
+        ( map_effect subject ~f
+        , scrutinee
+        , List.map cases ~f:(fun (pattern, body) -> pattern, map_effect body ~f)
+        )
     | Operator (left, op, right) ->
       Operator (map_effect left ~f, op, map_effect right ~f)
     | Unary_operator (uop, arg) -> Unary_operator (uop, map_effect arg ~f)

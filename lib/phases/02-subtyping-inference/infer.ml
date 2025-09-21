@@ -295,7 +295,10 @@ let rec infer_expr
     (match constructor, args with
      | List_nil, [] ->
        let element =
-         Metavariables.fresh_type t.metavariables ~level ~location:(Expr expr)
+         Metavariables.fresh_type
+           t.metavariables
+           ~level
+           ~location:(List_element (Expr expr))
        in
        let effect_ =
          Metavariables.fresh_effect t.metavariables ~level ~location:(Expr expr)
@@ -384,6 +387,8 @@ let rec infer_expr
     ( Expl.Expr.If_then_else (e_cond, e_true, e_false)
     , result_type
     , overall_effect )
+  | Match (subject, cases) ->
+    infer_match t subject cases ~env ~level ~effect_env
   | Operator (left, op, right) ->
     let arg_type = operand_type op |> Type.Mono.Primitive in
     let result_type = operator_result_type op |> Type.Mono.Primitive in
@@ -514,6 +519,156 @@ and type_literal (lit : Literal.t) : Type.Mono.t =
   | Int _ -> Primitive Int
   | Bool _ -> Primitive Bool
   | Unit -> Primitive Unit
+
+and infer_match_case
+      t
+      ~(subject_type : Type.Mono.t)
+      ~(pattern : Pattern.t)
+      ~(body : Min.Expr.t)
+      ~env
+      ~level
+      ~effect_env
+  =
+  let open Result.Let_syntax in
+  let bind_parameter ~(parameter : Parameter.t) ~(type_ : Type.t) ~env =
+    match parameter with
+    | Wildcard -> return env
+    | Variable name ->
+      Context.extend env ~var:name ~type_ |> error_if_cannot_shadow ~name
+  in
+  let%bind env =
+    match pattern with
+    | Parameter parameter ->
+      let type_name =
+        Metavariables.fresh_type
+          t.metavariables
+          ~level
+          ~location:(Pattern pattern)
+      in
+      let%bind () =
+        Constraints.constrain_type_at_most t.constraints subject_type type_name
+      in
+      bind_parameter ~parameter ~type_:(Mono type_name) ~env
+    | Literal lit ->
+      let lit_type = type_literal lit in
+      let%map () =
+        Constraints.constrain_type_at_most t.constraints subject_type lit_type
+      in
+      env
+    | Construction (constructor, params) ->
+      (match constructor, params with
+       | List_nil, [] ->
+         let element_type =
+           Metavariables.fresh_type
+             t.metavariables
+             ~level
+             ~location:(List_element (Pattern pattern))
+         in
+         let list_type = Type.Mono.List element_type in
+         let%map () =
+           Constraints.constrain_type_at_most
+             t.constraints
+             subject_type
+             list_type
+         in
+         env
+       | List_cons, [ head; tail ] ->
+         let element_type =
+           Metavariables.fresh_type
+             t.metavariables
+             ~level
+             ~location:(List_element (Pattern pattern))
+         in
+         let list_type = Type.Mono.List element_type in
+         let%bind () =
+           Constraints.constrain_type_at_most
+             t.constraints
+             subject_type
+             list_type
+         in
+         let%bind env =
+           bind_parameter ~parameter:head ~type_:(Mono element_type) ~env
+         in
+         bind_parameter ~parameter:tail ~type_:(Mono list_type) ~env
+       | (List_nil | List_cons), _ ->
+         Static_error.type_error_s
+           [%message
+             "constructor pattern with wrong number of arguments"
+               (pattern : Pattern.t)]
+         |> Error)
+  in
+  let%map body, body_type, body_effect =
+    infer_expr t body ~env ~level ~effect_env
+  in
+  (pattern, body), body_type, body_effect
+
+and infer_match
+      t
+      (subject : Min.Expr.t)
+      (cases : (Pattern.t * Min.Expr.t) list)
+      ~env
+      ~level
+      ~effect_env
+  =
+  let open Result.Let_syntax in
+  let match_expr = Min.Expr.Match (subject, cases) in
+  let%bind () =
+    match cases with
+    | _ :: _ -> Ok ()
+    | [] ->
+      Static_error.type_error_s
+        [%message
+          "match expression must have at least one case"
+            (match_expr : Min.Expr.t)]
+      |> Error
+  in
+  let%bind subject, subject_type, subject_effect =
+    infer_expr t subject ~env ~level ~effect_env
+  in
+  let%bind cases_and_types_and_effects =
+    Or_static_error.list_map cases ~f:(fun (pattern, body) ->
+      infer_match_case t ~subject_type ~pattern ~body ~env ~level ~effect_env)
+  in
+  let cases, case_types, case_effects =
+    List.unzip3 cases_and_types_and_effects
+  in
+  let match_expr_type =
+    Metavariables.fresh_type t.metavariables ~level ~location:(Expr match_expr)
+  in
+  let%bind () =
+    Or_static_error.list_iter case_types ~f:(fun case ->
+      Constraints.constrain_type_at_most t.constraints case match_expr_type)
+  in
+  let%bind overall_effect =
+    union_effects
+      t
+      (subject_effect :: case_effects)
+      ~level
+      ~location:(Expr match_expr)
+  in
+  let%map scrutinee =
+    let scrutinees =
+      List.filter_map cases ~f:(fun (pattern, _) -> Pattern.scrutinee pattern)
+    in
+    match List.all_equal scrutinees ~equal:[%equal: Pattern.Scrutinee.t] with
+    | Some scrutinee -> Ok scrutinee
+    | None ->
+      Error
+        (match scrutinees with
+         | [] ->
+           Static_error.type_error_s
+             [%message
+               "all cases of match expression are wildcard - at least one must \
+                match a constructor/literal"
+                 (match_expr : Min.Expr.t)]
+         | _ :: _ ->
+           Static_error.type_error_s
+             [%message
+               "cases of match expression inspect inconsistent information"
+                 (scrutinees : Pattern.Scrutinee.t list)
+                 (match_expr : Min.Expr.t)])
+  in
+  Expl.Expr.Match (subject, scrutinee, cases), match_expr_type, overall_effect
 
 and infer_impure_built_in
       t
