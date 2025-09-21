@@ -10,6 +10,7 @@ include Monad_utils.S with type 'a t := 'a t
 val fresh_marker : Value.Marker.t t
 val impossible_error : string -> 'a t
 val unsupported_feature_error : string -> 'a t
+val no_matching_pattern_error : string -> 'a t
 
 (** try performing an i/o operation, returning a [Runtime_error.io_error] with
     the given message on exception *)

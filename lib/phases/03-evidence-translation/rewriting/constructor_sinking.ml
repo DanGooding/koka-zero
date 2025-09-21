@@ -24,6 +24,11 @@ let rec add_pure_at_tail (expr : Expr.t) : Expr.t =
     let normal_branch = map_branch_body normal_branch ~f:add_pure_at_tail in
     let tail_branch = map_branch_body tail_branch ~f:add_pure_at_tail in
     Match_op { subject; normal_branch; tail_branch }
+  | Match (subject, scrutinee, cases) ->
+    let cases =
+      List.map cases ~f:(fun (pattern, body) -> pattern, add_pure_at_tail body)
+    in
+    Match (subject, scrutinee, cases)
   | Fresh_marker | Nil_evidence_vector | Variable _ | Lambda _ | Fix_lambda _
   | Application (_, _, _)
   | Construction (_, _)

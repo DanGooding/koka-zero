@@ -10,6 +10,9 @@ val unsupported_feature_error : string -> t
 (** reports an error performing a built-in io operation *)
 val io_error : string -> t
 
+(** reports that no branch in a match expresssion matched the subject *)
+val no_matching_pattern_error : string -> t
+
 val to_string : t -> string
 
 module Or_runtime_error : sig

@@ -7,6 +7,7 @@ include struct
   module Literal = Literal
   module Operator = Operator
   module Parameter = Parameter
+  module Pattern = Pattern
   module Variable = Variable
 end
 

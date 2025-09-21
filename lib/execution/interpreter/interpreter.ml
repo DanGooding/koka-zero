@@ -67,6 +67,10 @@ let unsupported_feature_error message _state =
   Result.Error (Runtime_error.unsupported_feature_error message)
 ;;
 
+let no_matching_pattern_error message _state =
+  Result.Error (Runtime_error.no_matching_pattern_error message)
+;;
+
 let try_io_with ~message f state =
   let%map.Result x =
     Result.try_with f
