@@ -68,6 +68,41 @@ let error_if_cannot_shadow result ~name =
   | `Ok result -> Ok result
 ;;
 
+let rec bind_parameter
+          t
+          env
+          ~(parameter : Parameter.t)
+          ~(type_ : Type.Mono.t)
+          ~level
+  : Context.t Or_static_error.t
+  =
+  let open Result.Let_syntax in
+  match parameter with
+  | Wildcard -> Ok env
+  | Variable var ->
+    Context.extend env ~var ~type_:(Mono type_)
+    |> error_if_cannot_shadow ~name:var
+  | Tuple parameters ->
+    let parameters_and_types =
+      List.map parameters ~f:(fun parameter ->
+        ( parameter
+        , Metavariables.fresh_type
+            t.metavariables
+            ~level
+            ~location:(Parameter parameter) ))
+    in
+    let _, element_types = List.unzip parameters_and_types in
+    let tuple_type = Type.Mono.Tuple element_types in
+    let%bind () =
+      Constraints.constrain_type_at_most t.constraints type_ tuple_type
+    in
+    Or_static_error.list_fold
+      parameters_and_types
+      ~init:env
+      ~f:(fun env (parameter, type_) ->
+        bind_parameter t env ~parameter ~type_ ~level)
+;;
+
 let infer_and_generalise
       (t : t)
       (value : 'v)
@@ -235,14 +270,11 @@ let rec infer_expr
     in
     let%map body, type_, effect_ = infer_expr t body ~env ~level ~effect_env in
     Expl.Expr.Let (var, subject, body), type_, effect_
-  | Let_mono (var, subject, body) ->
+  | Let_mono (parameter, subject, body) ->
     let%bind subject, type_subject, effect_subject =
       infer_expr t subject ~env ~level ~effect_env
     in
-    let%bind env =
-      Context.extend env ~var ~type_:(Mono type_subject)
-      |> error_if_cannot_shadow ~name:var
-    in
+    let%bind env = bind_parameter t env ~parameter ~type_:type_subject ~level in
     let%bind body, type_body, effect_body =
       infer_expr t body ~env ~level ~effect_env
     in
@@ -253,7 +285,7 @@ let rec infer_expr
         ~level
         ~location:(Expr expr)
     in
-    Expl.Expr.Let_mono (var, subject, body), type_body, overall_effect
+    Expl.Expr.Let_mono (parameter, subject, body), type_body, overall_effect
   | Application (f, args) ->
     let%bind args_and_types_and_effects =
       Or_static_error.list_map args ~f:(fun arg ->
@@ -478,12 +510,11 @@ and infer_lambda t ((params, body) : Min.Expr.lambda) ~env ~level ~effect_env
           ~location:(Parameter param) ))
   in
   let%bind env =
-    Or_static_error.list_fold param_metas ~init:env ~f:(fun env (param, meta) ->
-      match (param : Parameter.t) with
-      | Wildcard -> return env
-      | Variable name ->
-        Context.extend env ~var:name ~type_:(Mono meta)
-        |> error_if_cannot_shadow ~name)
+    Or_static_error.list_fold
+      param_metas
+      ~init:env
+      ~f:(fun env (parameter, meta) ->
+        bind_parameter t env ~parameter ~type_:meta ~level)
   in
   let%map body, result, effect_ = infer_expr t body ~env ~level ~effect_env in
   let param_types = List.map param_metas ~f:(fun (_, meta) -> meta) in
@@ -518,7 +549,6 @@ and type_literal (lit : Literal.t) : Type.Mono.t =
   match lit with
   | Int _ -> Primitive Int
   | Bool _ -> Primitive Bool
-  | Unit -> Primitive Unit
 
 and infer_match_case
       t
@@ -530,12 +560,6 @@ and infer_match_case
       ~effect_env
   =
   let open Result.Let_syntax in
-  let bind_parameter ~(parameter : Parameter.t) ~(type_ : Type.t) ~env =
-    match parameter with
-    | Wildcard -> return env
-    | Variable name ->
-      Context.extend env ~var:name ~type_ |> error_if_cannot_shadow ~name
-  in
   let%bind env =
     match pattern with
     | Parameter parameter ->
@@ -548,7 +572,7 @@ and infer_match_case
       let%bind () =
         Constraints.constrain_type_at_most t.constraints subject_type type_name
       in
-      bind_parameter ~parameter ~type_:(Mono type_name) ~env
+      bind_parameter t env ~parameter ~type_:type_name ~level
     | Literal lit ->
       let lit_type = type_literal lit in
       let%map () =
@@ -587,9 +611,12 @@ and infer_match_case
              list_type
          in
          let%bind env =
-           bind_parameter ~parameter:head ~type_:(Mono element_type) ~env
+           bind_parameter t env ~parameter:head ~type_:element_type ~level
          in
-         bind_parameter ~parameter:tail ~type_:(Mono list_type) ~env
+         bind_parameter t env ~parameter:tail ~type_:list_type ~level
+       | Tuple, elements ->
+         (* TODO: this will never be generated, because of the special Tuple case in Parameter *)
+         ()
        | (List_nil | List_cons), _ ->
          Static_error.type_error_s
            [%message

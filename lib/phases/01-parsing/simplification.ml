@@ -43,8 +43,6 @@ let simplify_constructor_id (id : Syntax.Constructor_id.t)
   match Syntax.Constructor_id.to_string id with
   | "Nil" -> Ok List_nil
   | "Cons" -> Ok List_cons
-  | _ when [%equal: Syntax.Constructor_id.t] id Syntax.Constructor_id.tuple ->
-    Ok Tuple
   | _ ->
     Error
       (Static_error.syntax_error_s
@@ -397,11 +395,7 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%map block_no' = simplify_block block_no in
     Min.Expr.If_then_else (e_cond', block_yes', block_no')
   | Syntax.If_then (e_cond, block_yes) ->
-    let block_no =
-      Syntax.singleton_block
-        (Syntax.Application
-           (Identifier (Constructor Syntax.Constructor_id.tuple), []))
-    in
+    let block_no = Syntax.singleton_block (Syntax.Tuple_construction []) in
     Syntax.If_then_else (e_cond, block_yes, block_no) |> simplify_expr
   | Syntax.Match (subject, cases) ->
     let%bind subject' = simplify_expr subject in
@@ -424,6 +418,9 @@ let rec simplify_expr (e : Syntax.expr) : Min.Expr.t Or_static_error.t =
     let%map lambda = simplify_fn f in
     Min.Expr.Lambda lambda |> Min.Expr.Value
   | Syntax.Application (e_f, e_args) -> simplify_application e_f e_args
+  | Syntax.Tuple_construction es ->
+    let%map es' = Or_static_error.list_map es ~f:simplify_expr in
+    Min.Expr.Tuple_construction es'
   | Syntax.Identifier x -> simplify_identifier_as_expr x
   | Syntax.Literal lit ->
     let lit' = simplify_literal lit in
@@ -527,7 +524,8 @@ and simplify_application (e_f : Syntax.expr) (e_args : Syntax.expr list)
   | Unary_op _
   | Application _
   | Literal _
-  | Annotated_expr _ ->
+  | Annotated_expr _
+  | Tuple_construction _ ->
     let%map e_f' = simplify_expr e_f in
     Min.Expr.Application (e_f', e_args')
 

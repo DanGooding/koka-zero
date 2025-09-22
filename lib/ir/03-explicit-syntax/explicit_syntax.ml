@@ -5,7 +5,7 @@ module Expr = struct
   type 'e t =
     | Value of 'e value
     | Let of Variable.t * 'e value * 'e t
-    | Let_mono of Variable.t * 'e t * 'e t
+    | Let_mono of Parameter.t * 'e t * 'e t
     | Application of 'e t * 'e t list * 'e
     | Construction of Constructor.t * 'e t list
     | Seq of 'e t * 'e t

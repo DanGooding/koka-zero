@@ -840,12 +840,12 @@ atom:
   | lit = literal
     { Literal lit }
   (* | mask *)
-  | "("; elements = separated_list(",", atom); ")"
+  | "("; elements = separated_list(",", ntlexpr); ")"
     { match elements with
       | [e] -> e
-      | _   -> Application (Identifier (Constructor (Constructor_id.tuple), elements))
+      | _   -> Tuple_construction elements
     }
-  | "["; elements = separated_list(",", atom); "]"
+  | "["; elements = separated_list(",", ntlexpr); "]"
     { 
       let rec make_list = function
         | [] -> Identifier (Constructor (Constructor_id.of_string "Nil"))

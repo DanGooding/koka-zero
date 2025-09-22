@@ -15,6 +15,7 @@ module Expr : sig
         generalised *)
     | Application of t * t list
     | Construction of Constructor.t * t list
+    | Tuple_construction of t list
     | Seq of t * t
     (** evaluates first expression, then second. both may be of any type *)
     | If_then_else of t * t * t

@@ -6,7 +6,7 @@ module Expr : sig
     | Value of 'e value
     | Let of Variable.t * 'e value * 'e t
     (** [Let] provides polymorphic binding *)
-    | Let_mono of Variable.t * 'e t * 'e t
+    | Let_mono of Parameter.t * 'e t * 'e t
     (** [Let_mono] provides monomorphic binding *)
     | Application of 'e t * 'e t list * 'e
     (** ['e] is the effect produced by this application *)

@@ -8,6 +8,7 @@ module Expr = struct
     | Let_mono of Parameter.t * t * t
     | Application of t * t list
     | Construction of Constructor.t * t list
+    | Tuple_construction of t list
     | Seq of t * t
     | If_then_else of t * t * t
     | Match of t * (Pattern.t * t) list
@@ -121,6 +122,6 @@ module Program = struct
           ( Expr.Application
               ( Expr.Value (Expr.Handler console_handler)
               , [ Expr.Value (Expr.Variable Keyword.main) ] )
-          , Expr.Construction (Constructor.Tuple, []) ) ) )
+          , Expr.Tuple_construction [] ) ) )
   ;;
 end

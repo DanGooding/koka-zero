@@ -91,15 +91,16 @@ fun main() {
        ((Fun
          ((User main)
           (()
-           (Let_mono (User x) (Value (Literal (Int 1)))
+           (Let_mono (Variable (User x)) (Value (Literal (Int 1)))
             (Seq
              (Application (Value (Variable (User print)))
               ((Value (Variable (User x)))))
-             (Let_mono (User y)
+             (Let_mono (Variable (User y))
               (Application (Value (Variable (User foo)))
                ((Value (Variable (User x)))))
               (Operator (Value (Variable (User y))) (Int Times)
-               (Value (Literal (Int 2)))))))))))))) |}]
+               (Value (Literal (Int 2))))))))))))))
+    |}]
 ;;
 
 let%expect_test "dashes in identifiers" =
@@ -134,7 +135,8 @@ fun wrapper() {
                 (Declaration
                  (Val ((pattern (Pattern_id (Var number3-letter))) (scheme ()))
                   ((statements ()) (last (Literal (Int 2))))))))
-              (last (Literal Unit)))))))))))) |}];
+              (last (Tuple_construction ()))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -143,10 +145,11 @@ fun wrapper() {
        ((Fun
          ((User wrapper)
           (()
-           (Let_mono (User kebab-case) (Value (Literal (Int 0)))
-            (Let_mono (User x-y-z) (Value (Literal (Int 1)))
-             (Let_mono (User number3-letter) (Value (Literal (Int 2)))
-              (Value (Literal Unit)))))))))))) |}]
+           (Let_mono (Variable (User kebab-case)) (Value (Literal (Int 0)))
+            (Let_mono (Variable (User x-y-z)) (Value (Literal (Int 1)))
+             (Let_mono (Variable (User number3-letter)) (Value (Literal (Int 2)))
+              (Tuple_construction ())))))))))))
+    |}]
 ;;
 
 let%expect_test "hex literals" =
@@ -208,7 +211,8 @@ fun wrapper() {
                   ((statements ())
                    (last
                     (Application (Identifier (Var diff)) ((Identifier (Var f'))))))))))
-              (last (Literal Unit)))))))))))) |}];
+              (last (Tuple_construction ()))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -217,13 +221,14 @@ fun wrapper() {
        ((Fun
          ((User wrapper)
           (()
-           (Let_mono (User f')
+           (Let_mono (Variable (User f'))
             (Application (Value (Variable (User diff)))
              ((Value (Variable (User f)))))
-            (Let_mono (User f'')
+            (Let_mono (Variable (User f''))
              (Application (Value (Variable (User diff)))
               ((Value (Variable (User f')))))
-             (Value (Literal Unit))))))))))) |}]
+             (Tuple_construction ()))))))))))
+    |}]
 ;;
 
 let%expect_test "wildcard parameter" =
@@ -249,7 +254,9 @@ fun foo(_a, b, _c, _, e, _f) { () };
               ((pattern Pattern_wildcard) (type_ ()))
               ((pattern (Pattern_id (Var e))) (type_ ()))
               ((pattern Pattern_wildcard) (type_ ()))))
-            (result_type ()) (body ((statements ()) (last (Literal Unit)))))))))))) |}];
+            (result_type ())
+            (body ((statements ()) (last (Tuple_construction ()))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -259,7 +266,8 @@ fun foo(_a, b, _c, _, e, _f) { () };
          ((User foo)
           ((Wildcard (Variable (User b)) Wildcard Wildcard (Variable (User e))
             Wildcard)
-           (Value (Literal Unit))))))))) |}]
+           (Tuple_construction ()))))))))
+    |}]
 ;;
 
 let%expect_test "operators" =
@@ -348,8 +356,8 @@ fun main() {
                       And
                       (Binary_op (Identifier (Var x)) Greater_equal
                        (Literal (Int 9000)))))))))))
-              (last (Literal Unit))))))))))))
-|}];
+              (last (Tuple_construction ()))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -358,21 +366,21 @@ fun main() {
        ((Fun
          ((User hypotenuse)
           (((Variable (User a)) (Variable (User b)))
-           (Let_mono (User c-squared)
+           (Let_mono (Variable (User c-squared))
             (Operator
              (Operator (Value (Variable (User a))) (Int Times)
               (Value (Variable (User a))))
              (Int Plus)
              (Operator (Value (Variable (User b))) (Int Times)
               (Value (Variable (User b)))))
-            (Let_mono (User c)
+            (Let_mono (Variable (User c))
              (Application (Value (Variable (User isqrt)))
               ((Value (Variable (User c-squared)))))
              (Value (Variable (User c))))))))
         (Fun
          ((User main)
           (()
-           (Let_mono (User all)
+           (Let_mono (Variable (User all))
             (Operator
              (Operator
               (Operator
@@ -386,7 +394,7 @@ fun main() {
               (Operator (Value (Literal (Int 91))) (Int Modulo)
                (Value (Literal (Int 7)))))
              (Int Plus) (Value (Literal (Int 11))))
-            (Let_mono (User inside)
+            (Let_mono (Variable (User inside))
              (Operator
               (Operator
                (Operator (Value (Literal (Int 0))) (Int Less_equal)
@@ -401,7 +409,8 @@ fun main() {
                (Bool And)
                (Operator (Value (Variable (User x))) (Int Greater_equal)
                 (Value (Literal (Int 9000))))))
-             (Value (Literal Unit))))))))))) |}]
+             (Tuple_construction ()))))))))))
+    |}]
 ;;
 
 let%expect_test "negative integer literals" =
@@ -568,7 +577,8 @@ fun i() {
            (If_then_else (Value (Variable (User a)))
             (If_then_else (Value (Variable (User b))) (Value (Variable (User c)))
              (Value (Variable (User d))))
-            (Value (Literal Unit)))))))))) |}]
+            (Tuple_construction ())))))))))
+    |}]
 ;;
 
 let%expect_test "if statement body" =
@@ -626,16 +636,17 @@ fun i() {
           (()
            (Seq
             (If_then_else (Value (Variable (User condition)))
-             (Let_mono (User x) (Value (Literal (Int 101)))
+             (Let_mono (Variable (User x)) (Value (Literal (Int 101)))
               (Application (Value (Variable (User print)))
                ((Operator (Value (Variable (User x))) (Int Modulo)
                  (Value (Literal (Int 7)))))))
-             (Value (Literal Unit)))
+             (Tuple_construction ()))
             (If_then_else (Value (Variable (User b)))
              (Seq (Application (Value (Variable (User aaa))) ())
               (Application (Value (Variable (User bbb))) ()))
              (Seq (Application (Value (Variable (User ccc))) ())
-              (Application (Value (Variable (User ddd))) ()))))))))))) |}]
+              (Application (Value (Variable (User ddd))) ())))))))))))
+    |}]
 ;;
 
 let%expect_test "dot application" =
@@ -853,7 +864,7 @@ fun one(aa, bb, cc, dd) {
          ((User one)
           (((Variable (User aa)) (Variable (User bb)) (Variable (User cc))
             (Variable (User dd)))
-           (Let_mono (User z) (Value (Literal (Int 1)))
+           (Let_mono (Variable (User z)) (Value (Literal (Int 1)))
             (Application (Value (Variable (User aa)))
              ((Value
                (Lambda
@@ -876,7 +887,8 @@ fun one(aa, bb, cc, dd) {
                                (Lambda
                                 (((Variable (User x)))
                                  (Application (Value (Variable (User println)))
-                                  ((Value (Variable (User x)))))))))))))))))))))))))))))))))) |}]
+                                  ((Value (Variable (User x))))))))))))))))))))))))))))))))))
+    |}]
 ;;
 
 let%expect_test "single line comments" =
@@ -942,14 +954,15 @@ fun not-commented-out() { True; };
         (Fun
          ((User documented)
           (()
-           (Let_mono (User x)
+           (Let_mono (Variable (User x))
             (Operator
              (Operator (Value (Literal (Int 1))) (Int Plus)
               (Value (Literal (Int 2))))
              (Int Plus) (Value (Literal (Int 3))))
             (Operator (Value (Variable (User x))) (Int Times)
              (Value (Variable (User x))))))))
-        (Fun ((User not-commented-out) (() (Value (Literal (Bool true)))))))))) |}]
+        (Fun ((User not-commented-out) (() (Value (Literal (Bool true))))))))))
+    |}]
 ;;
 
 let%expect_test "multiline comments" =
@@ -993,7 +1006,8 @@ fun main() {
                   ((statements ())
                    (last
                     (Binary_op (Identifier (Var x)) Times (Literal (Int 5)))))))))
-              (last (Literal Unit)))))))))))) |}];
+              (last (Tuple_construction ()))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -1002,11 +1016,12 @@ fun main() {
        ((Fun
          ((User main)
           (()
-           (Let_mono (User x) (Value (Literal (Int 1)))
-            (Let_mono (User y)
+           (Let_mono (Variable (User x)) (Value (Literal (Int 1)))
+            (Let_mono (Variable (User y))
              (Operator (Value (Variable (User x))) (Int Times)
               (Value (Literal (Int 5))))
-             (Value (Literal Unit))))))))))) |}]
+             (Tuple_construction ()))))))))))
+    |}]
 ;;
 
 let%expect_test "" =
@@ -1237,14 +1252,14 @@ effect my-effect {
              ((shape Control) (argument (Primitive Int))
               (answer (Primitive Int))))
             ((User depth)
-             ((shape Fun) (argument (Primitive Unit)) (answer (Primitive Int))))
+             ((shape Fun) (argument (Tuple ())) (answer (Primitive Int))))
             ((User get)
-             ((shape Fun) (argument (Primitive Unit)) (answer (Primitive Int))))
+             ((shape Fun) (argument (Tuple ())) (answer (Primitive Int))))
             ((User raise)
-             ((shape Control) (argument (Primitive Int))
-              (answer (Primitive Unit))))
+             ((shape Control) (argument (Primitive Int)) (answer (Tuple ()))))
             ((User set)
-             ((shape Fun) (argument (Primitive Int)) (answer (Primitive Bool)))))))))))) |}]
+             ((shape Fun) (argument (Primitive Int)) (answer (Primitive Bool))))))))))))
+    |}]
 ;;
 
 let%expect_test "multi shaped effect declaration" =
@@ -1951,18 +1966,18 @@ fun f() {
        ((Fun
          ((User f)
           (()
-           (Let_mono (User empty) (Construction List_nil ())
-            (Let_mono (User xs)
+           (Let_mono (Variable (User empty)) (Construction List_nil ())
+            (Let_mono (Variable (User xs))
              (Construction List_cons
               ((Value (Literal (Int 1)))
                (Construction List_cons
                 ((Value (Literal (Int 2)))
                  (Construction List_cons
                   ((Value (Literal (Int 3))) (Construction List_nil ())))))))
-             (Let_mono (User z)
+             (Let_mono (Variable (User z))
               (Construction List_cons
                ((Value (Literal (Int 1))) (Construction List_nil ())))
-              (Let_mono (User nested)
+              (Let_mono (Variable (User nested))
                (Construction List_cons
                 ((Construction List_cons
                   ((Value (Literal (Int 1)))
@@ -2027,13 +2042,13 @@ fun g() {
        ((Fun
          ((User g)
           (()
-           (Let_mono (User ws) (Construction List_nil ())
-            (Let_mono (User xs)
+           (Let_mono (Variable (User ws)) (Construction List_nil ())
+            (Let_mono (Variable (User xs))
              (Construction List_cons
               ((Value (Literal (Int 1)))
                (Construction List_cons
                 ((Value (Literal (Int 2))) (Construction List_nil ())))))
-             (Let_mono (User ys)
+             (Let_mono (Variable (User ys))
               (Construction List_cons
                ((Value (Literal (Int 3))) (Value (Variable (User xs)))))
               (Value (Variable (User ys)))))))))))))
@@ -2075,7 +2090,7 @@ fun f(x) {
                     (Application (Identifier (Var println-int))
                      ((Identifier (Var a)))))))
                  ((Pattern_constructor Nil ())
-                  ((statements ()) (last (Literal Unit)))))))))))))))))
+                  ((statements ()) (last (Tuple_construction ())))))))))))))))))
     |}];
   Util.print_simplification_result syntax;
   [%expect
@@ -2089,7 +2104,7 @@ fun f(x) {
             (((Construction List_cons ((Variable (User a)) (Variable (User b))))
               (Application (Value (Variable (User println-int)))
                ((Value (Variable (User a))))))
-             ((Construction List_nil ()) (Value (Literal Unit))))))))))))
+             ((Construction List_nil ()) (Tuple_construction ())))))))))))
     |}]
 ;;
 
@@ -2150,12 +2165,54 @@ fun g(q, (x,y)) {
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
-    (Error
-     ((kind Syntax_error) (error "parse error")
-      (location (((filename ()) (line 2) (char 11))))))
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Top_fun
+         ((id (Var g))
+          (fn
+           ((type_parameters ())
+            (parameters
+             (((pattern (Pattern_id (Var q))) (type_ ()))
+              ((pattern
+                (Pattern_tuple ((Pattern_id (Var x)) (Pattern_id (Var y)))))
+               (type_ ()))))
+            (result_type ())
+            (body
+             ((statements
+               ((Declaration
+                 (Val
+                  ((pattern
+                    (Pattern_tuple
+                     ((Pattern_id (Var a)) (Pattern_id (Var b))
+                      (Pattern_id (Var c)))))
+                   (scheme ()))
+                  ((statements ()) (last (Identifier (Var q))))))))
+              (last
+               (Tuple_construction
+                ((Binary_op (Identifier (Var x)) Plus (Literal (Int 1)))
+                 (Binary_op (Identifier (Var y)) Plus (Literal (Int 1)))
+                 (Literal (Int 0)))))))))))))))
     |}];
   Util.print_simplification_result syntax;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     ((declarations
+       ((Fun
+         ((User g)
+          (((Variable (User q))
+            (Tuple ((Variable (User x)) (Variable (User y)))))
+           (Let_mono
+            (Tuple ((Variable (User a)) (Variable (User b)) (Variable (User c))))
+            (Value (Variable (User q)))
+            (Tuple_construction
+             ((Operator (Value (Variable (User x))) (Int Plus)
+               (Value (Literal (Int 1))))
+              (Operator (Value (Variable (User y))) (Int Plus)
+               (Value (Literal (Int 1))))
+              (Value (Literal (Int 0)))))))))))))
+    |}]
 ;;
 
 let%expect_test "tuple pattern matching" =
@@ -2171,28 +2228,93 @@ fun f(t) {
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
-    (Error
-     ((kind Syntax_error) (error "parse error")
-      (location (((filename ()) (line 4) (char 7))))))
+    (Ok
+     (Program
+      ((Pure_declaration
+        (Top_fun
+         ((id (Var f))
+          (fn
+           ((type_parameters ())
+            (parameters (((pattern (Pattern_id (Var t))) (type_ ()))))
+            (result_type ())
+            (body
+             ((statements ())
+              (last
+               (Match (Identifier (Var t))
+                (((Irrefutable_pattern
+                   (Pattern_tuple ((Pattern_id (Var x)) (Pattern_id (Var y)))))
+                  ((statements ())
+                   (last
+                    (Binary_op (Identifier (Var x)) Plus (Identifier (Var y)))))))))))))))))))
     |}];
   Util.print_simplification_result syntax;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     ((declarations
+       ((Fun
+         ((User f)
+          (((Variable (User t)))
+           (Match (Value (Variable (User t)))
+            (((Parameter (Tuple ((Variable (User x)) (Variable (User y)))))
+              (Operator (Value (Variable (User x))) (Int Plus)
+               (Value (Variable (User y))))))))))))))
+    |}]
 ;;
 
 let%expect_test "tuple types" =
   let code =
     {|
-effect control foo(x : (int, int)) : (bool, int, (), (int, int))
-}
+effect control foo(x : (int, int)) : (bool, int, (), (int, int));
 |}
   in
   let syntax = Util.print_parse_to_syntax_result code in
   [%expect
     {|
-    (Error
-     ((kind Syntax_error) (error "parse error")
-      (location (((filename ()) (line 4) (char 7))))))
+    (Ok
+     (Program
+      ((Type_declaration
+        (Effect_declaration
+         ((id foo) (type_parameters ()) (kind ())
+          (operations
+           (((id foo) (type_parameters ())
+             (shape
+              (Shape_control
+               (((id (Parameter_id (Var x)))
+                 (type_
+                  (Parameters_or_tuple
+                   (((parameter_id ())
+                     (type_ (Type_atom (constructor Type_int) (arguments ()))))
+                    ((parameter_id ())
+                     (type_ (Type_atom (constructor Type_int) (arguments ())))))))))
+               (Parameters_or_tuple
+                (((parameter_id ())
+                  (type_ (Type_atom (constructor Type_bool) (arguments ()))))
+                 ((parameter_id ())
+                  (type_ (Type_atom (constructor Type_int) (arguments ()))))
+                 ((parameter_id ()) (type_ (Parameters_or_tuple ())))
+                 ((parameter_id ())
+                  (type_
+                   (Parameters_or_tuple
+                    (((parameter_id ())
+                      (type_ (Type_atom (constructor Type_int) (arguments ()))))
+                     ((parameter_id ())
+                      (type_ (Type_atom (constructor Type_int) (arguments ())))))))))))))))))))))
     |}];
   Util.print_simplification_result syntax;
-  [%expect {| |}]
+  [%expect
+    {|
+    (Ok
+     ((declarations
+       ((Effect
+         ((name foo)
+          (operations
+           (((User foo)
+             ((shape Control)
+              (argument (Tuple ((Primitive Int) (Primitive Int))))
+              (answer
+               (Tuple
+                ((Primitive Bool) (Primitive Int) (Tuple ())
+                 (Tuple ((Primitive Int) (Primitive Int))))))))))))))))
+    |}]
 ;;
