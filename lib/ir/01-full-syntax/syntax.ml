@@ -4,13 +4,7 @@ open Koka_zero_util
 (* Names: *)
 
 module Var_id : Identifiable.S = String
-
-module Constructor_id = struct
-  include String
-
-  let tuple = "$#tuple"
-end
-
+module Constructor_id : Identifiable.S = String
 module Wildcard_id : Identifiable.S = String
 
 module Identifier = struct
@@ -227,6 +221,7 @@ type expr =
   | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr
   | Application of expr * expr list
+  | Tuple_construction of expr list
   | Identifier of Identifier.t
   | Literal of literal
   (* | Tuple of expr list *)
@@ -344,5 +339,6 @@ let insert_with_callback : callback:fn -> expr -> expr =
   | Match _ | Handler _ | Handle _ | Fn _
   | Binary_op (_, _, _)
   | Unary_op (_, _)
-  | Identifier _ | Literal _ -> Application (e, [ Fn callback ])
+  | Identifier _ | Literal _ | Tuple_construction _ ->
+    Application (e, [ Fn callback ])
 ;;

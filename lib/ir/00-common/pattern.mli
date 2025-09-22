@@ -5,7 +5,6 @@ module Scrutinee : sig
   type t =
     | Primitive of Type.Primitive.t
     | List
-    | Tuple
   [@@deriving equal, sexp_of]
 end
 

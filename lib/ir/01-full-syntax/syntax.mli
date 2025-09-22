@@ -4,15 +4,7 @@ open Koka_zero_util
 (* Names: *)
 
 module Var_id : Identifiable.S
-
-module Constructor_id : sig
-  include Identifiable.S
-
-  (** Special internal name for the constructor of a tuple,
-      cannot be used in user code. *)
-  val tuple : t
-end
-
+module Constructor_id : Identifiable.S
 module Wildcard_id : Identifiable.S
 
 module Identifier : sig
@@ -243,6 +235,7 @@ type expr =
   | Binary_op of expr * binary_operator * expr
   | Unary_op of unary_operator * expr
   | Application of expr * expr list
+  | Tuple_construction of expr list
   | Identifier of Identifier.t
   | Literal of literal
   | Annotated_expr of expr * type_scheme
