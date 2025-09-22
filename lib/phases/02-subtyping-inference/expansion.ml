@@ -38,6 +38,15 @@ let rec expand_type_aux
         ~in_progress_type_metavariables
     in
     List element
+  | Tuple elements ->
+    Tuple
+      (List.map
+         elements
+         ~f:
+           (expand_type_aux
+              t
+              ~polarity_positive
+              ~in_progress_type_metavariables))
   | Arrow (args, effect_, result) ->
     let args =
       List.map

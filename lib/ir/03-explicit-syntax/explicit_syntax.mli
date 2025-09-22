@@ -11,6 +11,7 @@ module Expr : sig
     | Application of 'e t * 'e t list * 'e
     (** ['e] is the effect produced by this application *)
     | Construction of Constructor.t * 'e t list
+    | Tuple_construction of 'e t list
     | Seq of 'e t * 'e t
     (** evaluates first expression, then second. both may be of any type *)
     | If_then_else of 'e t * 'e t * 'e t

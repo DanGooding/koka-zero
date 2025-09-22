@@ -17,12 +17,12 @@ let%expect_test "identity gets polymorphic type" =
   [%expect
     {|
     (Ok
-     ((Primitive Unit) (Labels ())
+     ((Tuple ()) (Labels ())
       (Let (User id) (Lambda (((Variable (User z))) (Value (Variable (User z)))))
        (Application
         (Application (Value (Variable (User id))) ((Value (Variable (User id))))
          (Labels ()))
-        ((Value (Literal Unit))) (Labels ())))))
+        ((Tuple_construction ())) (Labels ())))))
     |}]
 ;;
 
@@ -68,7 +68,7 @@ let%expect_test "literal unit" =
   let expr = UE.lit_unit in
   Util.print_expr_inference_result expr;
   [%expect
-    {| (Ok ((Primitive Unit) (Labels ()) (Value (Literal Unit)))) |}]
+    {| (Ok ((Tuple ()) (Variable e0) (Tuple_construction ()))) |}]
 ;;
 
 let%expect_test "literal bool" =
@@ -236,12 +236,12 @@ let%expect_test "local function can shadow toplevel" =
     {|
     (Ok
      ((declarations
-       ((Fun ((User foo) (() (Value (Literal Unit)))))
+       ((Fun ((User foo) (() (Tuple_construction ()))))
         (Fun
          ((User bar)
           (()
-           (Let (User foo) (Lambda (() (Value (Literal Unit))))
-            (Value (Literal Unit))))))))))
+           (Let (User foo) (Lambda (() (Tuple_construction ())))
+            (Tuple_construction ())))))))))
     |}]
 ;;
 
@@ -275,7 +275,7 @@ let%expect_test "handled effects reflected in subject's effect" =
            ((Handled (read)
              (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
             (Labels ()))))))
-       (Primitive Unit))
+       (Tuple ()))
       (Labels ())
       (Value
        (Lambda
@@ -287,7 +287,7 @@ let%expect_test "handled effects reflected in subject's effect" =
              (operations
               (((User throw)
                 (Control
-                 ((op_argument Wildcard) (op_body (Value (Literal Unit))))))))
+                 ((op_argument Wildcard) (op_body (Tuple_construction ())))))))
              (return_clause ()))))
           ((Value
             (Lambda
@@ -325,13 +325,11 @@ let%expect_test "handled effects reflected in subject's effect" =
                 ((Handled (read)
                   (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
                  (Labels ()))))))))
-          (Union
-           ((Handled (exn)
-             (Union
-              ((Handled (read)
-                (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
-               (Labels ()))))
-            (Labels ())))))))))
+          (Handled (exn)
+           (Union
+            ((Handled (read)
+              (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
+             (Labels ()))))))))))
     |}]
 ;;
 
@@ -378,7 +376,7 @@ let%expect_test "return clause is typed correctly" =
   [%expect
     {|
     (Ok
-     ((Primitive Unit)
+     ((Tuple ())
       (Union
        ((Labels ()) (Handled (query) (Union ((Labels (query)) (Labels ()))))))
       (Application
@@ -395,8 +393,8 @@ let%expect_test "return clause is typed correctly" =
           (return_clause
            (((op_argument (Variable (User b)))
              (op_body
-              (If_then_else (Value (Variable (User b))) (Value (Literal Unit))
-               (Value (Literal Unit))))))))))
+              (If_then_else (Value (Variable (User b))) (Tuple_construction ())
+               (Tuple_construction ())))))))))
        ((Value
          (Lambda
           (()
@@ -471,7 +469,7 @@ let%expect_test "handlers can delegate to outer handlers" =
                        (Value
                         (Perform
                          ((operation (User ask)) (performed_effect read))))
-                       ((Value (Literal Unit))) (Labels (read)))
+                       ((Tuple_construction ())) (Labels (read)))
                       (Int Plus) (Value (Literal (Int 1))))))))))
                (return_clause ()))))
             ((Value
@@ -480,7 +478,7 @@ let%expect_test "handlers can delegate to outer handlers" =
                 (Application
                  (Value
                   (Perform ((operation (User ask)) (performed_effect read))))
-                 ((Value (Literal Unit))) (Labels (read)))))))
+                 ((Tuple_construction ())) (Labels (read)))))))
             (Union
              ((Handled (read) (Union ((Labels (read)) (Labels ()))))
               (Labels (read)) (Labels ()))))))))

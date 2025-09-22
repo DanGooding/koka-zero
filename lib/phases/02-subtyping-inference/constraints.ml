@@ -50,6 +50,11 @@ let rec extrude_aux
       extrude_aux t element ~to_level ~polarity_positive ~cache ~effect_cache
     in
     List element
+  | Tuple elements ->
+    Tuple
+      (List.map
+         elements
+         ~f:(extrude_aux t ~to_level ~polarity_positive ~cache ~effect_cache))
   | Arrow (args, effect_, result) ->
     let args =
       List.map
@@ -297,6 +302,20 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
                    (args_lo : Type.Mono.t list)
                    (args_hi : Type.Mono.t list)]))
      | List elem_lo, List elem_hi -> constrain_type_at_most t elem_lo elem_hi
+     | Tuple elements_lo, Tuple elements_hi ->
+       (match List.zip elements_lo elements_hi with
+        | Unequal_lengths ->
+          Error
+            (Static_error.type_error_s
+               [%message
+                 "tuple has wrong number of arguments"
+                   ~n:(List.length elements_lo : int)
+                   ~m:(List.length elements_hi : int)])
+        | Ok paired_elements ->
+          Or_static_error.list_iter
+            paired_elements
+            ~f:(fun (elem_lo, elem_hi) ->
+              constrain_type_at_most t elem_lo elem_hi))
      | Primitive p, Primitive p' when [%equal: Type.Primitive.t] p p' ->
        return ()
      | Primitive p, Primitive p' ->
@@ -358,9 +377,10 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
             extrude t type_lo ~to_level:m_level ~polarity_positive:true
           in
           constrain_type_at_most t approx_type_lo (Metavariable m))
-     | Arrow _, (Primitive _ | List _)
-     | Primitive _, (Arrow _ | List _)
-     | List _, (Arrow _ | Primitive _) ->
+     | Arrow _, (Primitive _ | List _ | Tuple _)
+     | Primitive _, (Arrow _ | List _ | Tuple _)
+     | List _, (Arrow _ | Primitive _ | Tuple _)
+     | Tuple _, (Arrow _ | Primitive _ | List _) ->
        Error
          (Static_error.type_error_s
             [%message

@@ -142,6 +142,9 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
     | List element ->
       let element = instantiate_aux element in
       List element
+    | Tuple elements ->
+      let elements = List.map elements ~f:instantiate_aux in
+      Tuple elements
     | Arrow (args, effect_, result) ->
       let args = List.map args ~f:instantiate_aux in
       let effect_ = instantiate_effect_aux effect_ in
@@ -369,6 +372,24 @@ let rec infer_expr
              (constructor : Constructor.t)
              ~num:(List.length args : int)]
        |> Error)
+  | Tuple_construction elements ->
+    let%bind elements_and_types_and_effects =
+      Or_static_error.list_map
+        elements
+        ~f:(infer_expr t ~env ~level ~effect_env)
+    in
+    let elements', types, effects =
+      List.unzip3 elements_and_types_and_effects
+    in
+    let tuple_type = Type.Mono.Tuple types in
+    let%map overall_effect =
+      union_effects
+        t
+        effects
+        ~level
+        ~location:(Expr (Tuple_construction elements))
+    in
+    Expl.Expr.Tuple_construction elements', tuple_type, overall_effect
   | Seq (first, second) ->
     let%bind first, _type, first_effect =
       infer_expr t first ~env ~level ~effect_env
@@ -614,9 +635,6 @@ and infer_match_case
            bind_parameter t env ~parameter:head ~type_:element_type ~level
          in
          bind_parameter t env ~parameter:tail ~type_:list_type ~level
-       | Tuple, elements ->
-         (* TODO: this will never be generated, because of the special Tuple case in Parameter *)
-         ()
        | (List_nil | List_cons), _ ->
          Static_error.type_error_s
            [%message
@@ -713,7 +731,7 @@ and infer_impure_built_in
   | Impure_println ->
     return
       ( Expl.Expr.Impure_println
-      , Type.Mono.Primitive Unit
+      , Type.Mono.Tuple []
       , Effect.Labels Effect.Label.Set.empty )
   | Impure_read_int ->
     return
@@ -730,9 +748,7 @@ and infer_impure_built_in
         type_value
         (Primitive Int)
     in
-    ( Expl.Expr.Impure_print_int { value; newline }
-    , Type.Mono.Primitive Unit
-    , effect_ )
+    Expl.Expr.Impure_print_int { value; newline }, Type.Mono.Tuple [], effect_
 
 and infer_handler
       t
@@ -800,11 +816,12 @@ and infer_handler
       None
     | Some (return_clause : Min.Expr.op_handler) ->
       let%bind env =
-        match (return_clause.op_argument : Parameter.t) with
-        | Wildcard -> return env
-        | Variable var ->
-          Context.extend env ~var ~type_:(Mono t_subject)
-          |> error_if_cannot_shadow ~name:var
+        bind_parameter
+          t
+          env
+          ~parameter:return_clause.op_argument
+          ~type_:t_subject
+          ~level
       in
       let%bind op_body, t_return_clause, eff_return_clause =
         infer_expr t return_clause.op_body ~env ~level ~effect_env
@@ -911,11 +928,12 @@ and infer_operation_clause
   =
   let open Result.Let_syntax in
   let%bind env =
-    match (op_handler.op_argument : Parameter.t) with
-    | Wildcard -> return env
-    | Variable var ->
-      Context.extend env ~var ~type_:(Mono t_argument)
-      |> error_if_cannot_shadow ~name:var
+    bind_parameter
+      t
+      env
+      ~parameter:op_handler.op_argument
+      ~type_:t_argument
+      ~level
   in
   let%bind op_body, t_body, eff_op_clause =
     infer_expr t op_handler.op_body ~env ~level ~effect_env
@@ -1049,10 +1067,7 @@ let check_entry_point t ~env ~level : unit Or_static_error.t =
   | Some (Context.Binding.Value type_) ->
     let t_expected =
       (* () -> <> () *)
-      Type.Mono.Arrow
-        ( []
-        , Labels Effect.Label.Set.empty
-        , Type.Mono.Primitive Type.Primitive.Unit )
+      Type.Mono.Arrow ([], Labels Effect.Label.Set.empty, Type.Mono.Tuple [])
     in
     let t_actual =
       match (type_ : Type.t) with
