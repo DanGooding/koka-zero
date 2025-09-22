@@ -33,7 +33,7 @@ let%expect_test
     E.Application
       ( E.Application
           (omega, [ E.Value (E.Lambda ([ UP.var "y" ], UE.var "y")) ])
-      , [ E.Value (E.Literal Unit) ] )
+      , [ E.Tuple_construction [] ] )
   in
   Util.print_expr_inference_result expr;
   [%expect
@@ -42,11 +42,9 @@ let%expect_test
      ((kind Type_error)
       (error
        (("error when expanding constraint" (type_lo (Metavariable tm3))
-         (type_hi
-          (Arrow ((Primitive Unit)) (Metavariable em4) (Metavariable tm4))))
-        ("type error: cannot relate" (type_lo (Primitive Unit))
-         (type_hi
-          (Arrow ((Primitive Unit)) (Metavariable em4) (Metavariable tm4))))))
+         (type_hi (Arrow ((Tuple ())) (Metavariable em5) (Metavariable tm4))))
+        ("type error: cannot relate" (type_lo (Tuple ()))
+         (type_hi (Arrow ((Tuple ())) (Metavariable em5) (Metavariable tm4))))))
       (location ())))
     |}]
 ;;
@@ -60,9 +58,9 @@ let%expect_test "if statement's branch types are unioned" =
   [%expect
     {|
     (Ok
-     ((Union ((Primitive Unit) (Primitive Int))) (Labels ())
+     ((Union ((Tuple ()) (Primitive Int))) (Labels ())
       (If_then_else (Value (Literal (Bool true))) (Value (Literal (Int 1)))
-       (Value (Literal Unit)))))
+       (Tuple_construction ()))))
     |}]
 ;;
 
@@ -76,12 +74,11 @@ let%expect_test "fix lambdas name cannot collide with own parameters" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Variable t0) (Variable t1)) (Labels ()) (Primitive Unit))
-      (Labels ())
+     ((Arrow ((Variable t0) (Variable t1)) (Variable e0) (Tuple ())) (Labels ())
       (Value
        (Fix_lambda
         ((User f)
-         (((Variable (User g)) (Variable (User f))) (Value (Literal Unit))))))))
+         (((Variable (User g)) (Variable (User f))) (Tuple_construction ())))))))
     |}]
 ;;
 
@@ -93,7 +90,8 @@ let%expect_test "cannot shadow functions at toplevel" =
   in
   let program = { M.Program.declarations } in
   Util.print_check_program_without_main_result program;
-  [%expect {|
+  [%expect
+    {|
     (Error
      ((kind Type_error) (error "cannot shadow 'foo' at toplevel") (location ())))
     |}]
@@ -117,7 +115,8 @@ let%expect_test "handler must include all operations" =
   in
   let body = Util.Expr.make_handle_expr state_handler_set_only UE.lit_unit in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {|
+  [%expect
+    {|
     (Error
      ((kind Type_error) (error "handler does not match any effect: ((User set))")
       (location ())))
@@ -163,5 +162,6 @@ let%expect_test "`fun` clause cannot use `resume`" =
   in
   let body = E.Value (E.Handler read_handler) in
   Util.print_expr_inference_result ~declarations body;
-  [%expect {| (Error ((kind Type_error) (error "unbound variable: resume") (location ()))) |}]
+  [%expect
+    {| (Error ((kind Type_error) (error "unbound variable: resume") (location ()))) |}]
 ;;

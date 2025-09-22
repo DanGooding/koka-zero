@@ -6,11 +6,7 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
   | Expr.Variable v -> Variable.Set.singleton v
   | Expr.Let (p, _type, subject, body) ->
     let subject_free = free_in_expr subject in
-    let body_free =
-      match p with
-      | Parameter.Wildcard -> free_in_expr body
-      | Parameter.Variable v -> free_in_binding v body
-    in
+    let body_free = free_in_bindings_set (Parameter.bound_variables p) body in
     Set.union subject_free body_free
   | Expr.Lambda lambda -> free_in_lambda lambda
   | Expr.Fix_lambda fix_lambda -> free_in_fix_lambda fix_lambda
@@ -99,13 +95,11 @@ and free_in_binding : Variable.t -> Expr.t -> Variable.Set.t =
 
 and free_in_lambda : Expr.lambda -> Variable.Set.t =
   fun (params, _ty, body) ->
-  let param_names =
-    List.filter_map params ~f:(fun (p, _t) ->
-      match (p : Parameter.t) with
-      | Variable v -> Some v
-      | Wildcard -> None)
+  let bindings =
+    List.map params ~f:(fun (param, _type) -> Parameter.bound_variables param)
+    |> Variable.Set.union_list
   in
-  free_in_bindings param_names body
+  free_in_bindings_set bindings body
 
 and free_in_fix_lambda : Expr.fix_lambda -> Variable.Set.t =
   fun (name, lambda) ->

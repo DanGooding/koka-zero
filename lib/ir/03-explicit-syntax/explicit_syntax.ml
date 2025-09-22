@@ -8,6 +8,7 @@ module Expr = struct
     | Let_mono of Parameter.t * 'e t * 'e t
     | Application of 'e t * 'e t list * 'e
     | Construction of Constructor.t * 'e t list
+    | Tuple_construction of 'e t list
     | Seq of 'e t * 'e t
     | If_then_else of 'e t * 'e t * 'e t
     | Match of 'e t * Pattern.Scrutinee.t * (Pattern.t * 'e t) list
@@ -68,6 +69,8 @@ module Expr = struct
         (map_effect fun_ ~f, List.map args ~f:(map_effect ~f), f effect_)
     | Construction (constructor, args) ->
       Construction (constructor, List.map args ~f:(map_effect ~f))
+    | Tuple_construction elements ->
+      Tuple_construction (List.map elements ~f:(map_effect ~f))
     | Seq (first, second) -> Seq (map_effect first ~f, map_effect second ~f)
     | If_then_else (cond, yes, no) ->
       If_then_else (map_effect cond ~f, map_effect yes ~f, map_effect no ~f)

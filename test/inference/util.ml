@@ -43,10 +43,10 @@ end
 
 module Expr = struct
   let var x = E.Value (E.Variable (Variable.of_user x))
-  let lit_unit = E.Construction (Tuple, [])
+  let lit_unit = E.Tuple_construction []
   let lit_bool b = E.Value (E.Literal (Literal.Bool b))
   let lit_int i = E.Value (E.Literal (Literal.Int i))
-  let decl_main = M.Decl.Fun (Keyword.main, ([], E.Construction (Tuple, [])))
+  let decl_main = M.Decl.Fun (Keyword.main, ([], E.Tuple_construction []))
 
   (** construct the desugared equiavlent of the `handle h (subject ())`
       construct *)
