@@ -222,5 +222,29 @@ module Tuple = struct
   end
 
   include T
-  include Struct.Make (T)
+  module Non_empty_tuple = Struct.Make (T)
+
+  let type_ t =
+    match t.num_elements with
+    | 0 -> Types.pointer
+    | _ -> Non_empty_tuple.type_ t
+  ;;
+
+  let populate t pointer ~f =
+    let open Codegen.Let_syntax in
+    match t.num_elements with
+    | 0 -> return ()
+    | _ -> Non_empty_tuple.populate t pointer ~f
+  ;;
+
+  let project ?name t pointer field =
+    (* unit has no fields so project can't be called *)
+    Non_empty_tuple.project ?name t pointer field
+  ;;
+
+  let heap_allocate t ~name ~runtime =
+    match t.num_elements with
+    | 0 -> Immediate_repr.Unit.const_opaque ()
+    | _ -> Non_empty_tuple.heap_allocate t ~name ~runtime
+  ;;
 end
