@@ -5,7 +5,6 @@ open Evidence_passing_syntax
 let eval_literal : Literal.t -> Value.primitive = function
   | Literal.Int i -> Value.Int i
   | Literal.Bool b -> Value.Bool b
-  | Literal.Unit -> Value.Unit
 ;;
 
 let eval_op_expr
@@ -62,40 +61,54 @@ let eval_construct (constructor : Constructor.t) (args : Value.t list)
       (sprintf "wrong number of arguments for constructor")
 ;;
 
-let bind_parameter (param : Parameter.t) (value : Value.t) ~env : Value.context =
+let rec bind_parameter (param : Parameter.t) (value : Value.t) ~env
+  : Value.context Interpreter.t
+  =
+  let open Interpreter.Let_syntax in
   match param with
-  | Wildcard -> env
-  | Variable v -> Map.set env ~key:v ~data:value
+  | Wildcard -> return env
+  | Variable v -> Map.set env ~key:v ~data:value |> return
+  | Tuple params ->
+    let%bind elements = Typecast.tuple_of_value value in
+    (match List.zip params elements with
+     | Unequal_lengths ->
+       Interpreter.impossible_error
+         "tuple has wrong number of elements for parameter"
+     | Ok pairs ->
+       Interpreter.list_fold pairs ~init:env ~f:(fun env (param, value) ->
+         bind_parameter param value ~env))
 ;;
 
 let matches_pattern (subject : Value.t) (pattern : Pattern.t) ~env
-  : Value.context option
+  : Value.context option Interpreter.t
   =
+  let open Interpreter.Let_syntax in
   match pattern with
-  | Parameter p -> bind_parameter p subject ~env |> Some
+  | Parameter p ->
+    let%map env = bind_parameter p subject ~env in
+    Some env
   | Literal (Int i) ->
-    (match[@warning "-4"] subject with
-     | Primitive (Int i') when i = i' -> Some env
-     | _ -> None)
+    return
+      (match[@warning "-4"] subject with
+       | Primitive (Int i') when i = i' -> Some env
+       | _ -> None)
   | Literal (Bool b) ->
-    (match[@warning "-4"] subject with
-     | Primitive (Bool b') when [%equal: Bool.t] b b' -> Some env
-     | _ -> None)
-  | Literal Unit ->
-    (match[@warning "-4"] subject with
-     | Primitive Unit -> Some env
-     | _ -> None)
+    return
+      (match[@warning "-4"] subject with
+       | Primitive (Bool b') when [%equal: Bool.t] b b' -> Some env
+       | _ -> None)
   | Construction (List_nil, []) ->
-    (match[@warning "-4"] subject with
-     | List [] -> Some env
-     | _ -> None)
+    return
+      (match[@warning "-4"] subject with
+       | List [] -> Some env
+       | _ -> None)
   | Construction (List_cons, [ head; tail ]) ->
     (match[@warning "-4"] subject with
      | List (head' :: tail') ->
-       let env = bind_parameter head head' ~env in
-       let env = bind_parameter tail (List tail') ~env in
+       let%bind env = bind_parameter head head' ~env in
+       let%map env = bind_parameter tail (List tail') ~env in
        Some env
-     | _ -> None)
+     | _ -> return None)
   | Construction ((List_nil | List_cons), _) ->
     raise_s
       [%message "invalid number of args for constructor" (pattern : Pattern.t)]
@@ -127,7 +140,7 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
        Interpreter.impossible_error message)
   | Expr.Let (p, _type, e_subject, e_body) ->
     let%bind v_subject = eval_expr e_subject ~env in
-    let env' = bind_parameter p v_subject ~env in
+    let%bind env' = bind_parameter p v_subject ~env in
     eval_expr e_body ~env:env'
   | Expr.Lambda lambda ->
     let%map closure = eval_lambda lambda ~env in
@@ -164,10 +177,11 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
     eval_expr e_body ~env
   | Expr.Match (subject, _, cases) ->
     let%bind subject = eval_expr subject ~env in
-    (match
-       List.find_map cases ~f:(fun (pattern, body) ->
-         matches_pattern subject pattern ~env
-         |> Option.map ~f:(fun env -> env, body))
+    (match%bind
+       Interpreter.list_find_map cases ~f:(fun (pattern, body) ->
+         let%map maybe_env = matches_pattern subject pattern ~env in
+         let%map.Option env = maybe_env in
+         env, body)
      with
      | Some (env, body) -> eval_expr body ~env
      | None ->
@@ -175,6 +189,9 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
        Interpreter.no_matching_pattern_error
          (Sexp.to_string
             [%message (subject : Value.t) (patterns : Pattern.t list)]))
+  | Expr.Tuple_construction es ->
+    let%map vs = Interpreter.list_map es ~f:(eval_expr ~env) in
+    Value.Tuple vs
   | Expr.Operator (e_left, op, e_right) ->
     (* no short circuiting - but that has already been prevented by bind
        sequencing in [translation] *)
@@ -204,15 +221,15 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         [ x, v ], pure_body
       | Value.Yield { marker; op_clause; resumption } ->
         let x_marker, x_op_clause, x_resumption, yield_body = yield_branch in
-        ( [ x_marker, Value.Marker marker
-          ; x_op_clause, op_clause
-          ; x_resumption, resumption
+        ( [ Variable x_marker, Value.Marker marker
+          ; Variable x_op_clause, op_clause
+          ; Variable x_resumption, resumption
           ]
         , yield_body )
     in
-    let env' =
-      List.fold bindings ~init:env ~f:(fun env (x, v) ->
-        Map.set env ~key:x ~data:v)
+    let%bind env' =
+      Interpreter.list_fold bindings ~init:env ~f:(fun env (param, value) ->
+        bind_parameter param value ~env)
     in
     eval_expr body ~env:env'
   | Expr.Match_ctl_pure { subject; pure_branch } ->
@@ -226,9 +243,9 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         Interpreter.impossible_error
           "expression expected to be pure returned Yield"
     in
-    let env' =
-      List.fold bindings ~init:env ~f:(fun env (x, v) ->
-        Map.set env ~key:x ~data:v)
+    let%bind env' =
+      Interpreter.list_fold bindings ~init:env ~f:(fun env (x, v) ->
+        bind_parameter x v ~env)
     in
     eval_expr body ~env:env'
   | Expr.Fresh_marker ->
@@ -368,11 +385,11 @@ and eval_call
   fun ~f_env ~params ~e_body ~v_args ->
   let open Interpreter.Let_syntax in
   let%bind params_to_args = Typecast.zip_arguments ~params ~args:v_args in
-  let f_body_env =
-    List.fold params_to_args ~init:f_env ~f:(fun f_body_env ((p, _type), v) ->
-      match p with
-      | Parameter.Variable x -> Map.set f_body_env ~key:x ~data:v
-      | Parameter.Wildcard -> f_body_env)
+  let%bind f_body_env =
+    Interpreter.list_fold
+      params_to_args
+      ~init:f_env
+      ~f:(fun f_body_env ((p, _type), v) -> bind_parameter p v ~env:f_body_env)
   in
   eval_expr e_body ~env:f_body_env
 
@@ -384,12 +401,12 @@ and eval_impure_built_in
   match impure with
   | Expr.Impure_println ->
     printf "\n";
-    Value.Primitive Value.Unit |> return
+    Value.Tuple [] |> return
   | Expr.Impure_print_int { value = e; newline } ->
     let%bind v = eval_expr e ~env in
     let%map i = Typecast.int_of_value v in
     if newline then printf "%d\n" i else printf "%d " i;
-    Value.Primitive Value.Unit
+    Value.Tuple []
   | Expr.Impure_read_int ->
     let%map i =
       Interpreter.try_io_with ~message:"failed to read int" (fun () ->

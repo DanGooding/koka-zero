@@ -68,7 +68,7 @@ let%expect_test "bind inlining - simple expression" =
         (Application (Variable (Generated mon_0)) ((Nil_evidence_vector Pure))
          Ctl)))
       (pure_branch
-       ((Generated mon_1)
+       ((Variable (Generated mon_1))
         (Let (Variable (Generated mon_2)) Pure Nil_evidence_vector
          (Match_ctl
           (subject
@@ -76,7 +76,7 @@ let%expect_test "bind inlining - simple expression" =
             (Application (Variable (Generated mon_3))
              (((Variable (Generated mon_2)) Pure)) Ctl)))
           (pure_branch
-           ((Generated mon_4)
+           ((Variable (Generated mon_4))
             (Let (Variable (Generated mon_5)) Pure (Variable (Generated mon_2))
              (Construct_pure
               (Operator (Variable (Generated mon_1)) (Int Plus)

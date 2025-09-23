@@ -30,6 +30,8 @@ module type S = sig
     -> f:('a -> 'b -> unit t)
     -> unit List.Or_unequal_lengths.t t
 
+  val list_find_map : 'a list -> f:('a -> 'b option t) -> 'b option t
+
   val map_mapi
     :  ('k, 'a, 'cmp) Map.t
     -> f:(key:'k -> data:'a -> 'b t)
