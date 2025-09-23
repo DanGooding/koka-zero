@@ -75,3 +75,13 @@ module List : sig
 
   include Struct.Struct_S with module Field := Field and type t = unit
 end
+
+module Tuple : sig
+  type t = { num_elements : int }
+
+  module Field : sig
+    type t = Element of { index : int }
+  end
+
+  include Struct.Struct_S with module Field := Field and type t := t
+end

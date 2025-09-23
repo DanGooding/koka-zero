@@ -19,8 +19,9 @@ val compile_tail_call
   -> return_value_pointer:Context.Return_value_pointer.t
   -> Llvm.llvalue Codegen.t
 
-(** Constructs a llvm function with the expected type and parameters,
-    and builds a [Context.t] that is available in it's body.
+(** Constructs a llvm function with the expected type and parameters
+    and returns a function to build a [Context.t] (to be called within it's body),
+    handling destructuring of parameters.
     Leaves the body of the function uninitialised. *)
 val make_function_and_context
   :  params:(Parameter.t * Type.t) list
@@ -29,4 +30,4 @@ val make_function_and_context
   -> return_type:Type.t
   -> captured_shape:Context.Closure.Shape.t option
   -> toplevel:Context.Toplevel.t
-  -> (Llvm.llvalue * Context.t) Codegen.t
+  -> (Llvm.llvalue * (unit -> Context.t Codegen.t)) Codegen.t

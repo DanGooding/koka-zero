@@ -24,6 +24,12 @@ module Make (M : Monad.S) = struct
     List.concat lists
   ;;
 
+  let list_concat_mapi xs ~f =
+    let open M.Let_syntax in
+    let%map lists = List.mapi xs ~f |> M.all in
+    List.concat lists
+  ;;
+
   let list_iter xs ~f = List.map xs ~f |> M.all_unit
 
   let list_iter2 xs ys ~f =

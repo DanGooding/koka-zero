@@ -282,13 +282,45 @@ let compile_capture t ~captured_shape ~code_address ~runtime =
   closure
 ;;
 
-let add_local_exn t ~name ~value =
+let add_local t ~name ~value =
   let locals = Locals.add t.locals ~name ~value in
   { t with locals }
 ;;
 
-let add_local_parameter_exn t ~parameter ~value =
-  match (parameter : Parameter.t) with
-  | Wildcard -> t
-  | Variable v -> add_local_exn t ~name:v ~value
+let rec parameter_llvalue_name (parameter : Parameter.t) : string =
+  match parameter with
+  | Wildcard -> "ignored"
+  | Variable v -> Names.register_name_of_variable v
+  | Tuple elements ->
+    List.map elements ~f:parameter_llvalue_name |> String.concat ~sep:"_"
+;;
+
+let rec parameter_bindings (parameter : Parameter.t) (argument : Ctl_repr.t)
+  : (Variable.t * Ctl_repr.t) list Codegen.t
+  =
+  let open Codegen.Let_syntax in
+  match parameter with
+  | Wildcard -> return []
+  | Variable name -> return [ name, argument ]
+  | Tuple parameters ->
+    let%bind argument =
+      Ctl_repr.pure_exn argument |> Value_repr.Lazily_packed.pack
+    in
+    let tuple_type = { Structs.Tuple.num_elements = List.length parameters } in
+    Codegen.list_concat_mapi parameters ~f:(fun index parameter ->
+      let%bind element =
+        Structs.Tuple.project
+          tuple_type
+          argument
+          (Element { index })
+          ~name:(parameter_llvalue_name parameter)
+      in
+      parameter_bindings parameter (Pure (Packed element)))
+;;
+
+let add_local_parameter t ~parameter ~value =
+  let open Codegen.Let_syntax in
+  let%map bindings = parameter_bindings parameter value in
+  List.fold bindings ~init:t ~f:(fun t (name, value) ->
+    add_local t ~name ~value)
 ;;

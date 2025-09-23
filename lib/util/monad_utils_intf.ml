@@ -21,6 +21,7 @@ module type S = sig
   (** a version of [List.concat_map] which runs in this monad *)
   val list_concat_map : 'a list -> f:('a -> 'b list t) -> 'b list t
 
+  val list_concat_mapi : 'a list -> f:(int -> 'a -> 'b list t) -> 'b list t
   val list_iter : 'a list -> f:('a -> unit t) -> unit t
   val list_map : 'a list -> f:('a -> 'b t) -> 'b list t
 
