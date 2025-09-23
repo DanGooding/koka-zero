@@ -17,6 +17,7 @@ module Location : sig
     *)
     | List_element of t (** for a type `list<a>` this is the element type `a` *)
     | Instantiation of t
+    | Entry_point
   [@@deriving sexp_of]
 end
 

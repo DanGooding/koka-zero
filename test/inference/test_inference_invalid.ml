@@ -41,8 +41,19 @@ let%expect_test
     (Error
      ((kind Type_error)
       (error
-       (("error when expanding constraint" (type_lo (Metavariable tm3))
-         (type_hi (Arrow ((Tuple ())) (Metavariable em5) (Metavariable tm4))))
+       (("error when expanding constraint"
+         ((type_lo (Metavariable tm3))
+          (type_hi (Arrow ((Tuple ())) (Metavariable em5) (Metavariable tm4))))
+         (location
+          (Application
+           (Application
+            (Value
+             (Lambda
+              (((Variable (User x)))
+               (Application (Value (Variable (User x)))
+                ((Value (Variable (User x))))))))
+            ((Value (Lambda (((Variable (User y))) (Value (Variable (User y))))))))
+           ((Tuple_construction ())))))
         ("type error: cannot relate" (type_lo (Tuple ()))
          (type_hi (Arrow ((Tuple ())) (Metavariable em5) (Metavariable tm4))))))
       (location ())))

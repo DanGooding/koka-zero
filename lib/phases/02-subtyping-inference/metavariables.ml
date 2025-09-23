@@ -12,6 +12,7 @@ module Location = struct
     | Handler_result of Minimal_syntax.Expr.handler
     | List_element of t
     | Instantiation of t
+    | Entry_point
   [@@deriving sexp_of]
 end
 
