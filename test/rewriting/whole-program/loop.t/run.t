@@ -14,7 +14,7 @@ First show without any rewriting optimisations
        Ctl
        (Match_ctl (subject (Variable (Generated mon_0)))
         (pure_branch
-         ((Generated mon_3)
+         ((Variable (Generated mon_3))
           (Application (Variable (Generated mon_2))
            (((Variable (Generated mon_3)) Pure)
             ((Variable (Generated mon_1)) Pure))
@@ -55,7 +55,8 @@ First show without any rewriting optimisations
             Pure))
           Ctl))
         (pure_branch
-         ((Generated mon_14) (Construct_pure (Variable (Generated mon_14)))))
+         ((Variable (Generated mon_14))
+          (Construct_pure (Variable (Generated mon_14)))))
         (yield_branch
          ((Generated mon_15) (Generated mon_16) (Generated mon_17)
           (If_then_else
@@ -129,7 +130,8 @@ First show without any rewriting optimisations
            ((Variable (Generated mon_26)) Pure))
           Ctl))
         (pure_branch
-         ((Generated mon_29) (Construct_pure (Variable (Generated mon_29)))))
+         ((Variable (Generated mon_29))
+          (Construct_pure (Variable (Generated mon_29)))))
         (yield_branch
          ((Generated mon_30) (Generated mon_31) (Generated mon_32)
           (Construct_yield (marker (Variable (Generated mon_30)))
@@ -205,7 +207,7 @@ First show without any rewriting optimisations
           (Let (Variable (Generated mon_47)) Pure (Literal (Int 0))
            (Operator (Variable (Generated mon_46)) (Int Equals)
             (Variable (Generated mon_47)))))
-         (If_then_else (Variable (Generated mon_48)) (Literal Unit)
+         (If_then_else (Variable (Generated mon_48)) (Tuple_construction ())
           (Let (Variable (Generated mon_49)) Pure (Variable (User loop))
            (Let (Variable (Generated mon_52)) Pure
             (Let (Variable (Generated mon_50)) Pure (Variable (User n))
@@ -218,7 +220,8 @@ First show without any rewriting optimisations
                (((Variable (Generated mon_52)) Pure)
                 ((Variable (Generated mon_45)) Pure))
                Ctl))
-             (pure_branch ((Generated mon_53) (Variable (Generated mon_53))))))))))))
+             (pure_branch
+              ((Variable (Generated mon_53)) (Variable (Generated mon_53))))))))))))
      ((User main)
       ((((Variable (Generated mon_54)) Pure)) Ctl
        (Construct_pure
@@ -230,7 +233,8 @@ First show without any rewriting optimisations
              (((Variable (Generated mon_56)) Pure)
               ((Variable (Generated mon_54)) Pure))
              Ctl))
-           (pure_branch ((Generated mon_57) (Variable (Generated mon_57))))))))))
+           (pure_branch
+            ((Variable (Generated mon_57)) (Variable (Generated mon_57))))))))))
      ((Language main)
       ((((Variable (Generated mon_58)) Pure)) Ctl
        (Application (Variable (Language bind))
@@ -285,7 +289,7 @@ First show without any rewriting optimisations
          ((Lambda
            ((((Variable (Generated mon_67)) Pure)
              ((Variable (Generated mon_68)) Pure))
-            Ctl (Construct_pure (Literal Unit))))
+            Ctl (Construct_pure (Tuple_construction ()))))
           Pure))
         Ctl)))))
    (entry_expr
@@ -304,7 +308,7 @@ Then show with bind-inlining and other rewriting applied
        Ctl
        (Match_ctl (subject (Variable (Generated mon_0)))
         (pure_branch
-         ((Generated mon_3)
+         ((Variable (Generated mon_3))
           (Application (Variable (Generated mon_2))
            (((Variable (Generated mon_3)) Pure)
             ((Variable (Generated mon_1)) Pure))
@@ -345,7 +349,8 @@ Then show with bind-inlining and other rewriting applied
             Pure))
           Ctl))
         (pure_branch
-         ((Generated mon_14) (Construct_pure (Variable (Generated mon_14)))))
+         ((Variable (Generated mon_14))
+          (Construct_pure (Variable (Generated mon_14)))))
         (yield_branch
          ((Generated mon_15) (Generated mon_16) (Generated mon_17)
           (If_then_else
@@ -419,7 +424,8 @@ Then show with bind-inlining and other rewriting applied
            ((Variable (Generated mon_26)) Pure))
           Ctl))
         (pure_branch
-         ((Generated mon_29) (Construct_pure (Variable (Generated mon_29)))))
+         ((Variable (Generated mon_29))
+          (Construct_pure (Variable (Generated mon_29)))))
         (yield_branch
          ((Generated mon_30) (Generated mon_31) (Generated mon_32)
           (Construct_yield (marker (Variable (Generated mon_30)))
@@ -495,7 +501,7 @@ Then show with bind-inlining and other rewriting applied
           (Operator (Variable (Generated mon_46)) (Int Equals)
            (Variable (Generated mon_47)))))
         (If_then_else (Variable (Generated mon_48))
-         (Construct_pure (Literal Unit))
+         (Construct_pure (Tuple_construction ()))
          (Let (Variable (Generated mon_49)) Pure (Variable (User loop))
           (Let (Variable (Generated mon_52)) Pure
            (Let (Variable (Generated mon_50)) Pure (Variable (User n))
@@ -519,7 +525,7 @@ Then show with bind-inlining and other rewriting applied
        (Lambda
         ((((Variable (Generated mon_67)) Pure)
           ((Variable (Generated mon_68)) Pure))
-         Ctl (Construct_pure (Literal Unit))))))
+         Ctl (Construct_pure (Tuple_construction ()))))))
      ((Language main)
       ((((Variable (Generated mon_58)) Pure)) Ctl
        (Match_ctl
@@ -571,9 +577,9 @@ Then show with bind-inlining and other rewriting applied
              ((Variable (Generated mon_58)) Pure))
             Ctl))))
         (pure_branch
-         ((Generated mon_67)
+         ((Variable (Generated mon_67))
           (Let (Variable (Generated mon_68)) Pure (Variable (Generated mon_58))
-           (Construct_pure (Literal Unit)))))
+           (Construct_pure (Tuple_construction ())))))
         (yield_branch
          ((Generated opt_1) (Generated opt_2) (Generated opt_3)
           (Construct_yield (marker (Variable (Generated opt_1)))

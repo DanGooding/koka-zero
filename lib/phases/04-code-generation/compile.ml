@@ -168,6 +168,24 @@ let compile_construction
            "wrong number of args for constructor" (constructor : Constructor.t)])
 ;;
 
+let compile_tuple_construction ~(elements : Llvm.llvalue list) ~runtime
+  : Llvm.llvalue Codegen.t
+  =
+  let open Codegen.Let_syntax in
+  let tuple_type = { Structs.Tuple.num_elements = List.length elements } in
+  let%bind tuple =
+    Structs.Tuple.heap_allocate tuple_type ~name:"tuple" ~runtime
+  in
+  let%map () =
+    Structs.Tuple.populate
+      tuple_type
+      tuple
+      ~f:(fun (Structs.Tuple.Field.Element { index }) ->
+        List.nth_exn elements index)
+  in
+  tuple
+;;
+
 (** produces code to evaluate the given expression *)
 let rec compile_expr
           (e : EPS.Expr.t)
@@ -226,6 +244,14 @@ let rec compile_expr
         ~f:(compile_expr_pure_packed ~env ~runtime ~effect_reprs ~outer_symbol)
     in
     let%map constructed = compile_construction ~constructor ~args ~runtime in
+    Ctl_repr.Pure (Packed constructed)
+  | EPS.Expr.Tuple_construction elements ->
+    let%bind elements =
+      Codegen.list_map
+        elements
+        ~f:(compile_expr_pure_packed ~env ~runtime ~effect_reprs ~outer_symbol)
+    in
+    let%map constructed = compile_tuple_construction ~elements ~runtime in
     Ctl_repr.Pure (Packed constructed)
   | EPS.Expr.Literal lit ->
     let%map lit = compile_literal lit in
@@ -654,6 +680,7 @@ and compile_tail_position_expr
   | Operator _
   | Unary_operator _
   | Construction _
+  | Tuple_construction _
   | Construct_pure _
   | Construct_yield _
   | Fresh_marker
