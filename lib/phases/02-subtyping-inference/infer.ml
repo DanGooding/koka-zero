@@ -28,7 +28,11 @@ let union_effects t effects_ ~level ~location =
   in
   let%map () =
     Or_static_error.list_iter effects_ ~f:(fun effect_ ->
-      Constraints.constrain_effect_at_most t.constraints effect_ overall_effect)
+      Constraints.constrain_effect_at_most
+        t.constraints
+        effect_
+        overall_effect
+        ~location)
   in
   overall_effect
 ;;
@@ -68,39 +72,48 @@ let error_if_cannot_shadow result ~name =
   | `Ok result -> Ok result
 ;;
 
-let rec bind_parameter
-          t
-          env
-          ~(parameter : Parameter.t)
-          ~(type_ : Type.Mono.t)
-          ~level
+let bind_parameter
+      t
+      env
+      ~(parameter : Parameter.t)
+      ~(type_ : Type.Mono.t)
+      ~level
   : Context.t Or_static_error.t
   =
-  let open Result.Let_syntax in
-  match parameter with
-  | Wildcard -> Ok env
-  | Variable var ->
-    Context.extend env ~var ~type_:(Mono type_)
-    |> error_if_cannot_shadow ~name:var
-  | Tuple parameters ->
-    let parameters_and_types =
-      List.map parameters ~f:(fun parameter ->
-        ( parameter
-        , Metavariables.fresh_type
-            t.metavariables
-            ~level
-            ~location:(Parameter parameter) ))
-    in
-    let _, element_types = List.unzip parameters_and_types in
-    let tuple_type = Type.Mono.Tuple element_types in
-    let%bind () =
-      Constraints.constrain_type_at_most t.constraints type_ tuple_type
-    in
-    Or_static_error.list_fold
-      parameters_and_types
-      ~init:env
-      ~f:(fun env (parameter, type_) ->
-        bind_parameter t env ~parameter ~type_ ~level)
+  let rec bind_parameter_aux t env ~parameter ~type_ ~level ~location =
+    let open Result.Let_syntax in
+    match (parameter : Parameter.t) with
+    | Wildcard -> Ok env
+    | Variable var ->
+      Context.extend env ~var ~type_:(Mono type_)
+      |> error_if_cannot_shadow ~name:var
+    | Tuple parameters ->
+      let parameters_and_types =
+        List.map parameters ~f:(fun parameter ->
+          parameter, Metavariables.fresh_type t.metavariables ~level ~location)
+      in
+      let _, element_types = List.unzip parameters_and_types in
+      let tuple_type = Type.Mono.Tuple element_types in
+      let%bind () =
+        Constraints.constrain_type_at_most
+          t.constraints
+          type_
+          tuple_type
+          ~location
+      in
+      Or_static_error.list_fold
+        parameters_and_types
+        ~init:env
+        ~f:(fun env (parameter, type_) ->
+          bind_parameter_aux t env ~parameter ~type_ ~level ~location)
+  in
+  bind_parameter_aux
+    t
+    env
+    ~parameter
+    ~type_
+    ~level
+    ~location:(Parameter parameter)
 ;;
 
 let infer_and_generalise
@@ -314,6 +327,7 @@ let rec infer_expr
         t.constraints
         function_type
         (Arrow (arg_types, call_effect, result))
+        ~location:(Application (f, args))
     in
     let%map overall_effect =
       union_effects
@@ -324,10 +338,10 @@ let rec infer_expr
     in
     Expl.Expr.Application (f', args', call_effect), result, overall_effect
   | Construction (constructor, args) ->
-    let%bind args =
+    let%bind args' =
       Or_static_error.list_map args ~f:(infer_expr t ~env ~level ~effect_env)
     in
-    (match constructor, args with
+    (match constructor, args' with
      | List_nil, [] ->
        let element =
          Metavariables.fresh_type
@@ -350,10 +364,18 @@ let rec infer_expr
        in
        let list_type = Type.Mono.List element_type in
        let%bind () =
-         Constraints.constrain_type_at_most t.constraints head_type element_type
+         Constraints.constrain_type_at_most
+           t.constraints
+           head_type
+           element_type
+           ~location:(Expr (List.nth_exn args 0))
        in
        let%bind () =
-         Constraints.constrain_type_at_most t.constraints tail_type list_type
+         Constraints.constrain_type_at_most
+           t.constraints
+           tail_type
+           list_type
+           ~location:(Expr (List.nth_exn args 1))
        in
        let%map overall_effect =
          union_effects
@@ -406,13 +428,13 @@ let rec infer_expr
     in
     Expl.Expr.Seq (first, second), second_type, overall_effect
   | If_then_else (e_cond, e_true, e_false) ->
-    let%bind e_cond, type_cond, effect_cond =
+    let%bind e_cond', type_cond, effect_cond =
       infer_expr t e_cond ~env ~level ~effect_env
     in
-    let%bind e_true, type_true, effect_true =
+    let%bind e_true', type_true, effect_true =
       infer_expr t e_true ~env ~level ~effect_env
     in
-    let%bind e_false, type_false, effect_false =
+    let%bind e_false', type_false, effect_false =
       infer_expr t e_false ~env ~level ~effect_env
     in
     let%bind () =
@@ -420,15 +442,24 @@ let rec infer_expr
         t.constraints
         type_cond
         (Primitive Bool)
+        ~location:(Expr e_cond)
     in
     let result_type =
       Metavariables.fresh_type t.metavariables ~level ~location:(Expr expr)
     in
     let%bind () =
-      Constraints.constrain_type_at_most t.constraints type_true result_type
+      Constraints.constrain_type_at_most
+        t.constraints
+        type_true
+        result_type
+        ~location:(Expr e_true)
     in
     let%bind () =
-      Constraints.constrain_type_at_most t.constraints type_false result_type
+      Constraints.constrain_type_at_most
+        t.constraints
+        type_false
+        result_type
+        ~location:(Expr e_false)
     in
     let%map overall_effect =
       union_effects
@@ -437,7 +468,7 @@ let rec infer_expr
         ~level
         ~location:(Expr expr)
     in
-    ( Expl.Expr.If_then_else (e_cond, e_true, e_false)
+    ( Expl.Expr.If_then_else (e_cond', e_true', e_false')
     , result_type
     , overall_effect )
   | Match (subject, cases) ->
@@ -445,32 +476,44 @@ let rec infer_expr
   | Operator (left, op, right) ->
     let arg_type = operand_type op |> Type.Mono.Primitive in
     let result_type = operator_result_type op |> Type.Mono.Primitive in
-    let%bind left, left_type, left_effect =
+    let%bind left', left_type, left_effect =
       infer_expr t left ~env ~level ~effect_env
     in
-    let%bind right, right_type, right_effect =
+    let%bind right', right_type, right_effect =
       infer_expr t right ~env ~level ~effect_env
     in
     let%bind () =
-      Constraints.constrain_type_at_most t.constraints left_type arg_type
+      Constraints.constrain_type_at_most
+        t.constraints
+        left_type
+        arg_type
+        ~location:(Expr left)
     in
     let%bind () =
-      Constraints.constrain_type_at_most t.constraints right_type arg_type
+      Constraints.constrain_type_at_most
+        t.constraints
+        right_type
+        arg_type
+        ~location:(Expr right)
     in
     let%map overall_effect =
       union_effects t [ left_effect; right_effect ] ~level ~location:(Expr expr)
     in
-    Expl.Expr.Operator (left, op, right), result_type, overall_effect
+    Expl.Expr.Operator (left', op, right'), result_type, overall_effect
   | Unary_operator (uop, arg) ->
     let op_arg_type = unary_operand_type uop |> Type.Mono.Primitive in
     let result_type = unary_operator_result_type uop |> Type.Mono.Primitive in
-    let%bind arg, arg_type, effect_ =
+    let%bind arg', arg_type, effect_ =
       infer_expr t arg ~env ~level ~effect_env
     in
     let%map () =
-      Constraints.constrain_type_at_most t.constraints arg_type op_arg_type
+      Constraints.constrain_type_at_most
+        t.constraints
+        arg_type
+        op_arg_type
+        ~location:(Expr arg)
     in
-    Expl.Expr.Unary_operator (uop, arg), result_type, effect_
+    Expl.Expr.Unary_operator (uop, arg'), result_type, effect_
   | Impure_built_in impure_built_in ->
     let%map impure_built_in, type_, effect_ =
       infer_impure_built_in t impure_built_in ~env ~level ~effect_env
@@ -562,7 +605,11 @@ and infer_fix_lambda
   in
   (* [lambda] should be usable as [f_self] *)
   let%map () =
-    Constraints.constrain_type_at_most t.constraints lambda_type meta_self
+    Constraints.constrain_type_at_most
+      t.constraints
+      lambda_type
+      meta_self
+      ~location:(F_self var)
   in
   (var, lambda), lambda_type
 
@@ -591,13 +638,21 @@ and infer_match_case
           ~location:(Pattern pattern)
       in
       let%bind () =
-        Constraints.constrain_type_at_most t.constraints subject_type type_name
+        Constraints.constrain_type_at_most
+          t.constraints
+          subject_type
+          type_name
+          ~location:(Pattern pattern)
       in
       bind_parameter t env ~parameter ~type_:type_name ~level
     | Literal lit ->
       let lit_type = type_literal lit in
       let%map () =
-        Constraints.constrain_type_at_most t.constraints subject_type lit_type
+        Constraints.constrain_type_at_most
+          t.constraints
+          subject_type
+          lit_type
+          ~location:(Pattern pattern)
       in
       env
     | Construction (constructor, params) ->
@@ -615,6 +670,7 @@ and infer_match_case
              t.constraints
              subject_type
              list_type
+             ~location:(Pattern pattern)
          in
          env
        | List_cons, [ head; tail ] ->
@@ -630,6 +686,7 @@ and infer_match_case
              t.constraints
              subject_type
              list_type
+             ~location:(Pattern pattern)
          in
          let%bind env =
            bind_parameter t env ~parameter:head ~type_:element_type ~level
@@ -682,7 +739,11 @@ and infer_match
   in
   let%bind () =
     Or_static_error.list_iter case_types ~f:(fun case ->
-      Constraints.constrain_type_at_most t.constraints case match_expr_type)
+      Constraints.constrain_type_at_most
+        t.constraints
+        case
+        match_expr_type
+        ~location:(Expr match_expr))
   in
   let%bind overall_effect =
     union_effects
@@ -747,6 +808,7 @@ and infer_impure_built_in
         t.constraints
         type_value
         (Primitive Int)
+        ~location:(Expr (Impure_built_in impure_built_in))
     in
     Expl.Expr.Impure_print_int { value; newline }, Type.Mono.Tuple [], effect_
 
@@ -803,6 +865,7 @@ and infer_handler
       t.constraints
       (Handled (Effect.Label.Set.singleton label, eff_subject))
       eff_handler
+      ~location:(Handler_result handler)
   in
   let%bind return_clause =
     match return_clause with
@@ -812,6 +875,7 @@ and infer_handler
           t.constraints
           t_subject
           t_handler_result
+          ~location:(Handler_result handler)
       in
       None
     | Some (return_clause : Min.Expr.op_handler) ->
@@ -831,12 +895,14 @@ and infer_handler
           t.constraints
           t_return_clause
           t_handler_result
+          ~location:(Handler_result handler)
       in
       let%map () =
         Constraints.constrain_effect_at_most
           t.constraints
           eff_return_clause
           eff_handler
+          ~location:(Handler_result handler)
       in
       Some { Expl.Expr.op_argument = return_clause.op_argument; op_body }
   in
@@ -939,10 +1005,18 @@ and infer_operation_clause
     infer_expr t op_handler.op_body ~env ~level ~effect_env
   in
   let%bind () =
-    Constraints.constrain_type_at_most t.constraints t_body t_clause
+    Constraints.constrain_type_at_most
+      t.constraints
+      t_body
+      t_clause
+      ~location:(Expr op_handler.op_body)
   in
   let%map () =
-    Constraints.constrain_effect_at_most t.constraints eff_op_clause eff_handler
+    Constraints.constrain_effect_at_most
+      t.constraints
+      eff_op_clause
+      eff_handler
+      ~location:(Expr op_handler.op_body)
   in
   { Expl.Expr.op_body; op_argument = op_handler.op_argument }
 ;;
@@ -1056,7 +1130,7 @@ let infer_decls t (declarations : Min.Decl.t list) ~env ~level ~effect_env
   env', effect_env', declarations'
 ;;
 
-(** Constrain [Keywords.entry_point] to be a total function [() -> <> ()], skipping if
+(** Constrain [Keyword.entry_point] to be a total function [() -> <> ()], skipping if
     not present *)
 let check_entry_point t ~env ~level : unit Or_static_error.t =
   let open Result.Let_syntax in
@@ -1074,7 +1148,11 @@ let check_entry_point t ~env ~level : unit Or_static_error.t =
       | Mono mono -> mono
       | Poly poly -> instantiate t poly ~level
     in
-    Constraints.constrain_type_at_most t.constraints t_actual t_expected
+    Constraints.constrain_type_at_most
+      t.constraints
+      t_actual
+      t_expected
+      ~location:Entry_point
 ;;
 
 let infer_expr_toplevel (expr : Min.Expr.t) ~declarations

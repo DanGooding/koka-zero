@@ -12,12 +12,14 @@ val constrain_type_at_most
   :  t
   -> Type.Mono.t
   -> Type.Mono.t
+  -> location:Metavariables.Location.t
   -> unit Or_static_error.t
 
 val constrain_effect_at_most
   :  t
   -> Effect.t
   -> Effect.t
+  -> location:Metavariables.Location.t
   -> unit Or_static_error.t
 
 val get_type_bounds : t -> Type.Metavariable.t -> Type.Mono.t Bounds.t option

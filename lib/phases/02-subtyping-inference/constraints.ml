@@ -269,7 +269,11 @@ let extrude_effect t effect_ ~to_level ~polarity_positive =
 
 (** add constraints for [type_lo <= type_hi]
     fails if we find something unsatisfiable - i.e. a type error *)
-let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
+let rec constrain_type_at_most
+          t
+          (type_lo : Type.Mono.t)
+          (type_hi : Type.Mono.t)
+          ~(location : Metavariables.Location.t)
   : unit Or_static_error.t
   =
   let open Result.Let_syntax in
@@ -279,7 +283,8 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
       [%message
         "constrain_type_at_most"
           ~type_lo:(Metavariables.sexp_of_type t.metavariables type_lo : Sexp.t)
-          ~type_hi:(Metavariables.sexp_of_type t.metavariables type_hi : Sexp.t)];
+          ~type_hi:(Metavariables.sexp_of_type t.metavariables type_hi : Sexp.t)
+          (location : Metavariables.Location.t)];
   let constraint_ = Constraint.Type_at_most { type_lo; type_hi } in
   match Hash_set.strict_add t.already_seen_constraints constraint_ with
   | Error _already_present -> return ()
@@ -289,11 +294,13 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
        , Arrow (args_hi, effect_hi, result_hi) ) ->
        (match%bind
           Or_static_error.list_iter2 args_lo args_hi ~f:(fun arg_lo arg_hi ->
-            constrain_type_at_most t arg_hi arg_lo)
+            constrain_type_at_most t arg_hi arg_lo ~location)
         with
         | Ok () ->
-          let%bind () = constrain_effect_at_most t effect_lo effect_hi in
-          constrain_type_at_most t result_lo result_hi
+          let%bind () =
+            constrain_effect_at_most t effect_lo effect_hi ~location
+          in
+          constrain_type_at_most t result_lo result_hi ~location
         | Unequal_lengths ->
           Error
             (Static_error.type_error_s
@@ -301,7 +308,8 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
                  "function type has wrong number of arguments"
                    (args_lo : Type.Mono.t list)
                    (args_hi : Type.Mono.t list)]))
-     | List elem_lo, List elem_hi -> constrain_type_at_most t elem_lo elem_hi
+     | List elem_lo, List elem_hi ->
+       constrain_type_at_most t elem_lo elem_hi ~location
      | Tuple elements_lo, Tuple elements_hi ->
        (match List.zip elements_lo elements_hi with
         | Unequal_lengths ->
@@ -315,7 +323,7 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           Or_static_error.list_iter
             paired_elements
             ~f:(fun (elem_lo, elem_hi) ->
-              constrain_type_at_most t elem_lo elem_hi))
+              constrain_type_at_most t elem_lo elem_hi ~location))
      | Primitive p, Primitive p' when [%equal: Type.Primitive.t] p p' ->
        return ()
      | Primitive p, Primitive p' ->
@@ -344,14 +352,14 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           m_bounds.upper_bounds <- type_hi :: m_bounds.upper_bounds;
           (* add transitive closure *)
           Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
-            constrain_type_at_most t below_m type_hi)
+            constrain_type_at_most t below_m type_hi ~location)
         | false ->
           (* need to copy [type_hi] down to [m_level] *)
           let approx_type_hi =
             extrude t type_hi ~to_level:m_level ~polarity_positive:false
           in
           (* m (level_m) <= approx_type_hi (level_m) <= type_hi *)
-          constrain_type_at_most t (Metavariable m) approx_type_hi)
+          constrain_type_at_most t (Metavariable m) approx_type_hi ~location)
      | type_lo, Metavariable m ->
        let m_level = Metavariables.type_level_exn t.metavariables m in
        let lo_level =
@@ -371,12 +379,12 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
           m_bounds.lower_bounds <- type_lo :: m_bounds.lower_bounds;
           (* add transitive closure *)
           Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
-            constrain_type_at_most t type_lo above_m)
+            constrain_type_at_most t type_lo above_m ~location)
         | false ->
           let approx_type_lo =
             extrude t type_lo ~to_level:m_level ~polarity_positive:true
           in
-          constrain_type_at_most t approx_type_lo (Metavariable m))
+          constrain_type_at_most t approx_type_lo (Metavariable m) ~location)
      | Arrow _, (Primitive _ | List _ | Tuple _)
      | Primitive _, (Arrow _ | List _ | Tuple _)
      | List _, (Arrow _ | Primitive _ | Tuple _)
@@ -388,7 +396,11 @@ let rec constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t)
                 (type_lo : Type.Mono.t)
                 (type_hi : Type.Mono.t)]))
 
-and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
+and constrain_effect_at_most
+      t
+      (effect_lo : Effect.t)
+      (effect_hi : Effect.t)
+      ~(location : Metavariables.Location.t)
   : unit Or_static_error.t
   =
   let open Result.Let_syntax in
@@ -400,7 +412,8 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
           ~effect_lo:
             (Metavariables.sexp_of_effect t.metavariables effect_lo : Sexp.t)
           ~effect_hi:
-            (Metavariables.sexp_of_effect t.metavariables effect_hi : Sexp.t)];
+            (Metavariables.sexp_of_effect t.metavariables effect_hi : Sexp.t)
+          (location : Metavariables.Location.t)];
   let constraint_ = Constraint.Effect_at_most { effect_lo; effect_hi } in
   match Hash_set.strict_add t.already_seen_constraints constraint_ with
   | Error _already_present -> return ()
@@ -421,6 +434,7 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
          t
          (Metavariable effect_lo)
          (Labels (Set.union labels_lo labels_hi))
+         ~location
      | Labels labels_lo, Handled (labels_hi, effect_hi) ->
        (* labels_lo <= effect_hi - labels_hi *)
        (match Set.are_disjoint labels_lo labels_hi with
@@ -436,7 +450,11 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
         | true ->
           (* it's optional whether effect_hi contains labels' or not.
              so the constraint reduces to labels_lo <= effect_hi *)
-          constrain_effect_at_most t (Labels labels_lo) (Metavariable effect_hi))
+          constrain_effect_at_most
+            t
+            (Labels labels_lo)
+            (Metavariable effect_hi)
+            ~location)
      | Handled (labels_lo, effect_lo), Handled (labels_hi, effect_hi) ->
        (* effect_lo - labels_lo <= effect_hi - labels_hi
         we reduce into multiple simpler but equiavalent constraints to make progress *)
@@ -447,6 +465,7 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
            t
            (Handled (labels_lo, effect_lo))
            (Metavariable effect_hi)
+           ~location
          (* add back the info that [effect_lo] does not contain any of [labels_hi],
             except possibly those in [labels_lo]:
             effect_lo <= effect_lo - (labels_hi - labels_lo) *)
@@ -455,6 +474,7 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
          t
          (Metavariable effect_lo)
          (Handled (Set.diff labels_hi labels_lo, effect_lo))
+         ~location
      | Metavariable m, above_m ->
        let m_level = Metavariables.effect_level_exn t.metavariables m in
        let above_m_level =
@@ -469,12 +489,12 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
           in
           m_bounds.upper_bounds <- above_m :: m_bounds.upper_bounds;
           Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
-            constrain_effect_at_most t below_m above_m)
+            constrain_effect_at_most t below_m above_m ~location)
         | false ->
           let above_approx =
             extrude_effect t above_m ~to_level:m_level ~polarity_positive:false
           in
-          constrain_effect_at_most t (Metavariable m) above_approx)
+          constrain_effect_at_most t (Metavariable m) above_approx ~location)
      | below_m, Metavariable m ->
        let m_level = Metavariables.effect_level_exn t.metavariables m in
        let below_m_level =
@@ -489,36 +509,52 @@ and constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t)
           in
           m_bounds.lower_bounds <- below_m :: m_bounds.lower_bounds;
           Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
-            constrain_effect_at_most t below_m above_m)
+            constrain_effect_at_most t below_m above_m ~location)
         | false ->
           let approx_below_m =
             extrude_effect t below_m ~to_level:m_level ~polarity_positive:true
           in
-          constrain_effect_at_most t approx_below_m (Metavariable m)))
+          constrain_effect_at_most t approx_below_m (Metavariable m) ~location))
 ;;
 
-let constrain_type_at_most t (type_lo : Type.Mono.t) (type_hi : Type.Mono.t) =
-  constrain_type_at_most t type_lo type_hi
+let constrain_type_at_most
+      t
+      (type_lo : Type.Mono.t)
+      (type_hi : Type.Mono.t)
+      ~location
+  =
+  constrain_type_at_most t type_lo type_hi ~location
   |> Result.map_error
        ~f:
          (Static_error.tag_s
             ~tag:
-              [%message
-                "error when expanding constraint"
-                  (type_lo : Type.Mono.t)
-                  (type_hi : Type.Mono.t)])
+              (let constraint_ =
+                 [%sexp { type_lo : Type.Mono.t; type_hi : Type.Mono.t }]
+               in
+               [%message
+                 "error when expanding constraint"
+                   ~_:(constraint_ : Sexp.t)
+                   (location : Metavariables.Location.t)]))
 ;;
 
-let constrain_effect_at_most t (effect_lo : Effect.t) (effect_hi : Effect.t) =
-  constrain_effect_at_most t effect_lo effect_hi
+let constrain_effect_at_most
+      t
+      (effect_lo : Effect.t)
+      (effect_hi : Effect.t)
+      ~location
+  =
+  constrain_effect_at_most t effect_lo effect_hi ~location
   |> Result.map_error
        ~f:
          (Static_error.tag_s
             ~tag:
-              [%message
-                "error when expanding constraint"
-                  (effect_lo : Effect.t)
-                  (effect_hi : Effect.t)])
+              (let constraint_ =
+                 [%sexp { effect_lo : Effect.t; effect_hi : Effect.t }]
+               in
+               [%message
+                 "error when expanding constraint"
+                   ~_:(constraint_ : Sexp.t)
+                   (location : Metavariables.Location.t)]))
 ;;
 
 let to_graph t : Dot_graph.t =
