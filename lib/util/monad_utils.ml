@@ -37,6 +37,16 @@ module Make (M : Monad.S) = struct
 
   let list_map xs ~f = List.map xs ~f |> M.all
 
+  let rec list_find_map xs ~f =
+    let open M.Let_syntax in
+    match xs with
+    | [] -> return None
+    | x :: xs ->
+      (match%bind f x with
+       | None -> list_find_map xs ~f
+       | Some y -> return (Some y))
+  ;;
+
   let map_mapi m ~f =
     let open M.Let_syntax in
     Map.fold

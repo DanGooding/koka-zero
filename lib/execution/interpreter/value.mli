@@ -8,6 +8,7 @@ end
 type t =
   | Primitive of primitive
   | List of t list
+  | Tuple of t list
   | Closure of closure
   | Ctl of ctl
   | Effect_label of Effect_label.t
@@ -32,7 +33,6 @@ and ctl =
 and primitive =
   | Int of int
   | Bool of bool
-  | Unit
 [@@deriving sexp_of]
 
 and function_ =
