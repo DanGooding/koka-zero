@@ -121,8 +121,8 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
     let inner_a_free = Set.diff inner_a_free toplevel in
     let inner_a_free_excluding_a =
       let exclude =
-        List.filter_map [ param_a; param_vector_a ] ~f:Parameter.variable_opt
-        |> Variable.Set.of_list
+        List.map [ param_a; param_vector_a ] ~f:Parameter.bound_variables
+        |> Variable.Set.union_list
       in
       Set.to_list (Set.diff inner_a_free exclude)
     in
@@ -162,17 +162,12 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
          transformed_inner_a_fast_path
       *)
       let subject = expr_a_result.transformed_fast_path in
-      let%bind pure_branch =
-        let%map var_a =
-          match (param_a : Parameter.t) with
-          | Variable var_a -> return var_a
-          | Wildcard -> Generation.fresh_name
-        in
+      let pure_branch =
         let body =
           Expr.Let
             (param_vector_a, Pure, vector_a, inner_result.transformed_fast_path)
         in
-        var_a, body
+        param_a, body
       in
       let%map yield_branch =
         let%bind marker = Generation.fresh_name in
@@ -240,6 +235,10 @@ let rec rewrite_aux (expr : Expr.t) ~(toplevel : Variable.Set.t)
     let%map args = Generation.list_map args ~f:(rewrite_aux ~toplevel) in
     Rewrite_result.all args
     |> Rewrite_result.map ~f:(fun args -> Expr.Construction (constructor, args))
+  | Tuple_construction args ->
+    let%map args = Generation.list_map args ~f:(rewrite_aux ~toplevel) in
+    Rewrite_result.all args
+    |> Rewrite_result.map ~f:(fun args -> Expr.Tuple_construction args)
   | Let (param, type_, e_subject, e_body) ->
     let%bind subject_result = rewrite_aux e_subject ~toplevel in
     let%map body_result = rewrite_aux e_body ~toplevel in

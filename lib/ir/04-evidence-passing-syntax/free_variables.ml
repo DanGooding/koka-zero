@@ -13,6 +13,7 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
   | Expr.Application (e_f, e_args, _ty) ->
     free_in_exprs (e_f :: List.map e_args ~f:(fun (param, _type) -> param))
   | Expr.Construction (_, args) -> free_in_exprs args
+  | Expr.Tuple_construction args -> free_in_exprs args
   | Expr.Literal _ -> Variable.Set.empty
   | Expr.If_then_else (e_cond, e_yes, e_no) ->
     free_in_exprs [ e_cond; e_yes; e_no ]
@@ -33,7 +34,7 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
     let subject_free = free_in_expr subject in
     let pure_free =
       let x, pure_body = pure_branch in
-      free_in_binding x pure_body
+      free_in_bindings_set (Parameter.bound_variables x) pure_body
     in
     let yield_free =
       let marker, op_clause, resumption, yield_body = yield_branch in
@@ -44,7 +45,7 @@ let rec free_in_expr : Expr.t -> Variable.Set.t = function
     let subject_free = free_in_expr subject in
     let pure_free =
       let x, pure_body = pure_branch in
-      free_in_binding x pure_body
+      free_in_bindings_set (Parameter.bound_variables x) pure_body
     in
     Variable.Set.union_list [ subject_free; pure_free ]
   | Expr.Fresh_marker | Expr.Markers_equal (_, _) -> Variable.Set.empty

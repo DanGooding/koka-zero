@@ -141,7 +141,7 @@ let make_match_ctl subject ~pure ~yield =
   let open Let_syntax in
   let%bind x = fresh_name in
   let%bind pure_branch_body = pure (E.Variable x) in
-  let pure_branch = x, pure_branch_body in
+  let pure_branch = Parameter.Variable x, pure_branch_body in
   let%bind marker = fresh_name in
   let%bind op_clause = fresh_name in
   let%bind resumption = fresh_name in
