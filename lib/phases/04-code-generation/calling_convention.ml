@@ -237,6 +237,14 @@ let compile_tail_call
     ~return_type
 ;;
 
+let rec parameter_name (param : Parameter.t) : string =
+  match (param : Parameter.t) with
+  | Variable name -> Names.register_name_of_variable name
+  | Wildcard -> ""
+  | Tuple elements ->
+    List.map elements ~f:parameter_name |> String.concat ~sep:"_"
+;;
+
 let make_function_and_context
       ~(params : (Parameter.t * Type.t) list)
       ~(symbol_name : Symbol_name.t)
@@ -257,11 +265,7 @@ let make_function_and_context
              ~default:"closure")
     ; args =
         List.map params ~f:(fun (name, type_) ->
-          let root_name =
-            match (name : Parameter.t) with
-            | Variable name -> Names.register_name_of_variable name
-            | Wildcard -> ""
-          in
+          let root_name = parameter_name name in
           match (type_ : Type.t) with
           | Pure -> `Pure root_name
           | Ctl -> `Ctl root_name)
@@ -303,32 +307,18 @@ let make_function_and_context
       Some { Context.Closure.closure; shape = captured_shape }
   in
   let locals =
-    let f_self =
-      Option.map self ~f:(fun name ->
-        let v_self =
-          match captured_shape with
-          | None ->
-            (* use the statically known code pointer *)
-            Value_repr.Lazily_packed.Function (Code_pointer function_)
-          | Some _ ->
-            (* the closure passed in as f_self *)
-            function_type_with_llvalues.function_repr
-        in
-        name, Ctl_repr.Pure v_self)
-    in
-    let args =
-      List.map function_type_with_llvalues.args ~f:(function
-        | `Pure value -> Ctl_repr.Pure value
-        | `Ctl maybe_yield -> Ctl_repr.Ctl maybe_yield)
-    in
-    let args =
-      List.zip_exn params args
-      |> List.filter_map ~f:(fun ((param, _type), arg) ->
-        match param with
-        | Variable name -> Some (name, arg)
-        | Wildcard -> None)
-    in
-    Option.to_list f_self @ args
+    Option.map self ~f:(fun name ->
+      let v_self =
+        match captured_shape with
+        | None ->
+          (* use the statically known code pointer *)
+          Value_repr.Lazily_packed.Function (Code_pointer function_)
+        | Some _ ->
+          (* the closure passed in as f_self *)
+          function_type_with_llvalues.function_repr
+      in
+      name, Ctl_repr.Pure v_self)
+    |> Option.to_list
   in
   let return_value_pointer =
     match function_type_with_llvalues.return_ with
@@ -336,5 +326,17 @@ let make_function_and_context
     | `Ctl is_yield_i1_pointer -> Ctl { is_yield_i1_pointer }
   in
   let context = { Context.toplevel; closure; locals; return_value_pointer } in
-  function_, context
+  let destructure_parameters () =
+    let args =
+      List.map function_type_with_llvalues.args ~f:(function
+        | `Pure value -> Ctl_repr.Pure value
+        | `Ctl maybe_yield -> Ctl_repr.Ctl maybe_yield)
+    in
+    List.zip_exn params args
+    |> Codegen.list_fold
+         ~init:context
+         ~f:(fun context ((parameter, _type), value) ->
+           Context.add_local_parameter context ~parameter ~value)
+  in
+  function_, destructure_parameters
 ;;

@@ -31,7 +31,6 @@ let compile_literal (lit : Literal.t) =
   | Literal.Bool b ->
     let%bind v = Immediate_repr.Bool.const_bool b in
     Immediate_repr.Bool.to_opaque v
-  | Literal.Unit -> Immediate_repr.Unit.const_opaque ()
 ;;
 
 (** takes values which are [Types.opaque_pointer]s to the evaluated operands,
@@ -740,8 +739,8 @@ and compile_let
   let%bind subject =
     compile_expr subject ~env ~runtime ~effect_reprs ~outer_symbol
   in
-  let env' =
-    Context.add_local_parameter_exn env ~parameter:param ~value:subject
+  let%bind env' =
+    Context.add_local_parameter env ~parameter:param ~value:subject
   in
   compile_maybe_tail_position_expr
     body
@@ -783,8 +782,7 @@ and compile_match
          i
        | Bool ->
          let%map (Unpacked b) = Immediate_repr.Bool.of_opaque subject in
-         b
-       | Unit -> Immediate_repr.Unit.const_opaque ())
+         b)
   in
   let cases =
     List.map cases ~f:(fun (pattern, body) ->
@@ -793,11 +791,10 @@ and compile_match
         (* this case accepts any scrutinee *)
         let expect = `Any in
         let add_bindings env =
-          Context.add_local_parameter_exn
+          Context.add_local_parameter
             env
             ~parameter
             ~value:(Pure (Packed subject))
-          |> return
         in
         let label = "any" in
         expect, label, add_bindings, body
@@ -810,14 +807,12 @@ and compile_match
           | Bool b ->
             let%map (Unpacked v) = Immediate_repr.Bool.const_bool b in
             v
-          | Unit -> Immediate_repr.Unit.const_opaque ()
         in
         let add_bindings env = return env in
         let label =
           match literal with
           | Int i -> Int.to_string i
           | Bool b -> Bool.to_string b
-          | Unit -> "unit"
         in
         `Exactly expect, label, add_bindings, body
       | Construction (constructor, args) ->
@@ -833,14 +828,17 @@ and compile_match
           | List_nil, [] -> return env
           | List_cons, [ head; tail ] ->
             let%bind head_value = Structs.List.project () subject Head in
-            let%map tail_value = Structs.List.project () subject Tail in
-            Context.add_local_parameter_exn
+            let%bind tail_value = Structs.List.project () subject Tail in
+            let%bind env =
+              Context.add_local_parameter
+                env
+                ~parameter:head
+                ~value:(Pure (Packed head_value))
+            in
+            Context.add_local_parameter
               env
-              ~parameter:head
-              ~value:(Pure (Packed head_value))
-            |> Context.add_local_parameter_exn
-                 ~parameter:tail
-                 ~value:(Pure (Packed tail_value))
+              ~parameter:tail
+              ~value:(Pure (Packed tail_value))
           | (List_nil | List_cons), _ ->
             Codegen.impossible_error "wrong number of arguments for constructor"
         in
@@ -911,7 +909,7 @@ and compile_match
 and compile_match_ctl
   : type result.
     Ctl_repr.Maybe_yield_repr.t
-    -> pure_branch:Variable.t * EPS.Expr.t
+    -> pure_branch:Parameter.t * EPS.Expr.t
     -> yield_branch:Variable.t * Variable.t * Variable.t * EPS.Expr.t
     -> is_tail_position:result Is_tail_position.t
     -> env:Context.t
@@ -930,10 +928,13 @@ and compile_match_ctl
     ~outer_symbol ->
   let open Codegen.Let_syntax in
   let compile_pure () =
-    let x_value, body = pure_branch in
+    let param_value, body = pure_branch in
     let%bind content = Ctl_repr.Maybe_yield_repr.get_content subject in
-    let env' =
-      Context.add_local_exn env ~name:x_value ~value:(Pure (Packed content))
+    let%bind env' =
+      Context.add_local_parameter
+        env
+        ~parameter:param_value
+        ~value:(Pure (Packed content))
     in
     compile_maybe_tail_position_expr
       body
@@ -952,13 +953,9 @@ and compile_match_ctl
     let%bind resumption = Structs.Ctl_yield.project () content Resumption in
     let env' =
       env
-      |> Context.add_local_exn ~name:x_marker ~value:(Pure (Packed marker))
-      |> Context.add_local_exn
-           ~name:x_op_clause
-           ~value:(Pure (Packed op_clause))
-      |> Context.add_local_exn
-           ~name:x_resumption
-           ~value:(Pure (Packed resumption))
+      |> Context.add_local ~name:x_marker ~value:(Pure (Packed marker))
+      |> Context.add_local ~name:x_op_clause ~value:(Pure (Packed op_clause))
+      |> Context.add_local ~name:x_resumption ~value:(Pure (Packed resumption))
     in
     compile_maybe_tail_position_expr
       body
@@ -979,7 +976,7 @@ and compile_match_ctl
 and compile_match_ctl_pure
   : type result.
     Ctl_repr.Maybe_yield_repr.t
-    -> pure_branch:Variable.t * EPS.Expr.t
+    -> pure_branch:Parameter.t * EPS.Expr.t
     -> is_tail_position:result Is_tail_position.t
     -> env:Context.t
     -> runtime:Runtime.t
@@ -995,10 +992,13 @@ and compile_match_ctl_pure
     ~effect_reprs
     ~outer_symbol ->
   let open Codegen.Let_syntax in
-  let x_value, body = pure_branch in
+  let param_value, body = pure_branch in
   let%bind content = Ctl_repr.Maybe_yield_repr.get_content subject in
-  let env' =
-    Context.add_local_exn env ~name:x_value ~value:(Pure (Packed content))
+  let%bind env' =
+    Context.add_local_parameter
+      env
+      ~parameter:param_value
+      ~value:(Pure (Packed content))
   in
   compile_maybe_tail_position_expr
     body
@@ -1043,9 +1043,7 @@ and compile_match_op
         Clause
         ~name:(Names.register_name_of_variable x)
     in
-    let env' =
-      Context.add_local_exn env ~name:x ~value:(Pure (Packed clause))
-    in
+    let env' = Context.add_local env ~name:x ~value:(Pure (Packed clause)) in
     compile_maybe_tail_position_expr
       body
       ~is_tail_position
@@ -1122,7 +1120,7 @@ and compile_function
   =
   let open Codegen.Let_syntax in
   (* new llvm function *)
-  let%bind function_, context =
+  let%bind function_, bind_context =
     Calling_convention.make_function_and_context
       ~params
       ~symbol_name
@@ -1134,6 +1132,7 @@ and compile_function
   let function_start_block = Llvm.entry_block function_ in
   let%map () =
     Codegen.within_block function_start_block ~f:(fun () ->
+      let%bind context = bind_context () in
       compile_tail_position_expr
         e_body
         ~env:context

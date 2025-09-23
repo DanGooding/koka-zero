@@ -204,3 +204,23 @@ module List = struct
   include T
   include Struct.Make (T)
 end
+
+module Tuple = struct
+  module T = struct
+    type t = { num_elements : int }
+
+    module Field = struct
+      type t = Element of { index : int } [@@deriving equal]
+
+      let all { num_elements } =
+        Core.List.init num_elements ~f:(fun index -> Element { index })
+      ;;
+
+      let name (Element { index }) = [%string "element_%{index#Int}"]
+      let type_ (Element _) = Types.pointer
+    end
+  end
+
+  include T
+  include Struct.Make (T)
+end
