@@ -19,6 +19,7 @@ module Expr : sig
     | Fix_lambda of fix_lambda
     | Application of t * (t * Type.t) list * Type.t
     | Construction of Constructor.t * t list
+    | Tuple_construction of t list
     | Literal of Literal.t
     | If_then_else of t * t * t
     | Match of t * Pattern.Scrutinee.t * (Pattern.t * t) list
@@ -32,13 +33,13 @@ module Expr : sig
         }
     | Match_ctl of
         { subject : t
-        ; pure_branch : Variable.t * t (* gets one argument *)
+        ; pure_branch : Parameter.t * t (* gets one argument *)
         ; yield_branch : Variable.t * Variable.t * Variable.t * t
           (* gets one argument per field in Yield *)
         }
     | Match_ctl_pure of
         { subject : t
-        ; pure_branch : Variable.t * t
+        ; pure_branch : Parameter.t * t
         }
     (** [Match_ctl] for when we know statically the [Yield] case won't occur *)
     | Fresh_marker (** evaluates to a new unique marker *)

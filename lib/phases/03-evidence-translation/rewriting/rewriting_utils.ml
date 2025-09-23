@@ -45,6 +45,9 @@ and apply_everywhere_below
       Modified.list_map args ~f:(fun arg -> apply_everywhere arg ~rewrite)
     in
     Expr.Construction (constructor, args)
+  | Expr.Tuple_construction args ->
+    let%map args = Modified.list_map args ~f:(apply_everywhere ~rewrite) in
+    Expr.Tuple_construction args
   | Expr.Literal _ -> Modified.original e
   | Expr.If_then_else (cond, yes, no) ->
     let%bind cond = apply_everywhere ~rewrite cond in

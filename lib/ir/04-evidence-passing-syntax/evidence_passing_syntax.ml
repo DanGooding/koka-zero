@@ -16,6 +16,7 @@ module Expr = struct
     | Fix_lambda of fix_lambda
     | Application of t * (t * Type.t) list * Type.t
     | Construction of Constructor.t * t list
+    | Tuple_construction of t list
     | Literal of Literal.t
     | If_then_else of t * t * t
     | Match of t * Pattern.Scrutinee.t * (Pattern.t * t) list
@@ -29,12 +30,12 @@ module Expr = struct
         }
     | Match_ctl of
         { subject : t
-        ; pure_branch : Variable.t * t
+        ; pure_branch : Parameter.t * t
         ; yield_branch : Variable.t * Variable.t * Variable.t * t
         }
     | Match_ctl_pure of
         { subject : t
-        ; pure_branch : Variable.t * t
+        ; pure_branch : Parameter.t * t
         }
     | Fresh_marker
     | Markers_equal of t * t

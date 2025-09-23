@@ -72,7 +72,7 @@ let rec translate_expr
                   (f, List.map args ~f:(fun arg -> arg, EPS.Type.Pure), Ctl)
               in
               let%map x = Generation.fresh_name in
-              let pure_branch = x, EPS.Expr.Variable x in
+              let pure_branch = Parameter.Variable x, EPS.Expr.Variable x in
               EPS.Expr.Match_ctl_pure { subject; pure_branch }
               |> Maybe_effectful.Pure))
     | Expl.Expr.Construction (constructor, e_args) ->
@@ -81,6 +81,10 @@ let rec translate_expr
         EPS.Expr.Construction (constructor, xs)
         |> Maybe_effectful.Pure
         |> return)
+    | Expl.Expr.Tuple_construction e_args ->
+      List.map e_args ~f:translate_expr
+      |> Maybe_effectful.make_bind_or_let_many ~evv ~f:(fun xs ~evv:_ ->
+        EPS.Expr.Tuple_construction xs |> Maybe_effectful.Pure |> return)
     | Expl.Expr.Unary_operator (op, e) ->
       let%bind m_e = translate_expr e ~evv in
       Maybe_effectful.make_map_or_let m_e ~evv ~f:(fun x ->
@@ -115,7 +119,7 @@ let rec translate_expr
       Maybe_effectful.make_bind_or_let m_subject ~evv ~f:(fun y ~evv ->
         let%map m_body = translate_expr e_body ~evv in
         Maybe_effectful.map m_body ~f:(fun m_body ->
-          EPS.Expr.Let (Variable x, Pure, y, m_body)))
+          EPS.Expr.Let (x, Pure, y, m_body)))
     | Expl.Expr.Seq (e1, e2) ->
       let%bind e1' = translate_expr e1 ~evv in
       Maybe_effectful.make_bind_or_let e1' ~evv ~f:(fun _x1 ~evv ->

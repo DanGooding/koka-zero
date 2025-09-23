@@ -32,7 +32,7 @@ let rec add_pure_at_tail (expr : Expr.t) : Expr.t =
   | Fresh_marker | Nil_evidence_vector | Variable _ | Lambda _ | Fix_lambda _
   | Application (_, _, _)
   | Construction (_, _)
-  | Literal _
+  | Tuple_construction _ | Literal _
   | Operator (_, _, _)
   | Unary_operator (_, _)
   | Construct_pure _ | Construct_yield _
