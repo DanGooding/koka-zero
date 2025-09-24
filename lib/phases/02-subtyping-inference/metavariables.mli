@@ -16,6 +16,7 @@ module Location : sig
     (** when a handler wraps a function and is run, this is the result type/effect
     *)
     | List_element of t (** for a type `list<a>` this is the element type `a` *)
+    | Option_element of t
     | Instantiation of t
     | Entry_point
   [@@deriving sexp_of]

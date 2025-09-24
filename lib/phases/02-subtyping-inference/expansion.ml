@@ -38,6 +38,13 @@ let rec expand_type_aux
         ~in_progress_type_metavariables
     in
     List element
+  | Option element ->
+    Option
+      (expand_type_aux
+         t
+         element
+         ~polarity_positive:true
+         ~in_progress_type_metavariables)
   | Tuple elements ->
     Tuple
       (List.map

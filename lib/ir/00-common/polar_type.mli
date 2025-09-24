@@ -22,6 +22,7 @@ type t =
   | Arrow of t list * Effect.t * t
   | List of t
   | Tuple of t list
+  | Option of t
   | Union of t list
   | Intersection of t list
   | Recursive of Type.Variable.t * t

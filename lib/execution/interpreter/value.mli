@@ -8,6 +8,7 @@ end
 type t =
   | Primitive of primitive
   | List of t list
+  | Option of t option
   | Tuple of t list
   | Closure of closure
   | Ctl of ctl

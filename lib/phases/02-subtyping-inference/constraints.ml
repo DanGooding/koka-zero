@@ -50,6 +50,9 @@ let rec extrude_aux
       extrude_aux t element ~to_level ~polarity_positive ~cache ~effect_cache
     in
     List element
+  | Option element ->
+    Option
+      (extrude_aux t element ~to_level ~polarity_positive ~cache ~effect_cache)
   | Tuple elements ->
     Tuple
       (List.map
@@ -310,6 +313,8 @@ let rec constrain_type_at_most
                    (args_hi : Type.Mono.t list)]))
      | List elem_lo, List elem_hi ->
        constrain_type_at_most t elem_lo elem_hi ~location
+     | Option elem_lo, Option elem_hi ->
+       constrain_type_at_most t elem_lo elem_hi ~location
      | Tuple elements_lo, Tuple elements_hi ->
        (match List.zip elements_lo elements_hi with
         | Unequal_lengths ->
@@ -385,10 +390,11 @@ let rec constrain_type_at_most
             extrude t type_lo ~to_level:m_level ~polarity_positive:true
           in
           constrain_type_at_most t approx_type_lo (Metavariable m) ~location)
-     | Arrow _, (Primitive _ | List _ | Tuple _)
-     | Primitive _, (Arrow _ | List _ | Tuple _)
-     | List _, (Arrow _ | Primitive _ | Tuple _)
-     | Tuple _, (Arrow _ | Primitive _ | List _) ->
+     | Arrow _, (Primitive _ | List _ | Tuple _ | Option _)
+     | Primitive _, (Arrow _ | List _ | Tuple _ | Option _)
+     | List _, (Arrow _ | Primitive _ | Tuple _ | Option _)
+     | Tuple _, (Arrow _ | Primitive _ | List _ | Option _)
+     | Option _, (Arrow _ | Primitive _ | List _ | Tuple _) ->
        Error
          (Static_error.type_error_s
             [%message

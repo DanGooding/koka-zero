@@ -11,6 +11,7 @@ module Location = struct
     | Handler_subject of Minimal_syntax.Expr.handler
     | Handler_result of Minimal_syntax.Expr.handler
     | List_element of t
+    | Option_element of t
     | Instantiation of t
     | Entry_point
   [@@deriving sexp_of]
@@ -89,7 +90,7 @@ let sexp_of_type t (type_ : Type.Mono.t) =
     let level = type_level_exn t meta in
     let location = type_location_exn t meta in
     [%sexp { meta : Type.Metavariable.t; level : int; location : Location.t }]
-  | Primitive _ | Arrow _ | List _ | Tuple _ ->
+  | Primitive _ | Arrow _ | List _ | Tuple _ | Option _ ->
     let max_level =
       Type.Mono.max_level
         type_

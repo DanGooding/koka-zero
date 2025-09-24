@@ -56,7 +56,9 @@ let eval_construct (constructor : Constructor.t) (args : Value.t list)
   | List_cons, [ head; tail ] ->
     let%map tail = Typecast.list_of_value tail in
     Value.List (head :: tail)
-  | (List_nil | List_cons), _ ->
+  | Option_none, [] -> Value.Option None |> return
+  | Option_some, [ element ] -> Value.Option (Some element) |> return
+  | (List_nil | List_cons | Option_none | Option_some), _ ->
     Interpreter.impossible_error
       (sprintf "wrong number of arguments for constructor")
 ;;
@@ -109,7 +111,18 @@ let matches_pattern (subject : Value.t) (pattern : Pattern.t) ~env
        let%map env = bind_parameter tail (List tail') ~env in
        Some env
      | _ -> return None)
-  | Construction ((List_nil | List_cons), _) ->
+  | Construction (Option_none, []) ->
+    return
+      (match[@warning "-4"] subject with
+       | Option None -> Some env
+       | _ -> None)
+  | Construction (Option_some, [ element ]) ->
+    (match[@warning "-4"] subject with
+     | Option (Some element') ->
+       let%map env = bind_parameter element element' ~env in
+       Some env
+     | _ -> return None)
+  | Construction ((List_nil | List_cons | Option_none | Option_some), _) ->
     raise_s
       [%message "invalid number of args for constructor" (pattern : Pattern.t)]
 ;;

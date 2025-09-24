@@ -155,6 +155,7 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
     | List element ->
       let element = instantiate_aux element in
       List element
+    | Option element -> Option (instantiate_aux element)
     | Tuple elements ->
       let elements = List.map elements ~f:instantiate_aux in
       Tuple elements
@@ -338,62 +339,7 @@ let rec infer_expr
     in
     Expl.Expr.Application (f', args', call_effect), result, overall_effect
   | Construction (constructor, args) ->
-    let%bind args' =
-      Or_static_error.list_map args ~f:(infer_expr t ~env ~level ~effect_env)
-    in
-    (match constructor, args' with
-     | List_nil, [] ->
-       let element =
-         Metavariables.fresh_type
-           t.metavariables
-           ~level
-           ~location:(List_element (Expr expr))
-       in
-       let effect_ =
-         Metavariables.fresh_effect t.metavariables ~level ~location:(Expr expr)
-       in
-       Ok
-         ( Expl.Expr.Construction (constructor, [])
-         , Type.Mono.List element
-         , effect_ )
-     | List_cons, [ head_arg; tail_arg ] ->
-       let head_expr, head_type, head_effect = head_arg in
-       let tail_expr, tail_type, tail_effect = tail_arg in
-       let element_type =
-         Metavariables.fresh_type t.metavariables ~level ~location:(Expr expr)
-       in
-       let list_type = Type.Mono.List element_type in
-       let%bind () =
-         Constraints.constrain_type_at_most
-           t.constraints
-           head_type
-           element_type
-           ~location:(Expr (List.nth_exn args 0))
-       in
-       let%bind () =
-         Constraints.constrain_type_at_most
-           t.constraints
-           tail_type
-           list_type
-           ~location:(Expr (List.nth_exn args 1))
-       in
-       let%map overall_effect =
-         union_effects
-           t
-           [ head_effect; tail_effect ]
-           ~level
-           ~location:(Expr expr)
-       in
-       ( Expl.Expr.Construction (constructor, [ head_expr; tail_expr ])
-       , list_type
-       , overall_effect )
-     | (List_nil | List_cons), _ ->
-       Static_error.type_error_s
-         [%message
-           "Wrong number of arguments for constructor"
-             (constructor : Constructor.t)
-             ~num:(List.length args : int)]
-       |> Error)
+    infer_construction t constructor args ~env ~level ~effect_env
   | Tuple_construction elements ->
     let%bind elements_and_types_and_effects =
       Or_static_error.list_map
@@ -618,6 +564,88 @@ and type_literal (lit : Literal.t) : Type.Mono.t =
   | Int _ -> Primitive Int
   | Bool _ -> Primitive Bool
 
+and infer_construction
+      t
+      (constructor : Constructor.t)
+      (args : Min.Expr.t list)
+      ~env
+      ~level
+      ~effect_env
+  =
+  let open Result.Let_syntax in
+  let location =
+    Metavariables.Location.Expr (Construction (constructor, args))
+  in
+  let arg_locations =
+    List.map args ~f:(fun arg -> Metavariables.Location.Expr arg)
+  in
+  let%bind args =
+    Or_static_error.list_map args ~f:(infer_expr t ~env ~level ~effect_env)
+  in
+  match constructor, args with
+  | List_nil, [] ->
+    let element =
+      Metavariables.fresh_type
+        t.metavariables
+        ~level
+        ~location:(List_element location)
+    in
+    let effect_ = Metavariables.fresh_effect t.metavariables ~level ~location in
+    Ok
+      (Expl.Expr.Construction (constructor, []), Type.Mono.List element, effect_)
+  | List_cons, [ head_arg; tail_arg ] ->
+    let head_expr, head_type, head_effect = head_arg in
+    let tail_expr, tail_type, tail_effect = tail_arg in
+    let element_type =
+      Metavariables.fresh_type t.metavariables ~level ~location
+    in
+    let list_type = Type.Mono.List element_type in
+    let%bind () =
+      Constraints.constrain_type_at_most
+        t.constraints
+        head_type
+        element_type
+        ~location:(List.nth_exn arg_locations 0)
+    in
+    let%bind () =
+      Constraints.constrain_type_at_most
+        t.constraints
+        tail_type
+        list_type
+        ~location:(List.nth_exn arg_locations 1)
+    in
+    let%map overall_effect =
+      union_effects t [ head_effect; tail_effect ] ~level ~location
+    in
+    ( Expl.Expr.Construction (constructor, [ head_expr; tail_expr ])
+    , list_type
+    , overall_effect )
+  | Option_none, [] ->
+    let element =
+      Metavariables.fresh_type
+        t.metavariables
+        ~level
+        ~location:(Option_element location)
+    in
+    let effect_ = Metavariables.fresh_effect t.metavariables ~level ~location in
+    Ok
+      ( Expl.Expr.Construction (constructor, [])
+      , Type.Mono.Option element
+      , effect_ )
+  | Option_some, [ arg ] ->
+    let arg_expr, arg_type, arg_effect = arg in
+    Ok
+      ( Expl.Expr.Construction (constructor, [ arg_expr ])
+      , Type.Mono.Option arg_type
+      , arg_effect )
+  | (List_nil | List_cons | Option_none | Option_some), _ ->
+    Static_error.type_error_s
+      [%message
+        "Wrong number of arguments for constructor"
+          (constructor : Constructor.t)
+          ~num:(List.length args : int)]
+    |> Error
+
 and infer_match_case
       t
       ~(subject_type : Type.Mono.t)
@@ -692,7 +720,39 @@ and infer_match_case
            bind_parameter t env ~parameter:head ~type_:element_type ~level
          in
          bind_parameter t env ~parameter:tail ~type_:list_type ~level
-       | (List_nil | List_cons), _ ->
+       | Option_none, [] ->
+         let element_type =
+           Metavariables.fresh_type
+             t.metavariables
+             ~level
+             ~location:(List_element (Pattern pattern))
+         in
+         let list_type = Type.Mono.Option element_type in
+         let%map () =
+           Constraints.constrain_type_at_most
+             t.constraints
+             subject_type
+             list_type
+             ~location:(Pattern pattern)
+         in
+         env
+       | Option_some, [ element ] ->
+         let element_type =
+           Metavariables.fresh_type
+             t.metavariables
+             ~level
+             ~location:(Option_element (Pattern pattern))
+         in
+         let option_type = Type.Mono.Option element_type in
+         let%bind () =
+           Constraints.constrain_type_at_most
+             t.constraints
+             subject_type
+             option_type
+             ~location:(Pattern pattern)
+         in
+         bind_parameter t env ~parameter:element ~type_:element_type ~level
+       | (List_nil | List_cons | Option_none | Option_some), _ ->
          Static_error.type_error_s
            [%message
              "constructor pattern with wrong number of arguments"

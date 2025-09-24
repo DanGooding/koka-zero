@@ -55,6 +55,7 @@ type t =
   | Arrow of t list * Effect.t * t
   | List of t
   | Tuple of t list
+  | Option of t
   | Union of t list
   | Intersection of t list
   | Recursive of Type.Variable.t * t
@@ -64,7 +65,7 @@ let rec variables t =
   match t with
   | Variable v -> Type.Variable.Set.singleton v
   | Primitive _ -> Type.Variable.Set.empty
-  | List t -> variables t
+  | List t | Option t -> variables t
   | Tuple ts -> Type.Variable.Set.union_list (List.map ts ~f:variables)
   | Arrow (args, _effect, result) ->
     Type.Variable.Set.union_list (List.map (result :: args) ~f:variables)
@@ -82,6 +83,7 @@ let rec simplify t =
   | Union ts -> Union (List.map ts ~f:simplify)
   | Variable _ | Primitive _ -> t
   | List t -> List (simplify t)
+  | Option t -> Option (simplify t)
   | Tuple ts -> Tuple (List.map ts ~f:simplify)
   | Arrow (args, effect_, result) ->
     Arrow (List.map args ~f:simplify, Effect.simplify effect_, simplify result)

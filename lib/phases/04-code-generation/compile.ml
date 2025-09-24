@@ -161,7 +161,34 @@ let compile_construction
           | Tail -> tail)
     in
     list_ptr
-  | (List_nil | List_cons), _ ->
+  | Option_none, [] ->
+    let%bind list_ptr = Structs.Option.heap_allocate () ~name:"none" ~runtime in
+    let%bind tag = Structs.Option.Tag.const_none in
+    let%bind ptr_type = Types.pointer in
+    let%map () =
+      Structs.Option.populate
+        ()
+        list_ptr
+        ~f:(fun (field : Structs.Option.Field.t) ->
+          match field with
+          | Tag -> tag
+          | Value -> Llvm.const_null ptr_type)
+    in
+    list_ptr
+  | Option_some, [ value ] ->
+    let%bind list_ptr = Structs.List.heap_allocate () ~name:"some" ~runtime in
+    let%bind tag = Structs.List.Tag.const_cons in
+    let%map () =
+      Structs.Option.populate
+        ()
+        list_ptr
+        ~f:(fun (field : Structs.Option.Field.t) ->
+          match field with
+          | Tag -> tag
+          | Value -> value)
+    in
+    list_ptr
+  | (List_nil | List_cons | Option_none | Option_some), _ ->
     Codegen.impossible_error
       (Sexp.to_string
          [%message
@@ -802,6 +829,7 @@ and compile_match
   let%bind (scrutinee : Llvm.llvalue) =
     match (scrutinee : Pattern.Scrutinee.t) with
     | List -> Structs.List.project () subject Tag
+    | Option -> Structs.Option.project () subject Tag
     | Primitive type_ ->
       (match type_ with
        | Int ->
@@ -847,7 +875,9 @@ and compile_match
           match constructor, args with
           | List_nil, [] -> Structs.List.Tag.const_nil
           | List_cons, [ _; _ ] -> Structs.List.Tag.const_cons
-          | (List_nil | List_cons), _ ->
+          | Option_none, [] -> Structs.Option.Tag.const_none
+          | Option_some, [ _ ] -> Structs.Option.Tag.const_some
+          | (List_nil | List_cons | Option_none | Option_some), _ ->
             Codegen.impossible_error "wrong number of arguments for constructor"
         in
         let add_bindings env =
@@ -866,13 +896,22 @@ and compile_match
               env
               ~parameter:tail
               ~value:(Pure (Packed tail_value))
-          | (List_nil | List_cons), _ ->
+          | Option_none, [] -> return env
+          | Option_some, [ element ] ->
+            let%bind value = Structs.Option.project () subject Value in
+            Context.add_local_parameter
+              env
+              ~parameter:element
+              ~value:(Pure (Packed value))
+          | (List_nil | List_cons | Option_none | Option_some), _ ->
             Codegen.impossible_error "wrong number of arguments for constructor"
         in
         let label =
           match constructor with
           | List_nil -> "nil"
           | List_cons -> "cons"
+          | Option_none -> "none"
+          | Option_some -> "some"
         in
         `Exactly expect, label, add_bindings, body)
   in
