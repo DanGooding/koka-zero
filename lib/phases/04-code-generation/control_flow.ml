@@ -21,13 +21,20 @@ module Compile_conditional = struct
     let open Codegen.Let_syntax in
     let%bind if_start_block = Codegen.insertion_block_exn in
     let current_function = Llvm.block_parent if_start_block in
+    let condition_name = Llvm.value_name cond_i1 in
     let%bind true_start_block =
       Codegen.use_context (fun context ->
-        Llvm.append_block context "if_true" current_function)
+        Llvm.append_block
+          context
+          [%string "if_%{condition_name}_true"]
+          current_function)
     in
     let%bind false_start_block =
       Codegen.use_context (fun context ->
-        Llvm.append_block context "if_false" current_function)
+        Llvm.append_block
+          context
+          [%string "if_%{condition_name}_false"]
+          current_function)
     in
     let%bind _branch =
       Codegen.use_builder
@@ -50,9 +57,13 @@ module Compile_conditional = struct
     let open Codegen.Let_syntax in
     let%bind current_block = Codegen.insertion_block_exn in
     let current_function = Llvm.block_parent current_block in
+    let condition_name = Llvm.value_name cond_i1 in
     let%bind if_end_block =
       Codegen.use_context (fun context ->
-        Llvm.append_block context "post_if" current_function)
+        Llvm.append_block
+          context
+          [%string "post_if_%{condition_name}"]
+          current_function)
     in
     let recombine_after compile_branch () =
       let%bind result = compile_branch () in
