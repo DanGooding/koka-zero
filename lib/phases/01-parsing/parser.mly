@@ -197,8 +197,6 @@ let close_after_desugaring app : expr =
 %type <type_> paramtype
 %type <pattern_parameter list> pparameters
 %type <pattern_parameter> pparameter
-(* %type <expr list> aexprs *)
-%type <expr> aexpr
 %type <expr> matchexpr
 %type <pattern * block> matchrule
 %type <(pattern * block) list> matchrules
@@ -954,21 +952,6 @@ pparameter:
 
 
 (* annotated expressions: separated or terminated by comma *)
-
-(* %type <expr list> aexprs *)
-(* aexprs: *)
-(*   | es = separated_list(",", aexpr) *)
-(*     { es } *)
-(*   ; *)
-
-(* %type <expr> aexpr *)
-aexpr:
-  | e = expr; scheme = annot
-    { match scheme with
-      | Some scheme -> Annotated_expr(e, scheme)
-      | None -> e
-    }
-  ;
 
 (* %type <type_scheme option> annot *)
 annot:
