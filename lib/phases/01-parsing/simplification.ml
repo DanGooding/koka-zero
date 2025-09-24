@@ -145,7 +145,18 @@ let rec simplify_type_as_type : Syntax.type_ -> Type.Mono.t Or_static_error.t =
              [%message "wrong number of arguments for type list, expected one"]
            |> Error
        in
-       Type.Mono.List argument)
+       Type.Mono.List argument
+     | Syntax.Type_option ->
+       let%map argument =
+         match arguments with
+         | [ arg ] -> simplify_type_as_type arg
+         | _ ->
+           Static_error.syntax_error_s
+             [%message
+               "wrong number of arguments for type option, expected one"]
+           |> Error
+       in
+       Type.Mono.Option argument)
   | Syntax.Annotated_type { type_ = _; kind = _ } ->
     Static_error.unsupported_feature "kind annotation on type" |> Result.Error
 
@@ -175,7 +186,7 @@ and simplify_type_as_effect : Syntax.type_ -> Effect.t Or_static_error.t =
      | Syntax.Variable_or_name _ | Syntax.Type_wildcard _ ->
        Static_error.unsupported_feature "wildcards/names/variables in effects"
        |> Result.Error
-     | Syntax.Type_int | Type_bool | Type_list ->
+     | Syntax.Type_int | Type_bool | Type_list | Type_option ->
        let message =
          sprintf
            "expected effect, found type %s"
@@ -211,7 +222,7 @@ and simplify_type_as_effect_label
        Static_error.syntax_error
          "polymorphism over effect labels is not permitted"
        |> Result.Error
-     | Syntax.Type_int | Type_bool | Type_list ->
+     | Syntax.Type_int | Type_bool | Type_list | Type_option ->
        let message =
          sprintf
            "expected effect label, found type %s"

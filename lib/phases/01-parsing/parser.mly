@@ -75,6 +75,7 @@
 %token TYPE_BOOL
 %token TYPE_INT
 %token TYPE_LIST
+%token TYPE_OPTION
 
 
 (* precedence declarations are in increasing order,
@@ -1267,6 +1268,8 @@ typecon:
     { Type_bool }
   | TYPE_LIST
     { Type_list }
+  | TYPE_OPTION
+    { Type_option }
   ;
 
 

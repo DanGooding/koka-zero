@@ -1,3 +1,5 @@
+effect fun sqrt(n : int) : option<int>;
+
 fun filter-map(xs, f) {
   match xs {
     Nil -> Nil;

@@ -78,6 +78,7 @@ and type_constructor =
   | Type_int
   | Type_bool
   | Type_list
+  | Type_option
 [@@deriving sexp_of]
 
 and parameter_type =

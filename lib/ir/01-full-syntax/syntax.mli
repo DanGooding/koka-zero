@@ -81,6 +81,7 @@ and type_constructor =
   | Type_int
   | Type_bool
   | Type_list
+  | Type_option
 [@@deriving sexp_of]
 
 (** represents the `x : int` in `(x : int, y : int) -> int` *)
