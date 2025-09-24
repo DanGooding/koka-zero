@@ -1142,11 +1142,11 @@ opclause:
     { Op_val { id; type_ = None; value }}
   | VAL; id = varid; ":"; type_ = type_; "="; value = blockexpr
     { Op_val { id; type_ = Some type_; value }}
-  | FUN; id = varid; parameters = pparameters; body = bodyexpr
+  | FUN; id = varid; "("; parameters = pparameters; ")"; body = bodyexpr
     { Op_fun { id; parameters; body } }
-  | EXCEPT; id = varid; parameters = pparameters; body = bodyexpr
+  | EXCEPT; id = varid; "("; parameters = pparameters; ")"; body = bodyexpr
     { Op_except { id; parameters; body } }
-  | CONTROL; id = varid; parameters = pparameters; body = bodyexpr
+  | CONTROL; id = varid; "("; parameters = pparameters; ")"; body = bodyexpr
     { Op_control { id; parameters; body } }
   (* | RCONTROL varid opparams bodyexpr *)
   | RETURN; "("; parameter = pparameter; ")"; body = bodyexpr

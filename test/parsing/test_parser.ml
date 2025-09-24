@@ -1465,8 +1465,7 @@ fun one-operation() {
                (Application
                 (Handler
                  (Effect_handler
-                  ((Op_except (id fail)
-                    (parameters (((pattern (Pattern_tuple ())) (type_ ()))))
+                  ((Op_except (id fail) (parameters ())
                     (body ((statements ()) (last (Identifier (Var default))))))
                    (Op_return
                     (parameter ((pattern (Pattern_id (Var x))) (type_ ())))
@@ -1491,10 +1490,8 @@ fun one-operation() {
                      (Effect_handler
                       ((Op_control (id choose)
                         (parameters
-                         (((pattern
-                            (Pattern_tuple
-                             ((Pattern_id (Var x)) (Pattern_id (Var y)))))
-                           (type_ ()))))
+                         (((pattern (Pattern_id (Var x))) (type_ ()))
+                          ((pattern (Pattern_id (Var y))) (type_ ()))))
                         (body
                          ((statements ())
                           (last
@@ -1513,8 +1510,7 @@ fun one-operation() {
                             ((Identifier (Var x))))))))
                        (Op_val (id depth) (type_ ())
                         (value ((statements ()) (last (Literal (Int 42))))))
-                       (Op_fun (id get)
-                        (parameters (((pattern (Pattern_tuple ())) (type_ ()))))
+                       (Op_fun (id get) (parameters ())
                         (body ((statements ()) (last (Identifier (Var y))))))
                        (Op_fun (id set)
                         (parameters
@@ -1777,8 +1773,7 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                (Application
                 (Handler
                  (Effect_handler
-                  ((Op_except (id fail)
-                    (parameters (((pattern (Pattern_tuple ())) (type_ ()))))
+                  ((Op_except (id fail) (parameters ())
                     (body ((statements ()) (last (Identifier (Var x)))))))))
                 ((Fn
                   ((type_parameters ()) (parameters ()) (result_type ())
