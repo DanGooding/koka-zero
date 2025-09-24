@@ -343,20 +343,6 @@ let simplify_pattern (pattern : Syntax.pattern) : Pattern.t Or_static_error.t =
     Pattern.Construction (constructor, args)
 ;;
 
-let simplify_operation_parameter
-  :  Syntax.operation_parameter
-  -> (Parameter.t * Type.Mono.t option) Or_static_error.t
-  =
-  fun { Syntax.id; type_ } ->
-  let open Result.Let_syntax in
-  let%bind p' = simplify_parameter_id id in
-  let%map type_' =
-    Option.map type_ ~f:simplify_type_as_type
-    |> Static_error.Or_static_error.all_option
-  in
-  p', type_'
-;;
-
 let simplify_binary_operator (op : Syntax.binary_operator)
   : Operator.t Or_static_error.t
   =
@@ -572,7 +558,7 @@ and simplify_operation_handler
   let open Result.Let_syntax in
   let simplify_clause parameters body =
     let%bind parameters' =
-      List.map parameters ~f:simplify_operation_parameter |> Result.all
+      List.map parameters ~f:simplify_pattern_parameter |> Result.all
     in
     let names, types = List.unzip parameters' in
     let%bind op_argument =
@@ -606,7 +592,7 @@ and simplify_operation_handler
        simple, but requires creating a fresh variable name) *)
     Static_error.unsupported_feature "`val` effect" |> Result.Error
   | Syntax.Op_return { parameter; body } ->
-    let%bind op_argument, type_ = simplify_operation_parameter parameter in
+    let%bind op_argument, type_ = simplify_pattern_parameter parameter in
     let%bind () =
       restrict_to_none
         type_

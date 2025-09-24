@@ -211,8 +211,6 @@ let close_after_desugaring app : expr =
 %type <effect_handler> opclauses
 %type <operation_handler> opclausex
 %type <operation_handler> opclause
-%type <operation_parameter list> opparams
-%type <operation_parameter> opparam
 %type <type_parameter list> tbinders
 %type <type_parameter> tbinder
 %type <type_scheme> typescheme
@@ -1161,30 +1159,15 @@ opclause:
     { Op_val { id; type_ = None; value }}
   | VAL; id = varid; ":"; type_ = type_; "="; value = blockexpr
     { Op_val { id; type_ = Some type_; value }}
-  | FUN; id = varid; parameters = opparams; body = bodyexpr
+  | FUN; id = varid; parameters = pparameters; body = bodyexpr
     { Op_fun { id; parameters; body } }
-  | EXCEPT; id = varid; parameters = opparams; body = bodyexpr
+  | EXCEPT; id = varid; parameters = pparameters; body = bodyexpr
     { Op_except { id; parameters; body } }
-  | CONTROL; id = varid; parameters = opparams; body = bodyexpr
+  | CONTROL; id = varid; parameters = pparameters; body = bodyexpr
     { Op_control { id; parameters; body } }
   (* | RCONTROL varid opparams bodyexpr *)
-  | RETURN; "("; parameter = opparam; ")"; body = bodyexpr
+  | RETURN; "("; parameter = pparameter; ")"; body = bodyexpr
     { Op_return { parameter; body } }
-  (* | RETURN paramid bodyexpr               (\* deprecated *\) *)
-  ;
-
-(* %type <operation_parameter list> opparams *)
-opparams:
-  | "("; params = separated_list(",", opparam); ")"
-    { params }
-  ;
-
-(* %type <operation_parameter> opparam *)
-opparam:
-  | id = paramid
-    { { id; type_ = None } : operation_parameter }
-  | id = paramid; ":"; type_ = type_
-    { { id; type_ = Some type_ } : operation_parameter }
   ;
 
 
