@@ -165,12 +165,16 @@ let compile_call_common
     let%map return_type = return_lltype return_type in
     Llvm.function_type return_type (Array.of_list arg_types)
   in
-  Codegen.use_builder
-    (Llvm.build_call
-       function_type
-       code_pointer
-       (Array.of_list arg_values)
-       "result")
+  let%map call_instr =
+    Codegen.use_builder
+      (Llvm.build_call
+         function_type
+         code_pointer
+         (Array.of_list arg_values)
+         "result")
+  in
+  Llvm.set_tail_call true call_instr;
+  call_instr
 ;;
 
 let compile_call
