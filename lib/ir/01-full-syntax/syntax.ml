@@ -218,8 +218,6 @@ type expr =
   | Tuple_construction of expr list
   | Identifier of Identifier.t
   | Literal of literal
-  (* | Tuple of expr list *)
-  (* | List of expr list *)
   | Annotated_expr of expr * type_scheme
 [@@deriving sexp_of]
 

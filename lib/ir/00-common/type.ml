@@ -43,13 +43,15 @@ module Mono = struct
     | Primitive of Primitive.t
     | List of t
     | Tuple of t list
+    | Option of t
   [@@deriving sexp_of, compare, hash]
 
   let rec max_level t ~type_metavariable_level ~effect_metavariable_level =
     match t with
     | Primitive _ -> 0
     | Metavariable meta -> type_metavariable_level meta
-    | List t -> max_level t ~type_metavariable_level ~effect_metavariable_level
+    | List t | Option t ->
+      max_level t ~type_metavariable_level ~effect_metavariable_level
     | Tuple ts ->
       List.map
         ts
@@ -78,6 +80,7 @@ module Mono = struct
     | Arrow _ -> "Arrow"
     | List _ -> "List"
     | Tuple _ -> "Tuple"
+    | Option _ -> "Option"
     | Metavariable meta -> Metavariable.to_string meta
     | Primitive p -> Primitive.node_label p
   ;;
@@ -85,7 +88,7 @@ module Mono = struct
   let node_children t : ([ `Type of t | `Effect of Effect.t ] * string) list =
     match t with
     | Primitive _ | Metavariable _ -> []
-    | List element -> [ `Type element, "element" ]
+    | List element | Option element -> [ `Type element, "element" ]
     | Tuple element_types ->
       List.mapi element_types ~f:(fun i element ->
         `Type element, [%string "[%{i#Int}]"])
@@ -102,7 +105,8 @@ module Mono = struct
     let shape =
       match t with
       | Metavariable _ -> []
-      | Primitive _ | Arrow _ | List _ | Tuple _ -> [ "shape", "box" ]
+      | Primitive _ | Arrow _ | List _ | Tuple _ | Option _ ->
+        [ "shape", "box" ]
     in
     Dot_graph.add_node graph parent_id ~attrs:([ "label", node_label t ] @ shape);
     let children = node_children t in

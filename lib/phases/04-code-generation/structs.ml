@@ -205,6 +205,49 @@ module List = struct
   include Struct.Make (T)
 end
 
+module Option = struct
+  module Tag = struct
+    let type_ = Codegen.use_context Llvm.i8_type
+
+    let const_tag i =
+      let open Codegen.Let_syntax in
+      let%map type_ = type_ in
+      Llvm.const_int type_ i
+    ;;
+
+    let const_none = const_tag 0
+    let const_some = const_tag 1
+  end
+
+  module T = struct
+    type t = unit
+
+    module Field = struct
+      type t =
+        | Tag
+        | Value
+      [@@deriving equal]
+
+      let all () = [ Tag; Value ]
+
+      let name t =
+        match t with
+        | Tag -> "option_tag"
+        | Value -> "option_value"
+      ;;
+
+      let type_ t =
+        match t with
+        | Tag -> Tag.type_
+        | Value -> Types.pointer
+      ;;
+    end
+  end
+
+  include T
+  include Struct.Make (T)
+end
+
 module Tuple = struct
   module T = struct
     type t = { num_elements : int }

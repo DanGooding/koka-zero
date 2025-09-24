@@ -43,6 +43,8 @@ let simplify_constructor_id (id : Syntax.Constructor_id.t)
   match Syntax.Constructor_id.to_string id with
   | "Nil" -> Ok List_nil
   | "Cons" -> Ok List_cons
+  | "None" -> Ok Option_none
+  | "Some" -> Ok Option_some
   | _ ->
     Error
       (Static_error.syntax_error_s

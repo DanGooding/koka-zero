@@ -40,7 +40,16 @@ let case_reconstructs_pattern ((pattern, body) : Pattern.t * Expr.t) : bool =
        when [%equal: Variable.t * Variable.t] (head, tail) (head', tail') ->
        true
      | _ -> false)
-  | Construction ((List_nil | List_cons), _) ->
+  | Construction (Option_none, []) ->
+    (match[@warning "-4"] body with
+     | Construction (Option_none, []) -> true
+     | _ -> false)
+  | Construction (Option_some, [ Variable element ]) ->
+    (match[@warning "-4"] body with
+     | Construction (Option_some, [ Variable element' ])
+       when [%equal: Variable.t] element element' -> true
+     | _ -> false)
+  | Construction ((List_nil | List_cons | Option_none | Option_some), _) ->
     raise_s
       [%message
         "invalid number of arguments for constructor" (pattern : Pattern.t)]

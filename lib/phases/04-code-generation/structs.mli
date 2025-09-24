@@ -76,6 +76,21 @@ module List : sig
   include Struct.Struct_S with module Field := Field and type t = unit
 end
 
+module Option : sig
+  module Tag : sig
+    val const_none : Llvm.llvalue Codegen.t
+    val const_some : Llvm.llvalue Codegen.t
+  end
+
+  module Field : sig
+    type t =
+      | Tag
+      | Value
+  end
+
+  include Struct.Struct_S with module Field := Field and type t = unit
+end
+
 module Tuple : sig
   type t = { num_elements : int }
 

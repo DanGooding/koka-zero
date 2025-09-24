@@ -40,6 +40,7 @@ module Mono : sig
     | Primitive of Primitive.t
     | List of t
     | Tuple of t list
+    | Option of t
   [@@deriving sexp_of, compare, hash]
 
   val max_level
