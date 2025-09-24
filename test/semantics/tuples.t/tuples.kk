@@ -10,7 +10,7 @@ fun pick-from-list(xs) {
       Nil -> a;
       Cons (b, cs) -> {
         val x = pick((a, b));
-        with control exn(_) {
+        with control exn(()) {
           // if pick-from-list(cs) fails because cs is empty, then just return x
           x
         };
@@ -22,8 +22,7 @@ fun pick-from-list(xs) {
 }
 
 fun pick-max(action) {
-  with control pick(pair) {
-    val (a, b) = pair;
+  with control pick((a, b)) {
     resume(if a > b then a else b)
   };
   action()
@@ -34,7 +33,7 @@ fun max((a,b)) {
 }
 
 fun main() {
-  with control exn(_) {
+  with control exn(()) {
     ()
   };
   with pick-max;

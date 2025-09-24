@@ -1465,10 +1465,11 @@ fun one-operation() {
                (Application
                 (Handler
                  (Effect_handler
-                  ((Op_except (id fail) (parameters ())
+                  ((Op_except (id fail)
+                    (parameters (((pattern (Pattern_tuple ())) (type_ ()))))
                     (body ((statements ()) (last (Identifier (Var default))))))
                    (Op_return
-                    (parameter ((id (Parameter_id (Var x))) (type_ ())))
+                    (parameter ((pattern (Pattern_id (Var x))) (type_ ())))
                     (body ((statements ()) (last (Identifier (Var x)))))))))
                 ((Fn
                   ((type_parameters ()) (parameters ()) (result_type ())
@@ -1490,8 +1491,10 @@ fun one-operation() {
                      (Effect_handler
                       ((Op_control (id choose)
                         (parameters
-                         (((id (Parameter_id (Var x))) (type_ ()))
-                          ((id (Parameter_id (Var y))) (type_ ()))))
+                         (((pattern
+                            (Pattern_tuple
+                             ((Pattern_id (Var x)) (Pattern_id (Var y)))))
+                           (type_ ()))))
                         (body
                          ((statements ())
                           (last
@@ -1502,7 +1505,7 @@ fun one-operation() {
                             (Application (Identifier (Var resume))
                              ((Identifier (Var y)))))))))
                        (Op_return
-                        (parameter ((id (Parameter_id (Var x))) (type_ ())))
+                        (parameter ((pattern (Pattern_id (Var x))) (type_ ())))
                         (body
                          ((statements ())
                           (last
@@ -1510,13 +1513,16 @@ fun one-operation() {
                             ((Identifier (Var x))))))))
                        (Op_val (id depth) (type_ ())
                         (value ((statements ()) (last (Literal (Int 42))))))
-                       (Op_fun (id get) (parameters ())
+                       (Op_fun (id get)
+                        (parameters (((pattern (Pattern_tuple ())) (type_ ()))))
                         (body ((statements ()) (last (Identifier (Var y))))))
                        (Op_fun (id set)
-                        (parameters (((id (Parameter_id (Var x))) (type_ ()))))
+                        (parameters
+                         (((pattern (Pattern_id (Var x))) (type_ ()))))
                         (body ((statements ()) (last (Literal (Int 0))))))
                        (Op_except (id raise)
-                        (parameters (((id (Parameter_id (Var x))) (type_ ()))))
+                        (parameters
+                         (((pattern (Pattern_id (Var x))) (type_ ()))))
                         (body
                          ((statements ())
                           (last
@@ -1544,7 +1550,8 @@ fun one-operation() {
                   ((type_parameters ()) (parameters ()) (result_type ())
                    (body
                     ((statements ())
-                     (last (Application (Identifier (Var subject)) ()))))))))))))))))))) |}];
+                     (last (Application (Identifier (Var subject)) ())))))))))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -1582,14 +1589,15 @@ fun handle-example(action) {
                 (handler
                  (Effect_handler
                   ((Op_fun (id scramble)
-                    (parameters (((id (Parameter_id (Var x))) (type_ ()))))
+                    (parameters (((pattern (Pattern_id (Var x))) (type_ ()))))
                     (body
                      ((statements ())
                       (last
                        (Binary_op
                         (Binary_op (Identifier (Var x)) Times
                          (Identifier (Var x)))
-                        Plus (Identifier (Var x)))))))))))))))))))))) |}];
+                        Plus (Identifier (Var x))))))))))))))))))))))
+    |}];
   Util.print_simplification_result syntax;
   [%expect
     {|
@@ -1769,7 +1777,8 @@ fun fail-with-default(x : a, action : () -> <fail|e> a) : e a {
                (Application
                 (Handler
                  (Effect_handler
-                  ((Op_except (id fail) (parameters ())
+                  ((Op_except (id fail)
+                    (parameters (((pattern (Pattern_tuple ())) (type_ ()))))
                     (body ((statements ()) (last (Identifier (Var x)))))))))
                 ((Fn
                   ((type_parameters ()) (parameters ()) (result_type ())

@@ -182,12 +182,6 @@ type type_declaration = Effect_declaration of effect_declaration
 (* | Type *)
 [@@deriving sexp_of]
 
-type operation_parameter =
-  { id : parameter_id
-  ; type_ : type_ option
-  }
-[@@deriving sexp_of]
-
 (* expressions: *)
 
 type literal =
@@ -285,21 +279,21 @@ and operation_handler =
       }
   | Op_fun of
       { id : Var_id.t
-      ; parameters : operation_parameter list
+      ; parameters : pattern_parameter list
       ; body : block
       }
   | Op_except of
       { id : Var_id.t
-      ; parameters : operation_parameter list
+      ; parameters : pattern_parameter list
       ; body : block
       }
   | Op_control of
       { id : Var_id.t
-      ; parameters : operation_parameter list
+      ; parameters : pattern_parameter list
       ; body : block
       }
   | Op_return of
-      { parameter : operation_parameter
+      { parameter : pattern_parameter
       ; body : block
       }
 [@@deriving sexp_of]
