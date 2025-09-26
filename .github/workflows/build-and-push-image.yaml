@@ -3,7 +3,7 @@ name: Build and push container image
 
 on:
   push:
-    branches: ['main', 'cache-in-ci']
+    branches: ['main']
 
 env:
   REGISTRY: ghcr.io
