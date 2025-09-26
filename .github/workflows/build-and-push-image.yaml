@@ -26,6 +26,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
+          # required to use the github actions cache
           driver: docker-container
 
       - name: Log in to the Container registry
@@ -52,6 +53,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
