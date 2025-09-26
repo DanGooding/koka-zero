@@ -5,6 +5,8 @@ Reimplementation of core [Koka](https://koka-lang.github.io), compiling to
 
 This uses Algebraic Subtyping rather than Koka's Hindley-Milner inference with effect rows, since the former can give a precise effect to each subexpression of a program, which enables some optimisations. 
 
+Try Koka Zero in the [language playground](https://koka-zero.danielgooding.uk/).
+
 ## Example (a generator producing the Fibonacci sequence)
 ```koka
 effect control yield-int(x : int) : ();
