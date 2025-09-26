@@ -165,12 +165,15 @@ let compile_call_common
     let%map return_type = return_lltype return_type in
     Llvm.function_type return_type (Array.of_list arg_types)
   in
-  Codegen.use_builder
-    (Llvm.build_call
-       function_type
-       code_pointer
-       (Array.of_list arg_values)
-       "result")
+  let%map call_instr =
+    Codegen.use_builder
+      (Llvm.build_call
+         function_type
+         code_pointer
+         (Array.of_list arg_values)
+         "result")
+  in
+  call_instr
 ;;
 
 let compile_call
@@ -224,17 +227,22 @@ let compile_tail_call
       ~(return_value_pointer : Context.Return_value_pointer.t)
   : Llvm.llvalue Codegen.t
   =
+  let open Codegen.Let_syntax in
   let return_arg =
     match return_value_pointer with
     | Pure -> `Pure
     | Ctl { is_yield_i1_pointer } -> `Ctl is_yield_i1_pointer
   in
-  compile_call_common
-    ~code_pointer
-    ~function_repr
-    ~args
-    ~return_arg
-    ~return_type
+  let%map call_instr =
+    compile_call_common
+      ~code_pointer
+      ~function_repr
+      ~args
+      ~return_arg
+      ~return_type
+  in
+  Llvm.set_tail_call true call_instr;
+  call_instr
 ;;
 
 let rec parameter_name (param : Parameter.t) : string =
