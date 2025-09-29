@@ -6,8 +6,9 @@ module Stable = struct
       { clang_exe : string
       ; runtime_path : string
       ; gc_path : string option
+      ; prelude_path : string option
       }
-    [@@deriving sexp]
+    [@@sexp.alllow_extra_fields] [@@deriving sexp]
   end
 
   module Latest = V1
@@ -22,6 +23,8 @@ let example =
   ; runtime_path =
       "/Users/dan/projects/koka-zero/lib/execution/runtime/runtime.c"
   ; gc_path = Some "/opt/homebrew/Cellar/bdw-gc/8.2.8"
+  ; prelude_path =
+      Some "/Users/dan/projects/koka-zero/lib/execution/prelude/prelude.kk"
   }
 ;;
 
