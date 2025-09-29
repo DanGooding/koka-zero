@@ -5,6 +5,7 @@ type t =
   { clang_exe : Filename.t
   ; runtime_path : Filename.t
   ; gc_path : Filename.t option
+  ; prelude_path : Filename.t option
   }
 [@@deriving sexp_of]
 

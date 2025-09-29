@@ -149,9 +149,13 @@ let typecheck filename ~print_constraint_graph =
   ()
 ;;
 
-let create_config ~clang_exe ~runtime_path ~gc_path ~out_filename =
+let create_config ~clang_exe ~runtime_path ~gc_path ~prelude_path ~out_filename =
   let config =
-    { Koka_zero.Koka_zero_config.clang_exe; runtime_path; gc_path }
+    { Koka_zero.Koka_zero_config.clang_exe
+    ; runtime_path
+    ; gc_path
+    ; prelude_path = Some prelude_path
+    }
   in
   Koka_zero.Koka_zero_config.write config out_filename
 ;;
@@ -210,6 +214,10 @@ module Flags = struct
 
   let print_eps =
     flag "-dump-eps" no_arg ~doc:"print the intermediate evidence passing AST"
+  ;;
+
+  let prelude_path =
+    flag "-prelude" (required string) ~doc:"FILE path to koka prelude.kk file"
   ;;
 
   let clang_exe =
@@ -309,11 +317,18 @@ let command_example_config =
 let command_create_config =
   Command.basic_or_error
     ~summary:"create and populate config file"
-    (let%map.Command clang_exe = Flags.clang_exe
+    (let%map.Command prelude_path = Flags.prelude_path
+     and clang_exe = Flags.clang_exe
      and runtime_path = Flags.runtime_path
      and gc_path = Flags.gc_path
      and out_filename = Flags.out_filename in
-     fun () -> create_config ~clang_exe ~runtime_path ~gc_path ~out_filename)
+     fun () ->
+       create_config
+         ~prelude_path
+         ~clang_exe
+         ~runtime_path
+         ~gc_path
+         ~out_filename)
 ;;
 
 let command =

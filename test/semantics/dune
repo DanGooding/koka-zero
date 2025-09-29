@@ -5,4 +5,5 @@
   compile.sh
   koka-zero-config-template.sexp
   ../../lib/execution/runtime/runtime.c
-  ../../lib/execution/runtime/runtime.h))
+  ../../lib/execution/runtime/runtime.h
+  ../../lib/execution/prelude/prelude.kk))
