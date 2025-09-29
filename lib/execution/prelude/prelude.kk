@@ -69,7 +69,7 @@ fun list-equal(xs, ys, element-equal) {
     Cons(x, xx) -> {
       match ys {
         Nil -> False;
-        Cons(y, yy) -> element-equal(x, y) && list-equal(xx, yy);
+        Cons(y, yy) -> element-equal(x, y) && list-equal(xx, yy, element-equal);
       }
     }
   }
