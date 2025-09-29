@@ -4,10 +4,10 @@ Read integers from stdin
   > 456
   > EOF
 
-  $ koka-zero interpret sum-input.kk <in.txt
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret sum-input.kk <in.txt
   input> input> 579
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh sum-input.kk
+  $ ../../koka-zero.sh compile sum-input.kk
   $ ./sum-input <in.txt
   input> input> 579

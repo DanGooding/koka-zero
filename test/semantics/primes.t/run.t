@@ -1,11 +1,11 @@
 Prime sieve implementation
   $ echo 100 >in.txt
 
-  $ koka-zero interpret primes.kk <in.txt
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret primes.kk <in.txt
   input> 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh primes.kk
+  $ ../../koka-zero.sh compile primes.kk
   $ ./primes <in.txt
   input> 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 
 

@@ -56,7 +56,7 @@ fun decrement() {
 }
 
 // apply `f` to every element
-fun map(f, generate) {
+fun stream-map(f, generate) {
   with fun yield-int(x) {
     yield-int(f(x));
   };

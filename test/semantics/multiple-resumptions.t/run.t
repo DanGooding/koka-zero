@@ -1,5 +1,6 @@
 Read integers from stdin
-  $ koka-zero interpret multiple-resumptions.kk
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret multiple-resumptions.kk
   0
   1
   10
@@ -10,8 +11,7 @@ Read integers from stdin
   111
   1
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh multiple-resumptions.kk
+  $ ../../koka-zero.sh compile multiple-resumptions.kk
   $ ./multiple-resumptions
   0
   1

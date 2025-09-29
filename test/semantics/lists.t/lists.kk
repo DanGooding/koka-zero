@@ -16,13 +16,6 @@ fun print-bool(b) {
   }
 }
 
-fun map(xs, f) {
-  match xs {
-    Nil -> Nil;
-    Cons(x, xx) -> Cons(f(x), xx.map(f));
-  }
-}
-
 fun filter(xs, f) {
   match xs {
     Nil -> Nil;

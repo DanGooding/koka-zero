@@ -1,8 +1,8 @@
 Construct and destruct tuples
-  $ koka-zero interpret tuples.kk
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret tuples.kk
   10
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh tuples.kk
+  $ ../../koka-zero.sh compile tuples.kk
   $ ./tuples
   10

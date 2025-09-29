@@ -1,9 +1,9 @@
 Should be able to thread state closures through code using effects
-  $ koka-zero interpret state.kk
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret state.kk
   55
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh state.kk
+  $ ../../koka-zero.sh compile state.kk
   $ ./state
   55
 
