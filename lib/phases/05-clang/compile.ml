@@ -40,7 +40,7 @@ let run () ~prog ~args ~allow_output =
 
 let compile_ir_to_exe
       ~ir_filename
-      ~(config : Koka_zero_config.t)
+      ~(config : Koka_zero_config.Backend.t)
       ~exe_filename
       ~optimise
       ~enable_run_stats

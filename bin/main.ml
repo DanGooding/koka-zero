@@ -27,19 +27,50 @@ module Or_static_or_internal_error = struct
   ;;
 end
 
-let typecheck_and_compile_to_expl filename ~print_constraint_graph =
-  let%map.Or_error program =
-    match In_channel.with_file filename ~f:Koka_zero.parse_channel with
-    | program -> Ok program
-    | exception Sys_error message -> Or_error.error_string message
-  in
-  let%bind.Or_static_error program = program in
-  Koka_zero.infer_program program ~print_constraint_graph
+let parse_to_minimal filename =
+  match In_channel.with_file filename ~f:Koka_zero.parse_channel with
+  | program -> Ok program
+  | exception Sys_error message -> Or_error.error_string message
 ;;
 
-let compile_to_eps filename ~optimise ~print_constraint_graph =
+let typecheck_and_compile_to_expl
+      filename
+      ~frontend_config
+      ~no_prelude
+      ~print_constraint_graph
+  =
+  let%bind.Or_error prelude_program =
+    match no_prelude with
+    | true -> Ok (Ok { Koka_zero.Minimal_syntax.Program.declarations = [] })
+    | false ->
+      let { Koka_zero.Koka_zero_config.Frontend.prelude_path } =
+        frontend_config
+      in
+      (match prelude_path with
+       | None ->
+         Or_error.error_s [%message "prelude filename missing from config"]
+       | Some prelude_path -> parse_to_minimal prelude_path)
+  in
+  let%map.Or_error program = parse_to_minimal filename in
+  let%bind.Or_static_error program = program in
+  let%bind.Or_static_error prelude_program = prelude_program in
+  let declarations = prelude_program.declarations @ program.declarations in
+  Koka_zero.infer_program { declarations } ~print_constraint_graph
+;;
+
+let compile_to_eps
+      filename
+      ~frontend_config
+      ~no_prelude
+      ~optimise
+      ~print_constraint_graph
+  =
   let%map.Or_error program_explicit =
-    typecheck_and_compile_to_expl filename ~print_constraint_graph
+    typecheck_and_compile_to_expl
+      filename
+      ~frontend_config
+      ~no_prelude
+      ~print_constraint_graph
   in
   let%bind.Or_static_error program_explicit = program_explicit in
   let%bind.Or_static_error program_eps = Koka_zero.translate program_explicit in
@@ -48,13 +79,20 @@ let compile_to_eps filename ~optimise ~print_constraint_graph =
 
 let compile_to_ir
       ~in_filename
+      ~frontend_config
+      ~no_prelude
       ~optimise
       ~print_constraint_graph
       ~print_eps
       ~out_filename
   =
   match%bind.Or_error
-    compile_to_eps in_filename ~optimise ~print_constraint_graph
+    compile_to_eps
+      in_filename
+      ~frontend_config
+      ~no_prelude
+      ~optimise
+      ~print_constraint_graph
   with
   | Error static_error -> Ok (Error static_error)
   | Ok program_eps ->
@@ -80,9 +118,10 @@ let compile_to_exe
       ~optimise
       ~exe_filename
       ~where_to_save_temps
+      ~no_prelude
       ~print_constraint_graph
       ~print_eps
-      ~koka_zero_config
+      ~(koka_zero_config : Koka_zero.Koka_zero_config.t)
       ~enable_run_stats
   =
   let exe_filename =
@@ -109,6 +148,8 @@ let compile_to_exe
     compile_to_ir
       ~in_filename
       ~out_filename:ir_filename
+      ~frontend_config:koka_zero_config.frontend_config
+      ~no_prelude
       ~optimise
       ~print_constraint_graph
       ~print_eps
@@ -119,16 +160,21 @@ let compile_to_exe
       Koka_zero.compile_ir_to_exe
         ~ir_filename
         ~exe_filename
-        ~config:koka_zero_config
+        ~config:koka_zero_config.backend_config
         ~optimise
         ~enable_run_stats
     in
     Ok ()
 ;;
 
-let interpret_eps filename =
+let interpret_eps filename ~frontend_config ~no_prelude =
   match%bind.Or_error
-    compile_to_eps ~optimise:false ~print_constraint_graph:false filename
+    compile_to_eps
+      filename
+      ~optimise:false
+      ~print_constraint_graph:false
+      ~frontend_config
+      ~no_prelude
   with
   | Error static_error -> Ok (Error static_error)
   | Ok program ->
@@ -141,9 +187,13 @@ let interpret_eps filename =
        |> Or_error.error_string)
 ;;
 
-let typecheck filename ~print_constraint_graph =
+let typecheck filename ~print_constraint_graph ~no_prelude ~frontend_config =
   let%map.Or_error maybe_program =
-    typecheck_and_compile_to_expl filename ~print_constraint_graph
+    typecheck_and_compile_to_expl
+      filename
+      ~print_constraint_graph
+      ~no_prelude
+      ~frontend_config
   in
   let%map.Or_static_error _program = maybe_program in
   ()
@@ -151,20 +201,18 @@ let typecheck filename ~print_constraint_graph =
 
 let create_config ~clang_exe ~runtime_path ~gc_path ~prelude_path ~out_filename =
   let config =
-    { Koka_zero.Koka_zero_config.clang_exe
-    ; runtime_path
-    ; gc_path
-    ; prelude_path = Some prelude_path
+    { Koka_zero.Koka_zero_config.frontend_config =
+        { prelude_path = Some prelude_path }
+    ; backend_config = { clang_exe; runtime_path; gc_path }
     }
   in
   Koka_zero.Koka_zero_config.write config out_filename
 ;;
 
 let print_example_config () =
-  print_s
-    [%sexp
-      (Koka_zero.Koka_zero_config.example
-       : Koka_zero.Koka_zero_config.Stable.V1.t)]
+  Koka_zero.Koka_zero_config.write
+    Koka_zero.Koka_zero_config.example
+    "/dev/stdout"
 ;;
 
 module Flags = struct
@@ -199,6 +247,19 @@ module Flags = struct
       ~doc:
         "FILE language config file - sexp containing paths to required \
          libraries"
+  ;;
+
+  let frontend_config_filename =
+    flag
+      "-frontend-config"
+      (required string)
+      ~doc:
+        "FILE language frontend config file - sexp containing path to language \
+         prelude"
+  ;;
+
+  let no_prelude =
+    flag "-no-prelude" no_arg ~doc:"compile without the koka standard library"
   ;;
 
   let optimise =
@@ -252,6 +313,7 @@ let command_compile =
     ~summary:"compile a program"
     (let%map.Command in_filename = Flags.in_filename
      and config_filename = Flags.config_filename
+     and no_prelude = Flags.no_prelude
      and optimise = Flags.optimise
      and exe_filename = Flags.exe_filename
      and where_to_save_temps = Flags.where_to_save_temps
@@ -265,6 +327,7 @@ let command_compile =
        in
        compile_to_exe
          ~in_filename
+         ~no_prelude
          ~optimise
          ~exe_filename
          ~where_to_save_temps
@@ -279,12 +342,20 @@ let command_compile_to_ir =
     ~summary:"compile a program, stopping at the IR phase"
     (let%map.Command in_filename = Flags.in_filename
      and out_filename = Flags.out_filename
+     and frontend_config_filename = Flags.frontend_config_filename
+     and no_prelude = Flags.no_prelude
      and optimise = Flags.optimise
      and print_constraint_graph = Flags.print_constraint_graph
      and print_eps = Flags.print_eps in
      fun () ->
+       let open Result.Let_syntax in
+       let%bind frontend_config =
+         Koka_zero.Koka_zero_config.Frontend.load frontend_config_filename
+       in
        compile_to_ir
          ~in_filename
+         ~frontend_config
+         ~no_prelude
          ~optimise
          ~print_constraint_graph
          ~print_eps
@@ -294,22 +365,39 @@ let command_compile_to_ir =
 let command_interpret =
   Or_static_or_internal_error.command_basic
     ~summary:"interpret a program"
-    (let%map.Command in_filename = Flags.in_filename in
-     fun () -> interpret_eps in_filename)
+    (let%map.Command in_filename = Flags.in_filename
+     and frontend_config_filename = Flags.frontend_config_filename
+     and no_prelude = Flags.no_prelude in
+     fun () ->
+       let open Result.Let_syntax in
+       let%bind frontend_config =
+         Koka_zero.Koka_zero_config.Frontend.load frontend_config_filename
+       in
+       interpret_eps in_filename ~frontend_config ~no_prelude)
 ;;
 
 let command_typecheck =
   Command.basic_or_error
     ~summary:"type check a program"
     (let%map.Command in_filename = Flags.in_filename
+     and frontend_config_filename = Flags.frontend_config_filename
+     and no_prelude = Flags.no_prelude
      and print_constraint_graph = Flags.print_constraint_graph in
      fun () ->
-       typecheck in_filename ~print_constraint_graph
+       let open Result.Let_syntax in
+       let%bind frontend_config =
+         Koka_zero.Koka_zero_config.Frontend.load frontend_config_filename
+       in
+       typecheck
+         in_filename
+         ~print_constraint_graph
+         ~frontend_config
+         ~no_prelude
        |> Or_static_or_internal_error.exit)
 ;;
 
 let command_example_config =
-  Command.basic
+  Command.basic_or_error
     ~summary:"print an example config file"
     (Command.Param.return @@ fun () -> print_example_config ())
 ;;
