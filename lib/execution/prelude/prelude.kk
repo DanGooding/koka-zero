@@ -58,7 +58,7 @@ fun for-all(xs, p) {
   }
 }
 
-fun list-equal(xs, ys) {
+fun list-equal(xs, ys, element-equal) {
   match xs {
     Nil -> {
       match ys {
@@ -69,7 +69,7 @@ fun list-equal(xs, ys) {
     Cons(x, xx) -> {
       match ys {
         Nil -> False;
-        Cons(y, yy) -> list-equal(xx, yy);
+        Cons(y, yy) -> element-equal(x, y) && list-equal(xx, yy);
       }
     }
   }
@@ -173,4 +173,10 @@ fun option-flat-map(x, f) {
     None -> None;
     Some(y) -> f(y);
   }
+}
+
+// tuple
+
+fun tuple2-equal((a1, a2), (b1, b2), equal1, equal2) {
+  equal1(a1, b1) && equal2(a2, b2)
 }
