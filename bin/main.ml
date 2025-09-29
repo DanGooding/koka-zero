@@ -249,6 +249,11 @@ module Flags = struct
          libraries"
   ;;
 
+  let config =
+    map config_filename ~f:(fun filename ->
+      fun () -> Koka_zero.Koka_zero_config.load filename)
+  ;;
+
   let frontend_config_filename =
     flag
       "-frontend-config"
@@ -256,6 +261,22 @@ module Flags = struct
       ~doc:
         "FILE language frontend config file - sexp containing path to language \
          prelude"
+  ;;
+
+  let frontend_config =
+    let from_config load () =
+      let open Result.Let_syntax in
+      let%map { Koka_zero.Koka_zero_config.frontend_config; _ } = load () in
+      frontend_config
+    in
+    let from_frontend_config filename () =
+      Koka_zero.Koka_zero_config.Frontend.load filename
+    in
+    choose_one_non_optional
+      [ map config ~f:from_config
+      ; map frontend_config_filename ~f:from_frontend_config
+      ]
+      ~if_nothing_chosen:If_nothing_chosen.Raise
   ;;
 
   let no_prelude =
@@ -312,7 +333,7 @@ let command_compile =
   Or_static_or_internal_error.command_basic
     ~summary:"compile a program"
     (let%map.Command in_filename = Flags.in_filename
-     and config_filename = Flags.config_filename
+     and load_config = Flags.config
      and no_prelude = Flags.no_prelude
      and optimise = Flags.optimise
      and exe_filename = Flags.exe_filename
@@ -322,9 +343,7 @@ let command_compile =
      and enable_run_stats = Flags.enable_run_stats in
      fun () ->
        let open Result.Let_syntax in
-       let%bind koka_zero_config =
-         Koka_zero.Koka_zero_config.load config_filename
-       in
+       let%bind koka_zero_config = load_config () in
        compile_to_exe
          ~in_filename
          ~no_prelude
@@ -342,16 +361,14 @@ let command_compile_to_ir =
     ~summary:"compile a program, stopping at the IR phase"
     (let%map.Command in_filename = Flags.in_filename
      and out_filename = Flags.out_filename
-     and frontend_config_filename = Flags.frontend_config_filename
+     and load_frontend_config = Flags.frontend_config
      and no_prelude = Flags.no_prelude
      and optimise = Flags.optimise
      and print_constraint_graph = Flags.print_constraint_graph
      and print_eps = Flags.print_eps in
      fun () ->
        let open Result.Let_syntax in
-       let%bind frontend_config =
-         Koka_zero.Koka_zero_config.Frontend.load frontend_config_filename
-       in
+       let%bind frontend_config = load_frontend_config () in
        compile_to_ir
          ~in_filename
          ~frontend_config
@@ -366,13 +383,11 @@ let command_interpret =
   Or_static_or_internal_error.command_basic
     ~summary:"interpret a program"
     (let%map.Command in_filename = Flags.in_filename
-     and frontend_config_filename = Flags.frontend_config_filename
+     and load_frontend_config = Flags.frontend_config
      and no_prelude = Flags.no_prelude in
      fun () ->
        let open Result.Let_syntax in
-       let%bind frontend_config =
-         Koka_zero.Koka_zero_config.Frontend.load frontend_config_filename
-       in
+       let%bind frontend_config = load_frontend_config () in
        interpret_eps in_filename ~frontend_config ~no_prelude)
 ;;
 
@@ -380,14 +395,12 @@ let command_typecheck =
   Command.basic_or_error
     ~summary:"type check a program"
     (let%map.Command in_filename = Flags.in_filename
-     and frontend_config_filename = Flags.frontend_config_filename
+     and load_frontend_config = Flags.frontend_config
      and no_prelude = Flags.no_prelude
      and print_constraint_graph = Flags.print_constraint_graph in
      fun () ->
        let open Result.Let_syntax in
-       let%bind frontend_config =
-         Koka_zero.Koka_zero_config.Frontend.load frontend_config_filename
-       in
+       let%bind frontend_config = load_frontend_config () in
        typecheck
          in_filename
          ~print_constraint_graph
