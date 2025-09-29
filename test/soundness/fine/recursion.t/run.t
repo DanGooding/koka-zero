@@ -1,2 +1,3 @@
 Fun bindings should allow recursion
-  $ koka-zero check recursion.kk
+  $ export PROJECT_ROOT=../../../..
+  $ ../../../koka-zero.sh check recursion.kk

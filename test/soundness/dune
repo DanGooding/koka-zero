@@ -1,3 +1,7 @@
 (cram
  (applies_to :whole_subtree)
- (deps %{bin:koka-zero}))
+ (deps
+  ../koka-zero.sh
+  ../koka-zero-config-template.sexp
+  %{bin:koka-zero}
+  ../../lib/execution/prelude/prelude.kk))

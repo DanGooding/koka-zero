@@ -1,8 +1,8 @@
 Recursive functions
-  $ koka-zero interpret recursion.kk
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret recursion.kk
   144
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh recursion.kk
+  $ ../../koka-zero.sh compile recursion.kk
   $ ./recursion
   144

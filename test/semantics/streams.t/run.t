@@ -1,5 +1,6 @@
 Should be able to mix state and generator effects
-  $ koka-zero interpret streams.kk
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret streams.kk
   2
   3
   5
@@ -11,8 +12,7 @@ Should be able to mix state and generator effects
   23
   29
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh streams.kk
+  $ ../../koka-zero.sh compile streams.kk
   $ ./streams
   2
   3

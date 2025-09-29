@@ -1,2 +1,3 @@
 Should allow function and operation parameters to be wildcards
-  $ koka-zero check wildcards.kk
+  $ export PROJECT_ROOT=../../../..
+  $ ../../../koka-zero.sh check wildcards.kk

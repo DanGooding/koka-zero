@@ -1,9 +1,9 @@
 Various list operations and pattern matching
-  $ koka-zero interpret lists.kk
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret lists.kk
   2 4 6 8 
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh lists.kk
+  $ ../../koka-zero.sh compile lists.kk
   $ ./lists
   2 4 6 8 
 

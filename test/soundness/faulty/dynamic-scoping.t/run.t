@@ -1,4 +1,5 @@
 Attempting to access variable bound in call scope, rather than defintion scope
-  $ koka-zero check dynamic-scoping.kk
+  $ export PROJECT_ROOT=../../../..
+  $ ../../../koka-zero.sh check dynamic-scoping.kk
   type error: unbound variable: y
   [1]

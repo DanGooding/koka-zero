@@ -1,5 +1,6 @@
 Construct and destruct options
-  $ koka-zero interpret option.kk
+  $ export PROJECT_ROOT=../../..
+  $ ../../koka-zero.sh interpret option.kk
   1 1
   2 4
   3 9
@@ -10,8 +11,7 @@ Construct and destruct options
   8 64
   9 81
 
-  $ export PROJECT_ROOT=../../..
-  $ ../compile.sh option.kk
+  $ ../../koka-zero.sh compile option.kk
   $ ./option
   1 1
   2 4
