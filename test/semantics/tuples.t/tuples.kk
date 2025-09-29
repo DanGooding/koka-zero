@@ -28,7 +28,7 @@ fun pick-max(action) {
   action()
 }
 
-fun max((a,b)) {
+fun max-pair((a,b)) {
   a + b
 }
 

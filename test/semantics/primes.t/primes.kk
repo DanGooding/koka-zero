@@ -1,9 +1,3 @@
-fun range(start, stop) {
-  if start >= stop
-  then []
-  else Cons(start, range(start + 1, stop))
-}
-
 fun remove-multiples(prime, next-multiple, candidates) {
   match candidates {
     Nil -> Nil;
@@ -23,16 +17,6 @@ fun sieve(candidates) {
     Cons(prime, rest) -> {
       val rest-except-multiples = remove-multiples(prime, prime, rest);
       Cons(prime, sieve(rest-except-multiples))
-    }
-  }
-}
-
-fun print-list(xs, print-element) {
-  match xs {
-    Nil -> println(());
-    Cons(x, xx) -> {
-      print-element(x);
-      print-list(xx, print-element);
     }
   }
 }

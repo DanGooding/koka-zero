@@ -13,7 +13,7 @@ fun naturals() {
 }
 
 // yield elements satisfying `p` only
-fun filter(p, generate) {
+fun filter-stream(p, generate) {
   with control yield-int(x) {
     if p(x) then { yield-int(x); };
     resume(());
@@ -56,7 +56,7 @@ fun decrement() {
 }
 
 // apply `f` to every element
-fun stream-map(f, generate) {
+fun map-stream(f, generate) {
   with fun yield-int(x) {
     yield-int(f(x));
   };
@@ -93,8 +93,8 @@ fun take-while(p, generate) {
   generate();
 }
 
-// reduce a stream to a single value (a 'left' fold)
-fun fold(x0, f, generate) {
+// reduce a stream to a single value (a 'left' fold-stream)
+fun fold-stream(x0, f, generate) {
   with control yield-int(x) {
      f(x0, resume(()));
   };
@@ -139,7 +139,7 @@ fun main() {
   // print primes up to 30:
   with print-yielded;
   with take-while(fn(x) { x < 30 });
-  with filter(is-prime);
+  with filter-stream(is-prime);
   naturals();
 }
 

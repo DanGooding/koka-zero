@@ -1,5 +1,5 @@
 
-fun print-list(xs, print-element) {
+fun print-list2(xs, print-element) {
   match xs {
     Cons(x, ys) -> {
       print-element(x);
@@ -9,7 +9,7 @@ fun print-list(xs, print-element) {
   }
 }
 
-fun print-bool(b) {
+fun print-bool2(b) {
   val n = match b {
     False -> 0;
     True -> 1;
@@ -18,6 +18,6 @@ fun print-bool(b) {
 }
 
 fun main() {
-  print-list([1,2,3], print-int);
-  print-list([True, False, True], print-bool);
+  print-list2([1,2,3], print-int);
+  print-list2([True, False, True], print-bool2);
 }

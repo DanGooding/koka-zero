@@ -1,29 +1,7 @@
-
-fun print-list(xs, print-element) {
-  match xs {
-    Nil -> println(());
-    Cons(x, ys) -> {
-      print-element(x);
-      print-list(ys, print-element)
-    }
-  }
-}
-
 fun print-bool(b) {
   match b {
     True -> print-int(1);
     False -> print-int(0);
-  }
-}
-
-fun filter(xs, f) {
-  match xs {
-    Nil -> Nil;
-    Cons(x, xx) -> {
-      if f(x)
-      then Cons(x, xx.filter(f))
-      else xx.filter(f)
-    }
   }
 }
 
