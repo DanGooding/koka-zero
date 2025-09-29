@@ -69,6 +69,10 @@ COPY \
   ./lib/execution/runtime/ \
   runtime/
 
+COPY \
+  ./lib/execution/prelude/ \
+  prelude/
+
 ARG GC_SRC_PATH="/usr/local"
 ARG GC_DEST_PATH="/usr/local"
 
@@ -84,4 +88,5 @@ RUN /app/koka-zero create-config \
   -clang /usr/bin/clang \
   -runtime /app/runtime/runtime.c \
   -gc ${GC_DEST_PATH} \
+  -prelude /app/prelude/prelude.kk \
   -o koka-zero-config.sexp
