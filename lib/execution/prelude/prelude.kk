@@ -125,6 +125,14 @@ fun reduce(xs, combine) {
   }
 }
 
+fun fold-right(xs, init, f) {
+  fold(reverse(xs), init, fn(a, b) f(b, a))
+}
+
+fun concat-all(lists) {
+  fold-right(lists, [], concat)
+}
+
 fun for-each(xs, f) {
   match xs {
     Nil -> ();
