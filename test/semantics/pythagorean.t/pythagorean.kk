@@ -55,7 +55,7 @@ fun find-triple(n) {
 }
 
 fun main() {
-  val limit = 20;
+  val limit = read-int(());
   with choose-any();
   find-triple(limit);
 }
