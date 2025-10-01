@@ -335,6 +335,8 @@ let rec constrain_type_at_most
               "inconsistent types"
                 (p : Type.Primitive.t)
                 (p' : Type.Primitive.t)])
+     | Metavariable m, Metavariable n when [%equal: Type.Metavariable.t] m n ->
+       return ()
      | Metavariable m, Metavariable n ->
        let%bind () =
          add_upper_bound t m (Type.Mono.Metavariable n) ~location ~debug_trace
@@ -518,6 +520,8 @@ and constrain_effect_at_most
          (Handled (Set.diff labels_hi labels_lo, effect_lo))
          ~location
          ~debug_trace
+     | Metavariable m, Metavariable n when [%equal: Effect.Metavariable.t] m n
+       -> return ()
      | Metavariable m, Metavariable n ->
        let%bind () =
          add_effect_upper_bound
