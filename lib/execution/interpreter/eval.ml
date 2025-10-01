@@ -254,7 +254,9 @@ let rec eval_expr : Expr.t -> env:Value.context -> Value.t Interpreter.t =
         return ([ x, v ], pure_body)
       | Value.Yield _ ->
         Interpreter.impossible_error
-          "expression expected to be pure returned Yield"
+          (Sexp.to_string_hum
+             [%message
+               "expression expected to be pure returned Yield" (expr : Expr.t)])
     in
     let%bind env' =
       Interpreter.list_fold bindings ~init:env ~f:(fun env (x, v) ->
