@@ -78,5 +78,5 @@ let rec add_tree_to_graph t graph =
       ~from:parent_id
       ~to_:(node_id child)
       ~disambiguator:(Dot_graph.Edge_disambiguator.of_string "original")
-      ~attrs:[ "label", node_label child; "style", "dashed" ]
+      ~attrs:[ "style", "dashed" ]
 ;;
