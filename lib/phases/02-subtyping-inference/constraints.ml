@@ -1,7 +1,11 @@
 open! Core
 open! Import
 
-let debug () = Sys.getenv "DEBUG_PRINT_CONSTRAINTS" |> Option.is_some
+let root_debug_trace =
+  lazy
+    (Debug_trace.create_enabled_by_environment_variable
+       "DEBUG_PRINT_CONSTRAINTS")
+;;
 
 type t =
   { type_constraints : Type.Mono.t Bounds.t Type.Metavariable.Table.t
@@ -102,45 +106,39 @@ let rec extrude_aux
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
        let bounds = get_type_bounds t m in
-       if debug ()
-       then (
-         let sexp_of_type_ = Metavariables.sexp_of_type t.metavariables in
-         print_s
-           [%message
-             "extruding"
-               ~meta:(Metavariable m : type_)
-               (bounds : type_ Bounds.t option)]);
        let fresh_bounds =
          match bounds with
-         | None -> Bounds.create ()
-         | Some { Bounds.lower_bounds; upper_bounds } ->
+         | None -> Bounds.create (module Type.Mono)
+         | Some bounds ->
+           (* TODO: this is inconsistent with the effect case!
+              [ ] we don't add an extra metavariable 'fresh'
+              [ ] we don't set one of upper/lower to empty
+           *)
            (match polarity_positive with
             | true ->
-              let lower_bounds =
-                List.map
-                  lower_bounds
-                  ~f:
-                    (extrude_aux
-                       t
-                       ~to_level
-                       ~polarity_positive
-                       ~cache
-                       ~effect_cache)
-              in
-              { Bounds.lower_bounds; upper_bounds }
+              Bounds.freshen
+                bounds
+                ~upper:(`Map (fun bound -> bound))
+                ~lower:
+                  (`Map
+                      (extrude_aux
+                         t
+                         ~to_level
+                         ~polarity_positive
+                         ~cache
+                         ~effect_cache))
             | false ->
-              let upper_bounds =
-                List.map
-                  upper_bounds
-                  ~f:
-                    (extrude_aux
-                       t
-                       ~to_level
-                       ~polarity_positive
-                       ~cache
-                       ~effect_cache)
-              in
-              { Bounds.lower_bounds; upper_bounds })
+              Bounds.freshen
+                bounds
+                ~lower:(`Map (fun bound -> bound))
+                ~upper:
+                  (`Map
+                      (extrude_aux
+                         t
+                         ~to_level
+                         ~polarity_positive
+                         ~cache
+                         ~effect_cache)))
        in
        add_fresh_type_exn t fresh fresh_bounds;
        Metavariable fresh)
@@ -200,49 +198,42 @@ and extrude_effect_metavariable_aux
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
        let bounds = get_effect_bounds t m in
-       if debug ()
-       then (
-         let sexp_of_effect_ = Metavariables.sexp_of_effect t.metavariables in
-         print_s
-           [%message
-             "extruding"
-               ~meta:(Metavariable m : effect_)
-               (bounds : effect_ Bounds.t option)]);
        let fresh_bounds =
          match bounds with
-         | None -> Bounds.create ()
+         | None ->
+           (* TODO: surely it's wrong to do nothing here *)
+           Bounds.create (module Effect)
          | Some bounds ->
            (match polarity_positive with
             | true ->
-              let lower_bounds =
-                List.map
-                  bounds.lower_bounds
-                  ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
-              in
-              bounds.upper_bounds <- Metavariable fresh :: bounds.upper_bounds;
-              { Bounds.lower_bounds; upper_bounds = [] }
+              Bounds.freshen
+                bounds
+                ~upper:`Empty
+                ~lower:
+                  (`Map
+                      (extrude_effect_aux t ~to_level ~polarity_positive ~cache))
             | false ->
-              let upper_bounds =
-                List.map
-                  bounds.upper_bounds
-                  ~f:(extrude_effect_aux t ~to_level ~polarity_positive ~cache)
-              in
-              bounds.lower_bounds <- Metavariable fresh :: bounds.upper_bounds;
-              { Bounds.lower_bounds = []; upper_bounds })
+              Bounds.freshen
+                bounds
+                ~lower:`Empty
+                ~upper:
+                  (`Map
+                      (extrude_effect_aux t ~to_level ~polarity_positive ~cache)))
        in
+       (* TODO: in what cases do we run this add: *)
        add_fresh_effect_exn t fresh fresh_bounds;
        fresh)
 ;;
 
-let extrude t type_ ~to_level ~polarity_positive =
-  if debug ()
-  then
-    print_s
+let extrude t type_ ~to_level ~polarity_positive ~debug_trace =
+  let (_ : Debug_trace.t) =
+    Debug_trace.enter debug_trace (fun () ->
       [%message
         "extrude type"
           ~type_:(Metavariables.sexp_of_type t.metavariables type_ : Sexp.t)
           (to_level : int)
-          (polarity_positive : bool)];
+          (polarity_positive : bool)])
+  in
   extrude_aux
     t
     type_
@@ -252,16 +243,16 @@ let extrude t type_ ~to_level ~polarity_positive =
     ~effect_cache:(Effect.Metavariable.Table.create ())
 ;;
 
-let extrude_effect t effect_ ~to_level ~polarity_positive =
-  if debug ()
-  then
-    print_s
+let extrude_effect t effect_ ~to_level ~polarity_positive ~debug_trace =
+  let (_ : Debug_trace.t) =
+    Debug_trace.enter debug_trace (fun () ->
       [%message
         "extrude effect"
           ~effect_:
             (Metavariables.sexp_of_effect t.metavariables effect_ : Sexp.t)
           (to_level : int)
-          (polarity_positive : bool)];
+          (polarity_positive : bool)])
+  in
   extrude_effect_aux
     t
     effect_
@@ -277,17 +268,18 @@ let rec constrain_type_at_most
           (type_lo : Type.Mono.t)
           (type_hi : Type.Mono.t)
           ~(location : Metavariables.Location.t)
+          ~debug_trace
   : unit Or_static_error.t
   =
   let open Result.Let_syntax in
-  if debug ()
-  then
-    print_s
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
       [%message
         "constrain_type_at_most"
           ~type_lo:(Metavariables.sexp_of_type t.metavariables type_lo : Sexp.t)
           ~type_hi:(Metavariables.sexp_of_type t.metavariables type_hi : Sexp.t)
-          (location : Metavariables.Location.t)];
+          (location : Metavariables.Location.t)])
+  in
   let constraint_ = Constraint.Type_at_most { type_lo; type_hi } in
   match Hash_set.strict_add t.already_seen_constraints constraint_ with
   | Error _already_present -> return ()
@@ -297,13 +289,18 @@ let rec constrain_type_at_most
        , Arrow (args_hi, effect_hi, result_hi) ) ->
        (match%bind
           Or_static_error.list_iter2 args_lo args_hi ~f:(fun arg_lo arg_hi ->
-            constrain_type_at_most t arg_hi arg_lo ~location)
+            constrain_type_at_most t arg_hi arg_lo ~location ~debug_trace)
         with
         | Ok () ->
           let%bind () =
-            constrain_effect_at_most t effect_lo effect_hi ~location
+            constrain_effect_at_most
+              t
+              effect_lo
+              effect_hi
+              ~location
+              ~debug_trace
           in
-          constrain_type_at_most t result_lo result_hi ~location
+          constrain_type_at_most t result_lo result_hi ~location ~debug_trace
         | Unequal_lengths ->
           Error
             (Static_error.type_error_s
@@ -312,9 +309,9 @@ let rec constrain_type_at_most
                    (args_lo : Type.Mono.t list)
                    (args_hi : Type.Mono.t list)]))
      | List elem_lo, List elem_hi ->
-       constrain_type_at_most t elem_lo elem_hi ~location
+       constrain_type_at_most t elem_lo elem_hi ~location ~debug_trace
      | Option elem_lo, Option elem_hi ->
-       constrain_type_at_most t elem_lo elem_hi ~location
+       constrain_type_at_most t elem_lo elem_hi ~location ~debug_trace
      | Tuple elements_lo, Tuple elements_hi ->
        (match List.zip elements_lo elements_hi with
         | Unequal_lengths ->
@@ -328,7 +325,7 @@ let rec constrain_type_at_most
           Or_static_error.list_iter
             paired_elements
             ~f:(fun (elem_lo, elem_hi) ->
-              constrain_type_at_most t elem_lo elem_hi ~location))
+              constrain_type_at_most t elem_lo elem_hi ~location ~debug_trace))
      | Primitive p, Primitive p' when [%equal: Type.Primitive.t] p p' ->
        return ()
      | Primitive p, Primitive p' ->
@@ -339,10 +336,14 @@ let rec constrain_type_at_most
                 (p : Type.Primitive.t)
                 (p' : Type.Primitive.t)])
      | Metavariable m, Metavariable n ->
-       let%bind () = add_upper_bound t m (Type.Mono.Metavariable n) ~location in
-       add_lower_bound t (Type.Mono.Metavariable m) n ~location
-     | Metavariable m, type_hi -> add_upper_bound t m type_hi ~location
-     | type_lo, Metavariable m -> add_lower_bound t type_lo m ~location
+       let%bind () =
+         add_upper_bound t m (Type.Mono.Metavariable n) ~location ~debug_trace
+       in
+       add_lower_bound t (Type.Mono.Metavariable m) n ~location ~debug_trace
+     | Metavariable m, type_hi ->
+       add_upper_bound t m type_hi ~location ~debug_trace
+     | type_lo, Metavariable m ->
+       add_lower_bound t type_lo m ~location ~debug_trace
      | Arrow _, (Primitive _ | List _ | Tuple _ | Option _)
      | Primitive _, (Arrow _ | List _ | Tuple _ | Option _)
      | List _, (Arrow _ | Primitive _ | Tuple _ | Option _)
@@ -355,7 +356,15 @@ let rec constrain_type_at_most
                 (type_lo : Type.Mono.t)
                 (type_hi : Type.Mono.t)]))
 
-and add_upper_bound t m type_hi ~location =
+and add_upper_bound t m type_hi ~location ~debug_trace =
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
+      [%message
+        "add_upper_bound"
+          (m : Type.Metavariable.t)
+          (type_hi : Type.Mono.t)
+          (location : Metavariables.Location.t)])
+  in
   let m_level = Metavariables.type_level_exn t.metavariables m in
   let hi_level =
     Type.Mono.max_level
@@ -367,22 +376,35 @@ and add_upper_bound t m type_hi ~location =
   match hi_level <= m_level with
   | true ->
     let (m_bounds : _ Bounds.t) =
-      Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
+      Hashtbl.find_or_add t.type_constraints m ~default:(fun () ->
+        Bounds.create (module Type.Mono))
     in
     (* add [m <= type_hi]*)
-    m_bounds.upper_bounds <- type_hi :: m_bounds.upper_bounds;
+    Hash_set.add m_bounds.upper_bounds type_hi;
     (* add transitive closure *)
-    Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
-      constrain_type_at_most t below_m type_hi ~location)
+    let debug_trace =
+      Debug_trace.enter debug_trace (fun () ->
+        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.lower_bounds : int)])
+    in
+    Or_static_error.hash_set_iter m_bounds.lower_bounds ~f:(fun below_m ->
+      constrain_type_at_most t below_m type_hi ~location ~debug_trace)
   | false ->
     (* need to copy [type_hi] down to [m_level] *)
     let approx_type_hi =
-      extrude t type_hi ~to_level:m_level ~polarity_positive:false
+      extrude t type_hi ~to_level:m_level ~polarity_positive:false ~debug_trace
     in
     (* m (level_m) <= approx_type_hi (level_m) <= type_hi *)
-    add_upper_bound t m approx_type_hi ~location
+    add_upper_bound t m approx_type_hi ~location ~debug_trace
 
-and add_lower_bound t type_lo m ~location =
+and add_lower_bound t type_lo m ~location ~debug_trace =
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
+      [%message
+        "add_lower_bound"
+          (type_lo : Type.Mono.t)
+          (m : Type.Metavariable.t)
+          (location : Metavariables.Location.t)])
+  in
   let m_level = Metavariables.type_level_exn t.metavariables m in
   let lo_level =
     Type.Mono.max_level
@@ -394,37 +416,43 @@ and add_lower_bound t type_lo m ~location =
   match lo_level <= m_level with
   | true ->
     let (m_bounds : _ Bounds.t) =
-      Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
+      Hashtbl.find_or_add t.type_constraints m ~default:(fun () ->
+        Bounds.create (module Type.Mono))
     in
     (* add [type_less_than_m <= m] *)
-    m_bounds.lower_bounds <- type_lo :: m_bounds.lower_bounds;
+    Hash_set.add m_bounds.lower_bounds type_lo;
     (* add transitive closure *)
-    Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
-      constrain_type_at_most t type_lo above_m ~location)
+    let debug_trace =
+      Debug_trace.enter debug_trace (fun () ->
+        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.upper_bounds : int)])
+    in
+    Or_static_error.hash_set_iter m_bounds.upper_bounds ~f:(fun above_m ->
+      constrain_type_at_most t type_lo above_m ~location ~debug_trace)
   | false ->
     let approx_type_lo =
-      extrude t type_lo ~to_level:m_level ~polarity_positive:true
+      extrude t type_lo ~to_level:m_level ~polarity_positive:true ~debug_trace
     in
-    add_lower_bound t approx_type_lo m ~location
+    add_lower_bound t approx_type_lo m ~location ~debug_trace
 
 and constrain_effect_at_most
       t
       (effect_lo : Effect.t)
       (effect_hi : Effect.t)
       ~(location : Metavariables.Location.t)
+      ~debug_trace
   : unit Or_static_error.t
   =
   let open Result.Let_syntax in
-  if debug ()
-  then
-    print_s
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
       [%message
         "constrain_effect_at_most"
           ~effect_lo:
             (Metavariables.sexp_of_effect t.metavariables effect_lo : Sexp.t)
           ~effect_hi:
             (Metavariables.sexp_of_effect t.metavariables effect_hi : Sexp.t)
-          (location : Metavariables.Location.t)];
+          (location : Metavariables.Location.t)])
+  in
   let constraint_ = Constraint.Effect_at_most { effect_lo; effect_hi } in
   match Hash_set.strict_add t.already_seen_constraints constraint_ with
   | Error _already_present -> return ()
@@ -446,6 +474,7 @@ and constrain_effect_at_most
          (Metavariable effect_lo)
          (Labels (Set.union labels_lo labels_hi))
          ~location
+         ~debug_trace
      | Labels labels_lo, Handled (labels_hi, effect_hi) ->
        (* labels_lo <= effect_hi - labels_hi *)
        (match Set.are_disjoint labels_lo labels_hi with
@@ -465,7 +494,8 @@ and constrain_effect_at_most
             t
             (Labels labels_lo)
             (Metavariable effect_hi)
-            ~location)
+            ~location
+            ~debug_trace)
      | Handled (labels_lo, effect_lo), Handled (labels_hi, effect_hi) ->
        (* effect_lo - labels_lo <= effect_hi - labels_hi
         we reduce into multiple simpler but equiavalent constraints to make progress *)
@@ -477,6 +507,7 @@ and constrain_effect_at_most
            (Handled (labels_lo, effect_lo))
            (Metavariable effect_hi)
            ~location
+           ~debug_trace
          (* add back the info that [effect_lo] does not contain any of [labels_hi],
             except possibly those in [labels_lo]:
             effect_lo <= effect_lo - (labels_hi - labels_lo) *)
@@ -486,15 +517,31 @@ and constrain_effect_at_most
          (Metavariable effect_lo)
          (Handled (Set.diff labels_hi labels_lo, effect_lo))
          ~location
+         ~debug_trace
      | Metavariable m, Metavariable n ->
        let%bind () =
-         add_effect_upper_bound t m (Effect.Metavariable n) ~location
+         add_effect_upper_bound
+           t
+           m
+           (Effect.Metavariable n)
+           ~location
+           ~debug_trace
        in
-       add_effect_lower_bound t (Effect.Metavariable m) n ~location
-     | Metavariable m, above_m -> add_effect_upper_bound t m above_m ~location
-     | below_m, Metavariable m -> add_effect_lower_bound t below_m m ~location)
+       add_effect_lower_bound t (Effect.Metavariable m) n ~location ~debug_trace
+     | Metavariable m, above_m ->
+       add_effect_upper_bound t m above_m ~location ~debug_trace
+     | below_m, Metavariable m ->
+       add_effect_lower_bound t below_m m ~location ~debug_trace)
 
-and add_effect_upper_bound t m above_m ~location =
+and add_effect_upper_bound t m above_m ~location ~debug_trace =
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
+      [%message
+        "add_effect_upper_bound"
+          (m : Effect.Metavariable.t)
+          (above_m : Effect.t)
+          (location : Metavariables.Location.t)])
+  in
   let m_level = Metavariables.effect_level_exn t.metavariables m in
   let above_m_level =
     Effect.max_level
@@ -504,18 +551,36 @@ and add_effect_upper_bound t m above_m ~location =
   match above_m_level <= m_level with
   | true ->
     let m_bounds =
-      Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
+      Hashtbl.find_or_add t.effect_constraints m ~default:(fun () ->
+        Bounds.create (module Effect))
     in
-    m_bounds.upper_bounds <- above_m :: m_bounds.upper_bounds;
-    Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
-      constrain_effect_at_most t below_m above_m ~location)
+    Hash_set.add m_bounds.upper_bounds above_m;
+    let debug_trace =
+      Debug_trace.enter debug_trace (fun () ->
+        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.lower_bounds : int)])
+    in
+    Or_static_error.hash_set_iter m_bounds.lower_bounds ~f:(fun below_m ->
+      constrain_effect_at_most t below_m above_m ~location ~debug_trace)
   | false ->
     let above_approx =
-      extrude_effect t above_m ~to_level:m_level ~polarity_positive:false
+      extrude_effect
+        t
+        above_m
+        ~to_level:m_level
+        ~polarity_positive:false
+        ~debug_trace
     in
-    add_effect_upper_bound t m above_approx ~location
+    add_effect_upper_bound t m above_approx ~location ~debug_trace
 
-and add_effect_lower_bound t below_m m ~location =
+and add_effect_lower_bound t below_m m ~location ~debug_trace =
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
+      [%message
+        "add_effect_lower_bound"
+          (below_m : Effect.t)
+          (m : Effect.Metavariable.t)
+          (location : Metavariables.Location.t)])
+  in
   let m_level = Metavariables.effect_level_exn t.metavariables m in
   let below_m_level =
     Effect.max_level
@@ -525,16 +590,26 @@ and add_effect_lower_bound t below_m m ~location =
   match below_m_level <= m_level with
   | true ->
     let m_bounds =
-      Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
+      Hashtbl.find_or_add t.effect_constraints m ~default:(fun () ->
+        Bounds.create (module Effect))
     in
-    m_bounds.lower_bounds <- below_m :: m_bounds.lower_bounds;
-    Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
-      constrain_effect_at_most t below_m above_m ~location)
+    Hash_set.add m_bounds.lower_bounds below_m;
+    let debug_trace =
+      Debug_trace.enter debug_trace (fun () ->
+        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.upper_bounds : int)])
+    in
+    Or_static_error.hash_set_iter m_bounds.upper_bounds ~f:(fun above_m ->
+      constrain_effect_at_most t below_m above_m ~location ~debug_trace)
   | false ->
     let approx_below_m =
-      extrude_effect t below_m ~to_level:m_level ~polarity_positive:true
+      extrude_effect
+        t
+        below_m
+        ~to_level:m_level
+        ~polarity_positive:true
+        ~debug_trace
     in
-    add_effect_lower_bound t approx_below_m m ~location
+    add_effect_lower_bound t approx_below_m m ~location ~debug_trace
 ;;
 
 let constrain_type_at_most
@@ -543,7 +618,12 @@ let constrain_type_at_most
       (type_hi : Type.Mono.t)
       ~location
   =
-  constrain_type_at_most t type_lo type_hi ~location
+  constrain_type_at_most
+    t
+    type_lo
+    type_hi
+    ~location
+    ~debug_trace:(Lazy.force root_debug_trace)
   |> Result.map_error
        ~f:
          (Static_error.tag_s
@@ -563,7 +643,12 @@ let constrain_effect_at_most
       (effect_hi : Effect.t)
       ~location
   =
-  constrain_effect_at_most t effect_lo effect_hi ~location
+  constrain_effect_at_most
+    t
+    effect_lo
+    effect_hi
+    ~location
+    ~debug_trace:(Lazy.force root_debug_trace)
   |> Result.map_error
        ~f:
          (Static_error.tag_s
@@ -583,11 +668,11 @@ let to_graph t : Dot_graph.t =
     let meta_id = node_id meta in
     let disambiguator = Dot_graph.Edge_disambiguator.of_string "at-most" in
     add_tree_to_graph meta graph;
-    List.iter bounds.lower_bounds ~f:(fun lower_bound ->
+    Hash_set.iter bounds.lower_bounds ~f:(fun lower_bound ->
       let lower_bound_id = node_id lower_bound in
       add_tree_to_graph lower_bound graph;
       Dot_graph.add_edge graph ~from:lower_bound_id ~to_:meta_id ~disambiguator);
-    List.iter bounds.upper_bounds ~f:(fun upper_bound ->
+    Hash_set.iter bounds.upper_bounds ~f:(fun upper_bound ->
       let upper_bound_id = node_id upper_bound in
       add_tree_to_graph upper_bound graph;
       Dot_graph.add_edge graph ~from:meta_id ~to_:upper_bound_id ~disambiguator)
