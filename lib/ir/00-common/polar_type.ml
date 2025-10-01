@@ -23,9 +23,14 @@ module Effect = struct
 
   let rec simplify t =
     match t with
-    | Intersection [ t ] | Union [ t ] -> simplify t
-    | Intersection ts -> Intersection (List.map ts ~f:simplify)
-    | Union ts -> Union (List.map ts ~f:simplify)
+    | Intersection ts ->
+      (match List.concat_map ts ~f:simplify_within_intersection with
+       | [ t ] -> t
+       | ts -> Intersection ts)
+    | Union ts ->
+      (match List.concat_map ts ~f:simplify_within_union with
+       | [ t ] -> t
+       | ts -> Union ts)
     | Variable v -> Variable v
     | Labels labels -> Labels labels
     | Handled (handled_labels, t) ->
@@ -39,6 +44,18 @@ module Effect = struct
        | Intersection _ | Union _ | Variable _ | Recursive _ ->
          Handled (handled_labels, t))
     | Recursive (v, t) -> Recursive (v, simplify t)
+
+  and simplify_within_union t =
+    match simplify t with
+    | Union ts -> ts
+    | (Intersection _ | Variable _ | Labels _ | Handled _ | Recursive _) as t'
+      -> [ t' ]
+
+  and simplify_within_intersection t =
+    match simplify t with
+    | Intersection ts -> ts
+    | (Union _ | Variable _ | Labels _ | Handled _ | Recursive _) as t' ->
+      [ t' ]
   ;;
 
   let is_total t =
@@ -78,9 +95,14 @@ let rec variables t =
    notably there are many cases where we can remove variables *)
 let rec simplify t =
   match t with
-  | Intersection [ t ] | Union [ t ] -> simplify t
-  | Intersection ts -> Intersection (List.map ts ~f:simplify)
-  | Union ts -> Union (List.map ts ~f:simplify)
+  | Intersection ts ->
+    (match List.concat_map ts ~f:simplify_within_intersection with
+     | [ t ] -> t
+     | ts -> Intersection ts)
+  | Union ts ->
+    (match List.concat_map ts ~f:simplify_within_union with
+     | [ t ] -> t
+     | ts -> Union ts)
   | Variable _ | Primitive _ -> t
   | List t -> List (simplify t)
   | Option t -> Option (simplify t)
@@ -88,4 +110,28 @@ let rec simplify t =
   | Arrow (args, effect_, result) ->
     Arrow (List.map args ~f:simplify, Effect.simplify effect_, simplify result)
   | Recursive (v, t) -> Recursive (v, simplify t)
+
+and simplify_within_union t =
+  match simplify t with
+  | Union ts -> ts
+  | ( Intersection _
+    | Variable _
+    | Primitive _
+    | List _
+    | Option _
+    | Tuple _
+    | Arrow _
+    | Recursive _ ) as t' -> [ t' ]
+
+and simplify_within_intersection t =
+  match simplify t with
+  | Intersection ts -> ts
+  | ( Union _
+    | Variable _
+    | Primitive _
+    | List _
+    | Option _
+    | Tuple _
+    | Arrow _
+    | Recursive _ ) as t' -> [ t' ]
 ;;
