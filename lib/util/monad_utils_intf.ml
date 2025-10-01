@@ -70,4 +70,6 @@ module type S = sig
 
   (** [all_non_empty] is the equivalent of [all] but over non-empty lists*)
   val all_non_empty : 'a t Non_empty_list.t -> 'a Non_empty_list.t t
+
+  val hash_set_iter : 'a Hash_set.t -> f:('a -> unit t) -> unit t
 end

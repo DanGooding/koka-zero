@@ -33,11 +33,16 @@ module Label = struct
   end
 end
 
-type t =
-  | Metavariable of Metavariable.t
-  | Labels of Label.Set.t
-  | Handled of Set.M(Label).t * Metavariable.t
-[@@deriving sexp_of, compare, hash]
+module T = struct
+  type t =
+    | Metavariable of Metavariable.t
+    | Labels of Label.Set.t
+    | Handled of Set.M(Label).t * Metavariable.t
+  [@@deriving sexp_of, compare, hash]
+end
+
+include T
+include Hashable.Make_plain (T)
 
 let max_level t ~metavariable_level : int =
   match t with

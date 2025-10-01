@@ -37,14 +37,19 @@ module Primitive = struct
 end
 
 module Mono = struct
-  type t =
-    | Arrow of t list * Effect.t * t
-    | Metavariable of Metavariable.t
-    | Primitive of Primitive.t
-    | List of t
-    | Tuple of t list
-    | Option of t
-  [@@deriving sexp_of, compare, hash]
+  module T = struct
+    type t =
+      | Arrow of t list * Effect.t * t
+      | Metavariable of Metavariable.t
+      | Primitive of Primitive.t
+      | List of t
+      | Tuple of t list
+      | Option of t
+    [@@deriving sexp_of, compare, hash]
+  end
+
+  include T
+  include Hashable.Make_plain (T)
 
   let rec max_level t ~type_metavariable_level ~effect_metavariable_level =
     match t with

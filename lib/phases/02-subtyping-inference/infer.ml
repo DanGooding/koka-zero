@@ -177,13 +177,14 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
          Hashtbl.add_exn fresh_types ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_type_bounds t.constraints meta in
-         Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
-           let lower_bounds = List.map lower_bounds ~f:instantiate_aux in
-           let upper_bounds = List.map upper_bounds ~f:instantiate_aux in
-           Constraints.add_fresh_type_exn
-             t.constraints
-             meta'
-             { Bounds.lower_bounds; upper_bounds });
+         Option.iter bounds ~f:(fun bounds ->
+           let fresh_bounds =
+             Bounds.freshen
+               bounds
+               ~lower:(`Map instantiate_aux)
+               ~upper:(`Map instantiate_aux)
+           in
+           Constraints.add_fresh_type_exn t.constraints meta' fresh_bounds);
          Metavariable meta')
     | Metavariable meta -> Metavariable meta
   and instantiate_effect_aux (effect_ : Effect.t) : Effect.t =
@@ -211,13 +212,14 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
          Hashtbl.add_exn fresh_effects ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_effect_bounds t.constraints meta in
-         Option.iter bounds ~f:(fun { Bounds.lower_bounds; upper_bounds } ->
-           let lower_bounds = List.map lower_bounds ~f:instantiate_effect_aux in
-           let upper_bounds = List.map upper_bounds ~f:instantiate_effect_aux in
-           Constraints.add_fresh_effect_exn
-             t.constraints
-             meta'
-             { Bounds.lower_bounds; upper_bounds });
+         Option.iter bounds ~f:(fun bounds ->
+           let bounds =
+             Bounds.freshen
+               bounds
+               ~lower:(`Map instantiate_effect_aux)
+               ~upper:(`Map instantiate_effect_aux)
+           in
+           Constraints.add_fresh_effect_exn t.constraints meta' bounds);
          meta')
   in
   instantiate_aux poly.monotype

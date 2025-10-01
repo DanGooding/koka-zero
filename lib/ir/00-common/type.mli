@@ -43,6 +43,8 @@ module Mono : sig
     | Option of t
   [@@deriving sexp_of, compare, hash]
 
+  include Hashable.S_plain with type t := t
+
   val max_level
     :  t
     -> type_metavariable_level:(Metavariable.t -> int)
