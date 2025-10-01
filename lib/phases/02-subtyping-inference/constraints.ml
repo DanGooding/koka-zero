@@ -338,58 +338,11 @@ let rec constrain_type_at_most
               "inconsistent types"
                 (p : Type.Primitive.t)
                 (p' : Type.Primitive.t)])
-     | Metavariable m, type_hi ->
-       let m_level = Metavariables.type_level_exn t.metavariables m in
-       let hi_level =
-         Type.Mono.max_level
-           type_hi
-           ~type_metavariable_level:
-             (Metavariables.type_level_exn t.metavariables)
-           ~effect_metavariable_level:
-             (Metavariables.effect_level_exn t.metavariables)
-       in
-       (match hi_level <= m_level with
-        | true ->
-          let (m_bounds : _ Bounds.t) =
-            Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
-          in
-          (* add [m <= type_hi]*)
-          m_bounds.upper_bounds <- type_hi :: m_bounds.upper_bounds;
-          (* add transitive closure *)
-          Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
-            constrain_type_at_most t below_m type_hi ~location)
-        | false ->
-          (* need to copy [type_hi] down to [m_level] *)
-          let approx_type_hi =
-            extrude t type_hi ~to_level:m_level ~polarity_positive:false
-          in
-          (* m (level_m) <= approx_type_hi (level_m) <= type_hi *)
-          constrain_type_at_most t (Metavariable m) approx_type_hi ~location)
-     | type_lo, Metavariable m ->
-       let m_level = Metavariables.type_level_exn t.metavariables m in
-       let lo_level =
-         Type.Mono.max_level
-           type_lo
-           ~type_metavariable_level:
-             (Metavariables.type_level_exn t.metavariables)
-           ~effect_metavariable_level:
-             (Metavariables.effect_level_exn t.metavariables)
-       in
-       (match lo_level <= m_level with
-        | true ->
-          let (m_bounds : _ Bounds.t) =
-            Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
-          in
-          (* add [type_less_than_m <= m] *)
-          m_bounds.lower_bounds <- type_lo :: m_bounds.lower_bounds;
-          (* add transitive closure *)
-          Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
-            constrain_type_at_most t type_lo above_m ~location)
-        | false ->
-          let approx_type_lo =
-            extrude t type_lo ~to_level:m_level ~polarity_positive:true
-          in
-          constrain_type_at_most t approx_type_lo (Metavariable m) ~location)
+     | Metavariable m, Metavariable n ->
+       let%bind () = add_upper_bound t m (Type.Mono.Metavariable n) ~location in
+       add_lower_bound t (Type.Mono.Metavariable m) n ~location
+     | Metavariable m, type_hi -> add_upper_bound t m type_hi ~location
+     | type_lo, Metavariable m -> add_lower_bound t type_lo m ~location
      | Arrow _, (Primitive _ | List _ | Tuple _ | Option _)
      | Primitive _, (Arrow _ | List _ | Tuple _ | Option _)
      | List _, (Arrow _ | Primitive _ | Tuple _ | Option _)
@@ -401,6 +354,58 @@ let rec constrain_type_at_most
               "type error: cannot relate"
                 (type_lo : Type.Mono.t)
                 (type_hi : Type.Mono.t)]))
+
+and add_upper_bound t m type_hi ~location =
+  let m_level = Metavariables.type_level_exn t.metavariables m in
+  let hi_level =
+    Type.Mono.max_level
+      type_hi
+      ~type_metavariable_level:(Metavariables.type_level_exn t.metavariables)
+      ~effect_metavariable_level:
+        (Metavariables.effect_level_exn t.metavariables)
+  in
+  match hi_level <= m_level with
+  | true ->
+    let (m_bounds : _ Bounds.t) =
+      Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
+    in
+    (* add [m <= type_hi]*)
+    m_bounds.upper_bounds <- type_hi :: m_bounds.upper_bounds;
+    (* add transitive closure *)
+    Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
+      constrain_type_at_most t below_m type_hi ~location)
+  | false ->
+    (* need to copy [type_hi] down to [m_level] *)
+    let approx_type_hi =
+      extrude t type_hi ~to_level:m_level ~polarity_positive:false
+    in
+    (* m (level_m) <= approx_type_hi (level_m) <= type_hi *)
+    add_upper_bound t m approx_type_hi ~location
+
+and add_lower_bound t type_lo m ~location =
+  let m_level = Metavariables.type_level_exn t.metavariables m in
+  let lo_level =
+    Type.Mono.max_level
+      type_lo
+      ~type_metavariable_level:(Metavariables.type_level_exn t.metavariables)
+      ~effect_metavariable_level:
+        (Metavariables.effect_level_exn t.metavariables)
+  in
+  match lo_level <= m_level with
+  | true ->
+    let (m_bounds : _ Bounds.t) =
+      Hashtbl.find_or_add t.type_constraints m ~default:Bounds.create
+    in
+    (* add [type_less_than_m <= m] *)
+    m_bounds.lower_bounds <- type_lo :: m_bounds.lower_bounds;
+    (* add transitive closure *)
+    Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
+      constrain_type_at_most t type_lo above_m ~location)
+  | false ->
+    let approx_type_lo =
+      extrude t type_lo ~to_level:m_level ~polarity_positive:true
+    in
+    add_lower_bound t approx_type_lo m ~location
 
 and constrain_effect_at_most
       t
@@ -481,46 +486,55 @@ and constrain_effect_at_most
          (Metavariable effect_lo)
          (Handled (Set.diff labels_hi labels_lo, effect_lo))
          ~location
-     | Metavariable m, above_m ->
-       let m_level = Metavariables.effect_level_exn t.metavariables m in
-       let above_m_level =
-         Effect.max_level
-           above_m
-           ~metavariable_level:(Metavariables.effect_level_exn t.metavariables)
+     | Metavariable m, Metavariable n ->
+       let%bind () =
+         add_effect_upper_bound t m (Effect.Metavariable n) ~location
        in
-       (match above_m_level <= m_level with
-        | true ->
-          let m_bounds =
-            Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
-          in
-          m_bounds.upper_bounds <- above_m :: m_bounds.upper_bounds;
-          Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
-            constrain_effect_at_most t below_m above_m ~location)
-        | false ->
-          let above_approx =
-            extrude_effect t above_m ~to_level:m_level ~polarity_positive:false
-          in
-          constrain_effect_at_most t (Metavariable m) above_approx ~location)
-     | below_m, Metavariable m ->
-       let m_level = Metavariables.effect_level_exn t.metavariables m in
-       let below_m_level =
-         Effect.max_level
-           below_m
-           ~metavariable_level:(Metavariables.effect_level_exn t.metavariables)
-       in
-       (match below_m_level <= m_level with
-        | true ->
-          let m_bounds =
-            Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
-          in
-          m_bounds.lower_bounds <- below_m :: m_bounds.lower_bounds;
-          Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
-            constrain_effect_at_most t below_m above_m ~location)
-        | false ->
-          let approx_below_m =
-            extrude_effect t below_m ~to_level:m_level ~polarity_positive:true
-          in
-          constrain_effect_at_most t approx_below_m (Metavariable m) ~location))
+       add_effect_lower_bound t (Effect.Metavariable m) n ~location
+     | Metavariable m, above_m -> add_effect_upper_bound t m above_m ~location
+     | below_m, Metavariable m -> add_effect_lower_bound t below_m m ~location)
+
+and add_effect_upper_bound t m above_m ~location =
+  let m_level = Metavariables.effect_level_exn t.metavariables m in
+  let above_m_level =
+    Effect.max_level
+      above_m
+      ~metavariable_level:(Metavariables.effect_level_exn t.metavariables)
+  in
+  match above_m_level <= m_level with
+  | true ->
+    let m_bounds =
+      Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
+    in
+    m_bounds.upper_bounds <- above_m :: m_bounds.upper_bounds;
+    Or_static_error.list_iter m_bounds.lower_bounds ~f:(fun below_m ->
+      constrain_effect_at_most t below_m above_m ~location)
+  | false ->
+    let above_approx =
+      extrude_effect t above_m ~to_level:m_level ~polarity_positive:false
+    in
+    add_effect_upper_bound t m above_approx ~location
+
+and add_effect_lower_bound t below_m m ~location =
+  let m_level = Metavariables.effect_level_exn t.metavariables m in
+  let below_m_level =
+    Effect.max_level
+      below_m
+      ~metavariable_level:(Metavariables.effect_level_exn t.metavariables)
+  in
+  match below_m_level <= m_level with
+  | true ->
+    let m_bounds =
+      Hashtbl.find_or_add t.effect_constraints m ~default:Bounds.create
+    in
+    m_bounds.lower_bounds <- below_m :: m_bounds.lower_bounds;
+    Or_static_error.list_iter m_bounds.upper_bounds ~f:(fun above_m ->
+      constrain_effect_at_most t below_m above_m ~location)
+  | false ->
+    let approx_below_m =
+      extrude_effect t below_m ~to_level:m_level ~polarity_positive:true
+    in
+    add_effect_lower_bound t approx_below_m m ~location
 ;;
 
 let constrain_type_at_most
