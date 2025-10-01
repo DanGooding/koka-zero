@@ -89,13 +89,14 @@ let rec expand_type_aux
        (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
        Variable var
      | false ->
+       (* TODO: union the bound sets *)
        let bounds =
          Constraints.get_type_bounds t.constraints meta
          |> Option.value_map
               ~f:(fun (bounds : _ Bounds.t) ->
                 match polarity_positive with
-                | true -> bounds.lower_bounds
-                | false -> bounds.upper_bounds)
+                | true -> Hash_set.to_list bounds.lower_bounds
+                | false -> Hash_set.to_list bounds.upper_bounds)
               ~default:[]
        in
        let bound_types =
@@ -164,13 +165,14 @@ and expand_effect_metavariable_aux
     (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
     Variable var
   | false ->
+    (* TODO: union bound sets *)
     let bounds =
       Constraints.get_effect_bounds t.constraints meta
       |> Option.value_map
            ~f:(fun (bounds : _ Bounds.t) ->
              match polarity_positive with
-             | true -> bounds.lower_bounds
-             | false -> bounds.upper_bounds)
+             | true -> Hash_set.to_list bounds.lower_bounds
+             | false -> Hash_set.to_list bounds.upper_bounds)
            ~default:[]
     in
     let bound_effects =

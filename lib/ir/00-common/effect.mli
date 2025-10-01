@@ -41,6 +41,8 @@ type t =
   | Handled of Label.Set.t * Metavariable.t
 [@@deriving sexp_of, compare, hash]
 
+include Hashable.S_plain with type t := t
+
 val max_level : t -> metavariable_level:(Metavariable.t -> int) -> int
 val node_id : t -> Dot_graph.Node_id.t
 val add_tree_to_graph : t -> Dot_graph.t -> unit

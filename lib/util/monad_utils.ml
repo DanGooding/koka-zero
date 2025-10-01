@@ -103,4 +103,11 @@ module Make (M : Monad.S) = struct
     let%map xs = M.all ts in
     Non_empty_list.Cons (x, xs)
   ;;
+
+  let hash_set_iter set ~f =
+    let open M.Let_syntax in
+    Hash_set.fold set ~init:(return ()) ~f:(fun unit x ->
+      let%bind () = unit in
+      f x)
+  ;;
 end
