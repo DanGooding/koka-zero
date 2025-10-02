@@ -28,3 +28,27 @@ let freshen t ~lower ~upper =
        Hash_set.add fresh.upper_bounds (f upper_bound)));
   fresh
 ;;
+
+let bound_set t which =
+  match which with
+  | `lower -> t.lower_bounds
+  | `upper -> t.upper_bounds
+;;
+
+let add t which ub =
+  (* avoid hitting the mutation-while-iterating check in the specific case that
+     we're adding a duplicate. This comes up when propagating constraints when
+     a pair of metavariables are equal (<= and >=) *)
+  let set = bound_set t which in
+  if not (Hash_set.mem set ub) then Hash_set.add set ub
+;;
+
+let iter t which ~f = bound_set t which |> Hash_set.iter ~f
+let fold t which ~init ~f = bound_set t which |> Hash_set.fold ~init ~f
+let to_list t which = bound_set t which |> Hash_set.to_list
+
+let result_iter t which ~f =
+  fold t which ~init:(Ok ()) ~f:(fun maybe_unit x ->
+    let%bind.Result () = maybe_unit in
+    f x)
+;;

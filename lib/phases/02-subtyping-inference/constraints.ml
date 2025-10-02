@@ -382,13 +382,9 @@ and add_upper_bound t m type_hi ~location ~debug_trace =
         Bounds.create (module Type.Mono))
     in
     (* add [m <= type_hi]*)
-    Hash_set.add m_bounds.upper_bounds type_hi;
+    Bounds.add m_bounds `upper type_hi;
     (* add transitive closure *)
-    let debug_trace =
-      Debug_trace.enter debug_trace (fun () ->
-        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.lower_bounds : int)])
-    in
-    Or_static_error.hash_set_iter m_bounds.lower_bounds ~f:(fun below_m ->
+    Bounds.result_iter m_bounds `lower ~f:(fun below_m ->
       constrain_type_at_most t below_m type_hi ~location ~debug_trace)
   | false ->
     (* need to copy [type_hi] down to [m_level] *)
@@ -422,13 +418,9 @@ and add_lower_bound t type_lo m ~location ~debug_trace =
         Bounds.create (module Type.Mono))
     in
     (* add [type_less_than_m <= m] *)
-    Hash_set.add m_bounds.lower_bounds type_lo;
+    Bounds.add m_bounds `lower type_lo;
     (* add transitive closure *)
-    let debug_trace =
-      Debug_trace.enter debug_trace (fun () ->
-        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.upper_bounds : int)])
-    in
-    Or_static_error.hash_set_iter m_bounds.upper_bounds ~f:(fun above_m ->
+    Bounds.result_iter m_bounds `upper ~f:(fun above_m ->
       constrain_type_at_most t type_lo above_m ~location ~debug_trace)
   | false ->
     let approx_type_lo =
@@ -558,12 +550,12 @@ and add_effect_upper_bound t m above_m ~location ~debug_trace =
       Hashtbl.find_or_add t.effect_constraints m ~default:(fun () ->
         Bounds.create (module Effect))
     in
-    Hash_set.add m_bounds.upper_bounds above_m;
+    Bounds.add m_bounds `upper above_m;
     let debug_trace =
       Debug_trace.enter debug_trace (fun () ->
-        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.lower_bounds : int)])
+        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds : int)])
     in
-    Or_static_error.hash_set_iter m_bounds.lower_bounds ~f:(fun below_m ->
+    Bounds.result_iter m_bounds `lower ~f:(fun below_m ->
       constrain_effect_at_most t below_m above_m ~location ~debug_trace)
   | false ->
     let above_approx =
@@ -597,12 +589,8 @@ and add_effect_lower_bound t below_m m ~location ~debug_trace =
       Hashtbl.find_or_add t.effect_constraints m ~default:(fun () ->
         Bounds.create (module Effect))
     in
-    Hash_set.add m_bounds.lower_bounds below_m;
-    let debug_trace =
-      Debug_trace.enter debug_trace (fun () ->
-        [%message "hash_set_iter" ~addr:(Obj.magic m_bounds.upper_bounds : int)])
-    in
-    Or_static_error.hash_set_iter m_bounds.upper_bounds ~f:(fun above_m ->
+    Bounds.add m_bounds `lower below_m;
+    Bounds.result_iter m_bounds `upper ~f:(fun above_m ->
       constrain_effect_at_most t below_m above_m ~location ~debug_trace)
   | false ->
     let approx_below_m =
@@ -672,11 +660,11 @@ let to_graph t : Dot_graph.t =
     let meta_id = node_id meta in
     let disambiguator = Dot_graph.Edge_disambiguator.of_string "at-most" in
     add_tree_to_graph meta graph;
-    Hash_set.iter bounds.lower_bounds ~f:(fun lower_bound ->
+    Bounds.iter bounds `lower ~f:(fun lower_bound ->
       let lower_bound_id = node_id lower_bound in
       add_tree_to_graph lower_bound graph;
       Dot_graph.add_edge graph ~from:lower_bound_id ~to_:meta_id ~disambiguator);
-    Hash_set.iter bounds.upper_bounds ~f:(fun upper_bound ->
+    Bounds.iter bounds `upper ~f:(fun upper_bound ->
       let upper_bound_id = node_id upper_bound in
       add_tree_to_graph upper_bound graph;
       Dot_graph.add_edge graph ~from:meta_id ~to_:upper_bound_id ~disambiguator)
