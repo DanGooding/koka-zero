@@ -20,11 +20,47 @@ let create ~constraints ~type_variable_source ~effect_variable_source =
   }
 ;;
 
+module Memo_table = struct
+  type t =
+    { types_by_polarity : Polar_type.t Type.Metavariable.Table.t Bool.Table.t
+    ; effects_by_polarity :
+        Polar_type.Effect.t Effect.Metavariable.Table.t Bool.Table.t
+    }
+  [@@deriving sexp_of]
+
+  let create () =
+    let types_by_polarity = Bool.Table.create () in
+    let effects_by_polarity = Bool.Table.create () in
+    { types_by_polarity; effects_by_polarity }
+  ;;
+
+  let find_or_add_type t meta ~polarity_positive ~default =
+    let types =
+      Hashtbl.find_or_add
+        t.types_by_polarity
+        polarity_positive
+        ~default:Type.Metavariable.Table.create
+    in
+    Hashtbl.find_or_add types meta ~default
+  ;;
+
+  let find_or_add_effect t meta ~polarity_positive ~default =
+    let effects =
+      Hashtbl.find_or_add
+        t.effects_by_polarity
+        polarity_positive
+        ~default:Effect.Metavariable.Table.create
+    in
+    Hashtbl.find_or_add effects meta ~default
+  ;;
+end
+
 let rec expand_type_aux
           t
           (type_ : Type.Mono.t)
           ~polarity_positive
           ~(in_progress_type_metavariables : Type.Metavariable.Set.t)
+          ~memo_table
   : Polar_type.t
   =
   match type_ with
@@ -36,6 +72,7 @@ let rec expand_type_aux
         element
         ~polarity_positive:true
         ~in_progress_type_metavariables
+        ~memo_table
     in
     List element
   | Option element ->
@@ -44,7 +81,8 @@ let rec expand_type_aux
          t
          element
          ~polarity_positive:true
-         ~in_progress_type_metavariables)
+         ~in_progress_type_metavariables
+         ~memo_table)
   | Tuple elements ->
     Tuple
       (List.map
@@ -53,7 +91,8 @@ let rec expand_type_aux
            (expand_type_aux
               t
               ~polarity_positive
-              ~in_progress_type_metavariables))
+              ~in_progress_type_metavariables
+              ~memo_table))
   | Arrow (args, effect_, result) ->
     let args =
       List.map
@@ -62,7 +101,8 @@ let rec expand_type_aux
           (expand_type_aux
              t
              ~polarity_positive:(not polarity_positive)
-             ~in_progress_type_metavariables)
+             ~in_progress_type_metavariables
+             ~memo_table)
     in
     let effect_ =
       expand_effect_aux
@@ -70,6 +110,7 @@ let rec expand_type_aux
         effect_
         ~polarity_positive
         ~in_progress_effect_metavariables:Effect.Metavariable.Set.empty
+        ~memo_table
     in
     let result =
       expand_type_aux
@@ -77,6 +118,7 @@ let rec expand_type_aux
         result
         ~polarity_positive
         ~in_progress_type_metavariables
+        ~memo_table
     in
     Arrow (args, effect_, result)
   | Metavariable meta ->
@@ -89,51 +131,58 @@ let rec expand_type_aux
        (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
        Variable var
      | false ->
-       let bounds =
-         Constraints.get_type_bounds t.constraints meta
-         |> Option.value_map
-              ~f:(fun (bounds : _ Bounds.t) ->
-                match polarity_positive with
-                | true -> Bounds.to_list bounds `lower
-                | false -> Bounds.to_list bounds `upper)
-              ~default:[]
-       in
-       let bound_types =
-         List.map bounds ~f:(fun bound_type ->
-           expand_type_aux
-             t
-             bound_type
-             ~polarity_positive
-             ~in_progress_type_metavariables:
-               (Set.add in_progress_type_metavariables meta))
-       in
-       (match bound_types with
-        (* a metavariable with no lower bounds is a polymorphic parameter,
-           one with no upper bounds is a polymorphic function return type *)
-        | [] -> Variable var
-        | _ :: _ ->
-          let combined : Polar_type.t =
-            match bound_types with
-            | [] -> assert false
-            | [ bound ] -> bound
-            | _ :: _ :: _ ->
-              (match polarity_positive with
-               | true -> Union bound_types
-               | false -> Intersection bound_types)
-          in
-          let is_recursive =
-            List.exists bound_types ~f:(fun type_ ->
-              Set.mem (Polar_type.variables type_) var)
-          in
-          (match is_recursive with
-           | false -> combined
-           | true -> Recursive (var, combined))))
+       Memo_table.find_or_add_type
+         memo_table
+         meta
+         ~polarity_positive
+         ~default:(fun () ->
+           let bounds =
+             Constraints.get_type_bounds t.constraints meta
+             |> Option.value_map
+                  ~f:(fun (bounds : _ Bounds.t) ->
+                    match polarity_positive with
+                    | true -> Bounds.to_list bounds `lower
+                    | false -> Bounds.to_list bounds `upper)
+                  ~default:[]
+           in
+           let bound_types =
+             List.map bounds ~f:(fun bound_type ->
+               expand_type_aux
+                 t
+                 bound_type
+                 ~polarity_positive
+                 ~in_progress_type_metavariables:
+                   (Set.add in_progress_type_metavariables meta)
+                 ~memo_table)
+           in
+           match bound_types with
+           (* a metavariable with no lower bounds is a polymorphic parameter,
+              one with no upper bounds is a polymorphic function return type *)
+           | [] -> Variable var
+           | _ :: _ ->
+             let combined : Polar_type.t =
+               match bound_types with
+               | [] -> assert false
+               | [ bound ] -> bound
+               | _ :: _ :: _ ->
+                 (match polarity_positive with
+                  | true -> Union bound_types
+                  | false -> Intersection bound_types)
+             in
+             let is_recursive =
+               List.exists bound_types ~f:(fun type_ ->
+                 Set.mem (Polar_type.variables type_) var)
+             in
+             (match is_recursive with
+              | false -> combined
+              | true -> Recursive (var, combined))))
 
 and expand_effect_aux
       t
       (effect_ : Effect.t)
       ~polarity_positive
       ~(in_progress_effect_metavariables : Effect.Metavariable.Set.t)
+      ~memo_table
   : Polar_type.Effect.t
   =
   match effect_ with
@@ -145,6 +194,7 @@ and expand_effect_aux
         meta
         ~polarity_positive
         ~in_progress_effect_metavariables
+        ~memo_table
     in
     Handled (labels, effect_)
   | Metavariable meta ->
@@ -153,12 +203,14 @@ and expand_effect_aux
       meta
       ~polarity_positive
       ~in_progress_effect_metavariables
+      ~memo_table
 
 and expand_effect_metavariable_aux
       t
       (meta : Effect.Metavariable.t)
       ~polarity_positive
       ~in_progress_effect_metavariables
+      ~memo_table
   : Polar_type.Effect.t
   =
   let var =
@@ -170,43 +222,49 @@ and expand_effect_metavariable_aux
     (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
     Variable var
   | false ->
-    let bounds =
-      Constraints.get_effect_bounds t.constraints meta
-      |> Option.value_map
-           ~f:(fun (bounds : _ Bounds.t) ->
-             match polarity_positive with
-             | true -> Bounds.to_list bounds `lower
-             | false -> Bounds.to_list bounds `upper)
-           ~default:[]
-    in
-    let bound_effects =
-      List.map bounds ~f:(fun bound_effect ->
-        expand_effect_aux
-          t
-          bound_effect
-          ~polarity_positive
-          ~in_progress_effect_metavariables:
-            (Set.add in_progress_effect_metavariables meta))
-    in
-    (match bound_effects with
-     | [] -> Variable var
-     | _ :: _ ->
-       let combined : Polar_type.Effect.t =
-         match bound_effects with
-         | [] -> assert false
-         | [ bound ] -> bound
-         | _ :: _ :: _ ->
-           (match polarity_positive with
-            | true -> Union bound_effects
-            | false -> Intersection bound_effects)
-       in
-       let is_recursive =
-         List.exists bound_effects ~f:(fun type_ ->
-           Set.mem (Polar_type.Effect.variables type_) var)
-       in
-       (match is_recursive with
-        | false -> combined
-        | true -> Recursive (var, combined)))
+    Memo_table.find_or_add_effect
+      memo_table
+      meta
+      ~polarity_positive
+      ~default:(fun () ->
+        let bounds =
+          Constraints.get_effect_bounds t.constraints meta
+          |> Option.value_map
+               ~f:(fun (bounds : _ Bounds.t) ->
+                 match polarity_positive with
+                 | true -> Bounds.to_list bounds `lower
+                 | false -> Bounds.to_list bounds `upper)
+               ~default:[]
+        in
+        let bound_effects =
+          List.map bounds ~f:(fun bound_effect ->
+            expand_effect_aux
+              t
+              bound_effect
+              ~polarity_positive
+              ~in_progress_effect_metavariables:
+                (Set.add in_progress_effect_metavariables meta)
+              ~memo_table)
+        in
+        match bound_effects with
+        | [] -> Variable var
+        | _ :: _ ->
+          let combined : Polar_type.Effect.t =
+            match bound_effects with
+            | [] -> assert false
+            | [ bound ] -> bound
+            | _ :: _ :: _ ->
+              (match polarity_positive with
+               | true -> Union bound_effects
+               | false -> Intersection bound_effects)
+          in
+          let is_recursive =
+            List.exists bound_effects ~f:(fun type_ ->
+              Set.mem (Polar_type.Effect.variables type_) var)
+          in
+          (match is_recursive with
+           | false -> combined
+           | true -> Recursive (var, combined)))
 ;;
 
 let expand_type t type_ =
@@ -215,14 +273,21 @@ let expand_type t type_ =
     type_
     ~polarity_positive:true
     ~in_progress_type_metavariables:Type.Metavariable.Set.empty
+    ~memo_table:(Memo_table.create ())
   |> Polar_type.simplify
 ;;
 
 let expand_effect t effect_ =
-  expand_effect_aux
-    t
-    effect_
-    ~polarity_positive:true
-    ~in_progress_effect_metavariables:Effect.Metavariable.Set.empty
-  |> Polar_type.Effect.simplify
+  let full_effect =
+    expand_effect_aux
+      t
+      effect_
+      ~polarity_positive:true
+      ~in_progress_effect_metavariables:Effect.Metavariable.Set.empty
+      ~memo_table:(Memo_table.create ())
+  in
+  print_s [%message (full_effect : Polar_type.Effect.t)];
+  let simplified = Polar_type.Effect.simplify full_effect in
+  print_s [%message (simplified : Polar_type.Effect.t)];
+  simplified
 ;;
