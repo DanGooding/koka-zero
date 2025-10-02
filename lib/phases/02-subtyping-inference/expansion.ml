@@ -89,14 +89,13 @@ let rec expand_type_aux
        (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
        Variable var
      | false ->
-       (* TODO: union the bound sets *)
        let bounds =
          Constraints.get_type_bounds t.constraints meta
          |> Option.value_map
               ~f:(fun (bounds : _ Bounds.t) ->
                 match polarity_positive with
-                | true -> Hash_set.to_list bounds.lower_bounds
-                | false -> Hash_set.to_list bounds.upper_bounds)
+                | true -> Bounds.to_list bounds `lower
+                | false -> Bounds.to_list bounds `upper)
               ~default:[]
        in
        let bound_types =
@@ -108,21 +107,27 @@ let rec expand_type_aux
              ~in_progress_type_metavariables:
                (Set.add in_progress_type_metavariables meta))
        in
-       let is_recursive =
-         List.exists bound_types ~f:(fun type_ ->
-           Set.mem (Polar_type.variables type_) var)
-       in
-       let combined : Polar_type.t =
-         match polarity_positive with
-         | true -> Union bound_types
-         | false -> Intersection bound_types
-       in
-       (match is_recursive with
-        | true -> Recursive (var, combined)
-        | false ->
-          (match bound_types with
-           | [] -> Variable var
-           | _ :: _ -> combined)))
+       (match bound_types with
+        (* a metavariable with no lower bounds is a polymorphic parameter,
+           one with no upper bounds is a polymorphic function return type *)
+        | [] -> Variable var
+        | _ :: _ ->
+          let combined : Polar_type.t =
+            match bound_types with
+            | [] -> assert false
+            | [ bound ] -> bound
+            | _ :: _ :: _ ->
+              (match polarity_positive with
+               | true -> Union bound_types
+               | false -> Intersection bound_types)
+          in
+          let is_recursive =
+            List.exists bound_types ~f:(fun type_ ->
+              Set.mem (Polar_type.variables type_) var)
+          in
+          (match is_recursive with
+           | false -> combined
+           | true -> Recursive (var, combined))))
 
 and expand_effect_aux
       t
@@ -165,14 +170,13 @@ and expand_effect_metavariable_aux
     (* recursive reference - leave unexpanded, it'll be bound in a Recursive type *)
     Variable var
   | false ->
-    (* TODO: union bound sets *)
     let bounds =
       Constraints.get_effect_bounds t.constraints meta
       |> Option.value_map
            ~f:(fun (bounds : _ Bounds.t) ->
              match polarity_positive with
-             | true -> Hash_set.to_list bounds.lower_bounds
-             | false -> Hash_set.to_list bounds.upper_bounds)
+             | true -> Bounds.to_list bounds `lower
+             | false -> Bounds.to_list bounds `upper)
            ~default:[]
     in
     let bound_effects =
@@ -184,21 +188,25 @@ and expand_effect_metavariable_aux
           ~in_progress_effect_metavariables:
             (Set.add in_progress_effect_metavariables meta))
     in
-    let is_recursive =
-      List.exists bound_effects ~f:(fun type_ ->
-        Set.mem (Polar_type.Effect.variables type_) var)
-    in
-    let combined : Polar_type.Effect.t =
-      match polarity_positive with
-      | true -> Union bound_effects
-      | false -> Intersection bound_effects
-    in
-    (match is_recursive with
-     | true -> Recursive (var, combined)
-     | false ->
-       (match bound_effects with
-        | [] -> Variable var
-        | _ :: _ -> combined))
+    (match bound_effects with
+     | [] -> Variable var
+     | _ :: _ ->
+       let combined : Polar_type.Effect.t =
+         match bound_effects with
+         | [] -> assert false
+         | [ bound ] -> bound
+         | _ :: _ :: _ ->
+           (match polarity_positive with
+            | true -> Union bound_effects
+            | false -> Intersection bound_effects)
+       in
+       let is_recursive =
+         List.exists bound_effects ~f:(fun type_ ->
+           Set.mem (Polar_type.Effect.variables type_) var)
+       in
+       (match is_recursive with
+        | false -> combined
+        | true -> Recursive (var, combined)))
 ;;
 
 let expand_type t type_ =
