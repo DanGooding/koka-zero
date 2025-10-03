@@ -9,7 +9,7 @@ module Effect = struct
     | Union of t list
     | Intersection of t list
     | Recursive of Effect.Variable.t * t
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, compare]
 
   let rec variables t =
     match t with
@@ -76,7 +76,7 @@ type t =
   | Union of t list
   | Intersection of t list
   | Recursive of Type.Variable.t * t
-[@@deriving sexp_of]
+[@@deriving sexp_of, compare]
 
 let rec variables t =
   match t with

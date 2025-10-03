@@ -9,7 +9,7 @@ module Effect : sig
     | Union of t list
     | Intersection of t list
     | Recursive of Effect.Variable.t * t
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, compare]
 
   val variables : t -> Effect.Variable.Set.t
   val simplify : t -> t
@@ -26,7 +26,7 @@ type t =
   | Union of t list
   | Intersection of t list
   | Recursive of Type.Variable.t * t
-[@@deriving sexp_of]
+[@@deriving sexp_of, compare]
 
 val variables : t -> Type.Variable.Set.t
 val simplify : t -> t
