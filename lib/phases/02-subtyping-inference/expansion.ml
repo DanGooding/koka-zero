@@ -155,27 +155,26 @@ let rec expand_type_aux
                    (Set.add in_progress_type_metavariables meta)
                  ~memo_table)
            in
-           match bound_types with
-           (* a metavariable with no lower bounds is a polymorphic parameter,
-              one with no upper bounds is a polymorphic function return type *)
-           | [] -> Variable var
-           | _ :: _ ->
-             let combined : Polar_type.t =
-               match bound_types with
-               | [] -> assert false
-               | [ bound ] -> bound
-               | _ :: _ :: _ ->
-                 (match polarity_positive with
-                  | true -> Union bound_types
-                  | false -> Intersection bound_types)
-             in
-             let is_recursive =
-               List.exists bound_types ~f:(fun type_ ->
-                 Set.mem (Polar_type.variables type_) var)
-             in
-             (match is_recursive with
-              | false -> combined
-              | true -> Recursive (var, combined))))
+           let bound_types = Polar_type.Variable var :: bound_types in
+           let bound_types =
+             List.dedup_and_sort bound_types ~compare:[%compare: Polar_type.t]
+           in
+           let combined : Polar_type.t =
+             match bound_types with
+             | [] -> assert false
+             | [ bound ] -> bound
+             | _ :: _ :: _ ->
+               (match polarity_positive with
+                | true -> Union bound_types
+                | false -> Intersection bound_types)
+           in
+           let is_recursive =
+             List.exists bound_types ~f:(fun type_ ->
+               Set.mem (Polar_type.variables type_) var)
+           in
+           match is_recursive with
+           | false -> combined
+           | true -> Recursive (var, combined)))
 
 and expand_effect_aux
       t
@@ -246,25 +245,28 @@ and expand_effect_metavariable_aux
                 (Set.add in_progress_effect_metavariables meta)
               ~memo_table)
         in
-        match bound_effects with
-        | [] -> Variable var
-        | _ :: _ ->
-          let combined : Polar_type.Effect.t =
-            match bound_effects with
-            | [] -> assert false
-            | [ bound ] -> bound
-            | _ :: _ :: _ ->
-              (match polarity_positive with
-               | true -> Union bound_effects
-               | false -> Intersection bound_effects)
-          in
-          let is_recursive =
-            List.exists bound_effects ~f:(fun type_ ->
-              Set.mem (Polar_type.Effect.variables type_) var)
-          in
-          (match is_recursive with
-           | false -> combined
-           | true -> Recursive (var, combined)))
+        let bound_effects = Polar_type.Effect.Variable var :: bound_effects in
+        let bound_effects =
+          List.dedup_and_sort
+            bound_effects
+            ~compare:[%compare: Polar_type.Effect.t]
+        in
+        let combined : Polar_type.Effect.t =
+          match bound_effects with
+          | [] -> assert false
+          | [ bound ] -> bound
+          | _ :: _ :: _ ->
+            (match polarity_positive with
+             | true -> Union bound_effects
+             | false -> Intersection bound_effects)
+        in
+        let is_recursive =
+          List.exists bound_effects ~f:(fun type_ ->
+            Set.mem (Polar_type.Effect.variables type_) var)
+        in
+        match is_recursive with
+        | false -> combined
+        | true -> Recursive (var, combined))
 ;;
 
 let expand_type t type_ =
