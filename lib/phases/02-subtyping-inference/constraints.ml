@@ -26,8 +26,15 @@ let create ~metavariables =
   }
 ;;
 
-let get_type_bounds t meta = Hashtbl.find t.type_constraints meta
-let get_effect_bounds t meta = Hashtbl.find t.effect_constraints meta
+let get_type_bounds t meta =
+  Hashtbl.find_or_add t.type_constraints meta ~default:(fun () ->
+    Bounds.create (module Type.Mono))
+;;
+
+let get_effect_bounds t meta =
+  Hashtbl.find_or_add t.effect_constraints meta ~default:(fun () ->
+    Bounds.create (module Effect))
+;;
 
 let add_fresh_type_exn t meta bounds =
   Hashtbl.add_exn t.type_constraints ~key:meta ~data:bounds
@@ -45,23 +52,49 @@ let rec extrude_aux
           ~(cache : Type.Metavariable.t Bool.Table.t Type.Metavariable.Table.t)
           ~(effect_cache :
              Effect.Metavariable.t Bool.Table.t Effect.Metavariable.Table.t)
+          ~debug_trace
   : Type.Mono.t
   =
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
+      [%message "extrude_aux" (type_ : Type.Mono.t) (to_level : int)])
+  in
   match type_ with
   | Primitive p -> Primitive p
   | List element ->
     let element =
-      extrude_aux t element ~to_level ~polarity_positive ~cache ~effect_cache
+      extrude_aux
+        t
+        element
+        ~to_level
+        ~polarity_positive
+        ~cache
+        ~effect_cache
+        ~debug_trace
     in
     List element
   | Option element ->
     Option
-      (extrude_aux t element ~to_level ~polarity_positive ~cache ~effect_cache)
+      (extrude_aux
+         t
+         element
+         ~to_level
+         ~polarity_positive
+         ~cache
+         ~effect_cache
+         ~debug_trace)
   | Tuple elements ->
     Tuple
       (List.map
          elements
-         ~f:(extrude_aux t ~to_level ~polarity_positive ~cache ~effect_cache))
+         ~f:
+           (extrude_aux
+              t
+              ~to_level
+              ~polarity_positive
+              ~cache
+              ~effect_cache
+              ~debug_trace))
   | Arrow (args, effect_, result) ->
     let args =
       List.map
@@ -72,7 +105,8 @@ let rec extrude_aux
              ~to_level
              ~polarity_positive:(not polarity_positive)
              ~cache
-             ~effect_cache)
+             ~effect_cache
+             ~debug_trace)
     in
     let effect_ =
       extrude_effect_aux
@@ -81,15 +115,28 @@ let rec extrude_aux
         ~to_level
         ~polarity_positive
         ~cache:effect_cache
+        ~debug_trace
     in
     let result =
-      extrude_aux t result ~to_level ~polarity_positive ~cache ~effect_cache
+      extrude_aux
+        t
+        result
+        ~to_level
+        ~polarity_positive
+        ~cache
+        ~effect_cache
+        ~debug_trace
     in
     Arrow (args, effect_, result)
   | Metavariable m
     when Metavariables.type_level_exn t.metavariables m <= to_level ->
     Metavariable m
   | Metavariable m ->
+    let debug_trace =
+      Debug_trace.enter debug_trace (fun () ->
+        [%message
+          "extrude_type_metavariable" (m : Type.Metavariable.t) (to_level : int)])
+    in
     (* need to lower m to [level] *)
     let polarity_cache =
       Hashtbl.find_or_add cache m ~default:Bool.Table.create
@@ -105,40 +152,37 @@ let rec extrude_aux
              (Instantiation (Metavariables.type_location_exn t.metavariables m))
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
-       let bounds = get_type_bounds t m in
        let fresh_bounds =
-         match bounds with
-         | None -> Bounds.create (module Type.Mono)
-         | Some bounds ->
-           (* TODO: this is inconsistent with the effect case!
-              [ ] we don't add an extra metavariable 'fresh'
-              [ ] we don't set one of upper/lower to empty
-           *)
-           (match polarity_positive with
-            | true ->
-              Bounds.freshen
-                bounds
-                ~upper:(`Map (fun bound -> bound))
-                ~lower:
-                  (`Map
-                      (extrude_aux
-                         t
-                         ~to_level
-                         ~polarity_positive
-                         ~cache
-                         ~effect_cache))
-            | false ->
-              Bounds.freshen
-                bounds
-                ~lower:(`Map (fun bound -> bound))
-                ~upper:
-                  (`Map
-                      (extrude_aux
-                         t
-                         ~to_level
-                         ~polarity_positive
-                         ~cache
-                         ~effect_cache)))
+         let m_bounds = get_type_bounds t m in
+         match polarity_positive with
+         | true ->
+           Bounds.add m_bounds `upper (Metavariable fresh);
+           Bounds.freshen
+             m_bounds
+             ~upper:`Empty
+             ~lower:
+               (`Map
+                   (extrude_aux
+                      t
+                      ~to_level
+                      ~polarity_positive
+                      ~cache
+                      ~effect_cache
+                      ~debug_trace))
+         | false ->
+           Bounds.add m_bounds `lower (Metavariable fresh);
+           Bounds.freshen
+             m_bounds
+             ~lower:`Empty
+             ~upper:
+               (`Map
+                   (extrude_aux
+                      t
+                      ~to_level
+                      ~polarity_positive
+                      ~cache
+                      ~effect_cache
+                      ~debug_trace))
        in
        add_fresh_type_exn t fresh fresh_bounds;
        Metavariable fresh)
@@ -149,8 +193,13 @@ and extrude_effect_aux
       ~to_level
       ~polarity_positive
       ~(cache : Effect.Metavariable.t Bool.Table.t Effect.Metavariable.Table.t)
+      ~debug_trace
   : Effect.t
   =
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
+      [%message "extrude_effect_aux" (effect_ : Effect.t) (to_level : int)])
+  in
   match effect_ with
   | Labels labels -> Labels labels
   | Metavariable meta ->
@@ -160,7 +209,8 @@ and extrude_effect_aux
          meta
          ~to_level
          ~polarity_positive
-         ~cache)
+         ~cache
+         ~debug_trace)
   | Handled (labels, meta) ->
     Handled
       ( labels
@@ -169,7 +219,8 @@ and extrude_effect_aux
           meta
           ~to_level
           ~polarity_positive
-          ~cache )
+          ~cache
+          ~debug_trace )
 
 and extrude_effect_metavariable_aux
       t
@@ -177,8 +228,16 @@ and extrude_effect_metavariable_aux
       ~to_level
       ~polarity_positive
       ~cache
+      ~debug_trace
   : Effect.Metavariable.t
   =
+  let debug_trace =
+    Debug_trace.enter debug_trace (fun () ->
+      [%message
+        "extrude_effect_metavariable_aux"
+          (m : Effect.Metavariable.t)
+          (to_level : int)])
+  in
   match Metavariables.effect_level_exn t.metavariables m > to_level with
   | false -> m
   | true ->
@@ -197,43 +256,41 @@ and extrude_effect_metavariable_aux
                 (Metavariables.effect_location_exn t.metavariables m))
        in
        Hashtbl.add_exn polarity_cache ~key:polarity_positive ~data:fresh;
-       let bounds = get_effect_bounds t m in
        let fresh_bounds =
-         match bounds with
-         | None ->
-           (* TODO: surely it's wrong to do nothing here *)
-           Bounds.create (module Effect)
-         | Some bounds ->
-           (match polarity_positive with
-            | true ->
-              Bounds.freshen
-                bounds
-                ~upper:`Empty
-                ~lower:
-                  (`Map
-                      (extrude_effect_aux t ~to_level ~polarity_positive ~cache))
-            | false ->
-              Bounds.freshen
-                bounds
-                ~lower:`Empty
-                ~upper:
-                  (`Map
-                      (extrude_effect_aux t ~to_level ~polarity_positive ~cache)))
+         let m_bounds = get_effect_bounds t m in
+         match polarity_positive with
+         | true ->
+           Bounds.add m_bounds `upper (Metavariable fresh);
+           Bounds.freshen
+             m_bounds
+             ~upper:`Empty
+             ~lower:
+               (`Map
+                   (extrude_effect_aux
+                      t
+                      ~to_level
+                      ~polarity_positive
+                      ~cache
+                      ~debug_trace))
+         | false ->
+           Bounds.add m_bounds `lower (Metavariable fresh);
+           Bounds.freshen
+             m_bounds
+             ~lower:`Empty
+             ~upper:
+               (`Map
+                   (extrude_effect_aux
+                      t
+                      ~to_level
+                      ~polarity_positive
+                      ~cache
+                      ~debug_trace))
        in
-       (* TODO: in what cases do we run this add: *)
        add_fresh_effect_exn t fresh fresh_bounds;
        fresh)
 ;;
 
 let extrude t type_ ~to_level ~polarity_positive ~debug_trace =
-  let (_ : Debug_trace.t) =
-    Debug_trace.enter debug_trace (fun () ->
-      [%message
-        "extrude type"
-          ~type_:(Metavariables.sexp_of_type t.metavariables type_ : Sexp.t)
-          (to_level : int)
-          (polarity_positive : bool)])
-  in
   extrude_aux
     t
     type_
@@ -241,24 +298,17 @@ let extrude t type_ ~to_level ~polarity_positive ~debug_trace =
     ~polarity_positive
     ~cache:(Type.Metavariable.Table.create ())
     ~effect_cache:(Effect.Metavariable.Table.create ())
+    ~debug_trace
 ;;
 
 let extrude_effect t effect_ ~to_level ~polarity_positive ~debug_trace =
-  let (_ : Debug_trace.t) =
-    Debug_trace.enter debug_trace (fun () ->
-      [%message
-        "extrude effect"
-          ~effect_:
-            (Metavariables.sexp_of_effect t.metavariables effect_ : Sexp.t)
-          (to_level : int)
-          (polarity_positive : bool)])
-  in
   extrude_effect_aux
     t
     effect_
     ~to_level
     ~polarity_positive
     ~cache:(Effect.Metavariable.Table.create ())
+    ~debug_trace
 ;;
 
 (** add constraints for [type_lo <= type_hi]

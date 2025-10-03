@@ -177,14 +177,13 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
          Hashtbl.add_exn fresh_types ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_type_bounds t.constraints meta in
-         Option.iter bounds ~f:(fun bounds ->
-           let fresh_bounds =
-             Bounds.freshen
-               bounds
-               ~lower:(`Map instantiate_aux)
-               ~upper:(`Map instantiate_aux)
-           in
-           Constraints.add_fresh_type_exn t.constraints meta' fresh_bounds);
+         let fresh_bounds =
+           Bounds.freshen
+             bounds
+             ~lower:(`Map instantiate_aux)
+             ~upper:(`Map instantiate_aux)
+         in
+         Constraints.add_fresh_type_exn t.constraints meta' fresh_bounds;
          Metavariable meta')
     | Metavariable meta -> Metavariable meta
   and instantiate_effect_aux (effect_ : Effect.t) : Effect.t =
@@ -212,14 +211,13 @@ let instantiate (t : t) (poly : Type.Poly.t) ~level =
          Hashtbl.add_exn fresh_effects ~key:meta ~data:meta';
          (* freshen bounds to [level] *)
          let bounds = Constraints.get_effect_bounds t.constraints meta in
-         Option.iter bounds ~f:(fun bounds ->
-           let bounds =
-             Bounds.freshen
-               bounds
-               ~lower:(`Map instantiate_effect_aux)
-               ~upper:(`Map instantiate_effect_aux)
-           in
-           Constraints.add_fresh_effect_exn t.constraints meta' bounds);
+         let bounds =
+           Bounds.freshen
+             bounds
+             ~lower:(`Map instantiate_effect_aux)
+             ~upper:(`Map instantiate_effect_aux)
+         in
+         Constraints.add_fresh_effect_exn t.constraints meta' bounds;
          meta')
   in
   instantiate_aux poly.monotype
@@ -1317,11 +1315,11 @@ let%expect_test "inference for a simple function" =
         (((Variable (User x)) (Variable (User f)) (Variable (User y)))
          (Operator
           (Application (Value (Variable (User id))) ((Value (Variable (User x))))
-           (Labels ()))
+           (Union ((Variable e4) (Labels ()))))
           (Int Plus)
           (Application
            (Application (Value (Variable (User id)))
-            ((Value (Variable (User f)))) (Labels ()))
+            ((Value (Variable (User f)))) (Union ((Variable e3) (Labels ()))))
            ((Value (Variable (User y)))) (Variable e0))))))))
     |}];
   print_s [%message (type_ : Polar_type.t) (effect_ : Polar_type.Effect.t)];
@@ -1329,9 +1327,15 @@ let%expect_test "inference for a simple function" =
     {|
     ((type_
       (Arrow
-       ((Primitive Int) (Arrow ((Variable t6)) (Variable e2) (Primitive Int))
+       ((Intersection
+         ((Variable t0) (Variable t1) (Variable t2) (Primitive Int)))
+        (Intersection
+         ((Variable t3) (Variable t4) (Variable t5)
+          (Arrow ((Variable t6))
+           (Intersection ((Variable e0) (Variable e1) (Variable e2)))
+           (Intersection ((Variable t7) (Primitive Int))))))
         (Variable t6))
-       (Labels ()) (Primitive Int)))
+       (Union ((Variable e2) (Labels ()))) (Primitive Int)))
      (effect_ (Labels ())))
     |}]
 ;;

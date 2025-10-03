@@ -17,12 +17,12 @@ let%expect_test "identity gets polymorphic type" =
   [%expect
     {|
     (Ok
-     ((Tuple ()) (Labels ())
+     ((Union ((Variable t0) (Tuple ()))) (Union ((Variable e0) (Labels ())))
       (Let (User id) (Lambda (((Variable (User z))) (Value (Variable (User z)))))
        (Application
         (Application (Value (Variable (User id))) ((Value (Variable (User id))))
-         (Labels ()))
-        ((Tuple_construction ())) (Labels ())))))
+         (Union ((Variable e2) (Labels ()))))
+        ((Tuple_construction ())) (Union ((Variable e1) (Labels ())))))))
     |}]
 ;;
 
@@ -38,14 +38,14 @@ let%expect_test "fix combinator allows recursion" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Recursive t0 (Variable t0))) (Labels ()) (Variable t1))
+     ((Arrow ((Variable t0)) (Union ((Variable e0) (Labels ()))) (Variable t1))
       (Labels ())
       (Value
        (Fix_lambda
         ((User f)
          (((Variable (User x)))
           (Application (Value (Variable (User f))) ((Value (Variable (User x))))
-           (Labels ()))))))))
+           (Union ((Variable e1) (Labels ()))))))))))
     |}]
 ;;
 
@@ -107,7 +107,7 @@ let%expect_test "int operators" =
   [%expect
     {|
     (Ok
-     ((Primitive Int) (Labels ())
+     ((Primitive Int) (Union ((Variable e0) (Labels ())))
       (Operator (Value (Literal (Int 1))) (Int Plus)
        (Operator (Value (Literal (Int 2))) (Int Minus)
         (Operator (Value (Literal (Int 3))) (Int Times)
@@ -134,7 +134,7 @@ let%expect_test "comparsion operators" =
   [%expect
     {|
     (Ok
-     ((Primitive Bool) (Labels ())
+     ((Primitive Bool) (Union ((Variable e0) (Labels ())))
       (Operator
        (Operator
         (Operator (Value (Literal (Int 3))) (Int Less_than)
@@ -162,7 +162,7 @@ let%expect_test "multi argument functions" =
   [%expect
     {|
     (Ok
-     ((Primitive Int) (Labels ())
+     ((Union ((Variable t0) (Primitive Int))) (Union ((Variable e0) (Labels ())))
       (Application
        (Value
         (Lambda
@@ -171,7 +171,7 @@ let%expect_test "multi argument functions" =
            (Value (Variable (User y)))))))
        ((Value (Literal (Bool true))) (Value (Literal (Int 1)))
         (Value (Literal (Int 0))))
-       (Labels ()))))
+       (Union ((Variable e1) (Labels ()))))))
     |}]
 ;;
 
@@ -199,12 +199,12 @@ let%expect_test "declared functions are generalised" =
          ((User const_true)
           (()
            (Application (Value (Variable (User id)))
-            ((Value (Literal (Bool true)))) (Labels ())))))
+            ((Value (Literal (Bool true)))) (Union ((Variable e0) (Labels ())))))))
         (Fun
          ((User const_three)
           (()
            (Application (Value (Variable (User id))) ((Value (Literal (Int 3))))
-            (Labels ())))))))))
+            (Union ((Variable e1) (Labels ())))))))))))
     |}]
 ;;
 
@@ -214,7 +214,7 @@ let%expect_test "sequence doesn't require first to be unit" =
   [%expect
     {|
     (Ok
-     ((Primitive Bool) (Labels ())
+     ((Primitive Bool) (Union ((Variable e0) (Labels ())))
       (Seq (Value (Literal (Int 0))) (Value (Literal (Bool true))))))
     |}]
 ;;
@@ -267,15 +267,24 @@ let%expect_test "handled effects reflected in subject's effect" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Arrow () (Variable e2) (Variable t10)))
+     ((Arrow
+       ((Intersection
+         ((Variable t0)
+          (Arrow () (Intersection ((Variable e0) (Variable e1) (Variable e2)))
+           (Intersection
+            ((Variable t1) (Variable t2) (Variable t3) (Variable t4)
+             (Variable t5) (Variable t6) (Variable t7) (Variable t8)
+             (Variable t10) (Variable t9)))))))
        (Union
-        ((Labels ())
+        ((Variable e3) (Labels ())
          (Handled (exn)
           (Union
-           ((Handled (read)
-             (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
-            (Labels ()))))))
-       (Tuple ()))
+           ((Variable e4) (Labels ())
+            (Handled (read)
+             (Union
+              ((Variable e5) (Labels ())
+               (Handled (read) (Union ((Variable e2) (Labels ()))))))))))))
+       (Union ((Variable t10) (Tuple ()))))
       (Labels ())
       (Value
        (Lambda
@@ -320,16 +329,24 @@ let%expect_test "handled effects reflected in subject's effect" =
                        (()
                         (Application (Value (Variable (User f))) ()
                          (Variable e0))))))
-                    (Union ((Labels ()) (Labels ()))))))))
+                    (Union
+                     ((Variable e8) (Labels ())
+                      (Handled (read) (Union ((Variable e2) (Labels ())))))))))))
                (Union
-                ((Handled (read)
-                  (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
-                 (Labels ()))))))))
-          (Handled (exn)
-           (Union
-            ((Handled (read)
-              (Union ((Handled (read) (Union ((Labels ())))) (Labels ()))))
-             (Labels ()))))))))))
+                ((Variable e7) (Labels ())
+                 (Handled (read)
+                  (Union
+                   ((Variable e5) (Labels ())
+                    (Handled (read) (Union ((Variable e2) (Labels ()))))))))))))))
+          (Union
+           ((Variable e6)
+            (Handled (exn)
+             (Union
+              ((Variable e4) (Labels ())
+               (Handled (read)
+                (Union
+                 ((Variable e5) (Labels ())
+                  (Handled (read) (Union ((Variable e2) (Labels ()))))))))))))))))))
     |}]
 ;;
 
@@ -376,9 +393,10 @@ let%expect_test "return clause is typed correctly" =
   [%expect
     {|
     (Ok
-     ((Tuple ())
+     ((Union ((Variable t0) (Tuple ())))
       (Union
-       ((Labels ()) (Handled (query) (Union ((Labels (query)) (Labels ()))))))
+       ((Variable e0) (Labels ())
+        (Handled (query) (Union ((Variable e1) (Labels ()) (Labels (query)))))))
       (Application
        (Value
         (Handler
@@ -400,9 +418,10 @@ let%expect_test "return clause is typed correctly" =
           (()
            (Application
             (Value (Perform ((operation (User test)) (performed_effect query))))
-            ((Value (Literal (Int 5)))) (Labels (query)))))))
+            ((Value (Literal (Int 5)))) (Union ((Variable e3) (Labels (query)))))))))
        (Union
-        ((Handled (query) (Union ((Labels (query)) (Labels ())))) (Labels ()))))))
+        ((Variable e2) (Labels ())
+         (Handled (query) (Union ((Variable e1) (Labels ()) (Labels (query))))))))))
     |}]
 ;;
 
@@ -437,13 +456,13 @@ let%expect_test "handlers can delegate to outer handlers" =
   [%expect
     {|
     (Ok
-     ((Primitive Int)
+     ((Union ((Variable t0) (Primitive Int)))
       (Union
-       ((Labels ())
+       ((Variable e0) (Labels ())
         (Handled (read)
          (Union
-          ((Handled (read) (Union ((Labels (read)) (Labels ())))) (Labels (read))
-           (Labels ()))))))
+          ((Variable e1) (Labels ()) (Labels (read))
+           (Handled (read) (Union ((Variable e2) (Labels ()) (Labels (read))))))))))
       (Application
        (Value
         (Handler
@@ -469,7 +488,8 @@ let%expect_test "handlers can delegate to outer handlers" =
                        (Value
                         (Perform
                          ((operation (User ask)) (performed_effect read))))
-                       ((Tuple_construction ())) (Labels (read)))
+                       ((Tuple_construction ()))
+                       (Union ((Variable e6) (Labels (read)))))
                       (Int Plus) (Value (Literal (Int 1))))))))))
                (return_clause ()))))
             ((Value
@@ -478,16 +498,18 @@ let%expect_test "handlers can delegate to outer handlers" =
                 (Application
                  (Value
                   (Perform ((operation (User ask)) (performed_effect read))))
-                 ((Tuple_construction ())) (Labels (read)))))))
+                 ((Tuple_construction ()))
+                 (Union ((Variable e5) (Labels (read)))))))))
             (Union
-             ((Handled (read) (Union ((Labels (read)) (Labels ()))))
-              (Labels (read)) (Labels ()))))))))
+             ((Variable e4) (Labels ()) (Labels (read))
+              (Handled (read)
+               (Union ((Variable e2) (Labels ()) (Labels (read))))))))))))
        (Union
-        ((Handled (read)
+        ((Variable e3) (Labels ())
+         (Handled (read)
           (Union
-           ((Handled (read) (Union ((Labels (read)) (Labels ()))))
-            (Labels (read)) (Labels ()))))
-         (Labels ()))))))
+           ((Variable e1) (Labels ()) (Labels (read))
+            (Handled (read) (Union ((Variable e2) (Labels ()) (Labels (read)))))))))))))
     |}]
 ;;
 
@@ -505,8 +527,10 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Arrow () (Variable e0) (Variable t1)))
-       (Union ((Labels ()) (Handled (choose) (Variable e0)))) (Variable t1))
+     ((Arrow
+       ((Arrow () (Variable e0) (Intersection ((Variable t0) (Variable t1)))))
+       (Union ((Variable e1) (Labels ()) (Handled (choose) (Variable e0))))
+       (Variable t1))
       (Labels ())
       (Value
        (Handler

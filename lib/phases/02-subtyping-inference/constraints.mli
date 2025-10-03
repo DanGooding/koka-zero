@@ -22,8 +22,8 @@ val constrain_effect_at_most
   -> location:Metavariables.Location.t
   -> unit Or_static_error.t
 
-val get_type_bounds : t -> Type.Metavariable.t -> Type.Mono.t Bounds.t option
-val get_effect_bounds : t -> Effect.Metavariable.t -> Effect.t Bounds.t option
+val get_type_bounds : t -> Type.Metavariable.t -> Type.Mono.t Bounds.t
+val get_effect_bounds : t -> Effect.Metavariable.t -> Effect.t Bounds.t
 
 val add_fresh_type_exn
   :  t
