@@ -15,8 +15,13 @@ let%expect_test
   [%expect
     {|
     (Ok
-     ((Arrow ((Recursive t0 (Arrow ((Variable t0)) (Variable e1) (Variable t1))))
-       (Labels ()) (Variable t1))
+     ((Arrow
+       ((Recursive t0
+         (Intersection
+          ((Variable t0)
+           (Arrow ((Variable t0)) (Intersection ((Variable e0) (Variable e1)))
+            (Variable t1))))))
+       (Union ((Variable e1) (Labels ()))) (Variable t1))
       (Labels ())
       (Value
        (Lambda
@@ -36,8 +41,7 @@ let%expect_test
       , [ E.Tuple_construction [] ] )
   in
   Util.print_expr_inference_result expr;
-  [%expect
-    {|
+  [%expect {|
     (Error
      ((kind Type_error)
       (error
@@ -69,7 +73,8 @@ let%expect_test "if statement's branch types are unioned" =
   [%expect
     {|
     (Ok
-     ((Union ((Tuple ()) (Primitive Int))) (Labels ())
+     ((Union ((Variable t0) (Primitive Int) (Tuple ())))
+      (Union ((Variable e0) (Labels ())))
       (If_then_else (Value (Literal (Bool true))) (Value (Literal (Int 1)))
        (Tuple_construction ()))))
     |}]
