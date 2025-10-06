@@ -11,7 +11,11 @@ module Effect : sig
     | Recursive of Effect.Variable.t * t
   [@@deriving sexp_of, compare]
 
-  val variables : t -> Effect.Variable.Set.t
+  val variables
+    :  t
+    -> polarity:[ `all | `negative | `positive ]
+    -> Effect.Variable.Set.t
+
   val simplify : t -> t
   val is_total : t -> bool
 end
@@ -28,5 +32,9 @@ type t =
   | Recursive of Type.Variable.t * t
 [@@deriving sexp_of, compare]
 
-val variables : t -> Type.Variable.Set.t
+val variables
+  :  t
+  -> polarity:[ `all | `negative | `positive ]
+  -> Type.Variable.Set.t
+
 val simplify : t -> t
