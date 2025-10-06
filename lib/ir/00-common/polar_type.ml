@@ -49,11 +49,11 @@ module Effect = struct
     | Intersection ts ->
       (match List.concat_map ts ~f:simplify_within_intersection with
        | [ t ] -> t
-       | ts -> Intersection ts)
+       | ts -> Intersection (List.dedup_and_sort ts ~compare:[%compare: t]))
     | Union ts ->
       (match List.concat_map ts ~f:simplify_within_union with
        | [ t ] -> t
-       | ts -> Union ts)
+       | ts -> Union (List.dedup_and_sort ts ~compare:[%compare: t]))
     | Variable v -> Variable v
     | Labels labels -> Labels labels
     | Handled (handled_labels, t) ->
@@ -202,11 +202,11 @@ let rec simplify t =
   | Intersection ts ->
     (match List.concat_map ts ~f:simplify_within_intersection with
      | [ t ] -> t
-     | ts -> Intersection ts)
+     | ts -> Intersection (List.dedup_and_sort ts ~compare:[%compare: t]))
   | Union ts ->
     (match List.concat_map ts ~f:simplify_within_union with
      | [ t ] -> t
-     | ts -> Union ts)
+     | ts -> Union (List.dedup_and_sort ts ~compare:[%compare: t]))
   | Variable _ | Primitive _ -> t
   | List t -> List (simplify t)
   | Option t -> Option (simplify t)
@@ -307,7 +307,7 @@ let%expect_test "remove unipolar variables" =
   [%expect
     {|
     (Arrow
-     ((Intersection ((Option (Intersection ())) (Option (Variable t0))))
+     ((Intersection ((Option (Variable t0)) (Option (Intersection ()))))
       (Arrow ((Variable t0)) (Variable e2) (Variable t1)))
      (Union ((Variable e2) (Labels ())))
      (Union ((Option (Variable t1)) (Option (Union ())))))
