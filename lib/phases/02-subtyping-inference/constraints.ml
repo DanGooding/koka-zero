@@ -387,11 +387,6 @@ let rec constrain_type_at_most
                 (p' : Type.Primitive.t)])
      | Metavariable m, Metavariable n when [%equal: Type.Metavariable.t] m n ->
        return ()
-     | Metavariable m, Metavariable n ->
-       let%bind () =
-         add_upper_bound t m (Type.Mono.Metavariable n) ~location ~debug_trace
-       in
-       add_lower_bound t (Type.Mono.Metavariable m) n ~location ~debug_trace
      | Metavariable m, type_hi ->
        add_upper_bound t m type_hi ~location ~debug_trace
      | type_lo, Metavariable m ->
@@ -564,16 +559,6 @@ and constrain_effect_at_most
          ~debug_trace
      | Metavariable m, Metavariable n when [%equal: Effect.Metavariable.t] m n
        -> return ()
-     | Metavariable m, Metavariable n ->
-       let%bind () =
-         add_effect_upper_bound
-           t
-           m
-           (Effect.Metavariable n)
-           ~location
-           ~debug_trace
-       in
-       add_effect_lower_bound t (Effect.Metavariable m) n ~location ~debug_trace
      | Metavariable m, above_m ->
        add_effect_upper_bound t m above_m ~location ~debug_trace
      | below_m, Metavariable m ->
