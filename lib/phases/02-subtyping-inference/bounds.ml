@@ -43,9 +43,11 @@ let add t which ub =
   if not (Hash_set.mem set ub) then Hash_set.add set ub
 ;;
 
-let iter t which ~f = bound_set t which |> Hash_set.iter ~f
-let fold t which ~init ~f = bound_set t which |> Hash_set.fold ~init ~f
 let to_list t which = bound_set t which |> Hash_set.to_list
+
+(* copy to allow modification while iterating *)
+let iter t which ~f = to_list t which |> List.iter ~f
+let fold t which ~init ~f = to_list t which |> List.fold ~init ~f
 
 let result_iter t which ~f =
   fold t which ~init:(Ok ()) ~f:(fun maybe_unit x ->
