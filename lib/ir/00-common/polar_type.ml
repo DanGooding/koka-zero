@@ -1,6 +1,12 @@
 open! Core
 open! Import
 
+let flip = function
+  | `all -> `all
+  | `positive -> `negative
+  | `negative -> `positive
+;;
+
 module Effect = struct
   type t =
     | Variable of Effect.Variable.t
@@ -11,14 +17,17 @@ module Effect = struct
     | Recursive of Effect.Variable.t * t
   [@@deriving sexp_of, compare]
 
-  let rec variables t =
+  let rec variables t ~polarity =
     match t with
-    | Variable v -> Effect.Variable.Set.singleton v
+    | Variable v ->
+      (match polarity with
+       | `all | `positive -> Effect.Variable.Set.singleton v
+       | `negative -> Effect.Variable.Set.empty)
     | Labels _labels -> Effect.Variable.Set.empty
-    | Handled (_lables, effect_) -> variables effect_
+    | Handled (_lables, effect_) -> variables effect_ ~polarity
     | Union effects | Intersection effects ->
-      Effect.Variable.Set.union_list (List.map effects ~f:variables)
-    | Recursive (v, effect_) -> Set.remove (variables effect_) v
+      Effect.Variable.Set.union_list (List.map effects ~f:(variables ~polarity))
+    | Recursive (v, effect_) -> Set.remove (variables effect_ ~polarity) v
   ;;
 
   let rec simplify t =
@@ -78,17 +87,23 @@ type t =
   | Recursive of Type.Variable.t * t
 [@@deriving sexp_of, compare]
 
-let rec variables t =
+let rec variables t ~polarity =
   match t with
-  | Variable v -> Type.Variable.Set.singleton v
+  | Variable v ->
+    (match polarity with
+     | `all | `positive -> Type.Variable.Set.singleton v
+     | `negative -> Type.Variable.Set.empty)
   | Primitive _ -> Type.Variable.Set.empty
-  | List t | Option t -> variables t
-  | Tuple ts -> Type.Variable.Set.union_list (List.map ts ~f:variables)
+  | List t | Option t -> variables t ~polarity
+  | Tuple ts ->
+    Type.Variable.Set.union_list (List.map ts ~f:(variables ~polarity))
   | Arrow (args, _effect, result) ->
-    Type.Variable.Set.union_list (List.map (result :: args) ~f:variables)
+    Type.Variable.Set.union_list
+      (variables result ~polarity
+       :: List.map args ~f:(variables ~polarity:(flip polarity)))
   | Union types | Intersection types ->
-    Type.Variable.Set.union_list (List.map types ~f:variables)
-  | Recursive (v, type_) -> Set.remove (variables type_) v
+    Type.Variable.Set.union_list (List.map types ~f:(variables ~polarity))
+  | Recursive (v, type_) -> Set.remove (variables type_ ~polarity) v
 ;;
 
 (* this could be much more sophisticated,

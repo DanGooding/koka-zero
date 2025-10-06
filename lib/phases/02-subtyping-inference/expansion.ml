@@ -191,7 +191,8 @@ and expand_type_metavariable_aux
             | Tuple _
             | Union _
             | Intersection _
-            | Recursive _ -> Set.mem (Polar_type.variables type_) var)
+            | Recursive _ ->
+              Set.mem (Polar_type.variables type_ ~polarity:`all) var)
         in
         match is_recursive with
         | false -> combined
@@ -283,7 +284,7 @@ and expand_effect_metavariable_aux
             match (effect_ : Polar_type.Effect.t) with
             | Variable _ -> false
             | Labels _ | Handled _ | Union _ | Intersection _ | Recursive _ ->
-              Set.mem (Polar_type.Effect.variables effect_) var)
+              Set.mem (Polar_type.Effect.variables effect_ ~polarity:`all) var)
         in
         match is_recursive with
         | false -> combined
