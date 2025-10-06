@@ -17,7 +17,7 @@ let%expect_test "identity gets polymorphic type" =
   [%expect
     {|
     (Ok
-     ((Union ((Variable t0) (Tuple ()))) (Union ((Variable e0) (Labels ())))
+     ((Tuple ()) (Union ((Variable e0) (Labels ())))
       (Let (User id) (Lambda (((Variable (User z))) (Value (Variable (User z)))))
        (Application
         (Application (Value (Variable (User id))) ((Value (Variable (User id))))
@@ -38,8 +38,7 @@ let%expect_test "fix combinator allows recursion" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Variable t0)) (Union ((Variable e0) (Labels ()))) (Variable t1))
-      (Labels ())
+     ((Arrow ((Intersection ())) (Labels ()) (Variable t1)) (Labels ())
       (Value
        (Fix_lambda
         ((User f)
@@ -162,7 +161,7 @@ let%expect_test "multi argument functions" =
   [%expect
     {|
     (Ok
-     ((Union ((Variable t0) (Primitive Int))) (Union ((Variable e0) (Labels ())))
+     ((Primitive Int) (Union ((Variable e0) (Labels ())))
       (Application
        (Value
         (Lambda
@@ -268,21 +267,19 @@ let%expect_test "handled effects reflected in subject's effect" =
     {|
     (Ok
      ((Arrow
-       ((Intersection
-         ((Variable t0)
-          (Arrow () (Intersection ((Variable e0) (Variable e1) (Variable e2)))
-           (Intersection
-            ((Variable t1) (Variable t2) (Variable t3) (Variable t4)
-             (Variable t5) (Variable t6) (Variable t7) (Variable t8)
-             (Variable t10) (Variable t9)))))))
+       ((Arrow () (Intersection ((Variable e0) (Variable e1) (Variable e2)))
+         (Intersection
+          ((Variable t1) (Variable t2) (Variable t3) (Variable t4) (Variable t5)
+           (Variable t6) (Variable t7) (Variable t8) (Variable t10)
+           (Variable t9)))))
        (Union
-        ((Variable e3) (Labels ())
+        ((Labels ())
          (Handled (exn)
           (Union
-           ((Variable e4) (Labels ())
+           ((Union ()) (Labels ())
             (Handled (read)
              (Union
-              ((Variable e5) (Labels ())
+              ((Union ()) (Labels ())
                (Handled (read) (Union ((Variable e2) (Labels ()))))))))))))
        (Union ((Variable t10) (Tuple ()))))
       (Labels ())
@@ -393,7 +390,7 @@ let%expect_test "return clause is typed correctly" =
   [%expect
     {|
     (Ok
-     ((Union ((Variable t0) (Tuple ())))
+     ((Tuple ())
       (Union
        ((Variable e0) (Labels ())
         (Handled (query) (Union ((Variable e1) (Labels ()) (Labels (query)))))))
@@ -456,7 +453,7 @@ let%expect_test "handlers can delegate to outer handlers" =
   [%expect
     {|
     (Ok
-     ((Union ((Variable t0) (Primitive Int)))
+     ((Primitive Int)
       (Union
        ((Variable e0) (Labels ())
         (Handled (read)
@@ -529,8 +526,7 @@ let%expect_test "`fun` handler can implemnent `control` operation" =
     (Ok
      ((Arrow
        ((Arrow () (Variable e0) (Intersection ((Variable t0) (Variable t1)))))
-       (Union ((Variable e1) (Labels ()) (Handled (choose) (Variable e0))))
-       (Variable t1))
+       (Union ((Labels ()) (Handled (choose) (Variable e0)))) (Variable t1))
       (Labels ())
       (Value
        (Handler
