@@ -1327,13 +1327,10 @@ let%expect_test "inference for a simple function" =
     {|
     ((type_
       (Arrow
-       ((Intersection
-         ((Variable t0) (Variable t1) (Variable t2) (Primitive Int)))
-        (Intersection
-         ((Variable t3) (Variable t4) (Variable t5)
-          (Arrow ((Variable t6))
-           (Intersection ((Variable e0) (Variable e1) (Variable e2)))
-           (Intersection ((Variable t7) (Primitive Int))))))
+       ((Primitive Int)
+        (Arrow ((Variable t6))
+         (Intersection ((Variable e0) (Variable e1) (Variable e2)))
+         (Intersection ((Variable t7) (Primitive Int))))
         (Variable t6))
        (Union ((Variable e2) (Labels ()))) (Primitive Int)))
      (effect_ (Labels ())))

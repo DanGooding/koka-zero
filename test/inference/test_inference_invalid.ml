@@ -73,8 +73,7 @@ let%expect_test "if statement's branch types are unioned" =
   [%expect
     {|
     (Ok
-     ((Union ((Variable t0) (Primitive Int) (Tuple ())))
-      (Union ((Variable e0) (Labels ())))
+     ((Union ((Primitive Int) (Tuple ()))) (Union ((Variable e0) (Labels ())))
       (If_then_else (Value (Literal (Bool true))) (Value (Literal (Int 1)))
        (Tuple_construction ()))))
     |}]
@@ -90,7 +89,8 @@ let%expect_test "fix lambdas name cannot collide with own parameters" =
   [%expect
     {|
     (Ok
-     ((Arrow ((Variable t0) (Variable t1)) (Variable e0) (Tuple ())) (Labels ())
+     ((Arrow ((Intersection ()) (Intersection ())) (Union ()) (Tuple ()))
+      (Labels ())
       (Value
        (Fix_lambda
         ((User f)
