@@ -44,6 +44,14 @@ module Effect = struct
     | Recursive (v, t) -> Recursive (v, map_variables t ~f)
   ;;
 
+  let remove_unipolar_variables t ~positive ~negative =
+    map_variables t ~f:(fun v ->
+      match Set.mem positive v, Set.mem negative v with
+      | true, true | false, false -> Variable v
+      | true, false -> Union []
+      | false, true -> Intersection [])
+  ;;
+
   let rec simplify t =
     match t with
     | Intersection ts ->
@@ -154,9 +162,13 @@ let rec map_variables t ~f =
 
 (* Remove variables occurring only positively or only negatively.
    These add no information since they can always be set to bottom/top. *)
-let remove_unipolar_type_variables t =
-  let positive = variables t ~polarity:`positive in
-  let negative = variables t ~polarity:`negative in
+let remove_unipolar_type_variables ?context_type t =
+  let variables ts ~polarity =
+    List.map ts ~f:(variables ~polarity) |> Type.Variable.Set.union_list
+  in
+  let types = List.filter_opt [ Some t; context_type ] in
+  let positive = variables types ~polarity:`positive in
+  let negative = variables types ~polarity:`negative in
   map_variables t ~f:(fun v ->
     match Set.mem positive v, Set.mem negative v with
     | true, true | false, false -> Variable v
@@ -178,21 +190,20 @@ let rec map_effect t ~f =
   | Recursive (v, t) -> Recursive (v, map_effect t ~f)
 ;;
 
-let remove_unipolar_effect_variables t =
-  let positive = effect_variables t ~polarity:`positive in
-  let negative = effect_variables t ~polarity:`negative in
-  map_effect
-    t
-    ~f:
-      (Effect.map_variables ~f:(fun v ->
-         match Set.mem positive v, Set.mem negative v with
-         | true, true | false, false -> Variable v
-         | true, false -> Union []
-         | false, true -> Intersection []))
+let many_effect_variables ts ~polarity =
+  List.map ts ~f:(effect_variables ~polarity) |> Effect.Variable.Set.union_list
 ;;
 
-let remove_unipolar_variables t =
-  remove_unipolar_type_variables t |> remove_unipolar_effect_variables
+let remove_unipolar_effect_variables ?context_type t =
+  let types = List.filter_opt [ Some t; context_type ] in
+  let positive = many_effect_variables types ~polarity:`positive in
+  let negative = many_effect_variables types ~polarity:`negative in
+  map_effect t ~f:(Effect.remove_unipolar_variables ~positive ~negative)
+;;
+
+let remove_unipolar_variables ?context_type t =
+  remove_unipolar_type_variables ?context_type t
+  |> remove_unipolar_effect_variables ?context_type
 ;;
 
 (* this could be much more sophisticated,
@@ -240,7 +251,24 @@ and simplify_within_intersection t =
     | Recursive _ ) as t' -> [ t' ]
 ;;
 
-let simplify t = remove_unipolar_variables t |> simplify
+let simplify ?context_type t =
+  remove_unipolar_variables ?context_type t |> simplify
+;;
+
+let simplify_effect ?context_type effect_ =
+  let variables ~polarity =
+    let context_variables =
+      match context_type with
+      | None -> Effect.Variable.Set.empty
+      | Some context_type -> effect_variables context_type ~polarity
+    in
+    Set.union context_variables (Effect.variables effect_ ~polarity)
+  in
+  let positive = variables ~polarity:`positive in
+  let negative = variables ~polarity:`negative in
+  Effect.remove_unipolar_variables effect_ ~positive ~negative
+  |> Effect.simplify
+;;
 
 let%expect_test "remove unipolar variables" =
   let type_source = Type.Variable.Name_source.fresh () ~prefix:"t" in

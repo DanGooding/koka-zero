@@ -1137,7 +1137,7 @@ let infer_effect_decl (declaration : Effect_decl.t) ~env ~effect_env
 (** run inference on a function declaration, adding it (generalised) to the
     environment if well typed *)
 let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
-  : (Context.t * Effect.t Expl.Decl.Fun.t) Or_static_error.t
+  : (Context.t * Polar_type.Effect.t Expl.Decl.Fun.t) Or_static_error.t
   =
   let open Result.Let_syntax in
   let f_name, _lambda = f in
@@ -1153,11 +1153,23 @@ let infer_fun_decl t (f : Min.Decl.Fun.t) ~env ~level ~effect_env
            "cannot shadow '%s' at toplevel"
            (Variable.to_string_user f_name))
   in
+  let f_polar_type_raw =
+    (* Compare the negative effect variables in [poly_f] with subexpression effects in [f].
+       Any variable appearing positively in [f] and negatively in [poly_f] is an effect controlled
+       by the caller. We must assume such an effect won't be total.
+    *)
+    Expansion.expand_type t.expansion poly_f.monotype ~simplify:false
+  in
+  let f =
+    Expl.Decl.Fun.map_effect
+      f
+      ~f:(Expansion.expand_effect t.expansion ~context_type:f_polar_type_raw)
+  in
   env', f
 ;;
 
 let infer_decl t (declaration : Min.Decl.t) ~env ~level ~effect_env
-  : (Context.t * Effect_signature.Context.t * Effect.t Expl.Decl.t)
+  : (Context.t * Effect_signature.Context.t * Polar_type.Effect.t Expl.Decl.t)
       Or_static_error.t
   =
   let open Result.Let_syntax in
@@ -1171,7 +1183,9 @@ let infer_decl t (declaration : Min.Decl.t) ~env ~level ~effect_env
 ;;
 
 let infer_decls t (declarations : Min.Decl.t list) ~env ~level ~effect_env
-  : (Context.t * Effect_signature.Context.t * Effect.t Expl.Decl.t list)
+  : (Context.t
+    * Effect_signature.Context.t
+    * Polar_type.Effect.t Expl.Decl.t list)
       Or_static_error.t
   =
   let open Result.Let_syntax in
@@ -1259,8 +1273,7 @@ let infer_program ?(print_constraint_graph = false) { Min.Program.declarations }
     declarations
   in
   if print_constraint_graph then Constraints.print_as_graph t.constraints;
-  let program = { Expl.Program.declarations } in
-  Expl.Program.map_effect program ~f:(Expansion.expand_effect t.expansion)
+  { Expl.Program.declarations }
 ;;
 
 let infer_program_without_main { Min.Program.declarations }
@@ -1274,8 +1287,7 @@ let infer_program_without_main { Min.Program.declarations }
     let effect_env = Effect_signature.Context.empty in
     infer_decls t declarations ~env ~level ~effect_env
   in
-  let program = { Expl.Program.declarations } in
-  Expl.Program.map_effect program ~f:(Expansion.expand_effect t.expansion)
+  { Expl.Program.declarations }
 ;;
 
 let%expect_test "inference for a simple function" =
@@ -1315,22 +1327,19 @@ let%expect_test "inference for a simple function" =
         (((Variable (User x)) (Variable (User f)) (Variable (User y)))
          (Operator
           (Application (Value (Variable (User id))) ((Value (Variable (User x))))
-           (Union ((Variable e4) (Labels ()))))
+           (Labels ()))
           (Int Plus)
           (Application
            (Application (Value (Variable (User id)))
-            ((Value (Variable (User f)))) (Union ((Variable e3) (Labels ()))))
-           ((Value (Variable (User y)))) (Variable e0))))))))
+            ((Value (Variable (User f)))) (Labels ()))
+           ((Value (Variable (User y)))) (Union ()))))))))
     |}];
   print_s [%message (type_ : Polar_type.t) (effect_ : Polar_type.Effect.t)];
   [%expect
     {|
     ((type_
       (Arrow
-       ((Primitive Int)
-        (Arrow ((Variable t6))
-         (Intersection ((Variable e0) (Variable e1) (Variable e2)))
-         (Intersection ((Variable t7) (Primitive Int))))
+       ((Primitive Int) (Arrow ((Variable t6)) (Variable e2) (Primitive Int))
         (Variable t6))
        (Union ((Variable e2) (Labels ()))) (Primitive Int)))
      (effect_ (Labels ())))

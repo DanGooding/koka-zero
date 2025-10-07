@@ -16,7 +16,6 @@ module Effect : sig
     -> polarity:[ `all | `negative | `positive ]
     -> Effect.Variable.Set.t
 
-  val simplify : t -> t
   val is_total : t -> bool
 end
 
@@ -37,4 +36,5 @@ val variables
   -> polarity:[ `all | `negative | `positive ]
   -> Type.Variable.Set.t
 
-val simplify : t -> t
+val simplify : ?context_type:t -> t -> t
+val simplify_effect : ?context_type:t -> Effect.t -> Effect.t

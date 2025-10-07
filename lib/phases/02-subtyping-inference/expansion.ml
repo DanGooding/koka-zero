@@ -8,6 +8,7 @@ type t =
   ; type_variable_source : Type.Variable.Name_source.t
   ; effect_variable_source : Effect.Variable.Name_source.t
   }
+[@@deriving sexp_of]
 
 let create ~constraints ~type_variable_source ~effect_variable_source =
   let type_meta_to_var = Type.Metavariable.Table.create () in
@@ -291,17 +292,19 @@ and expand_effect_metavariable_aux
         | true -> Recursive (var, combined))
 ;;
 
-let expand_type t type_ =
-  expand_type_aux
-    t
-    type_
-    ~polarity_positive:true
-    ~in_progress_type_metavariables:Type.Metavariable.Set.empty
-    ~memo_table:(Memo_table.create ())
-  |> Polar_type.simplify
+let expand_type ?context_type ?(simplify = true) t type_ =
+  let full_type =
+    expand_type_aux
+      t
+      type_
+      ~polarity_positive:true
+      ~in_progress_type_metavariables:Type.Metavariable.Set.empty
+      ~memo_table:(Memo_table.create ())
+  in
+  if simplify then Polar_type.simplify full_type ?context_type else full_type
 ;;
 
-let expand_effect t effect_ =
+let expand_effect ?context_type ?(simplify = true) t effect_ =
   let full_effect =
     expand_effect_aux
       t
@@ -310,5 +313,7 @@ let expand_effect t effect_ =
       ~in_progress_effect_metavariables:Effect.Metavariable.Set.empty
       ~memo_table:(Memo_table.create ())
   in
-  Polar_type.Effect.simplify full_effect
+  if simplify
+  then Polar_type.simplify_effect ?context_type full_effect
+  else full_effect
 ;;

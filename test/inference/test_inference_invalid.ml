@@ -18,16 +18,14 @@ let%expect_test
      ((Arrow
        ((Recursive t0
          (Intersection
-          ((Variable t0)
-           (Arrow ((Variable t0)) (Intersection ((Variable e0) (Variable e1)))
-            (Variable t1))))))
+          ((Variable t0) (Arrow ((Variable t0)) (Variable e1) (Variable t1))))))
        (Union ((Variable e1) (Labels ()))) (Variable t1))
       (Labels ())
       (Value
        (Lambda
         (((Variable (User x)))
          (Application (Value (Variable (User x))) ((Value (Variable (User x))))
-          (Variable e0)))))))
+          (Union ())))))))
     |}];
   (* here we try to type [omega (fun x -> x) ()]
      which should expand to [(fun x -> x) (fun x -> x) ()] which is just unit.
@@ -73,7 +71,7 @@ let%expect_test "if statement's branch types are unioned" =
   [%expect
     {|
     (Ok
-     ((Union ((Primitive Int) (Tuple ()))) (Union ((Variable e0) (Labels ())))
+     ((Union ((Primitive Int) (Tuple ()))) (Labels ())
       (If_then_else (Value (Literal (Bool true))) (Value (Literal (Int 1)))
        (Tuple_construction ()))))
     |}]
