@@ -77,6 +77,8 @@ module Decl : sig
   module Fun : sig
     (** toplevel function - implicitly generalised *)
     type 'e t = 'e Expr.fix_lambda [@@deriving sexp_of]
+
+    val map_effect : 'e t -> f:('e -> 'f) -> 'f t
   end
 
   type 'e t =
