@@ -4,10 +4,10 @@ since these are not guaranteed to be pure.
 
   $ export PROJECT_ROOT=../../..
 
-  $ ../../koka-zero.sh interpret effectful-callbacks.kk -no-prelude
+  $ ../../koka-zero.sh interpret effectful-callbacks.kk
   5
 
-  $ ../../koka-zero.sh compile effectful-callbacks.kk -no-prelude
+  $ ../../koka-zero.sh compile effectful-callbacks.kk
   $ ./effectful-callbacks
   5
 
