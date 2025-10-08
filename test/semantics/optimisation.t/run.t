@@ -6,14 +6,14 @@ Implement an optimisation search using effects
    (expr
     (Match_ctl_pure
      (subject
-      (Application (Variable (Generated mon_84))
-       (((Variable (Generated mon_85)) Pure)
-        ((Variable (Generated mon_91)) Pure)
-        ((Variable (Generated mon_93)) Pure)
-        ((Variable (Generated mon_92)) Pure))
+      (Application (Variable (Generated mon_91))
+       (((Variable (Generated mon_92)) Pure)
+        ((Variable (Generated mon_98)) Pure)
+        ((Variable (Generated mon_100)) Pure)
+        ((Variable (Generated mon_99)) Pure))
        Ctl))
      (pure_branch
-      ((Variable (Generated mon_94)) (Variable (Generated mon_94)))))))
+      ((Variable (Generated mon_101)) (Variable (Generated mon_101)))))))
   
   [2]
 
