@@ -4,6 +4,14 @@ fun max(x, y) {
   if x >= y then x else y
 }
 
+fun min(x, y) {
+  if x <= y then x else y
+}
+
+fun compare-int(a, b) {
+  a - b
+}
+
 // lists
 
 fun reverse(xs) {
@@ -16,13 +24,14 @@ fun reverse(xs) {
   reverse-tail(xs, Nil)
 }
 
+fun concat-rev(rev-xs, acc) {
+  match rev-xs {
+    Nil -> acc;
+    Cons(x, xx) -> concat-rev(xx, Cons(x, acc));
+  }
+}
+
 fun concat(xs, ys) {
-  fun concat-rev(rev-xs, acc) {
-    match rev-xs {
-      Nil -> acc;
-      Cons(x, xx) -> concat-rev(xx, Cons(x, acc));
-    }
-  };
   concat-rev(reverse(xs), ys)
 }
 
@@ -161,6 +170,62 @@ fun head(xs) {
   }
 }
 
+fun compare-reversed(compare) {
+  fn(a, b) compare(b, a)
+}
+
+fun sort(xs, compare) {
+  fun merge(xs, ys, acc) {
+    match xs {
+      Nil -> concat-rev(acc, ys);
+      Cons(x, xx) -> {
+        match ys {
+          Nil -> concat-rev(acc, xs);
+          Cons(y, yy) -> {
+            if compare(x, y) <= 0
+            then merge(xx, ys, Cons(x, acc))
+            else merge(xs, yy, Cons(y, acc))
+          }
+        }
+      }
+    }
+  };
+
+  fun split(xs, acc1, acc2) {
+    match xs {
+      Nil -> (acc1, acc2);
+      Cons(x, ys) -> {
+        match ys {
+          Nil -> (Cons(x, acc1), acc2);
+          Cons(y, zs) -> split(zs, Cons(x, acc1), Cons(y, acc2));
+        }
+      }
+    }
+  };
+
+  fun mergesort(xs) {
+    match xs {
+      Nil -> xs;
+      Cons(_, xx) -> {
+        match xx {
+          Nil -> xs;
+          Cons(_, _) -> {
+            // list of two or more items
+
+            val (a, b) = split(xs, [], []);
+            val a = mergesort(a);
+            val b = mergesort(b);
+            
+            merge(a, b, [])
+          }
+        } 
+      }
+    }
+  };
+
+  mergesort(xs)
+}
+
 // option
 
 fun some-if(cond, value) {
@@ -187,4 +252,11 @@ fun option-flat-map(x, f) {
 
 fun tuple2-equal((a1, a2), (b1, b2), equal1, equal2) {
   equal1(a1, b1) && equal2(a2, b2)
+}
+
+fun tuple2-compare((a1, a2), (b1, b2), compare1, compare2) {
+  val cmp1 = compare1(a1, b1);
+  if cmp1 == 0
+  then compare2(a2, b2)
+  else cmp1
 }

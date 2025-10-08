@@ -211,263 +211,278 @@ First show without any rewriting optimisations
             (Variable (Generated mon_47)))))
          (If_then_else (Variable (Generated mon_48)) (Variable (User x))
           (Variable (User y)))))))
+     ((User min)
+      ((((Variable (User x)) Pure) ((Variable (User y)) Pure)
+        ((Variable (Generated mon_49)) Pure))
+       Ctl
+       (Construct_pure
+        (Let (Variable (Generated mon_52)) Pure
+         (Let (Variable (Generated mon_50)) Pure (Variable (User x))
+          (Let (Variable (Generated mon_51)) Pure (Variable (User y))
+           (Operator (Variable (Generated mon_50)) (Int Less_equal)
+            (Variable (Generated mon_51)))))
+         (If_then_else (Variable (Generated mon_52)) (Variable (User x))
+          (Variable (User y)))))))
+     ((User compare-int)
+      ((((Variable (User a)) Pure) ((Variable (User b)) Pure)
+        ((Variable (Generated mon_53)) Pure))
+       Ctl
+       (Construct_pure
+        (Let (Variable (Generated mon_54)) Pure (Variable (User a))
+         (Let (Variable (Generated mon_55)) Pure (Variable (User b))
+          (Operator (Variable (Generated mon_54)) (Int Minus)
+           (Variable (Generated mon_55))))))))
      ((User reverse)
-      ((((Variable (User xs)) Pure) ((Variable (Generated mon_49)) Pure)) Ctl
+      ((((Variable (User xs)) Pure) ((Variable (Generated mon_56)) Pure)) Ctl
        (Construct_pure
         (Let (Variable (User reverse-tail)) Pure
          (Fix_lambda
           ((User reverse-tail)
            ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-             ((Variable (Generated mon_50)) Pure))
+             ((Variable (Generated mon_57)) Pure))
             Ctl
             (Construct_pure
-             (Let (Variable (Generated mon_51)) Pure (Variable (User xs))
-              (Match (Variable (Generated mon_51)) List
+             (Let (Variable (Generated mon_58)) Pure (Variable (User xs))
+              (Match (Variable (Generated mon_58)) List
                (((Construction List_nil ()) (Variable (User acc)))
                 ((Construction List_cons
                   ((Variable (User x)) (Variable (User xx))))
-                 (Let (Variable (Generated mon_52)) Pure
+                 (Let (Variable (Generated mon_59)) Pure
                   (Variable (User reverse-tail))
-                  (Let (Variable (Generated mon_53)) Pure (Variable (User xx))
-                   (Let (Variable (Generated mon_56)) Pure
-                    (Let (Variable (Generated mon_54)) Pure (Variable (User x))
-                     (Let (Variable (Generated mon_55)) Pure
+                  (Let (Variable (Generated mon_60)) Pure (Variable (User xx))
+                   (Let (Variable (Generated mon_63)) Pure
+                    (Let (Variable (Generated mon_61)) Pure (Variable (User x))
+                     (Let (Variable (Generated mon_62)) Pure
                       (Variable (User acc))
                       (Construction List_cons
-                       ((Variable (Generated mon_54))
-                        (Variable (Generated mon_55))))))
+                       ((Variable (Generated mon_61))
+                        (Variable (Generated mon_62))))))
                     (Match_ctl_pure
                      (subject
-                      (Application (Variable (Generated mon_52))
-                       (((Variable (Generated mon_53)) Pure)
-                        ((Variable (Generated mon_56)) Pure)
-                        ((Variable (Generated mon_50)) Pure))
+                      (Application (Variable (Generated mon_59))
+                       (((Variable (Generated mon_60)) Pure)
+                        ((Variable (Generated mon_63)) Pure)
+                        ((Variable (Generated mon_57)) Pure))
                        Ctl))
                      (pure_branch
-                      ((Variable (Generated mon_57))
-                       (Variable (Generated mon_57))))))))))))))))
-         (Let (Variable (Generated mon_58)) Pure (Variable (User reverse-tail))
-          (Let (Variable (Generated mon_59)) Pure (Variable (User xs))
-           (Let (Variable (Generated mon_60)) Pure (Construction List_nil ())
+                      ((Variable (Generated mon_64))
+                       (Variable (Generated mon_64))))))))))))))))
+         (Let (Variable (Generated mon_65)) Pure (Variable (User reverse-tail))
+          (Let (Variable (Generated mon_66)) Pure (Variable (User xs))
+           (Let (Variable (Generated mon_67)) Pure (Construction List_nil ())
             (Match_ctl_pure
              (subject
-              (Application (Variable (Generated mon_58))
-               (((Variable (Generated mon_59)) Pure)
-                ((Variable (Generated mon_60)) Pure)
-                ((Variable (Generated mon_49)) Pure))
+              (Application (Variable (Generated mon_65))
+               (((Variable (Generated mon_66)) Pure)
+                ((Variable (Generated mon_67)) Pure)
+                ((Variable (Generated mon_56)) Pure))
                Ctl))
              (pure_branch
-              ((Variable (Generated mon_61)) (Variable (Generated mon_61))))))))))))
-     ((User concat)
-      ((((Variable (User xs)) Pure) ((Variable (User ys)) Pure)
-        ((Variable (Generated mon_62)) Pure))
+              ((Variable (Generated mon_68)) (Variable (Generated mon_68))))))))))))
+     ((User concat-rev)
+      ((((Variable (User rev-xs)) Pure) ((Variable (User acc)) Pure)
+        ((Variable (Generated mon_69)) Pure))
        Ctl
        (Construct_pure
-        (Let (Variable (User concat-rev)) Pure
-         (Fix_lambda
-          ((User concat-rev)
-           ((((Variable (User rev-xs)) Pure) ((Variable (User acc)) Pure)
-             ((Variable (Generated mon_63)) Pure))
-            Ctl
-            (Construct_pure
-             (Let (Variable (Generated mon_64)) Pure (Variable (User rev-xs))
-              (Match (Variable (Generated mon_64)) List
-               (((Construction List_nil ()) (Variable (User acc)))
-                ((Construction List_cons
-                  ((Variable (User x)) (Variable (User xx))))
-                 (Let (Variable (Generated mon_65)) Pure
-                  (Variable (User concat-rev))
-                  (Let (Variable (Generated mon_66)) Pure (Variable (User xx))
-                   (Let (Variable (Generated mon_69)) Pure
-                    (Let (Variable (Generated mon_67)) Pure (Variable (User x))
-                     (Let (Variable (Generated mon_68)) Pure
-                      (Variable (User acc))
-                      (Construction List_cons
-                       ((Variable (Generated mon_67))
-                        (Variable (Generated mon_68))))))
-                    (Match_ctl_pure
-                     (subject
-                      (Application (Variable (Generated mon_65))
-                       (((Variable (Generated mon_66)) Pure)
-                        ((Variable (Generated mon_69)) Pure)
-                        ((Variable (Generated mon_63)) Pure))
-                       Ctl))
-                     (pure_branch
-                      ((Variable (Generated mon_70))
-                       (Variable (Generated mon_70))))))))))))))))
-         (Let (Variable (Generated mon_71)) Pure (Variable (User concat-rev))
-          (Let (Variable (Generated mon_75)) Pure
-           (Let (Variable (Generated mon_72)) Pure (Variable (User reverse))
-            (Let (Variable (Generated mon_73)) Pure (Variable (User xs))
-             (Match_ctl_pure
-              (subject
-               (Application (Variable (Generated mon_72))
-                (((Variable (Generated mon_73)) Pure)
-                 ((Variable (Generated mon_62)) Pure))
-                Ctl))
-              (pure_branch
-               ((Variable (Generated mon_74)) (Variable (Generated mon_74)))))))
-           (Let (Variable (Generated mon_76)) Pure (Variable (User ys))
+        (Let (Variable (Generated mon_70)) Pure (Variable (User rev-xs))
+         (Match (Variable (Generated mon_70)) List
+          (((Construction List_nil ()) (Variable (User acc)))
+           ((Construction List_cons ((Variable (User x)) (Variable (User xx))))
+            (Let (Variable (Generated mon_71)) Pure
+             (Variable (User concat-rev))
+             (Let (Variable (Generated mon_72)) Pure (Variable (User xx))
+              (Let (Variable (Generated mon_75)) Pure
+               (Let (Variable (Generated mon_73)) Pure (Variable (User x))
+                (Let (Variable (Generated mon_74)) Pure (Variable (User acc))
+                 (Construction List_cons
+                  ((Variable (Generated mon_73)) (Variable (Generated mon_74))))))
+               (Match_ctl_pure
+                (subject
+                 (Application (Variable (Generated mon_71))
+                  (((Variable (Generated mon_72)) Pure)
+                   ((Variable (Generated mon_75)) Pure)
+                   ((Variable (Generated mon_69)) Pure))
+                  Ctl))
+                (pure_branch
+                 ((Variable (Generated mon_76)) (Variable (Generated mon_76)))))))))))))))
+     ((User concat)
+      ((((Variable (User xs)) Pure) ((Variable (User ys)) Pure)
+        ((Variable (Generated mon_77)) Pure))
+       Ctl
+       (Construct_pure
+        (Let (Variable (Generated mon_78)) Pure (Variable (User concat-rev))
+         (Let (Variable (Generated mon_82)) Pure
+          (Let (Variable (Generated mon_79)) Pure (Variable (User reverse))
+           (Let (Variable (Generated mon_80)) Pure (Variable (User xs))
             (Match_ctl_pure
              (subject
-              (Application (Variable (Generated mon_71))
-               (((Variable (Generated mon_75)) Pure)
-                ((Variable (Generated mon_76)) Pure)
-                ((Variable (Generated mon_62)) Pure))
+              (Application (Variable (Generated mon_79))
+               (((Variable (Generated mon_80)) Pure)
+                ((Variable (Generated mon_77)) Pure))
                Ctl))
              (pure_branch
-              ((Variable (Generated mon_77)) (Variable (Generated mon_77))))))))))))
+              ((Variable (Generated mon_81)) (Variable (Generated mon_81)))))))
+          (Let (Variable (Generated mon_83)) Pure (Variable (User ys))
+           (Match_ctl_pure
+            (subject
+             (Application (Variable (Generated mon_78))
+              (((Variable (Generated mon_82)) Pure)
+               ((Variable (Generated mon_83)) Pure)
+               ((Variable (Generated mon_77)) Pure))
+              Ctl))
+            (pure_branch
+             ((Variable (Generated mon_84)) (Variable (Generated mon_84)))))))))))
      ((User map)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_78)) Pure))
+        ((Variable (Generated mon_85)) Pure))
        Ctl
        (Let (Variable (User map-tail)) Pure
         (Fix_lambda
          ((User map-tail)
           ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (User f)) Pure) ((Variable (Generated mon_79)) Pure))
+            ((Variable (User f)) Pure) ((Variable (Generated mon_86)) Pure))
            Ctl
-           (Let (Variable (Generated mon_80)) Pure (Variable (User xs))
-            (Match (Variable (Generated mon_80)) List
+           (Let (Variable (Generated mon_87)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_87)) List
              (((Construction List_nil ())
                (Construct_pure
-                (Let (Variable (Generated mon_81)) Pure
+                (Let (Variable (Generated mon_88)) Pure
                  (Variable (User reverse))
-                 (Let (Variable (Generated mon_82)) Pure (Variable (User acc))
+                 (Let (Variable (Generated mon_89)) Pure (Variable (User acc))
                   (Match_ctl_pure
                    (subject
-                    (Application (Variable (Generated mon_81))
-                     (((Variable (Generated mon_82)) Pure)
-                      ((Variable (Generated mon_79)) Pure))
+                    (Application (Variable (Generated mon_88))
+                     (((Variable (Generated mon_89)) Pure)
+                      ((Variable (Generated mon_86)) Pure))
                      Ctl))
                    (pure_branch
-                    ((Variable (Generated mon_83))
-                     (Variable (Generated mon_83)))))))))
+                    ((Variable (Generated mon_90))
+                     (Variable (Generated mon_90)))))))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User ys))))
-               (Let (Variable (Generated mon_84)) Pure
+               (Let (Variable (Generated mon_91)) Pure
                 (Variable (User map-tail))
-                (Let (Variable (Generated mon_85)) Pure (Variable (User ys))
+                (Let (Variable (Generated mon_92)) Pure (Variable (User ys))
                  (Application (Variable (Language bind))
                   (((Application (Variable (Language bind))
-                     (((Let (Variable (Generated mon_86)) Pure
+                     (((Let (Variable (Generated mon_93)) Pure
                         (Variable (User f))
-                        (Let (Variable (Generated mon_87)) Pure
+                        (Let (Variable (Generated mon_94)) Pure
                          (Variable (User y))
-                         (Application (Variable (Generated mon_86))
-                          (((Variable (Generated mon_87)) Pure)
-                           ((Variable (Generated mon_79)) Pure))
+                         (Application (Variable (Generated mon_93))
+                          (((Variable (Generated mon_94)) Pure)
+                           ((Variable (Generated mon_86)) Pure))
                           Ctl)))
                        Ctl)
-                      ((Variable (Generated mon_79)) Pure)
+                      ((Variable (Generated mon_86)) Pure)
                       ((Lambda
-                        ((((Variable (Generated mon_88)) Pure)
-                          ((Variable (Generated mon_89)) Pure))
+                        ((((Variable (Generated mon_95)) Pure)
+                          ((Variable (Generated mon_96)) Pure))
                          Ctl
                          (Construct_pure
-                          (Let (Variable (Generated mon_90)) Pure
+                          (Let (Variable (Generated mon_97)) Pure
                            (Variable (User acc))
                            (Construction List_cons
-                            ((Variable (Generated mon_88))
-                             (Variable (Generated mon_90))))))))
+                            ((Variable (Generated mon_95))
+                             (Variable (Generated mon_97))))))))
                        Pure))
                      Ctl)
                     Ctl)
-                   ((Variable (Generated mon_79)) Pure)
+                   ((Variable (Generated mon_86)) Pure)
                    ((Lambda
-                     ((((Variable (Generated mon_91)) Pure)
-                       ((Variable (Generated mon_92)) Pure))
+                     ((((Variable (Generated mon_98)) Pure)
+                       ((Variable (Generated mon_99)) Pure))
                       Ctl
                       (Construct_pure
-                       (Let (Variable (Generated mon_93)) Pure
+                       (Let (Variable (Generated mon_100)) Pure
                         (Variable (User f))
                         (Match_ctl_pure
                          (subject
-                          (Application (Variable (Generated mon_84))
-                           (((Variable (Generated mon_85)) Pure)
-                            ((Variable (Generated mon_91)) Pure)
-                            ((Variable (Generated mon_93)) Pure)
-                            ((Variable (Generated mon_92)) Pure))
+                          (Application (Variable (Generated mon_91))
+                           (((Variable (Generated mon_92)) Pure)
+                            ((Variable (Generated mon_98)) Pure)
+                            ((Variable (Generated mon_100)) Pure)
+                            ((Variable (Generated mon_99)) Pure))
                            Ctl))
                          (pure_branch
-                          ((Variable (Generated mon_94))
-                           (Variable (Generated mon_94)))))))))
+                          ((Variable (Generated mon_101))
+                           (Variable (Generated mon_101)))))))))
                     Pure))
                   Ctl))))))))))
-        (Let (Variable (Generated mon_95)) Pure (Variable (User map-tail))
-         (Let (Variable (Generated mon_96)) Pure (Variable (User xs))
-          (Let (Variable (Generated mon_97)) Pure (Construction List_nil ())
-           (Let (Variable (Generated mon_98)) Pure (Variable (User f))
-            (Application (Variable (Generated mon_95))
-             (((Variable (Generated mon_96)) Pure)
-              ((Variable (Generated mon_97)) Pure)
-              ((Variable (Generated mon_98)) Pure)
-              ((Variable (Generated mon_78)) Pure))
+        (Let (Variable (Generated mon_102)) Pure (Variable (User map-tail))
+         (Let (Variable (Generated mon_103)) Pure (Variable (User xs))
+          (Let (Variable (Generated mon_104)) Pure (Construction List_nil ())
+           (Let (Variable (Generated mon_105)) Pure (Variable (User f))
+            (Application (Variable (Generated mon_102))
+             (((Variable (Generated mon_103)) Pure)
+              ((Variable (Generated mon_104)) Pure)
+              ((Variable (Generated mon_105)) Pure)
+              ((Variable (Generated mon_85)) Pure))
              Ctl))))))))
      ((User exists)
       ((((Variable (User xs)) Pure) ((Variable (User p)) Pure)
-        ((Variable (Generated mon_99)) Pure))
+        ((Variable (Generated mon_106)) Pure))
        Ctl
-       (Let (Variable (Generated mon_100)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_100)) List
+       (Let (Variable (Generated mon_107)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_107)) List
          (((Construction List_nil ()) (Construct_pure (Literal (Bool false))))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
            (Application (Variable (Language bind))
-            (((Let (Variable (Generated mon_101)) Pure (Variable (User p))
-               (Let (Variable (Generated mon_102)) Pure (Variable (User y))
-                (Application (Variable (Generated mon_101))
-                 (((Variable (Generated mon_102)) Pure)
-                  ((Variable (Generated mon_99)) Pure))
+            (((Let (Variable (Generated mon_108)) Pure (Variable (User p))
+               (Let (Variable (Generated mon_109)) Pure (Variable (User y))
+                (Application (Variable (Generated mon_108))
+                 (((Variable (Generated mon_109)) Pure)
+                  ((Variable (Generated mon_106)) Pure))
                  Ctl)))
               Ctl)
-             ((Variable (Generated mon_99)) Pure)
+             ((Variable (Generated mon_106)) Pure)
              ((Lambda
-               ((((Variable (Generated mon_103)) Pure)
-                 ((Variable (Generated mon_104)) Pure))
+               ((((Variable (Generated mon_110)) Pure)
+                 ((Variable (Generated mon_111)) Pure))
                 Ctl
-                (If_then_else (Variable (Generated mon_103))
+                (If_then_else (Variable (Generated mon_110))
                  (Construct_pure (Literal (Bool true)))
-                 (Let (Variable (Generated mon_105)) Pure
+                 (Let (Variable (Generated mon_112)) Pure
                   (Variable (User exists))
-                  (Let (Variable (Generated mon_106)) Pure (Variable (User ys))
-                   (Let (Variable (Generated mon_107)) Pure (Variable (User p))
-                    (Application (Variable (Generated mon_105))
-                     (((Variable (Generated mon_106)) Pure)
-                      ((Variable (Generated mon_107)) Pure)
-                      ((Variable (Generated mon_104)) Pure))
+                  (Let (Variable (Generated mon_113)) Pure (Variable (User ys))
+                   (Let (Variable (Generated mon_114)) Pure (Variable (User p))
+                    (Application (Variable (Generated mon_112))
+                     (((Variable (Generated mon_113)) Pure)
+                      ((Variable (Generated mon_114)) Pure)
+                      ((Variable (Generated mon_111)) Pure))
                      Ctl)))))))
               Pure))
             Ctl)))))))
      ((User for-all)
       ((((Variable (User xs)) Pure) ((Variable (User p)) Pure)
-        ((Variable (Generated mon_108)) Pure))
+        ((Variable (Generated mon_115)) Pure))
        Ctl
-       (Let (Variable (Generated mon_109)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_109)) List
+       (Let (Variable (Generated mon_116)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_116)) List
          (((Construction List_nil ()) (Construct_pure (Literal (Bool true))))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
            (Application (Variable (Language bind))
-            (((Let (Variable (Generated mon_110)) Pure (Variable (User p))
-               (Let (Variable (Generated mon_111)) Pure (Variable (User y))
-                (Application (Variable (Generated mon_110))
-                 (((Variable (Generated mon_111)) Pure)
-                  ((Variable (Generated mon_108)) Pure))
+            (((Let (Variable (Generated mon_117)) Pure (Variable (User p))
+               (Let (Variable (Generated mon_118)) Pure (Variable (User y))
+                (Application (Variable (Generated mon_117))
+                 (((Variable (Generated mon_118)) Pure)
+                  ((Variable (Generated mon_115)) Pure))
                  Ctl)))
               Ctl)
-             ((Variable (Generated mon_108)) Pure)
+             ((Variable (Generated mon_115)) Pure)
              ((Lambda
-               ((((Variable (Generated mon_112)) Pure)
-                 ((Variable (Generated mon_113)) Pure))
+               ((((Variable (Generated mon_119)) Pure)
+                 ((Variable (Generated mon_120)) Pure))
                 Ctl
-                (If_then_else (Variable (Generated mon_112))
-                 (Let (Variable (Generated mon_114)) Pure
+                (If_then_else (Variable (Generated mon_119))
+                 (Let (Variable (Generated mon_121)) Pure
                   (Variable (User for-all))
-                  (Let (Variable (Generated mon_115)) Pure (Variable (User ys))
-                   (Let (Variable (Generated mon_116)) Pure (Variable (User p))
-                    (Application (Variable (Generated mon_114))
-                     (((Variable (Generated mon_115)) Pure)
-                      ((Variable (Generated mon_116)) Pure)
-                      ((Variable (Generated mon_113)) Pure))
+                  (Let (Variable (Generated mon_122)) Pure (Variable (User ys))
+                   (Let (Variable (Generated mon_123)) Pure (Variable (User p))
+                    (Application (Variable (Generated mon_121))
+                     (((Variable (Generated mon_122)) Pure)
+                      ((Variable (Generated mon_123)) Pure)
+                      ((Variable (Generated mon_120)) Pure))
                      Ctl))))
                  (Construct_pure (Literal (Bool false))))))
               Pure))
@@ -475,781 +490,1132 @@ First show without any rewriting optimisations
      ((User list-equal)
       ((((Variable (User xs)) Pure) ((Variable (User ys)) Pure)
         ((Variable (User element-equal)) Pure)
-        ((Variable (Generated mon_117)) Pure))
+        ((Variable (Generated mon_124)) Pure))
        Ctl
-       (Let (Variable (Generated mon_118)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_118)) List
+       (Let (Variable (Generated mon_125)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_125)) List
          (((Construction List_nil ())
            (Construct_pure
-            (Let (Variable (Generated mon_119)) Pure (Variable (User ys))
-             (Match (Variable (Generated mon_119)) List
+            (Let (Variable (Generated mon_126)) Pure (Variable (User ys))
+             (Match (Variable (Generated mon_126)) List
               (((Construction List_nil ()) (Literal (Bool true)))
                ((Construction List_cons (Wildcard Wildcard))
                 (Literal (Bool false))))))))
           ((Construction List_cons ((Variable (User x)) (Variable (User xx))))
-           (Let (Variable (Generated mon_120)) Pure (Variable (User ys))
-            (Match (Variable (Generated mon_120)) List
+           (Let (Variable (Generated mon_127)) Pure (Variable (User ys))
+            (Match (Variable (Generated mon_127)) List
              (((Construction List_nil ())
                (Construct_pure (Literal (Bool false))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User yy))))
                (Application (Variable (Language bind))
-                (((Let (Variable (Generated mon_121)) Pure
+                (((Let (Variable (Generated mon_128)) Pure
                    (Variable (User element-equal))
-                   (Let (Variable (Generated mon_122)) Pure (Variable (User x))
-                    (Let (Variable (Generated mon_123)) Pure
+                   (Let (Variable (Generated mon_129)) Pure (Variable (User x))
+                    (Let (Variable (Generated mon_130)) Pure
                      (Variable (User y))
-                     (Application (Variable (Generated mon_121))
-                      (((Variable (Generated mon_122)) Pure)
-                       ((Variable (Generated mon_123)) Pure)
-                       ((Variable (Generated mon_117)) Pure))
+                     (Application (Variable (Generated mon_128))
+                      (((Variable (Generated mon_129)) Pure)
+                       ((Variable (Generated mon_130)) Pure)
+                       ((Variable (Generated mon_124)) Pure))
                       Ctl))))
                   Ctl)
-                 ((Variable (Generated mon_117)) Pure)
+                 ((Variable (Generated mon_124)) Pure)
                  ((Lambda
-                   ((((Variable (Generated mon_124)) Pure)
-                     ((Variable (Generated mon_125)) Pure))
+                   ((((Variable (Generated mon_131)) Pure)
+                     ((Variable (Generated mon_132)) Pure))
                     Ctl
-                    (If_then_else (Variable (Generated mon_124))
-                     (Let (Variable (Generated mon_126)) Pure
+                    (If_then_else (Variable (Generated mon_131))
+                     (Let (Variable (Generated mon_133)) Pure
                       (Variable (User list-equal))
-                      (Let (Variable (Generated mon_127)) Pure
+                      (Let (Variable (Generated mon_134)) Pure
                        (Variable (User xx))
-                       (Let (Variable (Generated mon_128)) Pure
+                       (Let (Variable (Generated mon_135)) Pure
                         (Variable (User yy))
-                        (Let (Variable (Generated mon_129)) Pure
+                        (Let (Variable (Generated mon_136)) Pure
                          (Variable (User element-equal))
-                         (Application (Variable (Generated mon_126))
-                          (((Variable (Generated mon_127)) Pure)
-                           ((Variable (Generated mon_128)) Pure)
-                           ((Variable (Generated mon_129)) Pure)
-                           ((Variable (Generated mon_125)) Pure))
+                         (Application (Variable (Generated mon_133))
+                          (((Variable (Generated mon_134)) Pure)
+                           ((Variable (Generated mon_135)) Pure)
+                           ((Variable (Generated mon_136)) Pure)
+                           ((Variable (Generated mon_132)) Pure))
                           Ctl)))))
                      (Construct_pure (Literal (Bool false))))))
                   Pure))
                 Ctl)))))))))))
      ((User filter)
       ((((Variable (User xs)) Pure) ((Variable (User p)) Pure)
-        ((Variable (Generated mon_130)) Pure))
+        ((Variable (Generated mon_137)) Pure))
        Ctl
        (Let (Variable (User filter-tail)) Pure
         (Fix_lambda
          ((User filter-tail)
           ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (Generated mon_131)) Pure))
+            ((Variable (Generated mon_138)) Pure))
            Ctl
-           (Let (Variable (Generated mon_132)) Pure (Variable (User xs))
-            (Match (Variable (Generated mon_132)) List
+           (Let (Variable (Generated mon_139)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_139)) List
              (((Construction List_nil ())
                (Construct_pure
-                (Let (Variable (Generated mon_133)) Pure
+                (Let (Variable (Generated mon_140)) Pure
                  (Variable (User reverse))
-                 (Let (Variable (Generated mon_134)) Pure (Variable (User acc))
+                 (Let (Variable (Generated mon_141)) Pure (Variable (User acc))
                   (Match_ctl_pure
                    (subject
-                    (Application (Variable (Generated mon_133))
-                     (((Variable (Generated mon_134)) Pure)
-                      ((Variable (Generated mon_131)) Pure))
+                    (Application (Variable (Generated mon_140))
+                     (((Variable (Generated mon_141)) Pure)
+                      ((Variable (Generated mon_138)) Pure))
                      Ctl))
                    (pure_branch
-                    ((Variable (Generated mon_135))
-                     (Variable (Generated mon_135)))))))))
+                    ((Variable (Generated mon_142))
+                     (Variable (Generated mon_142)))))))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User ys))))
                (Application (Variable (Language bind))
-                (((Let (Variable (Generated mon_136)) Pure (Variable (User p))
-                   (Let (Variable (Generated mon_137)) Pure (Variable (User y))
-                    (Application (Variable (Generated mon_136))
-                     (((Variable (Generated mon_137)) Pure)
-                      ((Variable (Generated mon_131)) Pure))
+                (((Let (Variable (Generated mon_143)) Pure (Variable (User p))
+                   (Let (Variable (Generated mon_144)) Pure (Variable (User y))
+                    (Application (Variable (Generated mon_143))
+                     (((Variable (Generated mon_144)) Pure)
+                      ((Variable (Generated mon_138)) Pure))
                      Ctl)))
                   Ctl)
-                 ((Variable (Generated mon_131)) Pure)
+                 ((Variable (Generated mon_138)) Pure)
                  ((Lambda
-                   ((((Variable (Generated mon_138)) Pure)
-                     ((Variable (Generated mon_139)) Pure))
+                   ((((Variable (Generated mon_145)) Pure)
+                     ((Variable (Generated mon_146)) Pure))
                     Ctl
-                    (If_then_else (Variable (Generated mon_138))
-                     (Let (Variable (Generated mon_140)) Pure
+                    (If_then_else (Variable (Generated mon_145))
+                     (Let (Variable (Generated mon_147)) Pure
                       (Variable (User filter-tail))
-                      (Let (Variable (Generated mon_141)) Pure
+                      (Let (Variable (Generated mon_148)) Pure
                        (Variable (User ys))
-                       (Let (Variable (Generated mon_144)) Pure
-                        (Let (Variable (Generated mon_142)) Pure
+                       (Let (Variable (Generated mon_151)) Pure
+                        (Let (Variable (Generated mon_149)) Pure
                          (Variable (User y))
-                         (Let (Variable (Generated mon_143)) Pure
+                         (Let (Variable (Generated mon_150)) Pure
                           (Variable (User acc))
                           (Construction List_cons
-                           ((Variable (Generated mon_142))
-                            (Variable (Generated mon_143))))))
-                        (Application (Variable (Generated mon_140))
-                         (((Variable (Generated mon_141)) Pure)
-                          ((Variable (Generated mon_144)) Pure)
-                          ((Variable (Generated mon_139)) Pure))
+                           ((Variable (Generated mon_149))
+                            (Variable (Generated mon_150))))))
+                        (Application (Variable (Generated mon_147))
+                         (((Variable (Generated mon_148)) Pure)
+                          ((Variable (Generated mon_151)) Pure)
+                          ((Variable (Generated mon_146)) Pure))
                          Ctl))))
                      (Construct_pure
-                      (Let (Variable (Generated mon_145)) Pure
+                      (Let (Variable (Generated mon_152)) Pure
                        (Variable (User filter-tail))
-                       (Let (Variable (Generated mon_146)) Pure
+                       (Let (Variable (Generated mon_153)) Pure
                         (Variable (User ys))
-                        (Let (Variable (Generated mon_147)) Pure
+                        (Let (Variable (Generated mon_154)) Pure
                          (Variable (User acc))
                          (Match_ctl_pure
                           (subject
-                           (Application (Variable (Generated mon_145))
-                            (((Variable (Generated mon_146)) Pure)
-                             ((Variable (Generated mon_147)) Pure)
-                             ((Variable (Generated mon_139)) Pure))
+                           (Application (Variable (Generated mon_152))
+                            (((Variable (Generated mon_153)) Pure)
+                             ((Variable (Generated mon_154)) Pure)
+                             ((Variable (Generated mon_146)) Pure))
                             Ctl))
                           (pure_branch
-                           ((Variable (Generated mon_148))
-                            (Variable (Generated mon_148))))))))))))
+                           ((Variable (Generated mon_155))
+                            (Variable (Generated mon_155))))))))))))
                   Pure))
                 Ctl))))))))
-        (Let (Variable (Generated mon_149)) Pure (Variable (User filter-tail))
-         (Let (Variable (Generated mon_150)) Pure (Variable (User xs))
-          (Let (Variable (Generated mon_151)) Pure (Construction List_nil ())
-           (Application (Variable (Generated mon_149))
-            (((Variable (Generated mon_150)) Pure)
-             ((Variable (Generated mon_151)) Pure)
-             ((Variable (Generated mon_130)) Pure))
+        (Let (Variable (Generated mon_156)) Pure (Variable (User filter-tail))
+         (Let (Variable (Generated mon_157)) Pure (Variable (User xs))
+          (Let (Variable (Generated mon_158)) Pure (Construction List_nil ())
+           (Application (Variable (Generated mon_156))
+            (((Variable (Generated mon_157)) Pure)
+             ((Variable (Generated mon_158)) Pure)
+             ((Variable (Generated mon_137)) Pure))
             Ctl)))))))
      ((User filter-map)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_152)) Pure))
+        ((Variable (Generated mon_159)) Pure))
        Ctl
        (Let (Variable (User filter-map-tail)) Pure
         (Fix_lambda
          ((User filter-map-tail)
           ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (Generated mon_153)) Pure))
+            ((Variable (Generated mon_160)) Pure))
            Ctl
-           (Let (Variable (Generated mon_154)) Pure (Variable (User xs))
-            (Match (Variable (Generated mon_154)) List
+           (Let (Variable (Generated mon_161)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_161)) List
              (((Construction List_nil ())
                (Construct_pure
-                (Let (Variable (Generated mon_155)) Pure
+                (Let (Variable (Generated mon_162)) Pure
                  (Variable (User reverse))
-                 (Let (Variable (Generated mon_156)) Pure (Variable (User acc))
+                 (Let (Variable (Generated mon_163)) Pure (Variable (User acc))
                   (Match_ctl_pure
                    (subject
-                    (Application (Variable (Generated mon_155))
-                     (((Variable (Generated mon_156)) Pure)
-                      ((Variable (Generated mon_153)) Pure))
+                    (Application (Variable (Generated mon_162))
+                     (((Variable (Generated mon_163)) Pure)
+                      ((Variable (Generated mon_160)) Pure))
                      Ctl))
                    (pure_branch
-                    ((Variable (Generated mon_157))
-                     (Variable (Generated mon_157)))))))))
+                    ((Variable (Generated mon_164))
+                     (Variable (Generated mon_164)))))))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User ys))))
                (Application (Variable (Language bind))
-                (((Let (Variable (Generated mon_158)) Pure (Variable (User f))
-                   (Let (Variable (Generated mon_159)) Pure (Variable (User y))
-                    (Application (Variable (Generated mon_158))
-                     (((Variable (Generated mon_159)) Pure)
-                      ((Variable (Generated mon_153)) Pure))
+                (((Let (Variable (Generated mon_165)) Pure (Variable (User f))
+                   (Let (Variable (Generated mon_166)) Pure (Variable (User y))
+                    (Application (Variable (Generated mon_165))
+                     (((Variable (Generated mon_166)) Pure)
+                      ((Variable (Generated mon_160)) Pure))
                      Ctl)))
                   Ctl)
-                 ((Variable (Generated mon_153)) Pure)
+                 ((Variable (Generated mon_160)) Pure)
                  ((Lambda
-                   ((((Variable (Generated mon_160)) Pure)
-                     ((Variable (Generated mon_161)) Pure))
+                   ((((Variable (Generated mon_167)) Pure)
+                     ((Variable (Generated mon_168)) Pure))
                     Ctl
-                    (Match (Variable (Generated mon_160)) Option
+                    (Match (Variable (Generated mon_167)) Option
                      (((Construction Option_none ())
+                       (Let (Variable (Generated mon_169)) Pure
+                        (Variable (User filter-map-tail))
+                        (Let (Variable (Generated mon_170)) Pure
+                         (Variable (User ys))
+                         (Let (Variable (Generated mon_171)) Pure
+                          (Variable (User acc))
+                          (Application (Variable (Generated mon_169))
+                           (((Variable (Generated mon_170)) Pure)
+                            ((Variable (Generated mon_171)) Pure)
+                            ((Variable (Generated mon_168)) Pure))
+                           Ctl)))))
+                      ((Construction Option_some ((Variable (User z))))
                        (Construct_pure
-                        (Let (Variable (Generated mon_162)) Pure
+                        (Let (Variable (Generated mon_172)) Pure
                          (Variable (User filter-map-tail))
-                         (Let (Variable (Generated mon_163)) Pure
+                         (Let (Variable (Generated mon_173)) Pure
                           (Variable (User ys))
-                          (Let (Variable (Generated mon_164)) Pure
-                           (Variable (User acc))
+                          (Let (Variable (Generated mon_176)) Pure
+                           (Let (Variable (Generated mon_174)) Pure
+                            (Variable (User z))
+                            (Let (Variable (Generated mon_175)) Pure
+                             (Variable (User acc))
+                             (Construction List_cons
+                              ((Variable (Generated mon_174))
+                               (Variable (Generated mon_175))))))
                            (Match_ctl_pure
                             (subject
-                             (Application (Variable (Generated mon_162))
-                              (((Variable (Generated mon_163)) Pure)
-                               ((Variable (Generated mon_164)) Pure)
-                               ((Variable (Generated mon_161)) Pure))
+                             (Application (Variable (Generated mon_172))
+                              (((Variable (Generated mon_173)) Pure)
+                               ((Variable (Generated mon_176)) Pure)
+                               ((Variable (Generated mon_168)) Pure))
                               Ctl))
                             (pure_branch
-                             ((Variable (Generated mon_165))
-                              (Variable (Generated mon_165))))))))))
-                      ((Construction Option_some ((Variable (User z))))
-                       (Let (Variable (Generated mon_166)) Pure
-                        (Variable (User filter-map-tail))
-                        (Let (Variable (Generated mon_167)) Pure
-                         (Variable (User ys))
-                         (Let (Variable (Generated mon_170)) Pure
-                          (Let (Variable (Generated mon_168)) Pure
-                           (Variable (User z))
-                           (Let (Variable (Generated mon_169)) Pure
-                            (Variable (User acc))
-                            (Construction List_cons
-                             ((Variable (Generated mon_168))
-                              (Variable (Generated mon_169))))))
-                          (Application (Variable (Generated mon_166))
-                           (((Variable (Generated mon_167)) Pure)
-                            ((Variable (Generated mon_170)) Pure)
-                            ((Variable (Generated mon_161)) Pure))
-                           Ctl)))))))))
+                             ((Variable (Generated mon_177))
+                              (Variable (Generated mon_177))))))))))))))
                   Pure))
                 Ctl))))))))
-        (Let (Variable (Generated mon_171)) Pure
+        (Let (Variable (Generated mon_178)) Pure
          (Variable (User filter-map-tail))
-         (Let (Variable (Generated mon_172)) Pure (Variable (User xs))
-          (Let (Variable (Generated mon_173)) Pure (Construction List_nil ())
-           (Application (Variable (Generated mon_171))
-            (((Variable (Generated mon_172)) Pure)
-             ((Variable (Generated mon_173)) Pure)
-             ((Variable (Generated mon_152)) Pure))
+         (Let (Variable (Generated mon_179)) Pure (Variable (User xs))
+          (Let (Variable (Generated mon_180)) Pure (Construction List_nil ())
+           (Application (Variable (Generated mon_178))
+            (((Variable (Generated mon_179)) Pure)
+             ((Variable (Generated mon_180)) Pure)
+             ((Variable (Generated mon_159)) Pure))
             Ctl)))))))
      ((User flat-map)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_174)) Pure))
+        ((Variable (Generated mon_181)) Pure))
        Ctl
-       (Let (Variable (Generated mon_175)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_175)) List
+       (Let (Variable (Generated mon_182)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_182)) List
          (((Construction List_nil ())
            (Construct_pure (Construction List_nil ())))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
-           (Let (Variable (Generated mon_176)) Pure (Variable (User concat))
+           (Let (Variable (Generated mon_183)) Pure (Variable (User concat))
             (Application (Variable (Language bind))
-             (((Let (Variable (Generated mon_177)) Pure (Variable (User f))
-                (Let (Variable (Generated mon_178)) Pure (Variable (User y))
-                 (Application (Variable (Generated mon_177))
-                  (((Variable (Generated mon_178)) Pure)
-                   ((Variable (Generated mon_174)) Pure))
+             (((Let (Variable (Generated mon_184)) Pure (Variable (User f))
+                (Let (Variable (Generated mon_185)) Pure (Variable (User y))
+                 (Application (Variable (Generated mon_184))
+                  (((Variable (Generated mon_185)) Pure)
+                   ((Variable (Generated mon_181)) Pure))
                   Ctl)))
                Ctl)
-              ((Variable (Generated mon_174)) Pure)
+              ((Variable (Generated mon_181)) Pure)
               ((Lambda
-                ((((Variable (Generated mon_179)) Pure)
-                  ((Variable (Generated mon_180)) Pure))
+                ((((Variable (Generated mon_186)) Pure)
+                  ((Variable (Generated mon_187)) Pure))
                  Ctl
                  (Application (Variable (Language bind))
-                  (((Let (Variable (Generated mon_181)) Pure
+                  (((Let (Variable (Generated mon_188)) Pure
                      (Variable (User flat-map))
-                     (Let (Variable (Generated mon_182)) Pure
+                     (Let (Variable (Generated mon_189)) Pure
                       (Variable (User ys))
-                      (Let (Variable (Generated mon_183)) Pure
+                      (Let (Variable (Generated mon_190)) Pure
                        (Variable (User f))
-                       (Application (Variable (Generated mon_181))
-                        (((Variable (Generated mon_182)) Pure)
-                         ((Variable (Generated mon_183)) Pure)
-                         ((Variable (Generated mon_180)) Pure))
+                       (Application (Variable (Generated mon_188))
+                        (((Variable (Generated mon_189)) Pure)
+                         ((Variable (Generated mon_190)) Pure)
+                         ((Variable (Generated mon_187)) Pure))
                         Ctl))))
                     Ctl)
-                   ((Variable (Generated mon_180)) Pure)
+                   ((Variable (Generated mon_187)) Pure)
                    ((Lambda
-                     ((((Variable (Generated mon_184)) Pure)
-                       ((Variable (Generated mon_185)) Pure))
+                     ((((Variable (Generated mon_191)) Pure)
+                       ((Variable (Generated mon_192)) Pure))
                       Ctl
                       (Construct_pure
                        (Match_ctl_pure
                         (subject
-                         (Application (Variable (Generated mon_176))
-                          (((Variable (Generated mon_179)) Pure)
-                           ((Variable (Generated mon_184)) Pure)
-                           ((Variable (Generated mon_185)) Pure))
+                         (Application (Variable (Generated mon_183))
+                          (((Variable (Generated mon_186)) Pure)
+                           ((Variable (Generated mon_191)) Pure)
+                           ((Variable (Generated mon_192)) Pure))
                           Ctl))
                         (pure_branch
-                         ((Variable (Generated mon_186))
-                          (Variable (Generated mon_186))))))))
+                         ((Variable (Generated mon_193))
+                          (Variable (Generated mon_193))))))))
                     Pure))
                   Ctl)))
                Pure))
              Ctl))))))))
      ((User fold)
       ((((Variable (User xs)) Pure) ((Variable (User init)) Pure)
-        ((Variable (User f)) Pure) ((Variable (Generated mon_187)) Pure))
+        ((Variable (User f)) Pure) ((Variable (Generated mon_194)) Pure))
        Ctl
-       (Let (Variable (Generated mon_188)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_188)) List
+       (Let (Variable (Generated mon_195)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_195)) List
          (((Construction List_nil ()) (Construct_pure (Variable (User init))))
           ((Construction List_cons ((Variable (User x)) (Variable (User ys))))
-           (Let (Variable (Generated mon_189)) Pure (Variable (User fold))
-            (Let (Variable (Generated mon_190)) Pure (Variable (User ys))
+           (Let (Variable (Generated mon_196)) Pure (Variable (User fold))
+            (Let (Variable (Generated mon_197)) Pure (Variable (User ys))
              (Application (Variable (Language bind))
-              (((Let (Variable (Generated mon_191)) Pure (Variable (User f))
-                 (Let (Variable (Generated mon_192)) Pure
+              (((Let (Variable (Generated mon_198)) Pure (Variable (User f))
+                 (Let (Variable (Generated mon_199)) Pure
                   (Variable (User init))
-                  (Let (Variable (Generated mon_193)) Pure (Variable (User x))
-                   (Application (Variable (Generated mon_191))
-                    (((Variable (Generated mon_192)) Pure)
-                     ((Variable (Generated mon_193)) Pure)
-                     ((Variable (Generated mon_187)) Pure))
+                  (Let (Variable (Generated mon_200)) Pure (Variable (User x))
+                   (Application (Variable (Generated mon_198))
+                    (((Variable (Generated mon_199)) Pure)
+                     ((Variable (Generated mon_200)) Pure)
+                     ((Variable (Generated mon_194)) Pure))
                     Ctl))))
                 Ctl)
-               ((Variable (Generated mon_187)) Pure)
+               ((Variable (Generated mon_194)) Pure)
                ((Lambda
-                 ((((Variable (Generated mon_194)) Pure)
-                   ((Variable (Generated mon_195)) Pure))
+                 ((((Variable (Generated mon_201)) Pure)
+                   ((Variable (Generated mon_202)) Pure))
                   Ctl
-                  (Let (Variable (Generated mon_196)) Pure (Variable (User f))
-                   (Application (Variable (Generated mon_189))
-                    (((Variable (Generated mon_190)) Pure)
-                     ((Variable (Generated mon_194)) Pure)
-                     ((Variable (Generated mon_196)) Pure)
-                     ((Variable (Generated mon_195)) Pure))
+                  (Let (Variable (Generated mon_203)) Pure (Variable (User f))
+                   (Application (Variable (Generated mon_196))
+                    (((Variable (Generated mon_197)) Pure)
+                     ((Variable (Generated mon_201)) Pure)
+                     ((Variable (Generated mon_203)) Pure)
+                     ((Variable (Generated mon_202)) Pure))
                     Ctl))))
                 Pure))
               Ctl)))))))))
      ((User reduce)
       ((((Variable (User xs)) Pure) ((Variable (User combine)) Pure)
-        ((Variable (Generated mon_197)) Pure))
+        ((Variable (Generated mon_204)) Pure))
        Ctl
-       (Let (Variable (Generated mon_198)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_198)) List
+       (Let (Variable (Generated mon_205)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_205)) List
          (((Construction List_nil ())
            (Construct_pure (Construction Option_none ())))
           ((Construction List_cons ((Variable (User x)) (Variable (User ys))))
-           (Let (Variable (Generated mon_199)) Pure (Variable (User fold))
-            (Let (Variable (Generated mon_200)) Pure (Variable (User ys))
-             (Let (Variable (Generated mon_201)) Pure (Variable (User x))
-              (Let (Variable (Generated mon_202)) Pure
+           (Let (Variable (Generated mon_206)) Pure (Variable (User fold))
+            (Let (Variable (Generated mon_207)) Pure (Variable (User ys))
+             (Let (Variable (Generated mon_208)) Pure (Variable (User x))
+              (Let (Variable (Generated mon_209)) Pure
                (Variable (User combine))
-               (Application (Variable (Generated mon_199))
-                (((Variable (Generated mon_200)) Pure)
-                 ((Variable (Generated mon_201)) Pure)
-                 ((Variable (Generated mon_202)) Pure)
-                 ((Variable (Generated mon_197)) Pure))
+               (Application (Variable (Generated mon_206))
+                (((Variable (Generated mon_207)) Pure)
+                 ((Variable (Generated mon_208)) Pure)
+                 ((Variable (Generated mon_209)) Pure)
+                 ((Variable (Generated mon_204)) Pure))
                 Ctl)))))))))))
      ((User fold-right)
       ((((Variable (User xs)) Pure) ((Variable (User init)) Pure)
-        ((Variable (User f)) Pure) ((Variable (Generated mon_203)) Pure))
+        ((Variable (User f)) Pure) ((Variable (Generated mon_210)) Pure))
        Ctl
-       (Let (Variable (Generated mon_204)) Pure (Variable (User fold))
-        (Let (Variable (Generated mon_208)) Pure
-         (Let (Variable (Generated mon_205)) Pure (Variable (User reverse))
-          (Let (Variable (Generated mon_206)) Pure (Variable (User xs))
+       (Let (Variable (Generated mon_211)) Pure (Variable (User fold))
+        (Let (Variable (Generated mon_215)) Pure
+         (Let (Variable (Generated mon_212)) Pure (Variable (User reverse))
+          (Let (Variable (Generated mon_213)) Pure (Variable (User xs))
            (Match_ctl_pure
             (subject
-             (Application (Variable (Generated mon_205))
-              (((Variable (Generated mon_206)) Pure)
-               ((Variable (Generated mon_203)) Pure))
+             (Application (Variable (Generated mon_212))
+              (((Variable (Generated mon_213)) Pure)
+               ((Variable (Generated mon_210)) Pure))
               Ctl))
             (pure_branch
-             ((Variable (Generated mon_207)) (Variable (Generated mon_207)))))))
-         (Let (Variable (Generated mon_209)) Pure (Variable (User init))
-          (Let (Variable (Generated mon_214)) Pure
+             ((Variable (Generated mon_214)) (Variable (Generated mon_214)))))))
+         (Let (Variable (Generated mon_216)) Pure (Variable (User init))
+          (Let (Variable (Generated mon_221)) Pure
            (Lambda
             ((((Variable (User a)) Pure) ((Variable (User b)) Pure)
-              ((Variable (Generated mon_210)) Pure))
+              ((Variable (Generated mon_217)) Pure))
              Ctl
-             (Let (Variable (Generated mon_211)) Pure (Variable (User f))
-              (Let (Variable (Generated mon_212)) Pure (Variable (User b))
-               (Let (Variable (Generated mon_213)) Pure (Variable (User a))
-                (Application (Variable (Generated mon_211))
-                 (((Variable (Generated mon_212)) Pure)
-                  ((Variable (Generated mon_213)) Pure)
-                  ((Variable (Generated mon_210)) Pure))
+             (Let (Variable (Generated mon_218)) Pure (Variable (User f))
+              (Let (Variable (Generated mon_219)) Pure (Variable (User b))
+               (Let (Variable (Generated mon_220)) Pure (Variable (User a))
+                (Application (Variable (Generated mon_218))
+                 (((Variable (Generated mon_219)) Pure)
+                  ((Variable (Generated mon_220)) Pure)
+                  ((Variable (Generated mon_217)) Pure))
                  Ctl))))))
-           (Application (Variable (Generated mon_204))
-            (((Variable (Generated mon_208)) Pure)
-             ((Variable (Generated mon_209)) Pure)
-             ((Variable (Generated mon_214)) Pure)
-             ((Variable (Generated mon_203)) Pure))
+           (Application (Variable (Generated mon_211))
+            (((Variable (Generated mon_215)) Pure)
+             ((Variable (Generated mon_216)) Pure)
+             ((Variable (Generated mon_221)) Pure)
+             ((Variable (Generated mon_210)) Pure))
             Ctl)))))))
      ((User concat-all)
-      ((((Variable (User lists)) Pure) ((Variable (Generated mon_215)) Pure))
+      ((((Variable (User lists)) Pure) ((Variable (Generated mon_222)) Pure))
        Ctl
        (Construct_pure
-        (Let (Variable (Generated mon_216)) Pure (Variable (User fold-right))
-         (Let (Variable (Generated mon_217)) Pure (Variable (User lists))
-          (Let (Variable (Generated mon_218)) Pure (Construction List_nil ())
-           (Let (Variable (Generated mon_219)) Pure (Variable (User concat))
+        (Let (Variable (Generated mon_223)) Pure (Variable (User fold-right))
+         (Let (Variable (Generated mon_224)) Pure (Variable (User lists))
+          (Let (Variable (Generated mon_225)) Pure (Construction List_nil ())
+           (Let (Variable (Generated mon_226)) Pure (Variable (User concat))
             (Match_ctl_pure
              (subject
-              (Application (Variable (Generated mon_216))
-               (((Variable (Generated mon_217)) Pure)
-                ((Variable (Generated mon_218)) Pure)
-                ((Variable (Generated mon_219)) Pure)
-                ((Variable (Generated mon_215)) Pure))
+              (Application (Variable (Generated mon_223))
+               (((Variable (Generated mon_224)) Pure)
+                ((Variable (Generated mon_225)) Pure)
+                ((Variable (Generated mon_226)) Pure)
+                ((Variable (Generated mon_222)) Pure))
                Ctl))
              (pure_branch
-              ((Variable (Generated mon_220)) (Variable (Generated mon_220))))))))))))
+              ((Variable (Generated mon_227)) (Variable (Generated mon_227))))))))))))
      ((User for-each)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_221)) Pure))
+        ((Variable (Generated mon_228)) Pure))
        Ctl
-       (Let (Variable (Generated mon_222)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_222)) List
+       (Let (Variable (Generated mon_229)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_229)) List
          (((Construction List_nil ()) (Construct_pure (Tuple_construction ())))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
            (Application (Variable (Language bind))
-            (((Let (Variable (Generated mon_223)) Pure (Variable (User f))
-               (Let (Variable (Generated mon_224)) Pure (Variable (User y))
-                (Application (Variable (Generated mon_223))
-                 (((Variable (Generated mon_224)) Pure)
-                  ((Variable (Generated mon_221)) Pure))
+            (((Let (Variable (Generated mon_230)) Pure (Variable (User f))
+               (Let (Variable (Generated mon_231)) Pure (Variable (User y))
+                (Application (Variable (Generated mon_230))
+                 (((Variable (Generated mon_231)) Pure)
+                  ((Variable (Generated mon_228)) Pure))
                  Ctl)))
               Ctl)
-             ((Variable (Generated mon_221)) Pure)
+             ((Variable (Generated mon_228)) Pure)
              ((Lambda
-               ((((Variable (Generated mon_225)) Pure)
-                 ((Variable (Generated mon_226)) Pure))
+               ((((Variable (Generated mon_232)) Pure)
+                 ((Variable (Generated mon_233)) Pure))
                 Ctl
-                (Let (Variable (Generated mon_227)) Pure
+                (Let (Variable (Generated mon_234)) Pure
                  (Variable (User for-each))
-                 (Let (Variable (Generated mon_228)) Pure (Variable (User ys))
-                  (Let (Variable (Generated mon_229)) Pure (Variable (User f))
-                   (Application (Variable (Generated mon_227))
-                    (((Variable (Generated mon_228)) Pure)
-                     ((Variable (Generated mon_229)) Pure)
-                     ((Variable (Generated mon_226)) Pure))
+                 (Let (Variable (Generated mon_235)) Pure (Variable (User ys))
+                  (Let (Variable (Generated mon_236)) Pure (Variable (User f))
+                   (Application (Variable (Generated mon_234))
+                    (((Variable (Generated mon_235)) Pure)
+                     ((Variable (Generated mon_236)) Pure)
+                     ((Variable (Generated mon_233)) Pure))
                     Ctl))))))
               Pure))
             Ctl)))))))
      ((User range)
       ((((Variable (User start)) Pure) ((Variable (User stop)) Pure)
-        ((Variable (Generated mon_230)) Pure))
+        ((Variable (Generated mon_237)) Pure))
        Ctl
        (Construct_pure
-        (Let (Variable (Generated mon_233)) Pure
-         (Let (Variable (Generated mon_231)) Pure (Variable (User start))
-          (Let (Variable (Generated mon_232)) Pure (Variable (User stop))
-           (Operator (Variable (Generated mon_231)) (Int Greater_equal)
-            (Variable (Generated mon_232)))))
-         (If_then_else (Variable (Generated mon_233))
+        (Let (Variable (Generated mon_240)) Pure
+         (Let (Variable (Generated mon_238)) Pure (Variable (User start))
+          (Let (Variable (Generated mon_239)) Pure (Variable (User stop))
+           (Operator (Variable (Generated mon_238)) (Int Greater_equal)
+            (Variable (Generated mon_239)))))
+         (If_then_else (Variable (Generated mon_240))
           (Construction List_nil ())
-          (Let (Variable (Generated mon_234)) Pure (Variable (User start))
-           (Let (Variable (Generated mon_241)) Pure
-            (Let (Variable (Generated mon_235)) Pure (Variable (User range))
-             (Let (Variable (Generated mon_238)) Pure
-              (Let (Variable (Generated mon_236)) Pure (Variable (User start))
-               (Let (Variable (Generated mon_237)) Pure (Literal (Int 1))
-                (Operator (Variable (Generated mon_236)) (Int Plus)
-                 (Variable (Generated mon_237)))))
-              (Let (Variable (Generated mon_239)) Pure (Variable (User stop))
+          (Let (Variable (Generated mon_241)) Pure (Variable (User start))
+           (Let (Variable (Generated mon_248)) Pure
+            (Let (Variable (Generated mon_242)) Pure (Variable (User range))
+             (Let (Variable (Generated mon_245)) Pure
+              (Let (Variable (Generated mon_243)) Pure (Variable (User start))
+               (Let (Variable (Generated mon_244)) Pure (Literal (Int 1))
+                (Operator (Variable (Generated mon_243)) (Int Plus)
+                 (Variable (Generated mon_244)))))
+              (Let (Variable (Generated mon_246)) Pure (Variable (User stop))
                (Match_ctl_pure
                 (subject
-                 (Application (Variable (Generated mon_235))
-                  (((Variable (Generated mon_238)) Pure)
-                   ((Variable (Generated mon_239)) Pure)
-                   ((Variable (Generated mon_230)) Pure))
+                 (Application (Variable (Generated mon_242))
+                  (((Variable (Generated mon_245)) Pure)
+                   ((Variable (Generated mon_246)) Pure)
+                   ((Variable (Generated mon_237)) Pure))
                   Ctl))
                 (pure_branch
-                 ((Variable (Generated mon_240))
-                  (Variable (Generated mon_240))))))))
+                 ((Variable (Generated mon_247))
+                  (Variable (Generated mon_247))))))))
             (Construction List_cons
-             ((Variable (Generated mon_234)) (Variable (Generated mon_241)))))))))))
+             ((Variable (Generated mon_241)) (Variable (Generated mon_248)))))))))))
      ((User print-list)
       ((((Variable (User xs)) Pure) ((Variable (User print-element)) Pure)
-        ((Variable (Generated mon_242)) Pure))
+        ((Variable (Generated mon_249)) Pure))
        Ctl
        (Application (Variable (Language bind))
-        (((Let (Variable (Generated mon_243)) Pure (Variable (User for-each))
-           (Let (Variable (Generated mon_244)) Pure (Variable (User xs))
-            (Let (Variable (Generated mon_245)) Pure
+        (((Let (Variable (Generated mon_250)) Pure (Variable (User for-each))
+           (Let (Variable (Generated mon_251)) Pure (Variable (User xs))
+            (Let (Variable (Generated mon_252)) Pure
              (Variable (User print-element))
-             (Application (Variable (Generated mon_243))
-              (((Variable (Generated mon_244)) Pure)
-               ((Variable (Generated mon_245)) Pure)
-               ((Variable (Generated mon_242)) Pure))
+             (Application (Variable (Generated mon_250))
+              (((Variable (Generated mon_251)) Pure)
+               ((Variable (Generated mon_252)) Pure)
+               ((Variable (Generated mon_249)) Pure))
               Ctl))))
           Ctl)
-         ((Variable (Generated mon_242)) Pure)
+         ((Variable (Generated mon_249)) Pure)
          ((Lambda
-           ((((Variable (Generated mon_246)) Pure)
-             ((Variable (Generated mon_247)) Pure))
+           ((((Variable (Generated mon_253)) Pure)
+             ((Variable (Generated mon_254)) Pure))
             Ctl
-            (Let (Variable (Generated mon_249)) Pure
+            (Let (Variable (Generated mon_256)) Pure
              (Application (Variable (Language perform))
               (((Effect_label console) Pure)
                ((Lambda
-                 ((((Variable (Generated mon_248)) Pure)) Pure
+                 ((((Variable (Generated mon_255)) Pure)) Pure
                   (Select_operation console (User println)
-                   (Variable (Generated mon_248)))))
+                   (Variable (Generated mon_255)))))
                 Pure))
               Pure)
-             (Let (Variable (Generated mon_250)) Pure (Tuple_construction ())
-              (Application (Variable (Generated mon_249))
-               (((Variable (Generated mon_250)) Pure)
-                ((Variable (Generated mon_247)) Pure))
+             (Let (Variable (Generated mon_257)) Pure (Tuple_construction ())
+              (Application (Variable (Generated mon_256))
+               (((Variable (Generated mon_257)) Pure)
+                ((Variable (Generated mon_254)) Pure))
                Ctl)))))
           Pure))
         Ctl)))
      ((User head)
-      ((((Variable (User xs)) Pure) ((Variable (Generated mon_251)) Pure)) Ctl
+      ((((Variable (User xs)) Pure) ((Variable (Generated mon_258)) Pure)) Ctl
        (Construct_pure
-        (Let (Variable (Generated mon_252)) Pure (Variable (User xs))
-         (Match (Variable (Generated mon_252)) List
+        (Let (Variable (Generated mon_259)) Pure (Variable (User xs))
+         (Match (Variable (Generated mon_259)) List
           (((Construction List_nil ()) (Construction Option_none ()))
            ((Construction List_cons ((Variable (User x)) Wildcard))
-            (Let (Variable (Generated mon_253)) Pure (Variable (User x))
-             (Construction Option_some ((Variable (Generated mon_253))))))))))))
-     ((User some-if)
-      ((((Variable (User cond)) Pure) ((Variable (User value)) Pure)
-        ((Variable (Generated mon_254)) Pure))
+            (Let (Variable (Generated mon_260)) Pure (Variable (User x))
+             (Construction Option_some ((Variable (Generated mon_260))))))))))))
+     ((User compare-reversed)
+      ((((Variable (User compare)) Pure) ((Variable (Generated mon_261)) Pure))
        Ctl
        (Construct_pure
-        (Let (Variable (Generated mon_255)) Pure (Variable (User cond))
-         (If_then_else (Variable (Generated mon_255))
-          (Let (Variable (Generated mon_256)) Pure (Variable (User value))
-           (Construction Option_some ((Variable (Generated mon_256)))))
+        (Lambda
+         ((((Variable (User a)) Pure) ((Variable (User b)) Pure)
+           ((Variable (Generated mon_262)) Pure))
+          Ctl
+          (Let (Variable (Generated mon_263)) Pure (Variable (User compare))
+           (Let (Variable (Generated mon_264)) Pure (Variable (User b))
+            (Let (Variable (Generated mon_265)) Pure (Variable (User a))
+             (Application (Variable (Generated mon_263))
+              (((Variable (Generated mon_264)) Pure)
+               ((Variable (Generated mon_265)) Pure)
+               ((Variable (Generated mon_262)) Pure))
+              Ctl)))))))))
+     ((User sort)
+      ((((Variable (User xs)) Pure) ((Variable (User compare)) Pure)
+        ((Variable (Generated mon_266)) Pure))
+       Ctl
+       (Let (Variable (User merge)) Pure
+        (Fix_lambda
+         ((User merge)
+          ((((Variable (User xs)) Pure) ((Variable (User ys)) Pure)
+            ((Variable (User acc)) Pure) ((Variable (Generated mon_267)) Pure))
+           Ctl
+           (Let (Variable (Generated mon_268)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_268)) List
+             (((Construction List_nil ())
+               (Construct_pure
+                (Let (Variable (Generated mon_269)) Pure
+                 (Variable (User concat-rev))
+                 (Let (Variable (Generated mon_270)) Pure (Variable (User acc))
+                  (Let (Variable (Generated mon_271)) Pure (Variable (User ys))
+                   (Match_ctl_pure
+                    (subject
+                     (Application (Variable (Generated mon_269))
+                      (((Variable (Generated mon_270)) Pure)
+                       ((Variable (Generated mon_271)) Pure)
+                       ((Variable (Generated mon_267)) Pure))
+                      Ctl))
+                    (pure_branch
+                     ((Variable (Generated mon_272))
+                      (Variable (Generated mon_272))))))))))
+              ((Construction List_cons
+                ((Variable (User x)) (Variable (User xx))))
+               (Let (Variable (Generated mon_273)) Pure (Variable (User ys))
+                (Match (Variable (Generated mon_273)) List
+                 (((Construction List_nil ())
+                   (Construct_pure
+                    (Let (Variable (Generated mon_274)) Pure
+                     (Variable (User concat-rev))
+                     (Let (Variable (Generated mon_275)) Pure
+                      (Variable (User acc))
+                      (Let (Variable (Generated mon_276)) Pure
+                       (Variable (User xs))
+                       (Match_ctl_pure
+                        (subject
+                         (Application (Variable (Generated mon_274))
+                          (((Variable (Generated mon_275)) Pure)
+                           ((Variable (Generated mon_276)) Pure)
+                           ((Variable (Generated mon_267)) Pure))
+                          Ctl))
+                        (pure_branch
+                         ((Variable (Generated mon_277))
+                          (Variable (Generated mon_277))))))))))
+                  ((Construction List_cons
+                    ((Variable (User y)) (Variable (User yy))))
+                   (Application (Variable (Language bind))
+                    (((Application (Variable (Language bind))
+                       (((Let (Variable (Generated mon_278)) Pure
+                          (Variable (User compare))
+                          (Let (Variable (Generated mon_279)) Pure
+                           (Variable (User x))
+                           (Let (Variable (Generated mon_280)) Pure
+                            (Variable (User y))
+                            (Application (Variable (Generated mon_278))
+                             (((Variable (Generated mon_279)) Pure)
+                              ((Variable (Generated mon_280)) Pure)
+                              ((Variable (Generated mon_267)) Pure))
+                             Ctl))))
+                         Ctl)
+                        ((Variable (Generated mon_267)) Pure)
+                        ((Lambda
+                          ((((Variable (Generated mon_281)) Pure)
+                            ((Variable (Generated mon_282)) Pure))
+                           Ctl
+                           (Construct_pure
+                            (Let (Variable (Generated mon_283)) Pure
+                             (Literal (Int 0))
+                             (Operator (Variable (Generated mon_281))
+                              (Int Less_equal) (Variable (Generated mon_283)))))))
+                         Pure))
+                       Ctl)
+                      Ctl)
+                     ((Variable (Generated mon_267)) Pure)
+                     ((Lambda
+                       ((((Variable (Generated mon_284)) Pure)
+                         ((Variable (Generated mon_285)) Pure))
+                        Ctl
+                        (If_then_else (Variable (Generated mon_284))
+                         (Let (Variable (Generated mon_286)) Pure
+                          (Variable (User merge))
+                          (Let (Variable (Generated mon_287)) Pure
+                           (Variable (User xx))
+                           (Let (Variable (Generated mon_288)) Pure
+                            (Variable (User ys))
+                            (Let (Variable (Generated mon_291)) Pure
+                             (Let (Variable (Generated mon_289)) Pure
+                              (Variable (User x))
+                              (Let (Variable (Generated mon_290)) Pure
+                               (Variable (User acc))
+                               (Construction List_cons
+                                ((Variable (Generated mon_289))
+                                 (Variable (Generated mon_290))))))
+                             (Application (Variable (Generated mon_286))
+                              (((Variable (Generated mon_287)) Pure)
+                               ((Variable (Generated mon_288)) Pure)
+                               ((Variable (Generated mon_291)) Pure)
+                               ((Variable (Generated mon_285)) Pure))
+                              Ctl)))))
+                         (Construct_pure
+                          (Let (Variable (Generated mon_292)) Pure
+                           (Variable (User merge))
+                           (Let (Variable (Generated mon_293)) Pure
+                            (Variable (User xs))
+                            (Let (Variable (Generated mon_294)) Pure
+                             (Variable (User yy))
+                             (Let (Variable (Generated mon_297)) Pure
+                              (Let (Variable (Generated mon_295)) Pure
+                               (Variable (User y))
+                               (Let (Variable (Generated mon_296)) Pure
+                                (Variable (User acc))
+                                (Construction List_cons
+                                 ((Variable (Generated mon_295))
+                                  (Variable (Generated mon_296))))))
+                              (Match_ctl_pure
+                               (subject
+                                (Application (Variable (Generated mon_292))
+                                 (((Variable (Generated mon_293)) Pure)
+                                  ((Variable (Generated mon_294)) Pure)
+                                  ((Variable (Generated mon_297)) Pure)
+                                  ((Variable (Generated mon_285)) Pure))
+                                 Ctl))
+                               (pure_branch
+                                ((Variable (Generated mon_298))
+                                 (Variable (Generated mon_298)))))))))))))
+                      Pure))
+                    Ctl))))))))))))
+        (Let (Variable (User split)) Pure
+         (Fix_lambda
+          ((User split)
+           ((((Variable (User xs)) Pure) ((Variable (User acc1)) Pure)
+             ((Variable (User acc2)) Pure)
+             ((Variable (Generated mon_299)) Pure))
+            Ctl
+            (Construct_pure
+             (Let (Variable (Generated mon_300)) Pure (Variable (User xs))
+              (Match (Variable (Generated mon_300)) List
+               (((Construction List_nil ())
+                 (Let (Variable (Generated mon_301)) Pure
+                  (Variable (User acc1))
+                  (Let (Variable (Generated mon_302)) Pure
+                   (Variable (User acc2))
+                   (Tuple_construction
+                    ((Variable (Generated mon_301))
+                     (Variable (Generated mon_302)))))))
+                ((Construction List_cons
+                  ((Variable (User x)) (Variable (User ys))))
+                 (Let (Variable (Generated mon_303)) Pure (Variable (User ys))
+                  (Match (Variable (Generated mon_303)) List
+                   (((Construction List_nil ())
+                     (Let (Variable (Generated mon_306)) Pure
+                      (Let (Variable (Generated mon_304)) Pure
+                       (Variable (User x))
+                       (Let (Variable (Generated mon_305)) Pure
+                        (Variable (User acc1))
+                        (Construction List_cons
+                         ((Variable (Generated mon_304))
+                          (Variable (Generated mon_305))))))
+                      (Let (Variable (Generated mon_307)) Pure
+                       (Variable (User acc2))
+                       (Tuple_construction
+                        ((Variable (Generated mon_306))
+                         (Variable (Generated mon_307)))))))
+                    ((Construction List_cons
+                      ((Variable (User y)) (Variable (User zs))))
+                     (Let (Variable (Generated mon_308)) Pure
+                      (Variable (User split))
+                      (Let (Variable (Generated mon_309)) Pure
+                       (Variable (User zs))
+                       (Let (Variable (Generated mon_312)) Pure
+                        (Let (Variable (Generated mon_310)) Pure
+                         (Variable (User x))
+                         (Let (Variable (Generated mon_311)) Pure
+                          (Variable (User acc1))
+                          (Construction List_cons
+                           ((Variable (Generated mon_310))
+                            (Variable (Generated mon_311))))))
+                        (Let (Variable (Generated mon_315)) Pure
+                         (Let (Variable (Generated mon_313)) Pure
+                          (Variable (User y))
+                          (Let (Variable (Generated mon_314)) Pure
+                           (Variable (User acc2))
+                           (Construction List_cons
+                            ((Variable (Generated mon_313))
+                             (Variable (Generated mon_314))))))
+                         (Match_ctl_pure
+                          (subject
+                           (Application (Variable (Generated mon_308))
+                            (((Variable (Generated mon_309)) Pure)
+                             ((Variable (Generated mon_312)) Pure)
+                             ((Variable (Generated mon_315)) Pure)
+                             ((Variable (Generated mon_299)) Pure))
+                            Ctl))
+                          (pure_branch
+                           ((Variable (Generated mon_316))
+                            (Variable (Generated mon_316)))))))))))))))))))))
+         (Let (Variable (User mergesort)) Pure
+          (Fix_lambda
+           ((User mergesort)
+            ((((Variable (User xs)) Pure)
+              ((Variable (Generated mon_317)) Pure))
+             Ctl
+             (Let (Variable (Generated mon_318)) Pure (Variable (User xs))
+              (Match (Variable (Generated mon_318)) List
+               (((Construction List_nil ())
+                 (Construct_pure (Variable (User xs))))
+                ((Construction List_cons (Wildcard (Variable (User xx))))
+                 (Let (Variable (Generated mon_319)) Pure (Variable (User xx))
+                  (Match (Variable (Generated mon_319)) List
+                   (((Construction List_nil ())
+                     (Construct_pure (Variable (User xs))))
+                    ((Construction List_cons (Wildcard Wildcard))
+                     (Let (Variable (Generated mon_325)) Pure
+                      (Let (Variable (Generated mon_320)) Pure
+                       (Variable (User split))
+                       (Let (Variable (Generated mon_321)) Pure
+                        (Variable (User xs))
+                        (Let (Variable (Generated mon_322)) Pure
+                         (Construction List_nil ())
+                         (Let (Variable (Generated mon_323)) Pure
+                          (Construction List_nil ())
+                          (Match_ctl_pure
+                           (subject
+                            (Application (Variable (Generated mon_320))
+                             (((Variable (Generated mon_321)) Pure)
+                              ((Variable (Generated mon_322)) Pure)
+                              ((Variable (Generated mon_323)) Pure)
+                              ((Variable (Generated mon_317)) Pure))
+                             Ctl))
+                           (pure_branch
+                            ((Variable (Generated mon_324))
+                             (Variable (Generated mon_324)))))))))
+                      (Let (Tuple ((Variable (User a)) (Variable (User b))))
+                       Pure (Variable (Generated mon_325))
+                       (Let (Variable (Generated mon_329)) Pure
+                        (Let (Variable (Generated mon_326)) Pure
+                         (Variable (User mergesort))
+                         (Let (Variable (Generated mon_327)) Pure
+                          (Variable (User a))
+                          (Match_ctl_pure
+                           (subject
+                            (Application (Variable (Generated mon_326))
+                             (((Variable (Generated mon_327)) Pure)
+                              ((Variable (Generated mon_317)) Pure))
+                             Ctl))
+                           (pure_branch
+                            ((Variable (Generated mon_328))
+                             (Variable (Generated mon_328)))))))
+                        (Let (Variable (User a)) Pure
+                         (Variable (Generated mon_329))
+                         (Application (Variable (Language bind))
+                          (((Let (Variable (Generated mon_330)) Pure
+                             (Variable (User mergesort))
+                             (Let (Variable (Generated mon_331)) Pure
+                              (Variable (User b))
+                              (Application (Variable (Generated mon_330))
+                               (((Variable (Generated mon_331)) Pure)
+                                ((Variable (Generated mon_317)) Pure))
+                               Ctl)))
+                            Ctl)
+                           ((Variable (Generated mon_317)) Pure)
+                           ((Lambda
+                             ((((Variable (Generated mon_332)) Pure)
+                               ((Variable (Generated mon_333)) Pure))
+                              Ctl
+                              (Let (Variable (User b)) Pure
+                               (Variable (Generated mon_332))
+                               (Let (Variable (Generated mon_334)) Pure
+                                (Variable (User merge))
+                                (Let (Variable (Generated mon_335)) Pure
+                                 (Variable (User a))
+                                 (Let (Variable (Generated mon_336)) Pure
+                                  (Variable (User b))
+                                  (Let (Variable (Generated mon_337)) Pure
+                                   (Construction List_nil ())
+                                   (Application (Variable (Generated mon_334))
+                                    (((Variable (Generated mon_335)) Pure)
+                                     ((Variable (Generated mon_336)) Pure)
+                                     ((Variable (Generated mon_337)) Pure)
+                                     ((Variable (Generated mon_333)) Pure))
+                                    Ctl))))))))
+                            Pure))
+                          Ctl))))))))))))))))
+          (Let (Variable (Generated mon_338)) Pure (Variable (User mergesort))
+           (Let (Variable (Generated mon_339)) Pure (Variable (User xs))
+            (Application (Variable (Generated mon_338))
+             (((Variable (Generated mon_339)) Pure)
+              ((Variable (Generated mon_266)) Pure))
+             Ctl))))))))
+     ((User some-if)
+      ((((Variable (User cond)) Pure) ((Variable (User value)) Pure)
+        ((Variable (Generated mon_340)) Pure))
+       Ctl
+       (Construct_pure
+        (Let (Variable (Generated mon_341)) Pure (Variable (User cond))
+         (If_then_else (Variable (Generated mon_341))
+          (Let (Variable (Generated mon_342)) Pure (Variable (User value))
+           (Construction Option_some ((Variable (Generated mon_342)))))
           (Construction Option_none ()))))))
      ((User option-map)
       ((((Variable (User x)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_257)) Pure))
+        ((Variable (Generated mon_343)) Pure))
        Ctl
-       (Let (Variable (Generated mon_258)) Pure (Variable (User x))
-        (Match (Variable (Generated mon_258)) Option
+       (Let (Variable (Generated mon_344)) Pure (Variable (User x))
+        (Match (Variable (Generated mon_344)) Option
          (((Construction Option_none ())
            (Construct_pure (Construction Option_none ())))
           ((Construction Option_some ((Variable (User y))))
            (Application (Variable (Language bind))
-            (((Let (Variable (Generated mon_259)) Pure (Variable (User f))
-               (Let (Variable (Generated mon_260)) Pure (Variable (User y))
-                (Application (Variable (Generated mon_259))
-                 (((Variable (Generated mon_260)) Pure)
-                  ((Variable (Generated mon_257)) Pure))
+            (((Let (Variable (Generated mon_345)) Pure (Variable (User f))
+               (Let (Variable (Generated mon_346)) Pure (Variable (User y))
+                (Application (Variable (Generated mon_345))
+                 (((Variable (Generated mon_346)) Pure)
+                  ((Variable (Generated mon_343)) Pure))
                  Ctl)))
               Ctl)
-             ((Variable (Generated mon_257)) Pure)
+             ((Variable (Generated mon_343)) Pure)
              ((Lambda
-               ((((Variable (Generated mon_261)) Pure)
-                 ((Variable (Generated mon_262)) Pure))
+               ((((Variable (Generated mon_347)) Pure)
+                 ((Variable (Generated mon_348)) Pure))
                 Ctl
                 (Construct_pure
-                 (Construction Option_some ((Variable (Generated mon_261)))))))
+                 (Construction Option_some ((Variable (Generated mon_347)))))))
               Pure))
             Ctl)))))))
      ((User option-flat-map)
       ((((Variable (User x)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_263)) Pure))
+        ((Variable (Generated mon_349)) Pure))
        Ctl
-       (Let (Variable (Generated mon_264)) Pure (Variable (User x))
-        (Match (Variable (Generated mon_264)) Option
+       (Let (Variable (Generated mon_350)) Pure (Variable (User x))
+        (Match (Variable (Generated mon_350)) Option
          (((Construction Option_none ())
            (Construct_pure (Construction Option_none ())))
           ((Construction Option_some ((Variable (User y))))
-           (Let (Variable (Generated mon_265)) Pure (Variable (User f))
-            (Let (Variable (Generated mon_266)) Pure (Variable (User y))
-             (Application (Variable (Generated mon_265))
-              (((Variable (Generated mon_266)) Pure)
-               ((Variable (Generated mon_263)) Pure))
+           (Let (Variable (Generated mon_351)) Pure (Variable (User f))
+            (Let (Variable (Generated mon_352)) Pure (Variable (User y))
+             (Application (Variable (Generated mon_351))
+              (((Variable (Generated mon_352)) Pure)
+               ((Variable (Generated mon_349)) Pure))
               Ctl)))))))))
      ((User tuple2-equal)
       ((((Tuple ((Variable (User a1)) (Variable (User a2)))) Pure)
         ((Tuple ((Variable (User b1)) (Variable (User b2)))) Pure)
         ((Variable (User equal1)) Pure) ((Variable (User equal2)) Pure)
-        ((Variable (Generated mon_267)) Pure))
+        ((Variable (Generated mon_353)) Pure))
        Ctl
        (Application (Variable (Language bind))
-        (((Let (Variable (Generated mon_268)) Pure (Variable (User equal1))
-           (Let (Variable (Generated mon_269)) Pure (Variable (User a1))
-            (Let (Variable (Generated mon_270)) Pure (Variable (User b1))
-             (Application (Variable (Generated mon_268))
-              (((Variable (Generated mon_269)) Pure)
-               ((Variable (Generated mon_270)) Pure)
-               ((Variable (Generated mon_267)) Pure))
+        (((Let (Variable (Generated mon_354)) Pure (Variable (User equal1))
+           (Let (Variable (Generated mon_355)) Pure (Variable (User a1))
+            (Let (Variable (Generated mon_356)) Pure (Variable (User b1))
+             (Application (Variable (Generated mon_354))
+              (((Variable (Generated mon_355)) Pure)
+               ((Variable (Generated mon_356)) Pure)
+               ((Variable (Generated mon_353)) Pure))
               Ctl))))
           Ctl)
-         ((Variable (Generated mon_267)) Pure)
+         ((Variable (Generated mon_353)) Pure)
          ((Lambda
-           ((((Variable (Generated mon_271)) Pure)
-             ((Variable (Generated mon_272)) Pure))
+           ((((Variable (Generated mon_357)) Pure)
+             ((Variable (Generated mon_358)) Pure))
             Ctl
-            (If_then_else (Variable (Generated mon_271))
-             (Let (Variable (Generated mon_273)) Pure (Variable (User equal2))
-              (Let (Variable (Generated mon_274)) Pure (Variable (User a2))
-               (Let (Variable (Generated mon_275)) Pure (Variable (User b2))
-                (Application (Variable (Generated mon_273))
-                 (((Variable (Generated mon_274)) Pure)
-                  ((Variable (Generated mon_275)) Pure)
-                  ((Variable (Generated mon_272)) Pure))
+            (If_then_else (Variable (Generated mon_357))
+             (Let (Variable (Generated mon_359)) Pure (Variable (User equal2))
+              (Let (Variable (Generated mon_360)) Pure (Variable (User a2))
+               (Let (Variable (Generated mon_361)) Pure (Variable (User b2))
+                (Application (Variable (Generated mon_359))
+                 (((Variable (Generated mon_360)) Pure)
+                  ((Variable (Generated mon_361)) Pure)
+                  ((Variable (Generated mon_358)) Pure))
                  Ctl))))
              (Construct_pure (Literal (Bool false))))))
+          Pure))
+        Ctl)))
+     ((User tuple2-compare)
+      ((((Tuple ((Variable (User a1)) (Variable (User a2)))) Pure)
+        ((Tuple ((Variable (User b1)) (Variable (User b2)))) Pure)
+        ((Variable (User compare1)) Pure) ((Variable (User compare2)) Pure)
+        ((Variable (Generated mon_362)) Pure))
+       Ctl
+       (Application (Variable (Language bind))
+        (((Let (Variable (Generated mon_363)) Pure (Variable (User compare1))
+           (Let (Variable (Generated mon_364)) Pure (Variable (User a1))
+            (Let (Variable (Generated mon_365)) Pure (Variable (User b1))
+             (Application (Variable (Generated mon_363))
+              (((Variable (Generated mon_364)) Pure)
+               ((Variable (Generated mon_365)) Pure)
+               ((Variable (Generated mon_362)) Pure))
+              Ctl))))
+          Ctl)
+         ((Variable (Generated mon_362)) Pure)
+         ((Lambda
+           ((((Variable (Generated mon_366)) Pure)
+             ((Variable (Generated mon_367)) Pure))
+            Ctl
+            (Let (Variable (User cmp1)) Pure (Variable (Generated mon_366))
+             (Let (Variable (Generated mon_370)) Pure
+              (Let (Variable (Generated mon_368)) Pure (Variable (User cmp1))
+               (Let (Variable (Generated mon_369)) Pure (Literal (Int 0))
+                (Operator (Variable (Generated mon_368)) (Int Equals)
+                 (Variable (Generated mon_369)))))
+              (If_then_else (Variable (Generated mon_370))
+               (Let (Variable (Generated mon_371)) Pure
+                (Variable (User compare2))
+                (Let (Variable (Generated mon_372)) Pure (Variable (User a2))
+                 (Let (Variable (Generated mon_373)) Pure (Variable (User b2))
+                  (Application (Variable (Generated mon_371))
+                   (((Variable (Generated mon_372)) Pure)
+                    ((Variable (Generated mon_373)) Pure)
+                    ((Variable (Generated mon_367)) Pure))
+                   Ctl))))
+               (Construct_pure (Variable (User cmp1))))))))
           Pure))
         Ctl)))
      ((User foo)
       ((((Variable (User f)) Pure) ((Variable (User g)) Pure)
         ((Variable (User h)) Pure) ((Variable (User x)) Pure)
-        ((Variable (Generated mon_276)) Pure))
+        ((Variable (Generated mon_374)) Pure))
        Ctl
        (Application (Variable (Language bind))
         (((Application (Variable (Language bind))
            (((Application (Variable (Language bind))
-              (((Let (Variable (Generated mon_277)) Pure (Variable (User f))
+              (((Let (Variable (Generated mon_375)) Pure (Variable (User f))
                  (Application (Variable (Language bind))
-                  (((Let (Variable (Generated mon_278)) Pure
+                  (((Let (Variable (Generated mon_376)) Pure
                      (Variable (User g))
-                     (Let (Variable (Generated mon_279)) Pure
+                     (Let (Variable (Generated mon_377)) Pure
                       (Variable (User x))
-                      (Application (Variable (Generated mon_278))
-                       (((Variable (Generated mon_279)) Pure)
-                        ((Variable (Generated mon_276)) Pure))
+                      (Application (Variable (Generated mon_376))
+                       (((Variable (Generated mon_377)) Pure)
+                        ((Variable (Generated mon_374)) Pure))
                        Ctl)))
                     Ctl)
-                   ((Variable (Generated mon_276)) Pure)
+                   ((Variable (Generated mon_374)) Pure)
                    ((Lambda
-                     ((((Variable (Generated mon_280)) Pure)
-                       ((Variable (Generated mon_281)) Pure))
+                     ((((Variable (Generated mon_378)) Pure)
+                       ((Variable (Generated mon_379)) Pure))
                       Ctl
-                      (Application (Variable (Generated mon_277))
-                       (((Variable (Generated mon_280)) Pure)
-                        ((Variable (Generated mon_281)) Pure))
+                      (Application (Variable (Generated mon_375))
+                       (((Variable (Generated mon_378)) Pure)
+                        ((Variable (Generated mon_379)) Pure))
                        Ctl)))
                     Pure))
                   Ctl))
                 Ctl)
-               ((Variable (Generated mon_276)) Pure)
+               ((Variable (Generated mon_374)) Pure)
                ((Lambda
-                 ((((Variable (Generated mon_282)) Pure)
-                   ((Variable (Generated mon_283)) Pure))
+                 ((((Variable (Generated mon_380)) Pure)
+                   ((Variable (Generated mon_381)) Pure))
                   Ctl
                   (Construct_pure
-                   (Let (Variable (Generated mon_284)) Pure (Literal (Int 0))
-                    (Operator (Variable (Generated mon_282)) (Int Greater_than)
-                     (Variable (Generated mon_284)))))))
+                   (Let (Variable (Generated mon_382)) Pure (Literal (Int 0))
+                    (Operator (Variable (Generated mon_380)) (Int Greater_than)
+                     (Variable (Generated mon_382)))))))
                 Pure))
               Ctl)
              Ctl)
-            ((Variable (Generated mon_276)) Pure)
+            ((Variable (Generated mon_374)) Pure)
             ((Lambda
-              ((((Variable (Generated mon_285)) Pure)
-                ((Variable (Generated mon_286)) Pure))
+              ((((Variable (Generated mon_383)) Pure)
+                ((Variable (Generated mon_384)) Pure))
                Ctl
-               (If_then_else (Variable (Generated mon_285))
+               (If_then_else (Variable (Generated mon_383))
                 (Application (Variable (Language bind))
-                 (((Let (Variable (Generated mon_287)) Pure (Variable (User h))
-                    (Let (Variable (Generated mon_288)) Pure (Literal (Int 0))
-                     (Application (Variable (Generated mon_287))
-                      (((Variable (Generated mon_288)) Pure)
-                       ((Variable (Generated mon_286)) Pure))
+                 (((Let (Variable (Generated mon_385)) Pure (Variable (User h))
+                    (Let (Variable (Generated mon_386)) Pure (Literal (Int 0))
+                     (Application (Variable (Generated mon_385))
+                      (((Variable (Generated mon_386)) Pure)
+                       ((Variable (Generated mon_384)) Pure))
                       Ctl)))
                    Ctl)
-                  ((Variable (Generated mon_286)) Pure)
+                  ((Variable (Generated mon_384)) Pure)
                   ((Lambda
-                    ((((Variable (Generated mon_289)) Pure)
-                      ((Variable (Generated mon_290)) Pure))
+                    ((((Variable (Generated mon_387)) Pure)
+                      ((Variable (Generated mon_388)) Pure))
                      Ctl
-                     (Let (Variable (Generated mon_291)) Pure (Literal (Int 1))
-                      (Application (Variable (Generated mon_289))
-                       (((Variable (Generated mon_291)) Pure)
-                        ((Variable (Generated mon_290)) Pure))
+                     (Let (Variable (Generated mon_389)) Pure (Literal (Int 1))
+                      (Application (Variable (Generated mon_387))
+                       (((Variable (Generated mon_389)) Pure)
+                        ((Variable (Generated mon_388)) Pure))
                        Ctl))))
                    Pure))
                  Ctl)
                 (Application (Variable (Language bind))
-                 (((Let (Variable (Generated mon_292)) Pure (Variable (User h))
-                    (Let (Variable (Generated mon_293)) Pure (Literal (Int 1))
-                     (Application (Variable (Generated mon_292))
-                      (((Variable (Generated mon_293)) Pure)
-                       ((Variable (Generated mon_286)) Pure))
+                 (((Let (Variable (Generated mon_390)) Pure (Variable (User h))
+                    (Let (Variable (Generated mon_391)) Pure (Literal (Int 1))
+                     (Application (Variable (Generated mon_390))
+                      (((Variable (Generated mon_391)) Pure)
+                       ((Variable (Generated mon_384)) Pure))
                       Ctl)))
                    Ctl)
-                  ((Variable (Generated mon_286)) Pure)
+                  ((Variable (Generated mon_384)) Pure)
                   ((Lambda
-                    ((((Variable (Generated mon_294)) Pure)
-                      ((Variable (Generated mon_295)) Pure))
+                    ((((Variable (Generated mon_392)) Pure)
+                      ((Variable (Generated mon_393)) Pure))
                      Ctl
-                     (Let (Variable (Generated mon_296)) Pure (Literal (Int 0))
-                      (Application (Variable (Generated mon_294))
-                       (((Variable (Generated mon_296)) Pure)
-                        ((Variable (Generated mon_295)) Pure))
+                     (Let (Variable (Generated mon_394)) Pure (Literal (Int 0))
+                      (Application (Variable (Generated mon_392))
+                       (((Variable (Generated mon_394)) Pure)
+                        ((Variable (Generated mon_393)) Pure))
                        Ctl))))
                    Pure))
                  Ctl))))
              Pure))
            Ctl)
           Ctl)
-         ((Variable (Generated mon_276)) Pure)
+         ((Variable (Generated mon_374)) Pure)
          ((Lambda
-           ((((Variable (Generated mon_297)) Pure)
-             ((Variable (Generated mon_298)) Pure))
+           ((((Variable (Generated mon_395)) Pure)
+             ((Variable (Generated mon_396)) Pure))
             Ctl
-            (Let (Variable (User z)) Pure (Variable (Generated mon_297))
+            (Let (Variable (User z)) Pure (Variable (Generated mon_395))
              (Application (Variable (Language bind))
-              (((Let (Variable (Generated mon_299)) Pure (Variable (User h))
-                 (Let (Variable (Generated mon_300)) Pure (Variable (User z))
-                  (Application (Variable (Generated mon_299))
-                   (((Variable (Generated mon_300)) Pure)
-                    ((Variable (Generated mon_298)) Pure))
+              (((Let (Variable (Generated mon_397)) Pure (Variable (User h))
+                 (Let (Variable (Generated mon_398)) Pure (Variable (User z))
+                  (Application (Variable (Generated mon_397))
+                   (((Variable (Generated mon_398)) Pure)
+                    ((Variable (Generated mon_396)) Pure))
                    Ctl)))
                 Ctl)
-               ((Variable (Generated mon_298)) Pure)
+               ((Variable (Generated mon_396)) Pure)
                ((Lambda
-                 ((((Variable (Generated mon_301)) Pure)
-                   ((Variable (Generated mon_302)) Pure))
+                 ((((Variable (Generated mon_399)) Pure)
+                   ((Variable (Generated mon_400)) Pure))
                   Ctl
-                  (Let (Variable (Generated mon_303)) Pure (Variable (User z))
-                   (Application (Variable (Generated mon_301))
-                    (((Variable (Generated mon_303)) Pure)
-                     ((Variable (Generated mon_302)) Pure))
+                  (Let (Variable (Generated mon_401)) Pure (Variable (User z))
+                   (Application (Variable (Generated mon_399))
+                    (((Variable (Generated mon_401)) Pure)
+                     ((Variable (Generated mon_400)) Pure))
                     Ctl))))
                 Pure))
               Ctl))))
           Pure))
         Ctl)))
      ((User main)
-      ((((Variable (Generated mon_304)) Pure)) Ctl
-       (Let (Variable (Generated mon_306)) Pure
+      ((((Variable (Generated mon_402)) Pure)) Ctl
+       (Let (Variable (Generated mon_404)) Pure
         (Application (Variable (Language perform))
          (((Effect_label console) Pure)
           ((Lambda
-            ((((Variable (Generated mon_305)) Pure)) Pure
+            ((((Variable (Generated mon_403)) Pure)) Pure
              (Select_operation console (User println-int)
-              (Variable (Generated mon_305)))))
+              (Variable (Generated mon_403)))))
            Pure))
          Pure)
-        (Let (Variable (Generated mon_323)) Pure
-         (Let (Variable (Generated mon_307)) Pure (Variable (User foo))
-          (Let (Variable (Generated mon_311)) Pure
+        (Let (Variable (Generated mon_421)) Pure
+         (Let (Variable (Generated mon_405)) Pure (Variable (User foo))
+          (Let (Variable (Generated mon_409)) Pure
            (Lambda
-            ((((Variable (User y)) Pure) ((Variable (Generated mon_308)) Pure))
+            ((((Variable (User y)) Pure) ((Variable (Generated mon_406)) Pure))
              Ctl
              (Construct_pure
-              (Let (Variable (Generated mon_309)) Pure (Variable (User y))
-               (Let (Variable (Generated mon_310)) Pure (Variable (User y))
-                (Operator (Variable (Generated mon_309)) (Int Times)
-                 (Variable (Generated mon_310))))))))
-           (Let (Variable (Generated mon_315)) Pure
+              (Let (Variable (Generated mon_407)) Pure (Variable (User y))
+               (Let (Variable (Generated mon_408)) Pure (Variable (User y))
+                (Operator (Variable (Generated mon_407)) (Int Times)
+                 (Variable (Generated mon_408))))))))
+           (Let (Variable (Generated mon_413)) Pure
             (Lambda
              ((((Variable (User x)) Pure)
-               ((Variable (Generated mon_312)) Pure))
+               ((Variable (Generated mon_410)) Pure))
               Ctl
               (Construct_pure
-               (Let (Variable (Generated mon_313)) Pure (Variable (User x))
-                (Let (Variable (Generated mon_314)) Pure (Variable (User x))
-                 (Operator (Variable (Generated mon_313)) (Int Plus)
-                  (Variable (Generated mon_314))))))))
-            (Let (Variable (Generated mon_320)) Pure
+               (Let (Variable (Generated mon_411)) Pure (Variable (User x))
+                (Let (Variable (Generated mon_412)) Pure (Variable (User x))
+                 (Operator (Variable (Generated mon_411)) (Int Plus)
+                  (Variable (Generated mon_412))))))))
+            (Let (Variable (Generated mon_418)) Pure
              (Lambda
               ((((Variable (User m)) Pure)
-                ((Variable (Generated mon_316)) Pure))
+                ((Variable (Generated mon_414)) Pure))
                Ctl
                (Construct_pure
                 (Lambda
                  ((((Variable (User n)) Pure)
-                   ((Variable (Generated mon_317)) Pure))
+                   ((Variable (Generated mon_415)) Pure))
                   Ctl
                   (Construct_pure
-                   (Let (Variable (Generated mon_318)) Pure (Variable (User m))
-                    (Let (Variable (Generated mon_319)) Pure
+                   (Let (Variable (Generated mon_416)) Pure (Variable (User m))
+                    (Let (Variable (Generated mon_417)) Pure
                      (Variable (User n))
-                     (Operator (Variable (Generated mon_318)) (Int Minus)
-                      (Variable (Generated mon_319)))))))))))
-             (Let (Variable (Generated mon_321)) Pure (Literal (Int 3))
+                     (Operator (Variable (Generated mon_416)) (Int Minus)
+                      (Variable (Generated mon_417)))))))))))
+             (Let (Variable (Generated mon_419)) Pure (Literal (Int 3))
               (Match_ctl_pure
                (subject
-                (Application (Variable (Generated mon_307))
-                 (((Variable (Generated mon_311)) Pure)
-                  ((Variable (Generated mon_315)) Pure)
-                  ((Variable (Generated mon_320)) Pure)
-                  ((Variable (Generated mon_321)) Pure)
-                  ((Variable (Generated mon_304)) Pure))
+                (Application (Variable (Generated mon_405))
+                 (((Variable (Generated mon_409)) Pure)
+                  ((Variable (Generated mon_413)) Pure)
+                  ((Variable (Generated mon_418)) Pure)
+                  ((Variable (Generated mon_419)) Pure)
+                  ((Variable (Generated mon_402)) Pure))
                  Ctl))
                (pure_branch
-                ((Variable (Generated mon_322)) (Variable (Generated mon_322))))))))))
-         (Application (Variable (Generated mon_306))
-          (((Variable (Generated mon_323)) Pure)
-           ((Variable (Generated mon_304)) Pure))
+                ((Variable (Generated mon_420)) (Variable (Generated mon_420))))))))))
+         (Application (Variable (Generated mon_404))
+          (((Variable (Generated mon_421)) Pure)
+           ((Variable (Generated mon_402)) Pure))
           Ctl)))))
      ((Language main)
-      ((((Variable (Generated mon_324)) Pure)) Ctl
+      ((((Variable (Generated mon_422)) Pure)) Ctl
        (Application (Variable (Language bind))
-        (((Let (Variable (Generated mon_331)) Pure
+        (((Let (Variable (Generated mon_429)) Pure
            (Application (Variable (Language handler))
             (((Effect_label console) Pure)
              ((Construct_handler (handled_effect console)
@@ -1258,49 +1624,49 @@ First show without any rewriting optimisations
                   (Construct_op_tail
                    (Lambda
                     ((((Variable (Language x)) Pure)
-                      ((Variable (Generated mon_325)) Pure))
+                      ((Variable (Generated mon_423)) Pure))
                      Ctl
                      (Construct_pure
-                      (Let (Variable (Generated mon_326)) Pure
+                      (Let (Variable (Generated mon_424)) Pure
                        (Variable (Language x))
                        (Impure_built_in
                         (Impure_print_int
-                         (value (Variable (Generated mon_326)))
+                         (value (Variable (Generated mon_424)))
                          (newline false)))))))))
                  ((User println)
                   (Construct_op_tail
                    (Lambda
-                    (((Wildcard Pure) ((Variable (Generated mon_327)) Pure))
+                    (((Wildcard Pure) ((Variable (Generated mon_425)) Pure))
                      Ctl (Construct_pure (Impure_built_in Impure_println))))))
                  ((User println-int)
                   (Construct_op_tail
                    (Lambda
                     ((((Variable (Language x)) Pure)
-                      ((Variable (Generated mon_328)) Pure))
+                      ((Variable (Generated mon_426)) Pure))
                      Ctl
                      (Construct_pure
-                      (Let (Variable (Generated mon_329)) Pure
+                      (Let (Variable (Generated mon_427)) Pure
                        (Variable (Language x))
                        (Impure_built_in
                         (Impure_print_int
-                         (value (Variable (Generated mon_329))) (newline true)))))))))
+                         (value (Variable (Generated mon_427))) (newline true)))))))))
                  ((User read-int)
                   (Construct_op_tail
                    (Lambda
-                    (((Wildcard Pure) ((Variable (Generated mon_330)) Pure))
+                    (((Wildcard Pure) ((Variable (Generated mon_428)) Pure))
                      Ctl (Construct_pure (Impure_built_in Impure_read_int)))))))))
               Pure))
             Pure)
-           (Let (Variable (Generated mon_332)) Pure (Variable (User main))
-            (Application (Variable (Generated mon_331))
-             (((Variable (Generated mon_332)) Pure)
-              ((Variable (Generated mon_324)) Pure))
+           (Let (Variable (Generated mon_430)) Pure (Variable (User main))
+            (Application (Variable (Generated mon_429))
+             (((Variable (Generated mon_430)) Pure)
+              ((Variable (Generated mon_422)) Pure))
              Ctl)))
           Ctl)
-         ((Variable (Generated mon_324)) Pure)
+         ((Variable (Generated mon_422)) Pure)
          ((Lambda
-           ((((Variable (Generated mon_333)) Pure)
-             ((Variable (Generated mon_334)) Pure))
+           ((((Variable (Generated mon_431)) Pure)
+             ((Variable (Generated mon_432)) Pure))
             Ctl (Construct_pure (Tuple_construction ()))))
           Pure))
         Ctl)))))
@@ -1517,164 +1883,178 @@ Then show with bind-inlining and other rewriting applied
         (If_then_else (Variable (Generated mon_48))
          (Construct_pure (Variable (User x)))
          (Construct_pure (Variable (User y)))))))
+     ((User min)
+      ((((Variable (User x)) Pure) ((Variable (User y)) Pure)
+        ((Variable (Generated mon_49)) Pure))
+       Ctl
+       (Let (Variable (Generated mon_52)) Pure
+        (Let (Variable (Generated mon_50)) Pure (Variable (User x))
+         (Let (Variable (Generated mon_51)) Pure (Variable (User y))
+          (Operator (Variable (Generated mon_50)) (Int Less_equal)
+           (Variable (Generated mon_51)))))
+        (If_then_else (Variable (Generated mon_52))
+         (Construct_pure (Variable (User x)))
+         (Construct_pure (Variable (User y)))))))
+     ((User compare-int)
+      ((((Variable (User a)) Pure) ((Variable (User b)) Pure)
+        ((Variable (Generated mon_53)) Pure))
+       Ctl
+       (Let (Variable (Generated mon_54)) Pure (Variable (User a))
+        (Let (Variable (Generated mon_55)) Pure (Variable (User b))
+         (Construct_pure
+          (Operator (Variable (Generated mon_54)) (Int Minus)
+           (Variable (Generated mon_55))))))))
      ((User reverse)
-      ((((Variable (User xs)) Pure) ((Variable (Generated mon_49)) Pure)) Ctl
+      ((((Variable (User xs)) Pure) ((Variable (Generated mon_56)) Pure)) Ctl
        (Let (Variable (User reverse-tail)) Pure
         (Fix_lambda
          ((User reverse-tail)
           ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (Generated mon_50)) Pure))
+            ((Variable (Generated mon_57)) Pure))
            Ctl
-           (Let (Variable (Generated mon_51)) Pure (Variable (User xs))
-            (Match (Variable (Generated mon_51)) List
+           (Let (Variable (Generated mon_58)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_58)) List
              (((Construction List_nil ())
                (Construct_pure (Variable (User acc))))
               ((Construction List_cons
                 ((Variable (User x)) (Variable (User xx))))
-               (Let (Variable (Generated mon_52)) Pure
+               (Let (Variable (Generated mon_59)) Pure
                 (Variable (User reverse-tail))
-                (Let (Variable (Generated mon_53)) Pure (Variable (User xx))
-                 (Let (Variable (Generated mon_56)) Pure
-                  (Let (Variable (Generated mon_54)) Pure (Variable (User x))
-                   (Let (Variable (Generated mon_55)) Pure
+                (Let (Variable (Generated mon_60)) Pure (Variable (User xx))
+                 (Let (Variable (Generated mon_63)) Pure
+                  (Let (Variable (Generated mon_61)) Pure (Variable (User x))
+                   (Let (Variable (Generated mon_62)) Pure
                     (Variable (User acc))
                     (Construction List_cons
-                     ((Variable (Generated mon_54))
-                      (Variable (Generated mon_55))))))
-                  (Application (Variable (Generated mon_52))
-                   (((Variable (Generated mon_53)) Pure)
-                    ((Variable (Generated mon_56)) Pure)
-                    ((Variable (Generated mon_50)) Pure))
+                     ((Variable (Generated mon_61))
+                      (Variable (Generated mon_62))))))
+                  (Application (Variable (Generated mon_59))
+                   (((Variable (Generated mon_60)) Pure)
+                    ((Variable (Generated mon_63)) Pure)
+                    ((Variable (Generated mon_57)) Pure))
                    Ctl)))))))))))
-        (Let (Variable (Generated mon_58)) Pure (Variable (User reverse-tail))
-         (Let (Variable (Generated mon_59)) Pure (Variable (User xs))
-          (Let (Variable (Generated mon_60)) Pure (Construction List_nil ())
-           (Application (Variable (Generated mon_58))
-            (((Variable (Generated mon_59)) Pure)
-             ((Variable (Generated mon_60)) Pure)
-             ((Variable (Generated mon_49)) Pure))
+        (Let (Variable (Generated mon_65)) Pure (Variable (User reverse-tail))
+         (Let (Variable (Generated mon_66)) Pure (Variable (User xs))
+          (Let (Variable (Generated mon_67)) Pure (Construction List_nil ())
+           (Application (Variable (Generated mon_65))
+            (((Variable (Generated mon_66)) Pure)
+             ((Variable (Generated mon_67)) Pure)
+             ((Variable (Generated mon_56)) Pure))
             Ctl)))))))
+     ((User concat-rev)
+      ((((Variable (User rev-xs)) Pure) ((Variable (User acc)) Pure)
+        ((Variable (Generated mon_69)) Pure))
+       Ctl
+       (Let (Variable (Generated mon_70)) Pure (Variable (User rev-xs))
+        (Match (Variable (Generated mon_70)) List
+         (((Construction List_nil ()) (Construct_pure (Variable (User acc))))
+          ((Construction List_cons ((Variable (User x)) (Variable (User xx))))
+           (Let (Variable (Generated mon_71)) Pure (Variable (User concat-rev))
+            (Let (Variable (Generated mon_72)) Pure (Variable (User xx))
+             (Let (Variable (Generated mon_75)) Pure
+              (Let (Variable (Generated mon_73)) Pure (Variable (User x))
+               (Let (Variable (Generated mon_74)) Pure (Variable (User acc))
+                (Construction List_cons
+                 ((Variable (Generated mon_73)) (Variable (Generated mon_74))))))
+              (Application (Variable (Generated mon_71))
+               (((Variable (Generated mon_72)) Pure)
+                ((Variable (Generated mon_75)) Pure)
+                ((Variable (Generated mon_69)) Pure))
+               Ctl))))))))))
      ((User concat)
       ((((Variable (User xs)) Pure) ((Variable (User ys)) Pure)
-        ((Variable (Generated mon_62)) Pure))
+        ((Variable (Generated mon_77)) Pure))
        Ctl
-       (Let (Variable (User concat-rev)) Pure
-        (Fix_lambda
-         ((User concat-rev)
-          ((((Variable (User rev-xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (Generated mon_63)) Pure))
-           Ctl
-           (Let (Variable (Generated mon_64)) Pure (Variable (User rev-xs))
-            (Match (Variable (Generated mon_64)) List
-             (((Construction List_nil ())
-               (Construct_pure (Variable (User acc))))
-              ((Construction List_cons
-                ((Variable (User x)) (Variable (User xx))))
-               (Let (Variable (Generated mon_65)) Pure
-                (Variable (User concat-rev))
-                (Let (Variable (Generated mon_66)) Pure (Variable (User xx))
-                 (Let (Variable (Generated mon_69)) Pure
-                  (Let (Variable (Generated mon_67)) Pure (Variable (User x))
-                   (Let (Variable (Generated mon_68)) Pure
-                    (Variable (User acc))
-                    (Construction List_cons
-                     ((Variable (Generated mon_67))
-                      (Variable (Generated mon_68))))))
-                  (Application (Variable (Generated mon_65))
-                   (((Variable (Generated mon_66)) Pure)
-                    ((Variable (Generated mon_69)) Pure)
-                    ((Variable (Generated mon_63)) Pure))
-                   Ctl)))))))))))
-        (Let (Variable (Generated mon_71)) Pure (Variable (User concat-rev))
-         (Let (Variable (Generated mon_75)) Pure
-          (Let (Variable (Generated mon_72)) Pure (Variable (User reverse))
-           (Let (Variable (Generated mon_73)) Pure (Variable (User xs))
-            (Match_ctl_pure
-             (subject
-              (Application (Variable (Generated mon_72))
-               (((Variable (Generated mon_73)) Pure)
-                ((Variable (Generated mon_62)) Pure))
-               Ctl))
-             (pure_branch
-              ((Variable (Generated mon_74)) (Variable (Generated mon_74)))))))
-          (Let (Variable (Generated mon_76)) Pure (Variable (User ys))
-           (Application (Variable (Generated mon_71))
-            (((Variable (Generated mon_75)) Pure)
-             ((Variable (Generated mon_76)) Pure)
-             ((Variable (Generated mon_62)) Pure))
-            Ctl)))))))
+       (Let (Variable (Generated mon_78)) Pure (Variable (User concat-rev))
+        (Let (Variable (Generated mon_82)) Pure
+         (Let (Variable (Generated mon_79)) Pure (Variable (User reverse))
+          (Let (Variable (Generated mon_80)) Pure (Variable (User xs))
+           (Match_ctl_pure
+            (subject
+             (Application (Variable (Generated mon_79))
+              (((Variable (Generated mon_80)) Pure)
+               ((Variable (Generated mon_77)) Pure))
+              Ctl))
+            (pure_branch
+             ((Variable (Generated mon_81)) (Variable (Generated mon_81)))))))
+         (Let (Variable (Generated mon_83)) Pure (Variable (User ys))
+          (Application (Variable (Generated mon_78))
+           (((Variable (Generated mon_82)) Pure)
+            ((Variable (Generated mon_83)) Pure)
+            ((Variable (Generated mon_77)) Pure))
+           Ctl))))))
      ((Generated opt_1)
       ((((Variable (User acc)) Pure)) Pure
        (Lambda
-        ((((Variable (Generated mon_88)) Pure)
-          ((Variable (Generated mon_89)) Pure))
+        ((((Variable (Generated mon_95)) Pure)
+          ((Variable (Generated mon_96)) Pure))
          Ctl
-         (Let (Variable (Generated mon_90)) Pure (Variable (User acc))
+         (Let (Variable (Generated mon_97)) Pure (Variable (User acc))
           (Construct_pure
            (Construction List_cons
-            ((Variable (Generated mon_88)) (Variable (Generated mon_90))))))))))
+            ((Variable (Generated mon_95)) (Variable (Generated mon_97))))))))))
      ((Generated opt_0)
-      ((((Variable (User f)) Pure) ((Variable (Generated mon_84)) Pure)
-        ((Variable (Generated mon_85)) Pure))
+      ((((Variable (User f)) Pure) ((Variable (Generated mon_91)) Pure)
+        ((Variable (Generated mon_92)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_91)) Pure)
-          ((Variable (Generated mon_92)) Pure))
+        ((((Variable (Generated mon_98)) Pure)
+          ((Variable (Generated mon_99)) Pure))
          Ctl
-         (Let (Variable (Generated mon_93)) Pure (Variable (User f))
-          (Application (Variable (Generated mon_84))
-           (((Variable (Generated mon_85)) Pure)
-            ((Variable (Generated mon_91)) Pure)
-            ((Variable (Generated mon_93)) Pure)
-            ((Variable (Generated mon_92)) Pure))
+         (Let (Variable (Generated mon_100)) Pure (Variable (User f))
+          (Application (Variable (Generated mon_91))
+           (((Variable (Generated mon_92)) Pure)
+            ((Variable (Generated mon_98)) Pure)
+            ((Variable (Generated mon_100)) Pure)
+            ((Variable (Generated mon_99)) Pure))
            Ctl))))))
      ((User map)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_78)) Pure))
+        ((Variable (Generated mon_85)) Pure))
        Ctl
        (Let (Variable (User map-tail)) Pure
         (Fix_lambda
          ((User map-tail)
           ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (User f)) Pure) ((Variable (Generated mon_79)) Pure))
+            ((Variable (User f)) Pure) ((Variable (Generated mon_86)) Pure))
            Ctl
-           (Let (Variable (Generated mon_80)) Pure (Variable (User xs))
-            (Match (Variable (Generated mon_80)) List
+           (Let (Variable (Generated mon_87)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_87)) List
              (((Construction List_nil ())
-               (Let (Variable (Generated mon_81)) Pure
+               (Let (Variable (Generated mon_88)) Pure
                 (Variable (User reverse))
-                (Let (Variable (Generated mon_82)) Pure (Variable (User acc))
-                 (Application (Variable (Generated mon_81))
-                  (((Variable (Generated mon_82)) Pure)
-                   ((Variable (Generated mon_79)) Pure))
+                (Let (Variable (Generated mon_89)) Pure (Variable (User acc))
+                 (Application (Variable (Generated mon_88))
+                  (((Variable (Generated mon_89)) Pure)
+                   ((Variable (Generated mon_86)) Pure))
                   Ctl))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User ys))))
-               (Let (Variable (Generated mon_84)) Pure
+               (Let (Variable (Generated mon_91)) Pure
                 (Variable (User map-tail))
-                (Let (Variable (Generated mon_85)) Pure (Variable (User ys))
+                (Let (Variable (Generated mon_92)) Pure (Variable (User ys))
                  (Match_ctl
                   (subject
                    (Match_ctl
                     (subject
-                     (Let (Variable (Generated mon_86)) Pure
+                     (Let (Variable (Generated mon_93)) Pure
                       (Variable (User f))
-                      (Let (Variable (Generated mon_87)) Pure
+                      (Let (Variable (Generated mon_94)) Pure
                        (Variable (User y))
-                       (Application (Variable (Generated mon_86))
-                        (((Variable (Generated mon_87)) Pure)
-                         ((Variable (Generated mon_79)) Pure))
+                       (Application (Variable (Generated mon_93))
+                        (((Variable (Generated mon_94)) Pure)
+                         ((Variable (Generated mon_86)) Pure))
                         Ctl))))
                     (pure_branch
-                     ((Variable (Generated mon_88))
-                      (Let (Variable (Generated mon_89)) Pure
-                       (Variable (Generated mon_79))
-                       (Let (Variable (Generated mon_90)) Pure
+                     ((Variable (Generated mon_95))
+                      (Let (Variable (Generated mon_96)) Pure
+                       (Variable (Generated mon_86))
+                       (Let (Variable (Generated mon_97)) Pure
                         (Variable (User acc))
                         (Construct_pure
                          (Construction List_cons
-                          ((Variable (Generated mon_88))
-                           (Variable (Generated mon_90)))))))))
+                          ((Variable (Generated mon_95))
+                           (Variable (Generated mon_97)))))))))
                     (yield_branch
                      ((Generated opt_2) (Generated opt_3) (Generated opt_4)
                       (Construct_yield (marker (Variable (Generated opt_2)))
@@ -1696,16 +2076,16 @@ Then show with bind-inlining and other rewriting applied
                              Pure))
                            Ctl)))))))))
                   (pure_branch
-                   ((Variable (Generated mon_91))
-                    (Let (Variable (Generated mon_92)) Pure
-                     (Variable (Generated mon_79))
-                     (Let (Variable (Generated mon_93)) Pure
+                   ((Variable (Generated mon_98))
+                    (Let (Variable (Generated mon_99)) Pure
+                     (Variable (Generated mon_86))
+                     (Let (Variable (Generated mon_100)) Pure
                       (Variable (User f))
-                      (Application (Variable (Generated mon_84))
-                       (((Variable (Generated mon_85)) Pure)
-                        ((Variable (Generated mon_91)) Pure)
-                        ((Variable (Generated mon_93)) Pure)
-                        ((Variable (Generated mon_92)) Pure))
+                      (Application (Variable (Generated mon_91))
+                       (((Variable (Generated mon_92)) Pure)
+                        ((Variable (Generated mon_98)) Pure)
+                        ((Variable (Generated mon_100)) Pure)
+                        ((Variable (Generated mon_99)) Pure))
                        Ctl)))))
                   (yield_branch
                    ((Generated opt_7) (Generated opt_8) (Generated opt_9)
@@ -1725,69 +2105,69 @@ Then show with bind-inlining and other rewriting applied
                           ((Variable (Generated opt_11)) Pure)
                           ((Application (Variable (Generated opt_0))
                             (((Variable (User f)) Pure)
-                             ((Variable (Generated mon_84)) Pure)
-                             ((Variable (Generated mon_85)) Pure))
+                             ((Variable (Generated mon_91)) Pure)
+                             ((Variable (Generated mon_92)) Pure))
                             Pure)
                            Pure))
                          Ctl)))))))))))))))))
-        (Let (Variable (Generated mon_95)) Pure (Variable (User map-tail))
-         (Let (Variable (Generated mon_96)) Pure (Variable (User xs))
-          (Let (Variable (Generated mon_97)) Pure (Construction List_nil ())
-           (Let (Variable (Generated mon_98)) Pure (Variable (User f))
-            (Application (Variable (Generated mon_95))
-             (((Variable (Generated mon_96)) Pure)
-              ((Variable (Generated mon_97)) Pure)
-              ((Variable (Generated mon_98)) Pure)
-              ((Variable (Generated mon_78)) Pure))
+        (Let (Variable (Generated mon_102)) Pure (Variable (User map-tail))
+         (Let (Variable (Generated mon_103)) Pure (Variable (User xs))
+          (Let (Variable (Generated mon_104)) Pure (Construction List_nil ())
+           (Let (Variable (Generated mon_105)) Pure (Variable (User f))
+            (Application (Variable (Generated mon_102))
+             (((Variable (Generated mon_103)) Pure)
+              ((Variable (Generated mon_104)) Pure)
+              ((Variable (Generated mon_105)) Pure)
+              ((Variable (Generated mon_85)) Pure))
              Ctl))))))))
      ((Generated opt_12)
       ((((Variable (User exists)) Pure) ((Variable (User p)) Pure)
         ((Variable (User ys)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_103)) Pure)
-          ((Variable (Generated mon_104)) Pure))
+        ((((Variable (Generated mon_110)) Pure)
+          ((Variable (Generated mon_111)) Pure))
          Ctl
-         (If_then_else (Variable (Generated mon_103))
+         (If_then_else (Variable (Generated mon_110))
           (Construct_pure (Literal (Bool true)))
-          (Let (Variable (Generated mon_105)) Pure (Variable (User exists))
-           (Let (Variable (Generated mon_106)) Pure (Variable (User ys))
-            (Let (Variable (Generated mon_107)) Pure (Variable (User p))
-             (Application (Variable (Generated mon_105))
-              (((Variable (Generated mon_106)) Pure)
-               ((Variable (Generated mon_107)) Pure)
-               ((Variable (Generated mon_104)) Pure))
+          (Let (Variable (Generated mon_112)) Pure (Variable (User exists))
+           (Let (Variable (Generated mon_113)) Pure (Variable (User ys))
+            (Let (Variable (Generated mon_114)) Pure (Variable (User p))
+             (Application (Variable (Generated mon_112))
+              (((Variable (Generated mon_113)) Pure)
+               ((Variable (Generated mon_114)) Pure)
+               ((Variable (Generated mon_111)) Pure))
               Ctl)))))))))
      ((User exists)
       ((((Variable (User xs)) Pure) ((Variable (User p)) Pure)
-        ((Variable (Generated mon_99)) Pure))
+        ((Variable (Generated mon_106)) Pure))
        Ctl
-       (Let (Variable (Generated mon_100)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_100)) List
+       (Let (Variable (Generated mon_107)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_107)) List
          (((Construction List_nil ()) (Construct_pure (Literal (Bool false))))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
            (Match_ctl
             (subject
-             (Let (Variable (Generated mon_101)) Pure (Variable (User p))
-              (Let (Variable (Generated mon_102)) Pure (Variable (User y))
-               (Application (Variable (Generated mon_101))
-                (((Variable (Generated mon_102)) Pure)
-                 ((Variable (Generated mon_99)) Pure))
+             (Let (Variable (Generated mon_108)) Pure (Variable (User p))
+              (Let (Variable (Generated mon_109)) Pure (Variable (User y))
+               (Application (Variable (Generated mon_108))
+                (((Variable (Generated mon_109)) Pure)
+                 ((Variable (Generated mon_106)) Pure))
                 Ctl))))
             (pure_branch
-             ((Variable (Generated mon_103))
-              (Let (Variable (Generated mon_104)) Pure
-               (Variable (Generated mon_99))
-               (If_then_else (Variable (Generated mon_103))
+             ((Variable (Generated mon_110))
+              (Let (Variable (Generated mon_111)) Pure
+               (Variable (Generated mon_106))
+               (If_then_else (Variable (Generated mon_110))
                 (Construct_pure (Literal (Bool true)))
-                (Let (Variable (Generated mon_105)) Pure
+                (Let (Variable (Generated mon_112)) Pure
                  (Variable (User exists))
-                 (Let (Variable (Generated mon_106)) Pure (Variable (User ys))
-                  (Let (Variable (Generated mon_107)) Pure (Variable (User p))
-                   (Application (Variable (Generated mon_105))
-                    (((Variable (Generated mon_106)) Pure)
-                     ((Variable (Generated mon_107)) Pure)
-                     ((Variable (Generated mon_104)) Pure))
+                 (Let (Variable (Generated mon_113)) Pure (Variable (User ys))
+                  (Let (Variable (Generated mon_114)) Pure (Variable (User p))
+                   (Application (Variable (Generated mon_112))
+                    (((Variable (Generated mon_113)) Pure)
+                     ((Variable (Generated mon_114)) Pure)
+                     ((Variable (Generated mon_111)) Pure))
                     Ctl))))))))
             (yield_branch
              ((Generated opt_13) (Generated opt_14) (Generated opt_15)
@@ -1816,48 +2196,48 @@ Then show with bind-inlining and other rewriting applied
         ((Variable (User ys)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_112)) Pure)
-          ((Variable (Generated mon_113)) Pure))
+        ((((Variable (Generated mon_119)) Pure)
+          ((Variable (Generated mon_120)) Pure))
          Ctl
-         (If_then_else (Variable (Generated mon_112))
-          (Let (Variable (Generated mon_114)) Pure (Variable (User for-all))
-           (Let (Variable (Generated mon_115)) Pure (Variable (User ys))
-            (Let (Variable (Generated mon_116)) Pure (Variable (User p))
-             (Application (Variable (Generated mon_114))
-              (((Variable (Generated mon_115)) Pure)
-               ((Variable (Generated mon_116)) Pure)
-               ((Variable (Generated mon_113)) Pure))
+         (If_then_else (Variable (Generated mon_119))
+          (Let (Variable (Generated mon_121)) Pure (Variable (User for-all))
+           (Let (Variable (Generated mon_122)) Pure (Variable (User ys))
+            (Let (Variable (Generated mon_123)) Pure (Variable (User p))
+             (Application (Variable (Generated mon_121))
+              (((Variable (Generated mon_122)) Pure)
+               ((Variable (Generated mon_123)) Pure)
+               ((Variable (Generated mon_120)) Pure))
               Ctl))))
           (Construct_pure (Literal (Bool false))))))))
      ((User for-all)
       ((((Variable (User xs)) Pure) ((Variable (User p)) Pure)
-        ((Variable (Generated mon_108)) Pure))
+        ((Variable (Generated mon_115)) Pure))
        Ctl
-       (Let (Variable (Generated mon_109)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_109)) List
+       (Let (Variable (Generated mon_116)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_116)) List
          (((Construction List_nil ()) (Construct_pure (Literal (Bool true))))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
            (Match_ctl
             (subject
-             (Let (Variable (Generated mon_110)) Pure (Variable (User p))
-              (Let (Variable (Generated mon_111)) Pure (Variable (User y))
-               (Application (Variable (Generated mon_110))
-                (((Variable (Generated mon_111)) Pure)
-                 ((Variable (Generated mon_108)) Pure))
+             (Let (Variable (Generated mon_117)) Pure (Variable (User p))
+              (Let (Variable (Generated mon_118)) Pure (Variable (User y))
+               (Application (Variable (Generated mon_117))
+                (((Variable (Generated mon_118)) Pure)
+                 ((Variable (Generated mon_115)) Pure))
                 Ctl))))
             (pure_branch
-             ((Variable (Generated mon_112))
-              (Let (Variable (Generated mon_113)) Pure
-               (Variable (Generated mon_108))
-               (If_then_else (Variable (Generated mon_112))
-                (Let (Variable (Generated mon_114)) Pure
+             ((Variable (Generated mon_119))
+              (Let (Variable (Generated mon_120)) Pure
+               (Variable (Generated mon_115))
+               (If_then_else (Variable (Generated mon_119))
+                (Let (Variable (Generated mon_121)) Pure
                  (Variable (User for-all))
-                 (Let (Variable (Generated mon_115)) Pure (Variable (User ys))
-                  (Let (Variable (Generated mon_116)) Pure (Variable (User p))
-                   (Application (Variable (Generated mon_114))
-                    (((Variable (Generated mon_115)) Pure)
-                     ((Variable (Generated mon_116)) Pure)
-                     ((Variable (Generated mon_113)) Pure))
+                 (Let (Variable (Generated mon_122)) Pure (Variable (User ys))
+                  (Let (Variable (Generated mon_123)) Pure (Variable (User p))
+                   (Application (Variable (Generated mon_121))
+                    (((Variable (Generated mon_122)) Pure)
+                     ((Variable (Generated mon_123)) Pure)
+                     ((Variable (Generated mon_120)) Pure))
                     Ctl))))
                 (Construct_pure (Literal (Bool false)))))))
             (yield_branch
@@ -1888,72 +2268,72 @@ Then show with bind-inlining and other rewriting applied
         ((Variable (User yy)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_124)) Pure)
-          ((Variable (Generated mon_125)) Pure))
+        ((((Variable (Generated mon_131)) Pure)
+          ((Variable (Generated mon_132)) Pure))
          Ctl
-         (If_then_else (Variable (Generated mon_124))
-          (Let (Variable (Generated mon_126)) Pure (Variable (User list-equal))
-           (Let (Variable (Generated mon_127)) Pure (Variable (User xx))
-            (Let (Variable (Generated mon_128)) Pure (Variable (User yy))
-             (Let (Variable (Generated mon_129)) Pure
+         (If_then_else (Variable (Generated mon_131))
+          (Let (Variable (Generated mon_133)) Pure (Variable (User list-equal))
+           (Let (Variable (Generated mon_134)) Pure (Variable (User xx))
+            (Let (Variable (Generated mon_135)) Pure (Variable (User yy))
+             (Let (Variable (Generated mon_136)) Pure
               (Variable (User element-equal))
-              (Application (Variable (Generated mon_126))
-               (((Variable (Generated mon_127)) Pure)
-                ((Variable (Generated mon_128)) Pure)
-                ((Variable (Generated mon_129)) Pure)
-                ((Variable (Generated mon_125)) Pure))
+              (Application (Variable (Generated mon_133))
+               (((Variable (Generated mon_134)) Pure)
+                ((Variable (Generated mon_135)) Pure)
+                ((Variable (Generated mon_136)) Pure)
+                ((Variable (Generated mon_132)) Pure))
                Ctl)))))
           (Construct_pure (Literal (Bool false))))))))
      ((User list-equal)
       ((((Variable (User xs)) Pure) ((Variable (User ys)) Pure)
         ((Variable (User element-equal)) Pure)
-        ((Variable (Generated mon_117)) Pure))
+        ((Variable (Generated mon_124)) Pure))
        Ctl
-       (Let (Variable (Generated mon_118)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_118)) List
+       (Let (Variable (Generated mon_125)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_125)) List
          (((Construction List_nil ())
-           (Let (Variable (Generated mon_119)) Pure (Variable (User ys))
-            (Match (Variable (Generated mon_119)) List
+           (Let (Variable (Generated mon_126)) Pure (Variable (User ys))
+            (Match (Variable (Generated mon_126)) List
              (((Construction List_nil ())
                (Construct_pure (Literal (Bool true))))
               ((Construction List_cons (Wildcard Wildcard))
                (Construct_pure (Literal (Bool false))))))))
           ((Construction List_cons ((Variable (User x)) (Variable (User xx))))
-           (Let (Variable (Generated mon_120)) Pure (Variable (User ys))
-            (Match (Variable (Generated mon_120)) List
+           (Let (Variable (Generated mon_127)) Pure (Variable (User ys))
+            (Match (Variable (Generated mon_127)) List
              (((Construction List_nil ())
                (Construct_pure (Literal (Bool false))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User yy))))
                (Match_ctl
                 (subject
-                 (Let (Variable (Generated mon_121)) Pure
+                 (Let (Variable (Generated mon_128)) Pure
                   (Variable (User element-equal))
-                  (Let (Variable (Generated mon_122)) Pure (Variable (User x))
-                   (Let (Variable (Generated mon_123)) Pure (Variable (User y))
-                    (Application (Variable (Generated mon_121))
-                     (((Variable (Generated mon_122)) Pure)
-                      ((Variable (Generated mon_123)) Pure)
-                      ((Variable (Generated mon_117)) Pure))
+                  (Let (Variable (Generated mon_129)) Pure (Variable (User x))
+                   (Let (Variable (Generated mon_130)) Pure (Variable (User y))
+                    (Application (Variable (Generated mon_128))
+                     (((Variable (Generated mon_129)) Pure)
+                      ((Variable (Generated mon_130)) Pure)
+                      ((Variable (Generated mon_124)) Pure))
                      Ctl)))))
                 (pure_branch
-                 ((Variable (Generated mon_124))
-                  (Let (Variable (Generated mon_125)) Pure
-                   (Variable (Generated mon_117))
-                   (If_then_else (Variable (Generated mon_124))
-                    (Let (Variable (Generated mon_126)) Pure
+                 ((Variable (Generated mon_131))
+                  (Let (Variable (Generated mon_132)) Pure
+                   (Variable (Generated mon_124))
+                   (If_then_else (Variable (Generated mon_131))
+                    (Let (Variable (Generated mon_133)) Pure
                      (Variable (User list-equal))
-                     (Let (Variable (Generated mon_127)) Pure
+                     (Let (Variable (Generated mon_134)) Pure
                       (Variable (User xx))
-                      (Let (Variable (Generated mon_128)) Pure
+                      (Let (Variable (Generated mon_135)) Pure
                        (Variable (User yy))
-                       (Let (Variable (Generated mon_129)) Pure
+                       (Let (Variable (Generated mon_136)) Pure
                         (Variable (User element-equal))
-                        (Application (Variable (Generated mon_126))
-                         (((Variable (Generated mon_127)) Pure)
-                          ((Variable (Generated mon_128)) Pure)
-                          ((Variable (Generated mon_129)) Pure)
-                          ((Variable (Generated mon_125)) Pure))
+                        (Application (Variable (Generated mon_133))
+                         (((Variable (Generated mon_134)) Pure)
+                          ((Variable (Generated mon_135)) Pure)
+                          ((Variable (Generated mon_136)) Pure)
+                          ((Variable (Generated mon_132)) Pure))
                          Ctl)))))
                     (Construct_pure (Literal (Bool false)))))))
                 (yield_branch
@@ -1985,94 +2365,94 @@ Then show with bind-inlining and other rewriting applied
         ((Variable (User y)) Pure) ((Variable (User ys)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_138)) Pure)
-          ((Variable (Generated mon_139)) Pure))
+        ((((Variable (Generated mon_145)) Pure)
+          ((Variable (Generated mon_146)) Pure))
          Ctl
-         (If_then_else (Variable (Generated mon_138))
-          (Let (Variable (Generated mon_140)) Pure
+         (If_then_else (Variable (Generated mon_145))
+          (Let (Variable (Generated mon_147)) Pure
            (Variable (User filter-tail))
-           (Let (Variable (Generated mon_141)) Pure (Variable (User ys))
-            (Let (Variable (Generated mon_144)) Pure
-             (Let (Variable (Generated mon_142)) Pure (Variable (User y))
-              (Let (Variable (Generated mon_143)) Pure (Variable (User acc))
+           (Let (Variable (Generated mon_148)) Pure (Variable (User ys))
+            (Let (Variable (Generated mon_151)) Pure
+             (Let (Variable (Generated mon_149)) Pure (Variable (User y))
+              (Let (Variable (Generated mon_150)) Pure (Variable (User acc))
                (Construction List_cons
-                ((Variable (Generated mon_142)) (Variable (Generated mon_143))))))
-             (Application (Variable (Generated mon_140))
-              (((Variable (Generated mon_141)) Pure)
-               ((Variable (Generated mon_144)) Pure)
-               ((Variable (Generated mon_139)) Pure))
+                ((Variable (Generated mon_149)) (Variable (Generated mon_150))))))
+             (Application (Variable (Generated mon_147))
+              (((Variable (Generated mon_148)) Pure)
+               ((Variable (Generated mon_151)) Pure)
+               ((Variable (Generated mon_146)) Pure))
               Ctl))))
-          (Let (Variable (Generated mon_145)) Pure
+          (Let (Variable (Generated mon_152)) Pure
            (Variable (User filter-tail))
-           (Let (Variable (Generated mon_146)) Pure (Variable (User ys))
-            (Let (Variable (Generated mon_147)) Pure (Variable (User acc))
-             (Application (Variable (Generated mon_145))
-              (((Variable (Generated mon_146)) Pure)
-               ((Variable (Generated mon_147)) Pure)
-               ((Variable (Generated mon_139)) Pure))
+           (Let (Variable (Generated mon_153)) Pure (Variable (User ys))
+            (Let (Variable (Generated mon_154)) Pure (Variable (User acc))
+             (Application (Variable (Generated mon_152))
+              (((Variable (Generated mon_153)) Pure)
+               ((Variable (Generated mon_154)) Pure)
+               ((Variable (Generated mon_146)) Pure))
               Ctl)))))))))
      ((User filter)
       ((((Variable (User xs)) Pure) ((Variable (User p)) Pure)
-        ((Variable (Generated mon_130)) Pure))
+        ((Variable (Generated mon_137)) Pure))
        Ctl
        (Let (Variable (User filter-tail)) Pure
         (Fix_lambda
          ((User filter-tail)
           ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (Generated mon_131)) Pure))
+            ((Variable (Generated mon_138)) Pure))
            Ctl
-           (Let (Variable (Generated mon_132)) Pure (Variable (User xs))
-            (Match (Variable (Generated mon_132)) List
+           (Let (Variable (Generated mon_139)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_139)) List
              (((Construction List_nil ())
-               (Let (Variable (Generated mon_133)) Pure
+               (Let (Variable (Generated mon_140)) Pure
                 (Variable (User reverse))
-                (Let (Variable (Generated mon_134)) Pure (Variable (User acc))
-                 (Application (Variable (Generated mon_133))
-                  (((Variable (Generated mon_134)) Pure)
-                   ((Variable (Generated mon_131)) Pure))
+                (Let (Variable (Generated mon_141)) Pure (Variable (User acc))
+                 (Application (Variable (Generated mon_140))
+                  (((Variable (Generated mon_141)) Pure)
+                   ((Variable (Generated mon_138)) Pure))
                   Ctl))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User ys))))
                (Match_ctl
                 (subject
-                 (Let (Variable (Generated mon_136)) Pure (Variable (User p))
-                  (Let (Variable (Generated mon_137)) Pure (Variable (User y))
-                   (Application (Variable (Generated mon_136))
-                    (((Variable (Generated mon_137)) Pure)
-                     ((Variable (Generated mon_131)) Pure))
+                 (Let (Variable (Generated mon_143)) Pure (Variable (User p))
+                  (Let (Variable (Generated mon_144)) Pure (Variable (User y))
+                   (Application (Variable (Generated mon_143))
+                    (((Variable (Generated mon_144)) Pure)
+                     ((Variable (Generated mon_138)) Pure))
                     Ctl))))
                 (pure_branch
-                 ((Variable (Generated mon_138))
-                  (Let (Variable (Generated mon_139)) Pure
-                   (Variable (Generated mon_131))
-                   (If_then_else (Variable (Generated mon_138))
-                    (Let (Variable (Generated mon_140)) Pure
+                 ((Variable (Generated mon_145))
+                  (Let (Variable (Generated mon_146)) Pure
+                   (Variable (Generated mon_138))
+                   (If_then_else (Variable (Generated mon_145))
+                    (Let (Variable (Generated mon_147)) Pure
                      (Variable (User filter-tail))
-                     (Let (Variable (Generated mon_141)) Pure
+                     (Let (Variable (Generated mon_148)) Pure
                       (Variable (User ys))
-                      (Let (Variable (Generated mon_144)) Pure
-                       (Let (Variable (Generated mon_142)) Pure
+                      (Let (Variable (Generated mon_151)) Pure
+                       (Let (Variable (Generated mon_149)) Pure
                         (Variable (User y))
-                        (Let (Variable (Generated mon_143)) Pure
+                        (Let (Variable (Generated mon_150)) Pure
                          (Variable (User acc))
                          (Construction List_cons
-                          ((Variable (Generated mon_142))
-                           (Variable (Generated mon_143))))))
-                       (Application (Variable (Generated mon_140))
-                        (((Variable (Generated mon_141)) Pure)
-                         ((Variable (Generated mon_144)) Pure)
-                         ((Variable (Generated mon_139)) Pure))
+                          ((Variable (Generated mon_149))
+                           (Variable (Generated mon_150))))))
+                       (Application (Variable (Generated mon_147))
+                        (((Variable (Generated mon_148)) Pure)
+                         ((Variable (Generated mon_151)) Pure)
+                         ((Variable (Generated mon_146)) Pure))
                         Ctl))))
-                    (Let (Variable (Generated mon_145)) Pure
+                    (Let (Variable (Generated mon_152)) Pure
                      (Variable (User filter-tail))
-                     (Let (Variable (Generated mon_146)) Pure
+                     (Let (Variable (Generated mon_153)) Pure
                       (Variable (User ys))
-                      (Let (Variable (Generated mon_147)) Pure
+                      (Let (Variable (Generated mon_154)) Pure
                        (Variable (User acc))
-                       (Application (Variable (Generated mon_145))
-                        (((Variable (Generated mon_146)) Pure)
-                         ((Variable (Generated mon_147)) Pure)
-                         ((Variable (Generated mon_139)) Pure))
+                       (Application (Variable (Generated mon_152))
+                        (((Variable (Generated mon_153)) Pure)
+                         ((Variable (Generated mon_154)) Pure)
+                         ((Variable (Generated mon_146)) Pure))
                         Ctl))))))))
                 (yield_branch
                  ((Generated opt_31) (Generated opt_32) (Generated opt_33)
@@ -2098,112 +2478,112 @@ Then show with bind-inlining and other rewriting applied
                           Pure)
                          Pure))
                        Ctl)))))))))))))))
-        (Let (Variable (Generated mon_149)) Pure (Variable (User filter-tail))
-         (Let (Variable (Generated mon_150)) Pure (Variable (User xs))
-          (Let (Variable (Generated mon_151)) Pure (Construction List_nil ())
-           (Application (Variable (Generated mon_149))
-            (((Variable (Generated mon_150)) Pure)
-             ((Variable (Generated mon_151)) Pure)
-             ((Variable (Generated mon_130)) Pure))
+        (Let (Variable (Generated mon_156)) Pure (Variable (User filter-tail))
+         (Let (Variable (Generated mon_157)) Pure (Variable (User xs))
+          (Let (Variable (Generated mon_158)) Pure (Construction List_nil ())
+           (Application (Variable (Generated mon_156))
+            (((Variable (Generated mon_157)) Pure)
+             ((Variable (Generated mon_158)) Pure)
+             ((Variable (Generated mon_137)) Pure))
             Ctl)))))))
      ((Generated opt_36)
       ((((Variable (User acc)) Pure) ((Variable (User filter-map-tail)) Pure)
         ((Variable (User ys)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_160)) Pure)
-          ((Variable (Generated mon_161)) Pure))
+        ((((Variable (Generated mon_167)) Pure)
+          ((Variable (Generated mon_168)) Pure))
          Ctl
-         (Match (Variable (Generated mon_160)) Option
+         (Match (Variable (Generated mon_167)) Option
           (((Construction Option_none ())
-            (Let (Variable (Generated mon_162)) Pure
+            (Let (Variable (Generated mon_169)) Pure
              (Variable (User filter-map-tail))
-             (Let (Variable (Generated mon_163)) Pure (Variable (User ys))
-              (Let (Variable (Generated mon_164)) Pure (Variable (User acc))
-               (Application (Variable (Generated mon_162))
-                (((Variable (Generated mon_163)) Pure)
-                 ((Variable (Generated mon_164)) Pure)
-                 ((Variable (Generated mon_161)) Pure))
+             (Let (Variable (Generated mon_170)) Pure (Variable (User ys))
+              (Let (Variable (Generated mon_171)) Pure (Variable (User acc))
+               (Application (Variable (Generated mon_169))
+                (((Variable (Generated mon_170)) Pure)
+                 ((Variable (Generated mon_171)) Pure)
+                 ((Variable (Generated mon_168)) Pure))
                 Ctl)))))
            ((Construction Option_some ((Variable (User z))))
-            (Let (Variable (Generated mon_166)) Pure
+            (Let (Variable (Generated mon_172)) Pure
              (Variable (User filter-map-tail))
-             (Let (Variable (Generated mon_167)) Pure (Variable (User ys))
-              (Let (Variable (Generated mon_170)) Pure
-               (Let (Variable (Generated mon_168)) Pure (Variable (User z))
-                (Let (Variable (Generated mon_169)) Pure (Variable (User acc))
+             (Let (Variable (Generated mon_173)) Pure (Variable (User ys))
+              (Let (Variable (Generated mon_176)) Pure
+               (Let (Variable (Generated mon_174)) Pure (Variable (User z))
+                (Let (Variable (Generated mon_175)) Pure (Variable (User acc))
                  (Construction List_cons
-                  ((Variable (Generated mon_168))
-                   (Variable (Generated mon_169))))))
-               (Application (Variable (Generated mon_166))
-                (((Variable (Generated mon_167)) Pure)
-                 ((Variable (Generated mon_170)) Pure)
-                 ((Variable (Generated mon_161)) Pure))
+                  ((Variable (Generated mon_174))
+                   (Variable (Generated mon_175))))))
+               (Application (Variable (Generated mon_172))
+                (((Variable (Generated mon_173)) Pure)
+                 ((Variable (Generated mon_176)) Pure)
+                 ((Variable (Generated mon_168)) Pure))
                 Ctl)))))))))))
      ((User filter-map)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_152)) Pure))
+        ((Variable (Generated mon_159)) Pure))
        Ctl
        (Let (Variable (User filter-map-tail)) Pure
         (Fix_lambda
          ((User filter-map-tail)
           ((((Variable (User xs)) Pure) ((Variable (User acc)) Pure)
-            ((Variable (Generated mon_153)) Pure))
+            ((Variable (Generated mon_160)) Pure))
            Ctl
-           (Let (Variable (Generated mon_154)) Pure (Variable (User xs))
-            (Match (Variable (Generated mon_154)) List
+           (Let (Variable (Generated mon_161)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_161)) List
              (((Construction List_nil ())
-               (Let (Variable (Generated mon_155)) Pure
+               (Let (Variable (Generated mon_162)) Pure
                 (Variable (User reverse))
-                (Let (Variable (Generated mon_156)) Pure (Variable (User acc))
-                 (Application (Variable (Generated mon_155))
-                  (((Variable (Generated mon_156)) Pure)
-                   ((Variable (Generated mon_153)) Pure))
+                (Let (Variable (Generated mon_163)) Pure (Variable (User acc))
+                 (Application (Variable (Generated mon_162))
+                  (((Variable (Generated mon_163)) Pure)
+                   ((Variable (Generated mon_160)) Pure))
                   Ctl))))
               ((Construction List_cons
                 ((Variable (User y)) (Variable (User ys))))
                (Match_ctl
                 (subject
-                 (Let (Variable (Generated mon_158)) Pure (Variable (User f))
-                  (Let (Variable (Generated mon_159)) Pure (Variable (User y))
-                   (Application (Variable (Generated mon_158))
-                    (((Variable (Generated mon_159)) Pure)
-                     ((Variable (Generated mon_153)) Pure))
+                 (Let (Variable (Generated mon_165)) Pure (Variable (User f))
+                  (Let (Variable (Generated mon_166)) Pure (Variable (User y))
+                   (Application (Variable (Generated mon_165))
+                    (((Variable (Generated mon_166)) Pure)
+                     ((Variable (Generated mon_160)) Pure))
                     Ctl))))
                 (pure_branch
-                 ((Variable (Generated mon_160))
-                  (Let (Variable (Generated mon_161)) Pure
-                   (Variable (Generated mon_153))
-                   (Match (Variable (Generated mon_160)) Option
+                 ((Variable (Generated mon_167))
+                  (Let (Variable (Generated mon_168)) Pure
+                   (Variable (Generated mon_160))
+                   (Match (Variable (Generated mon_167)) Option
                     (((Construction Option_none ())
-                      (Let (Variable (Generated mon_162)) Pure
+                      (Let (Variable (Generated mon_169)) Pure
                        (Variable (User filter-map-tail))
-                       (Let (Variable (Generated mon_163)) Pure
+                       (Let (Variable (Generated mon_170)) Pure
                         (Variable (User ys))
-                        (Let (Variable (Generated mon_164)) Pure
+                        (Let (Variable (Generated mon_171)) Pure
                          (Variable (User acc))
-                         (Application (Variable (Generated mon_162))
-                          (((Variable (Generated mon_163)) Pure)
-                           ((Variable (Generated mon_164)) Pure)
-                           ((Variable (Generated mon_161)) Pure))
+                         (Application (Variable (Generated mon_169))
+                          (((Variable (Generated mon_170)) Pure)
+                           ((Variable (Generated mon_171)) Pure)
+                           ((Variable (Generated mon_168)) Pure))
                           Ctl)))))
                      ((Construction Option_some ((Variable (User z))))
-                      (Let (Variable (Generated mon_166)) Pure
+                      (Let (Variable (Generated mon_172)) Pure
                        (Variable (User filter-map-tail))
-                       (Let (Variable (Generated mon_167)) Pure
+                       (Let (Variable (Generated mon_173)) Pure
                         (Variable (User ys))
-                        (Let (Variable (Generated mon_170)) Pure
-                         (Let (Variable (Generated mon_168)) Pure
+                        (Let (Variable (Generated mon_176)) Pure
+                         (Let (Variable (Generated mon_174)) Pure
                           (Variable (User z))
-                          (Let (Variable (Generated mon_169)) Pure
+                          (Let (Variable (Generated mon_175)) Pure
                            (Variable (User acc))
                            (Construction List_cons
-                            ((Variable (Generated mon_168))
-                             (Variable (Generated mon_169))))))
-                         (Application (Variable (Generated mon_166))
-                          (((Variable (Generated mon_167)) Pure)
-                           ((Variable (Generated mon_170)) Pure)
-                           ((Variable (Generated mon_161)) Pure))
+                            ((Variable (Generated mon_174))
+                             (Variable (Generated mon_175))))))
+                         (Application (Variable (Generated mon_172))
+                          (((Variable (Generated mon_173)) Pure)
+                           ((Variable (Generated mon_176)) Pure)
+                           ((Variable (Generated mon_168)) Pure))
                           Ctl))))))))))
                 (yield_branch
                  ((Generated opt_37) (Generated opt_38) (Generated opt_39)
@@ -2228,96 +2608,96 @@ Then show with bind-inlining and other rewriting applied
                           Pure)
                          Pure))
                        Ctl)))))))))))))))
-        (Let (Variable (Generated mon_171)) Pure
+        (Let (Variable (Generated mon_178)) Pure
          (Variable (User filter-map-tail))
-         (Let (Variable (Generated mon_172)) Pure (Variable (User xs))
-          (Let (Variable (Generated mon_173)) Pure (Construction List_nil ())
-           (Application (Variable (Generated mon_171))
-            (((Variable (Generated mon_172)) Pure)
-             ((Variable (Generated mon_173)) Pure)
-             ((Variable (Generated mon_152)) Pure))
+         (Let (Variable (Generated mon_179)) Pure (Variable (User xs))
+          (Let (Variable (Generated mon_180)) Pure (Construction List_nil ())
+           (Application (Variable (Generated mon_178))
+            (((Variable (Generated mon_179)) Pure)
+             ((Variable (Generated mon_180)) Pure)
+             ((Variable (Generated mon_159)) Pure))
             Ctl)))))))
      ((Generated opt_42)
-      ((((Variable (Generated mon_176)) Pure)
-        ((Variable (Generated mon_179)) Pure))
+      ((((Variable (Generated mon_183)) Pure)
+        ((Variable (Generated mon_186)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_184)) Pure)
-          ((Variable (Generated mon_185)) Pure))
+        ((((Variable (Generated mon_191)) Pure)
+          ((Variable (Generated mon_192)) Pure))
          Ctl
-         (Application (Variable (Generated mon_176))
-          (((Variable (Generated mon_179)) Pure)
-           ((Variable (Generated mon_184)) Pure)
-           ((Variable (Generated mon_185)) Pure))
+         (Application (Variable (Generated mon_183))
+          (((Variable (Generated mon_186)) Pure)
+           ((Variable (Generated mon_191)) Pure)
+           ((Variable (Generated mon_192)) Pure))
           Ctl)))))
      ((Generated opt_48)
       ((((Variable (User f)) Pure) ((Variable (User flat-map)) Pure)
-        ((Variable (User ys)) Pure) ((Variable (Generated mon_176)) Pure))
+        ((Variable (User ys)) Pure) ((Variable (Generated mon_183)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_179)) Pure)
-          ((Variable (Generated mon_180)) Pure))
+        ((((Variable (Generated mon_186)) Pure)
+          ((Variable (Generated mon_187)) Pure))
          Ctl
          (Application (Variable (Language bind))
-          (((Let (Variable (Generated mon_181)) Pure (Variable (User flat-map))
-             (Let (Variable (Generated mon_182)) Pure (Variable (User ys))
-              (Let (Variable (Generated mon_183)) Pure (Variable (User f))
-               (Application (Variable (Generated mon_181))
-                (((Variable (Generated mon_182)) Pure)
-                 ((Variable (Generated mon_183)) Pure)
-                 ((Variable (Generated mon_180)) Pure))
+          (((Let (Variable (Generated mon_188)) Pure (Variable (User flat-map))
+             (Let (Variable (Generated mon_189)) Pure (Variable (User ys))
+              (Let (Variable (Generated mon_190)) Pure (Variable (User f))
+               (Application (Variable (Generated mon_188))
+                (((Variable (Generated mon_189)) Pure)
+                 ((Variable (Generated mon_190)) Pure)
+                 ((Variable (Generated mon_187)) Pure))
                 Ctl))))
             Ctl)
-           ((Variable (Generated mon_180)) Pure)
+           ((Variable (Generated mon_187)) Pure)
            ((Application (Variable (Generated opt_42))
-             (((Variable (Generated mon_176)) Pure)
-              ((Variable (Generated mon_179)) Pure))
+             (((Variable (Generated mon_183)) Pure)
+              ((Variable (Generated mon_186)) Pure))
              Pure)
             Pure))
           Ctl)))))
      ((User flat-map)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_174)) Pure))
+        ((Variable (Generated mon_181)) Pure))
        Ctl
-       (Let (Variable (Generated mon_175)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_175)) List
+       (Let (Variable (Generated mon_182)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_182)) List
          (((Construction List_nil ())
            (Construct_pure (Construction List_nil ())))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
-           (Let (Variable (Generated mon_176)) Pure (Variable (User concat))
+           (Let (Variable (Generated mon_183)) Pure (Variable (User concat))
             (Match_ctl
              (subject
-              (Let (Variable (Generated mon_177)) Pure (Variable (User f))
-               (Let (Variable (Generated mon_178)) Pure (Variable (User y))
-                (Application (Variable (Generated mon_177))
-                 (((Variable (Generated mon_178)) Pure)
-                  ((Variable (Generated mon_174)) Pure))
+              (Let (Variable (Generated mon_184)) Pure (Variable (User f))
+               (Let (Variable (Generated mon_185)) Pure (Variable (User y))
+                (Application (Variable (Generated mon_184))
+                 (((Variable (Generated mon_185)) Pure)
+                  ((Variable (Generated mon_181)) Pure))
                  Ctl))))
              (pure_branch
-              ((Variable (Generated mon_179))
-               (Let (Variable (Generated mon_180)) Pure
-                (Variable (Generated mon_174))
+              ((Variable (Generated mon_186))
+               (Let (Variable (Generated mon_187)) Pure
+                (Variable (Generated mon_181))
                 (Match_ctl
                  (subject
-                  (Let (Variable (Generated mon_181)) Pure
+                  (Let (Variable (Generated mon_188)) Pure
                    (Variable (User flat-map))
-                   (Let (Variable (Generated mon_182)) Pure
+                   (Let (Variable (Generated mon_189)) Pure
                     (Variable (User ys))
-                    (Let (Variable (Generated mon_183)) Pure
+                    (Let (Variable (Generated mon_190)) Pure
                      (Variable (User f))
-                     (Application (Variable (Generated mon_181))
-                      (((Variable (Generated mon_182)) Pure)
-                       ((Variable (Generated mon_183)) Pure)
-                       ((Variable (Generated mon_180)) Pure))
+                     (Application (Variable (Generated mon_188))
+                      (((Variable (Generated mon_189)) Pure)
+                       ((Variable (Generated mon_190)) Pure)
+                       ((Variable (Generated mon_187)) Pure))
                       Ctl)))))
                  (pure_branch
-                  ((Variable (Generated mon_184))
-                   (Let (Variable (Generated mon_185)) Pure
-                    (Variable (Generated mon_180))
-                    (Application (Variable (Generated mon_176))
-                     (((Variable (Generated mon_179)) Pure)
-                      ((Variable (Generated mon_184)) Pure)
-                      ((Variable (Generated mon_185)) Pure))
+                  ((Variable (Generated mon_191))
+                   (Let (Variable (Generated mon_192)) Pure
+                    (Variable (Generated mon_187))
+                    (Application (Variable (Generated mon_183))
+                     (((Variable (Generated mon_186)) Pure)
+                      ((Variable (Generated mon_191)) Pure)
+                      ((Variable (Generated mon_192)) Pure))
                      Ctl))))
                  (yield_branch
                   ((Generated opt_43) (Generated opt_44) (Generated opt_45)
@@ -2336,8 +2716,8 @@ Then show with bind-inlining and other rewriting applied
                           Ctl)
                          ((Variable (Generated opt_47)) Pure)
                          ((Application (Variable (Generated opt_42))
-                           (((Variable (Generated mon_176)) Pure)
-                            ((Variable (Generated mon_179)) Pure))
+                           (((Variable (Generated mon_183)) Pure)
+                            ((Variable (Generated mon_186)) Pure))
                            Pure)
                           Pure))
                         Ctl)))))))))))
@@ -2361,55 +2741,55 @@ Then show with bind-inlining and other rewriting applied
                        (((Variable (User f)) Pure)
                         ((Variable (User flat-map)) Pure)
                         ((Variable (User ys)) Pure)
-                        ((Variable (Generated mon_176)) Pure))
+                        ((Variable (Generated mon_183)) Pure))
                        Pure)
                       Pure))
                     Ctl)))))))))))))))
      ((Generated opt_54)
-      ((((Variable (User f)) Pure) ((Variable (Generated mon_189)) Pure)
-        ((Variable (Generated mon_190)) Pure))
+      ((((Variable (User f)) Pure) ((Variable (Generated mon_196)) Pure)
+        ((Variable (Generated mon_197)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_194)) Pure)
-          ((Variable (Generated mon_195)) Pure))
+        ((((Variable (Generated mon_201)) Pure)
+          ((Variable (Generated mon_202)) Pure))
          Ctl
-         (Let (Variable (Generated mon_196)) Pure (Variable (User f))
-          (Application (Variable (Generated mon_189))
-           (((Variable (Generated mon_190)) Pure)
-            ((Variable (Generated mon_194)) Pure)
-            ((Variable (Generated mon_196)) Pure)
-            ((Variable (Generated mon_195)) Pure))
+         (Let (Variable (Generated mon_203)) Pure (Variable (User f))
+          (Application (Variable (Generated mon_196))
+           (((Variable (Generated mon_197)) Pure)
+            ((Variable (Generated mon_201)) Pure)
+            ((Variable (Generated mon_203)) Pure)
+            ((Variable (Generated mon_202)) Pure))
            Ctl))))))
      ((User fold)
       ((((Variable (User xs)) Pure) ((Variable (User init)) Pure)
-        ((Variable (User f)) Pure) ((Variable (Generated mon_187)) Pure))
+        ((Variable (User f)) Pure) ((Variable (Generated mon_194)) Pure))
        Ctl
-       (Let (Variable (Generated mon_188)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_188)) List
+       (Let (Variable (Generated mon_195)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_195)) List
          (((Construction List_nil ()) (Construct_pure (Variable (User init))))
           ((Construction List_cons ((Variable (User x)) (Variable (User ys))))
-           (Let (Variable (Generated mon_189)) Pure (Variable (User fold))
-            (Let (Variable (Generated mon_190)) Pure (Variable (User ys))
+           (Let (Variable (Generated mon_196)) Pure (Variable (User fold))
+            (Let (Variable (Generated mon_197)) Pure (Variable (User ys))
              (Match_ctl
               (subject
-               (Let (Variable (Generated mon_191)) Pure (Variable (User f))
-                (Let (Variable (Generated mon_192)) Pure (Variable (User init))
-                 (Let (Variable (Generated mon_193)) Pure (Variable (User x))
-                  (Application (Variable (Generated mon_191))
-                   (((Variable (Generated mon_192)) Pure)
-                    ((Variable (Generated mon_193)) Pure)
-                    ((Variable (Generated mon_187)) Pure))
+               (Let (Variable (Generated mon_198)) Pure (Variable (User f))
+                (Let (Variable (Generated mon_199)) Pure (Variable (User init))
+                 (Let (Variable (Generated mon_200)) Pure (Variable (User x))
+                  (Application (Variable (Generated mon_198))
+                   (((Variable (Generated mon_199)) Pure)
+                    ((Variable (Generated mon_200)) Pure)
+                    ((Variable (Generated mon_194)) Pure))
                    Ctl)))))
               (pure_branch
-               ((Variable (Generated mon_194))
-                (Let (Variable (Generated mon_195)) Pure
-                 (Variable (Generated mon_187))
-                 (Let (Variable (Generated mon_196)) Pure (Variable (User f))
-                  (Application (Variable (Generated mon_189))
-                   (((Variable (Generated mon_190)) Pure)
-                    ((Variable (Generated mon_194)) Pure)
-                    ((Variable (Generated mon_196)) Pure)
-                    ((Variable (Generated mon_195)) Pure))
+               ((Variable (Generated mon_201))
+                (Let (Variable (Generated mon_202)) Pure
+                 (Variable (Generated mon_194))
+                 (Let (Variable (Generated mon_203)) Pure (Variable (User f))
+                  (Application (Variable (Generated mon_196))
+                   (((Variable (Generated mon_197)) Pure)
+                    ((Variable (Generated mon_201)) Pure)
+                    ((Variable (Generated mon_203)) Pure)
+                    ((Variable (Generated mon_202)) Pure))
                    Ctl)))))
               (yield_branch
                ((Generated opt_55) (Generated opt_56) (Generated opt_57)
@@ -2429,124 +2809,124 @@ Then show with bind-inlining and other rewriting applied
                       ((Variable (Generated opt_59)) Pure)
                       ((Application (Variable (Generated opt_54))
                         (((Variable (User f)) Pure)
-                         ((Variable (Generated mon_189)) Pure)
-                         ((Variable (Generated mon_190)) Pure))
+                         ((Variable (Generated mon_196)) Pure)
+                         ((Variable (Generated mon_197)) Pure))
                         Pure)
                        Pure))
                      Ctl))))))))))))))))
      ((User reduce)
       ((((Variable (User xs)) Pure) ((Variable (User combine)) Pure)
-        ((Variable (Generated mon_197)) Pure))
+        ((Variable (Generated mon_204)) Pure))
        Ctl
-       (Let (Variable (Generated mon_198)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_198)) List
+       (Let (Variable (Generated mon_205)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_205)) List
          (((Construction List_nil ())
            (Construct_pure (Construction Option_none ())))
           ((Construction List_cons ((Variable (User x)) (Variable (User ys))))
-           (Let (Variable (Generated mon_199)) Pure (Variable (User fold))
-            (Let (Variable (Generated mon_200)) Pure (Variable (User ys))
-             (Let (Variable (Generated mon_201)) Pure (Variable (User x))
-              (Let (Variable (Generated mon_202)) Pure
+           (Let (Variable (Generated mon_206)) Pure (Variable (User fold))
+            (Let (Variable (Generated mon_207)) Pure (Variable (User ys))
+             (Let (Variable (Generated mon_208)) Pure (Variable (User x))
+              (Let (Variable (Generated mon_209)) Pure
                (Variable (User combine))
-               (Application (Variable (Generated mon_199))
-                (((Variable (Generated mon_200)) Pure)
-                 ((Variable (Generated mon_201)) Pure)
-                 ((Variable (Generated mon_202)) Pure)
-                 ((Variable (Generated mon_197)) Pure))
+               (Application (Variable (Generated mon_206))
+                (((Variable (Generated mon_207)) Pure)
+                 ((Variable (Generated mon_208)) Pure)
+                 ((Variable (Generated mon_209)) Pure)
+                 ((Variable (Generated mon_204)) Pure))
                 Ctl)))))))))))
      ((User fold-right)
       ((((Variable (User xs)) Pure) ((Variable (User init)) Pure)
-        ((Variable (User f)) Pure) ((Variable (Generated mon_203)) Pure))
+        ((Variable (User f)) Pure) ((Variable (Generated mon_210)) Pure))
        Ctl
-       (Let (Variable (Generated mon_204)) Pure (Variable (User fold))
-        (Let (Variable (Generated mon_208)) Pure
-         (Let (Variable (Generated mon_205)) Pure (Variable (User reverse))
-          (Let (Variable (Generated mon_206)) Pure (Variable (User xs))
+       (Let (Variable (Generated mon_211)) Pure (Variable (User fold))
+        (Let (Variable (Generated mon_215)) Pure
+         (Let (Variable (Generated mon_212)) Pure (Variable (User reverse))
+          (Let (Variable (Generated mon_213)) Pure (Variable (User xs))
            (Match_ctl_pure
             (subject
-             (Application (Variable (Generated mon_205))
-              (((Variable (Generated mon_206)) Pure)
-               ((Variable (Generated mon_203)) Pure))
+             (Application (Variable (Generated mon_212))
+              (((Variable (Generated mon_213)) Pure)
+               ((Variable (Generated mon_210)) Pure))
               Ctl))
             (pure_branch
-             ((Variable (Generated mon_207)) (Variable (Generated mon_207)))))))
-         (Let (Variable (Generated mon_209)) Pure (Variable (User init))
-          (Let (Variable (Generated mon_214)) Pure
+             ((Variable (Generated mon_214)) (Variable (Generated mon_214)))))))
+         (Let (Variable (Generated mon_216)) Pure (Variable (User init))
+          (Let (Variable (Generated mon_221)) Pure
            (Lambda
             ((((Variable (User a)) Pure) ((Variable (User b)) Pure)
-              ((Variable (Generated mon_210)) Pure))
+              ((Variable (Generated mon_217)) Pure))
              Ctl
-             (Let (Variable (Generated mon_211)) Pure (Variable (User f))
-              (Let (Variable (Generated mon_212)) Pure (Variable (User b))
-               (Let (Variable (Generated mon_213)) Pure (Variable (User a))
-                (Application (Variable (Generated mon_211))
-                 (((Variable (Generated mon_212)) Pure)
-                  ((Variable (Generated mon_213)) Pure)
-                  ((Variable (Generated mon_210)) Pure))
+             (Let (Variable (Generated mon_218)) Pure (Variable (User f))
+              (Let (Variable (Generated mon_219)) Pure (Variable (User b))
+               (Let (Variable (Generated mon_220)) Pure (Variable (User a))
+                (Application (Variable (Generated mon_218))
+                 (((Variable (Generated mon_219)) Pure)
+                  ((Variable (Generated mon_220)) Pure)
+                  ((Variable (Generated mon_217)) Pure))
                  Ctl))))))
-           (Application (Variable (Generated mon_204))
-            (((Variable (Generated mon_208)) Pure)
-             ((Variable (Generated mon_209)) Pure)
-             ((Variable (Generated mon_214)) Pure)
-             ((Variable (Generated mon_203)) Pure))
+           (Application (Variable (Generated mon_211))
+            (((Variable (Generated mon_215)) Pure)
+             ((Variable (Generated mon_216)) Pure)
+             ((Variable (Generated mon_221)) Pure)
+             ((Variable (Generated mon_210)) Pure))
             Ctl)))))))
      ((User concat-all)
-      ((((Variable (User lists)) Pure) ((Variable (Generated mon_215)) Pure))
+      ((((Variable (User lists)) Pure) ((Variable (Generated mon_222)) Pure))
        Ctl
-       (Let (Variable (Generated mon_216)) Pure (Variable (User fold-right))
-        (Let (Variable (Generated mon_217)) Pure (Variable (User lists))
-         (Let (Variable (Generated mon_218)) Pure (Construction List_nil ())
-          (Let (Variable (Generated mon_219)) Pure (Variable (User concat))
-           (Application (Variable (Generated mon_216))
-            (((Variable (Generated mon_217)) Pure)
-             ((Variable (Generated mon_218)) Pure)
-             ((Variable (Generated mon_219)) Pure)
-             ((Variable (Generated mon_215)) Pure))
+       (Let (Variable (Generated mon_223)) Pure (Variable (User fold-right))
+        (Let (Variable (Generated mon_224)) Pure (Variable (User lists))
+         (Let (Variable (Generated mon_225)) Pure (Construction List_nil ())
+          (Let (Variable (Generated mon_226)) Pure (Variable (User concat))
+           (Application (Variable (Generated mon_223))
+            (((Variable (Generated mon_224)) Pure)
+             ((Variable (Generated mon_225)) Pure)
+             ((Variable (Generated mon_226)) Pure)
+             ((Variable (Generated mon_222)) Pure))
             Ctl)))))))
      ((Generated opt_60)
       ((((Variable (User f)) Pure) ((Variable (User for-each)) Pure)
         ((Variable (User ys)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_225)) Pure)
-          ((Variable (Generated mon_226)) Pure))
+        ((((Variable (Generated mon_232)) Pure)
+          ((Variable (Generated mon_233)) Pure))
          Ctl
-         (Let (Variable (Generated mon_227)) Pure (Variable (User for-each))
-          (Let (Variable (Generated mon_228)) Pure (Variable (User ys))
-           (Let (Variable (Generated mon_229)) Pure (Variable (User f))
-            (Application (Variable (Generated mon_227))
-             (((Variable (Generated mon_228)) Pure)
-              ((Variable (Generated mon_229)) Pure)
-              ((Variable (Generated mon_226)) Pure))
+         (Let (Variable (Generated mon_234)) Pure (Variable (User for-each))
+          (Let (Variable (Generated mon_235)) Pure (Variable (User ys))
+           (Let (Variable (Generated mon_236)) Pure (Variable (User f))
+            (Application (Variable (Generated mon_234))
+             (((Variable (Generated mon_235)) Pure)
+              ((Variable (Generated mon_236)) Pure)
+              ((Variable (Generated mon_233)) Pure))
              Ctl))))))))
      ((User for-each)
       ((((Variable (User xs)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_221)) Pure))
+        ((Variable (Generated mon_228)) Pure))
        Ctl
-       (Let (Variable (Generated mon_222)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_222)) List
+       (Let (Variable (Generated mon_229)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_229)) List
          (((Construction List_nil ()) (Construct_pure (Tuple_construction ())))
           ((Construction List_cons ((Variable (User y)) (Variable (User ys))))
            (Match_ctl
             (subject
-             (Let (Variable (Generated mon_223)) Pure (Variable (User f))
-              (Let (Variable (Generated mon_224)) Pure (Variable (User y))
-               (Application (Variable (Generated mon_223))
-                (((Variable (Generated mon_224)) Pure)
-                 ((Variable (Generated mon_221)) Pure))
+             (Let (Variable (Generated mon_230)) Pure (Variable (User f))
+              (Let (Variable (Generated mon_231)) Pure (Variable (User y))
+               (Application (Variable (Generated mon_230))
+                (((Variable (Generated mon_231)) Pure)
+                 ((Variable (Generated mon_228)) Pure))
                 Ctl))))
             (pure_branch
-             ((Variable (Generated mon_225))
-              (Let (Variable (Generated mon_226)) Pure
-               (Variable (Generated mon_221))
-               (Let (Variable (Generated mon_227)) Pure
+             ((Variable (Generated mon_232))
+              (Let (Variable (Generated mon_233)) Pure
+               (Variable (Generated mon_228))
+               (Let (Variable (Generated mon_234)) Pure
                 (Variable (User for-each))
-                (Let (Variable (Generated mon_228)) Pure (Variable (User ys))
-                 (Let (Variable (Generated mon_229)) Pure (Variable (User f))
-                  (Application (Variable (Generated mon_227))
-                   (((Variable (Generated mon_228)) Pure)
-                    ((Variable (Generated mon_229)) Pure)
-                    ((Variable (Generated mon_226)) Pure))
+                (Let (Variable (Generated mon_235)) Pure (Variable (User ys))
+                 (Let (Variable (Generated mon_236)) Pure (Variable (User f))
+                  (Application (Variable (Generated mon_234))
+                   (((Variable (Generated mon_235)) Pure)
+                    ((Variable (Generated mon_236)) Pure)
+                    ((Variable (Generated mon_233)) Pure))
                    Ctl)))))))
             (yield_branch
              ((Generated opt_61) (Generated opt_62) (Generated opt_63)
@@ -2573,88 +2953,88 @@ Then show with bind-inlining and other rewriting applied
                    Ctl))))))))))))))
      ((User range)
       ((((Variable (User start)) Pure) ((Variable (User stop)) Pure)
-        ((Variable (Generated mon_230)) Pure))
+        ((Variable (Generated mon_237)) Pure))
        Ctl
-       (Let (Variable (Generated mon_233)) Pure
-        (Let (Variable (Generated mon_231)) Pure (Variable (User start))
-         (Let (Variable (Generated mon_232)) Pure (Variable (User stop))
-          (Operator (Variable (Generated mon_231)) (Int Greater_equal)
-           (Variable (Generated mon_232)))))
-        (If_then_else (Variable (Generated mon_233))
+       (Let (Variable (Generated mon_240)) Pure
+        (Let (Variable (Generated mon_238)) Pure (Variable (User start))
+         (Let (Variable (Generated mon_239)) Pure (Variable (User stop))
+          (Operator (Variable (Generated mon_238)) (Int Greater_equal)
+           (Variable (Generated mon_239)))))
+        (If_then_else (Variable (Generated mon_240))
          (Construct_pure (Construction List_nil ()))
-         (Let (Variable (Generated mon_234)) Pure (Variable (User start))
-          (Let (Variable (Generated mon_241)) Pure
-           (Let (Variable (Generated mon_235)) Pure (Variable (User range))
-            (Let (Variable (Generated mon_238)) Pure
-             (Let (Variable (Generated mon_236)) Pure (Variable (User start))
-              (Let (Variable (Generated mon_237)) Pure (Literal (Int 1))
-               (Operator (Variable (Generated mon_236)) (Int Plus)
-                (Variable (Generated mon_237)))))
-             (Let (Variable (Generated mon_239)) Pure (Variable (User stop))
+         (Let (Variable (Generated mon_241)) Pure (Variable (User start))
+          (Let (Variable (Generated mon_248)) Pure
+           (Let (Variable (Generated mon_242)) Pure (Variable (User range))
+            (Let (Variable (Generated mon_245)) Pure
+             (Let (Variable (Generated mon_243)) Pure (Variable (User start))
+              (Let (Variable (Generated mon_244)) Pure (Literal (Int 1))
+               (Operator (Variable (Generated mon_243)) (Int Plus)
+                (Variable (Generated mon_244)))))
+             (Let (Variable (Generated mon_246)) Pure (Variable (User stop))
               (Match_ctl_pure
                (subject
-                (Application (Variable (Generated mon_235))
-                 (((Variable (Generated mon_238)) Pure)
-                  ((Variable (Generated mon_239)) Pure)
-                  ((Variable (Generated mon_230)) Pure))
+                (Application (Variable (Generated mon_242))
+                 (((Variable (Generated mon_245)) Pure)
+                  ((Variable (Generated mon_246)) Pure)
+                  ((Variable (Generated mon_237)) Pure))
                  Ctl))
                (pure_branch
-                ((Variable (Generated mon_240)) (Variable (Generated mon_240))))))))
+                ((Variable (Generated mon_247)) (Variable (Generated mon_247))))))))
            (Construct_pure
             (Construction List_cons
-             ((Variable (Generated mon_234)) (Variable (Generated mon_241)))))))))))
+             ((Variable (Generated mon_241)) (Variable (Generated mon_248)))))))))))
      ((Generated opt_66)
       (() Pure
        (Lambda
-        ((((Variable (Generated mon_246)) Pure)
-          ((Variable (Generated mon_247)) Pure))
+        ((((Variable (Generated mon_253)) Pure)
+          ((Variable (Generated mon_254)) Pure))
          Ctl
-         (Let (Variable (Generated mon_249)) Pure
+         (Let (Variable (Generated mon_256)) Pure
           (Application (Variable (Language perform))
            (((Effect_label console) Pure)
             ((Lambda
-              ((((Variable (Generated mon_248)) Pure)) Pure
+              ((((Variable (Generated mon_255)) Pure)) Pure
                (Select_operation console (User println)
-                (Variable (Generated mon_248)))))
+                (Variable (Generated mon_255)))))
              Pure))
            Pure)
-          (Let (Variable (Generated mon_250)) Pure (Tuple_construction ())
-           (Application (Variable (Generated mon_249))
-            (((Variable (Generated mon_250)) Pure)
-             ((Variable (Generated mon_247)) Pure))
+          (Let (Variable (Generated mon_257)) Pure (Tuple_construction ())
+           (Application (Variable (Generated mon_256))
+            (((Variable (Generated mon_257)) Pure)
+             ((Variable (Generated mon_254)) Pure))
             Ctl)))))))
      ((User print-list)
       ((((Variable (User xs)) Pure) ((Variable (User print-element)) Pure)
-        ((Variable (Generated mon_242)) Pure))
+        ((Variable (Generated mon_249)) Pure))
        Ctl
        (Match_ctl
         (subject
-         (Let (Variable (Generated mon_243)) Pure (Variable (User for-each))
-          (Let (Variable (Generated mon_244)) Pure (Variable (User xs))
-           (Let (Variable (Generated mon_245)) Pure
+         (Let (Variable (Generated mon_250)) Pure (Variable (User for-each))
+          (Let (Variable (Generated mon_251)) Pure (Variable (User xs))
+           (Let (Variable (Generated mon_252)) Pure
             (Variable (User print-element))
-            (Application (Variable (Generated mon_243))
-             (((Variable (Generated mon_244)) Pure)
-              ((Variable (Generated mon_245)) Pure)
-              ((Variable (Generated mon_242)) Pure))
+            (Application (Variable (Generated mon_250))
+             (((Variable (Generated mon_251)) Pure)
+              ((Variable (Generated mon_252)) Pure)
+              ((Variable (Generated mon_249)) Pure))
              Ctl)))))
         (pure_branch
-         ((Variable (Generated mon_246))
-          (Let (Variable (Generated mon_247)) Pure
-           (Variable (Generated mon_242))
-           (Let (Variable (Generated mon_249)) Pure
+         ((Variable (Generated mon_253))
+          (Let (Variable (Generated mon_254)) Pure
+           (Variable (Generated mon_249))
+           (Let (Variable (Generated mon_256)) Pure
             (Application (Variable (Language perform))
              (((Effect_label console) Pure)
               ((Lambda
-                ((((Variable (Generated mon_248)) Pure)) Pure
+                ((((Variable (Generated mon_255)) Pure)) Pure
                  (Select_operation console (User println)
-                  (Variable (Generated mon_248)))))
+                  (Variable (Generated mon_255)))))
                Pure))
              Pure)
-            (Let (Variable (Generated mon_250)) Pure (Tuple_construction ())
-             (Application (Variable (Generated mon_249))
-              (((Variable (Generated mon_250)) Pure)
-               ((Variable (Generated mon_247)) Pure))
+            (Let (Variable (Generated mon_257)) Pure (Tuple_construction ())
+             (Application (Variable (Generated mon_256))
+              (((Variable (Generated mon_257)) Pure)
+               ((Variable (Generated mon_254)) Pure))
               Ctl))))))
         (yield_branch
          ((Generated opt_67) (Generated opt_68) (Generated opt_69)
@@ -2675,265 +3055,769 @@ Then show with bind-inlining and other rewriting applied
                 ((Application (Variable (Generated opt_66)) () Pure) Pure))
                Ctl))))))))))
      ((User head)
-      ((((Variable (User xs)) Pure) ((Variable (Generated mon_251)) Pure)) Ctl
-       (Let (Variable (Generated mon_252)) Pure (Variable (User xs))
-        (Match (Variable (Generated mon_252)) List
+      ((((Variable (User xs)) Pure) ((Variable (Generated mon_258)) Pure)) Ctl
+       (Let (Variable (Generated mon_259)) Pure (Variable (User xs))
+        (Match (Variable (Generated mon_259)) List
          (((Construction List_nil ())
            (Construct_pure (Construction Option_none ())))
           ((Construction List_cons ((Variable (User x)) Wildcard))
-           (Let (Variable (Generated mon_253)) Pure (Variable (User x))
+           (Let (Variable (Generated mon_260)) Pure (Variable (User x))
             (Construct_pure
-             (Construction Option_some ((Variable (Generated mon_253))))))))))))
-     ((User some-if)
-      ((((Variable (User cond)) Pure) ((Variable (User value)) Pure)
-        ((Variable (Generated mon_254)) Pure))
+             (Construction Option_some ((Variable (Generated mon_260))))))))))))
+     ((User compare-reversed)
+      ((((Variable (User compare)) Pure) ((Variable (Generated mon_261)) Pure))
        Ctl
-       (Let (Variable (Generated mon_255)) Pure (Variable (User cond))
-        (If_then_else (Variable (Generated mon_255))
-         (Let (Variable (Generated mon_256)) Pure (Variable (User value))
-          (Construct_pure
-           (Construction Option_some ((Variable (Generated mon_256))))))
-         (Construct_pure (Construction Option_none ()))))))
-     ((Generated opt_72)
+       (Construct_pure
+        (Lambda
+         ((((Variable (User a)) Pure) ((Variable (User b)) Pure)
+           ((Variable (Generated mon_262)) Pure))
+          Ctl
+          (Let (Variable (Generated mon_263)) Pure (Variable (User compare))
+           (Let (Variable (Generated mon_264)) Pure (Variable (User b))
+            (Let (Variable (Generated mon_265)) Pure (Variable (User a))
+             (Application (Variable (Generated mon_263))
+              (((Variable (Generated mon_264)) Pure)
+               ((Variable (Generated mon_265)) Pure)
+               ((Variable (Generated mon_262)) Pure))
+              Ctl)))))))))
+     ((Generated opt_73)
       (() Pure
        (Lambda
-        ((((Variable (Generated mon_261)) Pure)
-          ((Variable (Generated mon_262)) Pure))
+        ((((Variable (Generated mon_281)) Pure)
+          ((Variable (Generated mon_282)) Pure))
+         Ctl
+         (Let (Variable (Generated mon_283)) Pure (Literal (Int 0))
+          (Construct_pure
+           (Operator (Variable (Generated mon_281)) (Int Less_equal)
+            (Variable (Generated mon_283)))))))))
+     ((Generated opt_72)
+      ((((Variable (User acc)) Pure) ((Variable (User merge)) Pure)
+        ((Variable (User x)) Pure) ((Variable (User xs)) Pure)
+        ((Variable (User xx)) Pure) ((Variable (User y)) Pure)
+        ((Variable (User ys)) Pure) ((Variable (User yy)) Pure))
+       Pure
+       (Lambda
+        ((((Variable (Generated mon_284)) Pure)
+          ((Variable (Generated mon_285)) Pure))
+         Ctl
+         (If_then_else (Variable (Generated mon_284))
+          (Let (Variable (Generated mon_286)) Pure (Variable (User merge))
+           (Let (Variable (Generated mon_287)) Pure (Variable (User xx))
+            (Let (Variable (Generated mon_288)) Pure (Variable (User ys))
+             (Let (Variable (Generated mon_291)) Pure
+              (Let (Variable (Generated mon_289)) Pure (Variable (User x))
+               (Let (Variable (Generated mon_290)) Pure (Variable (User acc))
+                (Construction List_cons
+                 ((Variable (Generated mon_289))
+                  (Variable (Generated mon_290))))))
+              (Application (Variable (Generated mon_286))
+               (((Variable (Generated mon_287)) Pure)
+                ((Variable (Generated mon_288)) Pure)
+                ((Variable (Generated mon_291)) Pure)
+                ((Variable (Generated mon_285)) Pure))
+               Ctl)))))
+          (Let (Variable (Generated mon_292)) Pure (Variable (User merge))
+           (Let (Variable (Generated mon_293)) Pure (Variable (User xs))
+            (Let (Variable (Generated mon_294)) Pure (Variable (User yy))
+             (Let (Variable (Generated mon_297)) Pure
+              (Let (Variable (Generated mon_295)) Pure (Variable (User y))
+               (Let (Variable (Generated mon_296)) Pure (Variable (User acc))
+                (Construction List_cons
+                 ((Variable (Generated mon_295))
+                  (Variable (Generated mon_296))))))
+              (Application (Variable (Generated mon_292))
+               (((Variable (Generated mon_293)) Pure)
+                ((Variable (Generated mon_294)) Pure)
+                ((Variable (Generated mon_297)) Pure)
+                ((Variable (Generated mon_285)) Pure))
+               Ctl))))))))))
+     ((Generated opt_84)
+      ((((Variable (User a)) Pure) ((Variable (User merge)) Pure)) Pure
+       (Lambda
+        ((((Variable (Generated mon_332)) Pure)
+          ((Variable (Generated mon_333)) Pure))
+         Ctl
+         (Let (Variable (User b)) Pure (Variable (Generated mon_332))
+          (Let (Variable (Generated mon_334)) Pure (Variable (User merge))
+           (Let (Variable (Generated mon_335)) Pure (Variable (User a))
+            (Let (Variable (Generated mon_336)) Pure (Variable (User b))
+             (Let (Variable (Generated mon_337)) Pure
+              (Construction List_nil ())
+              (Application (Variable (Generated mon_334))
+               (((Variable (Generated mon_335)) Pure)
+                ((Variable (Generated mon_336)) Pure)
+                ((Variable (Generated mon_337)) Pure)
+                ((Variable (Generated mon_333)) Pure))
+               Ctl))))))))))
+     ((User sort)
+      ((((Variable (User xs)) Pure) ((Variable (User compare)) Pure)
+        ((Variable (Generated mon_266)) Pure))
+       Ctl
+       (Let (Variable (User merge)) Pure
+        (Fix_lambda
+         ((User merge)
+          ((((Variable (User xs)) Pure) ((Variable (User ys)) Pure)
+            ((Variable (User acc)) Pure) ((Variable (Generated mon_267)) Pure))
+           Ctl
+           (Let (Variable (Generated mon_268)) Pure (Variable (User xs))
+            (Match (Variable (Generated mon_268)) List
+             (((Construction List_nil ())
+               (Let (Variable (Generated mon_269)) Pure
+                (Variable (User concat-rev))
+                (Let (Variable (Generated mon_270)) Pure (Variable (User acc))
+                 (Let (Variable (Generated mon_271)) Pure (Variable (User ys))
+                  (Application (Variable (Generated mon_269))
+                   (((Variable (Generated mon_270)) Pure)
+                    ((Variable (Generated mon_271)) Pure)
+                    ((Variable (Generated mon_267)) Pure))
+                   Ctl)))))
+              ((Construction List_cons
+                ((Variable (User x)) (Variable (User xx))))
+               (Let (Variable (Generated mon_273)) Pure (Variable (User ys))
+                (Match (Variable (Generated mon_273)) List
+                 (((Construction List_nil ())
+                   (Let (Variable (Generated mon_274)) Pure
+                    (Variable (User concat-rev))
+                    (Let (Variable (Generated mon_275)) Pure
+                     (Variable (User acc))
+                     (Let (Variable (Generated mon_276)) Pure
+                      (Variable (User xs))
+                      (Application (Variable (Generated mon_274))
+                       (((Variable (Generated mon_275)) Pure)
+                        ((Variable (Generated mon_276)) Pure)
+                        ((Variable (Generated mon_267)) Pure))
+                       Ctl)))))
+                  ((Construction List_cons
+                    ((Variable (User y)) (Variable (User yy))))
+                   (Match_ctl
+                    (subject
+                     (Match_ctl
+                      (subject
+                       (Let (Variable (Generated mon_278)) Pure
+                        (Variable (User compare))
+                        (Let (Variable (Generated mon_279)) Pure
+                         (Variable (User x))
+                         (Let (Variable (Generated mon_280)) Pure
+                          (Variable (User y))
+                          (Application (Variable (Generated mon_278))
+                           (((Variable (Generated mon_279)) Pure)
+                            ((Variable (Generated mon_280)) Pure)
+                            ((Variable (Generated mon_267)) Pure))
+                           Ctl)))))
+                      (pure_branch
+                       ((Variable (Generated mon_281))
+                        (Let (Variable (Generated mon_282)) Pure
+                         (Variable (Generated mon_267))
+                         (Let (Variable (Generated mon_283)) Pure
+                          (Literal (Int 0))
+                          (Construct_pure
+                           (Operator (Variable (Generated mon_281))
+                            (Int Less_equal) (Variable (Generated mon_283))))))))
+                      (yield_branch
+                       ((Generated opt_74) (Generated opt_75)
+                        (Generated opt_76)
+                        (Construct_yield (marker (Variable (Generated opt_74)))
+                         (op_clause (Variable (Generated opt_75)))
+                         (resumption
+                          (Lambda
+                           ((((Variable (Generated opt_77)) Pure)
+                             ((Variable (Generated opt_78)) Pure))
+                            Ctl
+                            (Application (Variable (Language bind))
+                             (((Application (Variable (Generated opt_76))
+                                (((Variable (Generated opt_77)) Pure)
+                                 ((Variable (Generated opt_78)) Pure))
+                                Ctl)
+                               Ctl)
+                              ((Variable (Generated opt_78)) Pure)
+                              ((Application (Variable (Generated opt_73)) ()
+                                Pure)
+                               Pure))
+                             Ctl)))))))))
+                    (pure_branch
+                     ((Variable (Generated mon_284))
+                      (Let (Variable (Generated mon_285)) Pure
+                       (Variable (Generated mon_267))
+                       (If_then_else (Variable (Generated mon_284))
+                        (Let (Variable (Generated mon_286)) Pure
+                         (Variable (User merge))
+                         (Let (Variable (Generated mon_287)) Pure
+                          (Variable (User xx))
+                          (Let (Variable (Generated mon_288)) Pure
+                           (Variable (User ys))
+                           (Let (Variable (Generated mon_291)) Pure
+                            (Let (Variable (Generated mon_289)) Pure
+                             (Variable (User x))
+                             (Let (Variable (Generated mon_290)) Pure
+                              (Variable (User acc))
+                              (Construction List_cons
+                               ((Variable (Generated mon_289))
+                                (Variable (Generated mon_290))))))
+                            (Application (Variable (Generated mon_286))
+                             (((Variable (Generated mon_287)) Pure)
+                              ((Variable (Generated mon_288)) Pure)
+                              ((Variable (Generated mon_291)) Pure)
+                              ((Variable (Generated mon_285)) Pure))
+                             Ctl)))))
+                        (Let (Variable (Generated mon_292)) Pure
+                         (Variable (User merge))
+                         (Let (Variable (Generated mon_293)) Pure
+                          (Variable (User xs))
+                          (Let (Variable (Generated mon_294)) Pure
+                           (Variable (User yy))
+                           (Let (Variable (Generated mon_297)) Pure
+                            (Let (Variable (Generated mon_295)) Pure
+                             (Variable (User y))
+                             (Let (Variable (Generated mon_296)) Pure
+                              (Variable (User acc))
+                              (Construction List_cons
+                               ((Variable (Generated mon_295))
+                                (Variable (Generated mon_296))))))
+                            (Application (Variable (Generated mon_292))
+                             (((Variable (Generated mon_293)) Pure)
+                              ((Variable (Generated mon_294)) Pure)
+                              ((Variable (Generated mon_297)) Pure)
+                              ((Variable (Generated mon_285)) Pure))
+                             Ctl)))))))))
+                    (yield_branch
+                     ((Generated opt_79) (Generated opt_80) (Generated opt_81)
+                      (Construct_yield (marker (Variable (Generated opt_79)))
+                       (op_clause (Variable (Generated opt_80)))
+                       (resumption
+                        (Lambda
+                         ((((Variable (Generated opt_82)) Pure)
+                           ((Variable (Generated opt_83)) Pure))
+                          Ctl
+                          (Application (Variable (Language bind))
+                           (((Application (Variable (Generated opt_81))
+                              (((Variable (Generated opt_82)) Pure)
+                               ((Variable (Generated opt_83)) Pure))
+                              Ctl)
+                             Ctl)
+                            ((Variable (Generated opt_83)) Pure)
+                            ((Application (Variable (Generated opt_72))
+                              (((Variable (User acc)) Pure)
+                               ((Variable (User merge)) Pure)
+                               ((Variable (User x)) Pure)
+                               ((Variable (User xs)) Pure)
+                               ((Variable (User xx)) Pure)
+                               ((Variable (User y)) Pure)
+                               ((Variable (User ys)) Pure)
+                               ((Variable (User yy)) Pure))
+                              Pure)
+                             Pure))
+                           Ctl)))))))))))))))))))
+        (Let (Variable (User split)) Pure
+         (Fix_lambda
+          ((User split)
+           ((((Variable (User xs)) Pure) ((Variable (User acc1)) Pure)
+             ((Variable (User acc2)) Pure)
+             ((Variable (Generated mon_299)) Pure))
+            Ctl
+            (Let (Variable (Generated mon_300)) Pure (Variable (User xs))
+             (Match (Variable (Generated mon_300)) List
+              (((Construction List_nil ())
+                (Let (Variable (Generated mon_301)) Pure (Variable (User acc1))
+                 (Let (Variable (Generated mon_302)) Pure
+                  (Variable (User acc2))
+                  (Construct_pure
+                   (Tuple_construction
+                    ((Variable (Generated mon_301))
+                     (Variable (Generated mon_302))))))))
+               ((Construction List_cons
+                 ((Variable (User x)) (Variable (User ys))))
+                (Let (Variable (Generated mon_303)) Pure (Variable (User ys))
+                 (Match (Variable (Generated mon_303)) List
+                  (((Construction List_nil ())
+                    (Let (Variable (Generated mon_306)) Pure
+                     (Let (Variable (Generated mon_304)) Pure
+                      (Variable (User x))
+                      (Let (Variable (Generated mon_305)) Pure
+                       (Variable (User acc1))
+                       (Construction List_cons
+                        ((Variable (Generated mon_304))
+                         (Variable (Generated mon_305))))))
+                     (Let (Variable (Generated mon_307)) Pure
+                      (Variable (User acc2))
+                      (Construct_pure
+                       (Tuple_construction
+                        ((Variable (Generated mon_306))
+                         (Variable (Generated mon_307))))))))
+                   ((Construction List_cons
+                     ((Variable (User y)) (Variable (User zs))))
+                    (Let (Variable (Generated mon_308)) Pure
+                     (Variable (User split))
+                     (Let (Variable (Generated mon_309)) Pure
+                      (Variable (User zs))
+                      (Let (Variable (Generated mon_312)) Pure
+                       (Let (Variable (Generated mon_310)) Pure
+                        (Variable (User x))
+                        (Let (Variable (Generated mon_311)) Pure
+                         (Variable (User acc1))
+                         (Construction List_cons
+                          ((Variable (Generated mon_310))
+                           (Variable (Generated mon_311))))))
+                       (Let (Variable (Generated mon_315)) Pure
+                        (Let (Variable (Generated mon_313)) Pure
+                         (Variable (User y))
+                         (Let (Variable (Generated mon_314)) Pure
+                          (Variable (User acc2))
+                          (Construction List_cons
+                           ((Variable (Generated mon_313))
+                            (Variable (Generated mon_314))))))
+                        (Application (Variable (Generated mon_308))
+                         (((Variable (Generated mon_309)) Pure)
+                          ((Variable (Generated mon_312)) Pure)
+                          ((Variable (Generated mon_315)) Pure)
+                          ((Variable (Generated mon_299)) Pure))
+                         Ctl))))))))))))))))
+         (Let (Variable (User mergesort)) Pure
+          (Fix_lambda
+           ((User mergesort)
+            ((((Variable (User xs)) Pure)
+              ((Variable (Generated mon_317)) Pure))
+             Ctl
+             (Let (Variable (Generated mon_318)) Pure (Variable (User xs))
+              (Match (Variable (Generated mon_318)) List
+               (((Construction List_nil ())
+                 (Construct_pure (Variable (User xs))))
+                ((Construction List_cons (Wildcard (Variable (User xx))))
+                 (Let (Variable (Generated mon_319)) Pure (Variable (User xx))
+                  (Match (Variable (Generated mon_319)) List
+                   (((Construction List_nil ())
+                     (Construct_pure (Variable (User xs))))
+                    ((Construction List_cons (Wildcard Wildcard))
+                     (Let (Variable (Generated mon_325)) Pure
+                      (Let (Variable (Generated mon_320)) Pure
+                       (Variable (User split))
+                       (Let (Variable (Generated mon_321)) Pure
+                        (Variable (User xs))
+                        (Let (Variable (Generated mon_322)) Pure
+                         (Construction List_nil ())
+                         (Let (Variable (Generated mon_323)) Pure
+                          (Construction List_nil ())
+                          (Match_ctl_pure
+                           (subject
+                            (Application (Variable (Generated mon_320))
+                             (((Variable (Generated mon_321)) Pure)
+                              ((Variable (Generated mon_322)) Pure)
+                              ((Variable (Generated mon_323)) Pure)
+                              ((Variable (Generated mon_317)) Pure))
+                             Ctl))
+                           (pure_branch
+                            ((Variable (Generated mon_324))
+                             (Variable (Generated mon_324)))))))))
+                      (Let (Tuple ((Variable (User a)) (Variable (User b))))
+                       Pure (Variable (Generated mon_325))
+                       (Let (Variable (Generated mon_329)) Pure
+                        (Let (Variable (Generated mon_326)) Pure
+                         (Variable (User mergesort))
+                         (Let (Variable (Generated mon_327)) Pure
+                          (Variable (User a))
+                          (Match_ctl_pure
+                           (subject
+                            (Application (Variable (Generated mon_326))
+                             (((Variable (Generated mon_327)) Pure)
+                              ((Variable (Generated mon_317)) Pure))
+                             Ctl))
+                           (pure_branch
+                            ((Variable (Generated mon_328))
+                             (Variable (Generated mon_328)))))))
+                        (Let (Variable (User a)) Pure
+                         (Variable (Generated mon_329))
+                         (Match_ctl
+                          (subject
+                           (Let (Variable (Generated mon_330)) Pure
+                            (Variable (User mergesort))
+                            (Let (Variable (Generated mon_331)) Pure
+                             (Variable (User b))
+                             (Application (Variable (Generated mon_330))
+                              (((Variable (Generated mon_331)) Pure)
+                               ((Variable (Generated mon_317)) Pure))
+                              Ctl))))
+                          (pure_branch
+                           ((Variable (Generated mon_332))
+                            (Let (Variable (Generated mon_333)) Pure
+                             (Variable (Generated mon_317))
+                             (Let (Variable (User b)) Pure
+                              (Variable (Generated mon_332))
+                              (Let (Variable (Generated mon_334)) Pure
+                               (Variable (User merge))
+                               (Let (Variable (Generated mon_335)) Pure
+                                (Variable (User a))
+                                (Let (Variable (Generated mon_336)) Pure
+                                 (Variable (User b))
+                                 (Let (Variable (Generated mon_337)) Pure
+                                  (Construction List_nil ())
+                                  (Application (Variable (Generated mon_334))
+                                   (((Variable (Generated mon_335)) Pure)
+                                    ((Variable (Generated mon_336)) Pure)
+                                    ((Variable (Generated mon_337)) Pure)
+                                    ((Variable (Generated mon_333)) Pure))
+                                   Ctl)))))))))
+                          (yield_branch
+                           ((Generated opt_85) (Generated opt_86)
+                            (Generated opt_87)
+                            (Construct_yield
+                             (marker (Variable (Generated opt_85)))
+                             (op_clause (Variable (Generated opt_86)))
+                             (resumption
+                              (Lambda
+                               ((((Variable (Generated opt_88)) Pure)
+                                 ((Variable (Generated opt_89)) Pure))
+                                Ctl
+                                (Application (Variable (Language bind))
+                                 (((Application (Variable (Generated opt_87))
+                                    (((Variable (Generated opt_88)) Pure)
+                                     ((Variable (Generated opt_89)) Pure))
+                                    Ctl)
+                                   Ctl)
+                                  ((Variable (Generated opt_89)) Pure)
+                                  ((Application (Variable (Generated opt_84))
+                                    (((Variable (User a)) Pure)
+                                     ((Variable (User merge)) Pure))
+                                    Pure)
+                                   Pure))
+                                 Ctl)))))))))))))))))))))))
+          (Let (Variable (Generated mon_338)) Pure (Variable (User mergesort))
+           (Let (Variable (Generated mon_339)) Pure (Variable (User xs))
+            (Application (Variable (Generated mon_338))
+             (((Variable (Generated mon_339)) Pure)
+              ((Variable (Generated mon_266)) Pure))
+             Ctl))))))))
+     ((User some-if)
+      ((((Variable (User cond)) Pure) ((Variable (User value)) Pure)
+        ((Variable (Generated mon_340)) Pure))
+       Ctl
+       (Let (Variable (Generated mon_341)) Pure (Variable (User cond))
+        (If_then_else (Variable (Generated mon_341))
+         (Let (Variable (Generated mon_342)) Pure (Variable (User value))
+          (Construct_pure
+           (Construction Option_some ((Variable (Generated mon_342))))))
+         (Construct_pure (Construction Option_none ()))))))
+     ((Generated opt_90)
+      (() Pure
+       (Lambda
+        ((((Variable (Generated mon_347)) Pure)
+          ((Variable (Generated mon_348)) Pure))
          Ctl
          (Construct_pure
-          (Construction Option_some ((Variable (Generated mon_261)))))))))
+          (Construction Option_some ((Variable (Generated mon_347)))))))))
      ((User option-map)
       ((((Variable (User x)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_257)) Pure))
+        ((Variable (Generated mon_343)) Pure))
        Ctl
-       (Let (Variable (Generated mon_258)) Pure (Variable (User x))
-        (Match (Variable (Generated mon_258)) Option
+       (Let (Variable (Generated mon_344)) Pure (Variable (User x))
+        (Match (Variable (Generated mon_344)) Option
          (((Construction Option_none ())
            (Construct_pure (Construction Option_none ())))
           ((Construction Option_some ((Variable (User y))))
            (Match_ctl
             (subject
-             (Let (Variable (Generated mon_259)) Pure (Variable (User f))
-              (Let (Variable (Generated mon_260)) Pure (Variable (User y))
-               (Application (Variable (Generated mon_259))
-                (((Variable (Generated mon_260)) Pure)
-                 ((Variable (Generated mon_257)) Pure))
+             (Let (Variable (Generated mon_345)) Pure (Variable (User f))
+              (Let (Variable (Generated mon_346)) Pure (Variable (User y))
+               (Application (Variable (Generated mon_345))
+                (((Variable (Generated mon_346)) Pure)
+                 ((Variable (Generated mon_343)) Pure))
                 Ctl))))
             (pure_branch
-             ((Variable (Generated mon_261))
-              (Let (Variable (Generated mon_262)) Pure
-               (Variable (Generated mon_257))
+             ((Variable (Generated mon_347))
+              (Let (Variable (Generated mon_348)) Pure
+               (Variable (Generated mon_343))
                (Construct_pure
-                (Construction Option_some ((Variable (Generated mon_261))))))))
+                (Construction Option_some ((Variable (Generated mon_347))))))))
             (yield_branch
-             ((Generated opt_73) (Generated opt_74) (Generated opt_75)
-              (Construct_yield (marker (Variable (Generated opt_73)))
-               (op_clause (Variable (Generated opt_74)))
+             ((Generated opt_91) (Generated opt_92) (Generated opt_93)
+              (Construct_yield (marker (Variable (Generated opt_91)))
+               (op_clause (Variable (Generated opt_92)))
                (resumption
                 (Lambda
-                 ((((Variable (Generated opt_76)) Pure)
-                   ((Variable (Generated opt_77)) Pure))
+                 ((((Variable (Generated opt_94)) Pure)
+                   ((Variable (Generated opt_95)) Pure))
                   Ctl
                   (Application (Variable (Language bind))
-                   (((Application (Variable (Generated opt_75))
-                      (((Variable (Generated opt_76)) Pure)
-                       ((Variable (Generated opt_77)) Pure))
+                   (((Application (Variable (Generated opt_93))
+                      (((Variable (Generated opt_94)) Pure)
+                       ((Variable (Generated opt_95)) Pure))
                       Ctl)
                      Ctl)
-                    ((Variable (Generated opt_77)) Pure)
-                    ((Application (Variable (Generated opt_72)) () Pure) Pure))
+                    ((Variable (Generated opt_95)) Pure)
+                    ((Application (Variable (Generated opt_90)) () Pure) Pure))
                    Ctl))))))))))))))
      ((User option-flat-map)
       ((((Variable (User x)) Pure) ((Variable (User f)) Pure)
-        ((Variable (Generated mon_263)) Pure))
+        ((Variable (Generated mon_349)) Pure))
        Ctl
-       (Let (Variable (Generated mon_264)) Pure (Variable (User x))
-        (Match (Variable (Generated mon_264)) Option
+       (Let (Variable (Generated mon_350)) Pure (Variable (User x))
+        (Match (Variable (Generated mon_350)) Option
          (((Construction Option_none ())
            (Construct_pure (Construction Option_none ())))
           ((Construction Option_some ((Variable (User y))))
-           (Let (Variable (Generated mon_265)) Pure (Variable (User f))
-            (Let (Variable (Generated mon_266)) Pure (Variable (User y))
-             (Application (Variable (Generated mon_265))
-              (((Variable (Generated mon_266)) Pure)
-               ((Variable (Generated mon_263)) Pure))
+           (Let (Variable (Generated mon_351)) Pure (Variable (User f))
+            (Let (Variable (Generated mon_352)) Pure (Variable (User y))
+             (Application (Variable (Generated mon_351))
+              (((Variable (Generated mon_352)) Pure)
+               ((Variable (Generated mon_349)) Pure))
               Ctl)))))))))
-     ((Generated opt_78)
+     ((Generated opt_96)
       ((((Variable (User a2)) Pure) ((Variable (User b2)) Pure)
         ((Variable (User equal2)) Pure))
        Pure
        (Lambda
-        ((((Variable (Generated mon_271)) Pure)
-          ((Variable (Generated mon_272)) Pure))
+        ((((Variable (Generated mon_357)) Pure)
+          ((Variable (Generated mon_358)) Pure))
          Ctl
-         (If_then_else (Variable (Generated mon_271))
-          (Let (Variable (Generated mon_273)) Pure (Variable (User equal2))
-           (Let (Variable (Generated mon_274)) Pure (Variable (User a2))
-            (Let (Variable (Generated mon_275)) Pure (Variable (User b2))
-             (Application (Variable (Generated mon_273))
-              (((Variable (Generated mon_274)) Pure)
-               ((Variable (Generated mon_275)) Pure)
-               ((Variable (Generated mon_272)) Pure))
+         (If_then_else (Variable (Generated mon_357))
+          (Let (Variable (Generated mon_359)) Pure (Variable (User equal2))
+           (Let (Variable (Generated mon_360)) Pure (Variable (User a2))
+            (Let (Variable (Generated mon_361)) Pure (Variable (User b2))
+             (Application (Variable (Generated mon_359))
+              (((Variable (Generated mon_360)) Pure)
+               ((Variable (Generated mon_361)) Pure)
+               ((Variable (Generated mon_358)) Pure))
               Ctl))))
           (Construct_pure (Literal (Bool false))))))))
      ((User tuple2-equal)
       ((((Tuple ((Variable (User a1)) (Variable (User a2)))) Pure)
         ((Tuple ((Variable (User b1)) (Variable (User b2)))) Pure)
         ((Variable (User equal1)) Pure) ((Variable (User equal2)) Pure)
-        ((Variable (Generated mon_267)) Pure))
+        ((Variable (Generated mon_353)) Pure))
        Ctl
        (Match_ctl
         (subject
-         (Let (Variable (Generated mon_268)) Pure (Variable (User equal1))
-          (Let (Variable (Generated mon_269)) Pure (Variable (User a1))
-           (Let (Variable (Generated mon_270)) Pure (Variable (User b1))
-            (Application (Variable (Generated mon_268))
-             (((Variable (Generated mon_269)) Pure)
-              ((Variable (Generated mon_270)) Pure)
-              ((Variable (Generated mon_267)) Pure))
+         (Let (Variable (Generated mon_354)) Pure (Variable (User equal1))
+          (Let (Variable (Generated mon_355)) Pure (Variable (User a1))
+           (Let (Variable (Generated mon_356)) Pure (Variable (User b1))
+            (Application (Variable (Generated mon_354))
+             (((Variable (Generated mon_355)) Pure)
+              ((Variable (Generated mon_356)) Pure)
+              ((Variable (Generated mon_353)) Pure))
              Ctl)))))
         (pure_branch
-         ((Variable (Generated mon_271))
-          (Let (Variable (Generated mon_272)) Pure
-           (Variable (Generated mon_267))
-           (If_then_else (Variable (Generated mon_271))
-            (Let (Variable (Generated mon_273)) Pure (Variable (User equal2))
-             (Let (Variable (Generated mon_274)) Pure (Variable (User a2))
-              (Let (Variable (Generated mon_275)) Pure (Variable (User b2))
-               (Application (Variable (Generated mon_273))
-                (((Variable (Generated mon_274)) Pure)
-                 ((Variable (Generated mon_275)) Pure)
-                 ((Variable (Generated mon_272)) Pure))
+         ((Variable (Generated mon_357))
+          (Let (Variable (Generated mon_358)) Pure
+           (Variable (Generated mon_353))
+           (If_then_else (Variable (Generated mon_357))
+            (Let (Variable (Generated mon_359)) Pure (Variable (User equal2))
+             (Let (Variable (Generated mon_360)) Pure (Variable (User a2))
+              (Let (Variable (Generated mon_361)) Pure (Variable (User b2))
+               (Application (Variable (Generated mon_359))
+                (((Variable (Generated mon_360)) Pure)
+                 ((Variable (Generated mon_361)) Pure)
+                 ((Variable (Generated mon_358)) Pure))
                 Ctl))))
             (Construct_pure (Literal (Bool false)))))))
         (yield_branch
-         ((Generated opt_79) (Generated opt_80) (Generated opt_81)
-          (Construct_yield (marker (Variable (Generated opt_79)))
-           (op_clause (Variable (Generated opt_80)))
+         ((Generated opt_97) (Generated opt_98) (Generated opt_99)
+          (Construct_yield (marker (Variable (Generated opt_97)))
+           (op_clause (Variable (Generated opt_98)))
            (resumption
             (Lambda
-             ((((Variable (Generated opt_82)) Pure)
-               ((Variable (Generated opt_83)) Pure))
+             ((((Variable (Generated opt_100)) Pure)
+               ((Variable (Generated opt_101)) Pure))
               Ctl
               (Application (Variable (Language bind))
-               (((Application (Variable (Generated opt_81))
-                  (((Variable (Generated opt_82)) Pure)
-                   ((Variable (Generated opt_83)) Pure))
+               (((Application (Variable (Generated opt_99))
+                  (((Variable (Generated opt_100)) Pure)
+                   ((Variable (Generated opt_101)) Pure))
                   Ctl)
                  Ctl)
-                ((Variable (Generated opt_83)) Pure)
-                ((Application (Variable (Generated opt_78))
+                ((Variable (Generated opt_101)) Pure)
+                ((Application (Variable (Generated opt_96))
                   (((Variable (User a2)) Pure) ((Variable (User b2)) Pure)
                    ((Variable (User equal2)) Pure))
                   Pure)
                  Pure))
                Ctl))))))))))
-     ((Generated opt_105)
-      ((((Variable (Generated mon_277)) Pure)) Pure
+     ((Generated opt_102)
+      ((((Variable (User a2)) Pure) ((Variable (User b2)) Pure)
+        ((Variable (User compare2)) Pure))
+       Pure
        (Lambda
-        ((((Variable (Generated mon_280)) Pure)
-          ((Variable (Generated mon_281)) Pure))
+        ((((Variable (Generated mon_366)) Pure)
+          ((Variable (Generated mon_367)) Pure))
          Ctl
-         (Application (Variable (Generated mon_277))
-          (((Variable (Generated mon_280)) Pure)
-           ((Variable (Generated mon_281)) Pure))
+         (Let (Variable (User cmp1)) Pure (Variable (Generated mon_366))
+          (Let (Variable (Generated mon_370)) Pure
+           (Let (Variable (Generated mon_368)) Pure (Variable (User cmp1))
+            (Let (Variable (Generated mon_369)) Pure (Literal (Int 0))
+             (Operator (Variable (Generated mon_368)) (Int Equals)
+              (Variable (Generated mon_369)))))
+           (If_then_else (Variable (Generated mon_370))
+            (Let (Variable (Generated mon_371)) Pure (Variable (User compare2))
+             (Let (Variable (Generated mon_372)) Pure (Variable (User a2))
+              (Let (Variable (Generated mon_373)) Pure (Variable (User b2))
+               (Application (Variable (Generated mon_371))
+                (((Variable (Generated mon_372)) Pure)
+                 ((Variable (Generated mon_373)) Pure)
+                 ((Variable (Generated mon_367)) Pure))
+                Ctl))))
+            (Construct_pure (Variable (User cmp1))))))))))
+     ((User tuple2-compare)
+      ((((Tuple ((Variable (User a1)) (Variable (User a2)))) Pure)
+        ((Tuple ((Variable (User b1)) (Variable (User b2)))) Pure)
+        ((Variable (User compare1)) Pure) ((Variable (User compare2)) Pure)
+        ((Variable (Generated mon_362)) Pure))
+       Ctl
+       (Match_ctl
+        (subject
+         (Let (Variable (Generated mon_363)) Pure (Variable (User compare1))
+          (Let (Variable (Generated mon_364)) Pure (Variable (User a1))
+           (Let (Variable (Generated mon_365)) Pure (Variable (User b1))
+            (Application (Variable (Generated mon_363))
+             (((Variable (Generated mon_364)) Pure)
+              ((Variable (Generated mon_365)) Pure)
+              ((Variable (Generated mon_362)) Pure))
+             Ctl)))))
+        (pure_branch
+         ((Variable (Generated mon_366))
+          (Let (Variable (Generated mon_367)) Pure
+           (Variable (Generated mon_362))
+           (Let (Variable (User cmp1)) Pure (Variable (Generated mon_366))
+            (Let (Variable (Generated mon_370)) Pure
+             (Let (Variable (Generated mon_368)) Pure (Variable (User cmp1))
+              (Let (Variable (Generated mon_369)) Pure (Literal (Int 0))
+               (Operator (Variable (Generated mon_368)) (Int Equals)
+                (Variable (Generated mon_369)))))
+             (If_then_else (Variable (Generated mon_370))
+              (Let (Variable (Generated mon_371)) Pure
+               (Variable (User compare2))
+               (Let (Variable (Generated mon_372)) Pure (Variable (User a2))
+                (Let (Variable (Generated mon_373)) Pure (Variable (User b2))
+                 (Application (Variable (Generated mon_371))
+                  (((Variable (Generated mon_372)) Pure)
+                   ((Variable (Generated mon_373)) Pure)
+                   ((Variable (Generated mon_367)) Pure))
+                  Ctl))))
+              (Construct_pure (Variable (User cmp1)))))))))
+        (yield_branch
+         ((Generated opt_103) (Generated opt_104) (Generated opt_105)
+          (Construct_yield (marker (Variable (Generated opt_103)))
+           (op_clause (Variable (Generated opt_104)))
+           (resumption
+            (Lambda
+             ((((Variable (Generated opt_106)) Pure)
+               ((Variable (Generated opt_107)) Pure))
+              Ctl
+              (Application (Variable (Language bind))
+               (((Application (Variable (Generated opt_105))
+                  (((Variable (Generated opt_106)) Pure)
+                   ((Variable (Generated opt_107)) Pure))
+                  Ctl)
+                 Ctl)
+                ((Variable (Generated opt_107)) Pure)
+                ((Application (Variable (Generated opt_102))
+                  (((Variable (User a2)) Pure) ((Variable (User b2)) Pure)
+                   ((Variable (User compare2)) Pure))
+                  Pure)
+                 Pure))
+               Ctl))))))))))
+     ((Generated opt_129)
+      ((((Variable (Generated mon_375)) Pure)) Pure
+       (Lambda
+        ((((Variable (Generated mon_378)) Pure)
+          ((Variable (Generated mon_379)) Pure))
+         Ctl
+         (Application (Variable (Generated mon_375))
+          (((Variable (Generated mon_378)) Pure)
+           ((Variable (Generated mon_379)) Pure))
           Ctl)))))
-     ((Generated opt_104)
+     ((Generated opt_128)
       (() Pure
        (Lambda
-        ((((Variable (Generated mon_282)) Pure)
-          ((Variable (Generated mon_283)) Pure))
+        ((((Variable (Generated mon_380)) Pure)
+          ((Variable (Generated mon_381)) Pure))
          Ctl
-         (Let (Variable (Generated mon_284)) Pure (Literal (Int 0))
+         (Let (Variable (Generated mon_382)) Pure (Literal (Int 0))
           (Construct_pure
-           (Operator (Variable (Generated mon_282)) (Int Greater_than)
-            (Variable (Generated mon_284)))))))))
-     ((Generated opt_91)
+           (Operator (Variable (Generated mon_380)) (Int Greater_than)
+            (Variable (Generated mon_382)))))))))
+     ((Generated opt_115)
       (() Pure
        (Lambda
-        ((((Variable (Generated mon_289)) Pure)
-          ((Variable (Generated mon_290)) Pure))
+        ((((Variable (Generated mon_387)) Pure)
+          ((Variable (Generated mon_388)) Pure))
          Ctl
-         (Let (Variable (Generated mon_291)) Pure (Literal (Int 1))
-          (Application (Variable (Generated mon_289))
-           (((Variable (Generated mon_291)) Pure)
-            ((Variable (Generated mon_290)) Pure))
+         (Let (Variable (Generated mon_389)) Pure (Literal (Int 1))
+          (Application (Variable (Generated mon_387))
+           (((Variable (Generated mon_389)) Pure)
+            ((Variable (Generated mon_388)) Pure))
            Ctl))))))
-     ((Generated opt_97)
+     ((Generated opt_121)
       (() Pure
        (Lambda
-        ((((Variable (Generated mon_294)) Pure)
-          ((Variable (Generated mon_295)) Pure))
+        ((((Variable (Generated mon_392)) Pure)
+          ((Variable (Generated mon_393)) Pure))
          Ctl
-         (Let (Variable (Generated mon_296)) Pure (Literal (Int 0))
-          (Application (Variable (Generated mon_294))
-           (((Variable (Generated mon_296)) Pure)
-            ((Variable (Generated mon_295)) Pure))
+         (Let (Variable (Generated mon_394)) Pure (Literal (Int 0))
+          (Application (Variable (Generated mon_392))
+           (((Variable (Generated mon_394)) Pure)
+            ((Variable (Generated mon_393)) Pure))
            Ctl))))))
-     ((Generated opt_103)
+     ((Generated opt_127)
       ((((Variable (User h)) Pure)) Pure
        (Lambda
-        ((((Variable (Generated mon_285)) Pure)
-          ((Variable (Generated mon_286)) Pure))
+        ((((Variable (Generated mon_383)) Pure)
+          ((Variable (Generated mon_384)) Pure))
          Ctl
-         (If_then_else (Variable (Generated mon_285))
+         (If_then_else (Variable (Generated mon_383))
           (Application (Variable (Language bind))
-           (((Let (Variable (Generated mon_287)) Pure (Variable (User h))
-              (Let (Variable (Generated mon_288)) Pure (Literal (Int 0))
-               (Application (Variable (Generated mon_287))
-                (((Variable (Generated mon_288)) Pure)
-                 ((Variable (Generated mon_286)) Pure))
+           (((Let (Variable (Generated mon_385)) Pure (Variable (User h))
+              (Let (Variable (Generated mon_386)) Pure (Literal (Int 0))
+               (Application (Variable (Generated mon_385))
+                (((Variable (Generated mon_386)) Pure)
+                 ((Variable (Generated mon_384)) Pure))
                 Ctl)))
              Ctl)
-            ((Variable (Generated mon_286)) Pure)
-            ((Application (Variable (Generated opt_91)) () Pure) Pure))
+            ((Variable (Generated mon_384)) Pure)
+            ((Application (Variable (Generated opt_115)) () Pure) Pure))
            Ctl)
           (Application (Variable (Language bind))
-           (((Let (Variable (Generated mon_292)) Pure (Variable (User h))
-              (Let (Variable (Generated mon_293)) Pure (Literal (Int 1))
-               (Application (Variable (Generated mon_292))
-                (((Variable (Generated mon_293)) Pure)
-                 ((Variable (Generated mon_286)) Pure))
+           (((Let (Variable (Generated mon_390)) Pure (Variable (User h))
+              (Let (Variable (Generated mon_391)) Pure (Literal (Int 1))
+               (Application (Variable (Generated mon_390))
+                (((Variable (Generated mon_391)) Pure)
+                 ((Variable (Generated mon_384)) Pure))
                 Ctl)))
              Ctl)
-            ((Variable (Generated mon_286)) Pure)
-            ((Application (Variable (Generated opt_97)) () Pure) Pure))
+            ((Variable (Generated mon_384)) Pure)
+            ((Application (Variable (Generated opt_121)) () Pure) Pure))
            Ctl))))))
-     ((Generated opt_84)
+     ((Generated opt_108)
       ((((Variable (User z)) Pure)) Pure
        (Lambda
-        ((((Variable (Generated mon_301)) Pure)
-          ((Variable (Generated mon_302)) Pure))
+        ((((Variable (Generated mon_399)) Pure)
+          ((Variable (Generated mon_400)) Pure))
          Ctl
-         (Let (Variable (Generated mon_303)) Pure (Variable (User z))
-          (Application (Variable (Generated mon_301))
-           (((Variable (Generated mon_303)) Pure)
-            ((Variable (Generated mon_302)) Pure))
+         (Let (Variable (Generated mon_401)) Pure (Variable (User z))
+          (Application (Variable (Generated mon_399))
+           (((Variable (Generated mon_401)) Pure)
+            ((Variable (Generated mon_400)) Pure))
            Ctl))))))
-     ((Generated opt_90)
+     ((Generated opt_114)
       ((((Variable (User h)) Pure)) Pure
        (Lambda
-        ((((Variable (Generated mon_297)) Pure)
-          ((Variable (Generated mon_298)) Pure))
+        ((((Variable (Generated mon_395)) Pure)
+          ((Variable (Generated mon_396)) Pure))
          Ctl
-         (Let (Variable (User z)) Pure (Variable (Generated mon_297))
+         (Let (Variable (User z)) Pure (Variable (Generated mon_395))
           (Application (Variable (Language bind))
-           (((Let (Variable (Generated mon_299)) Pure (Variable (User h))
-              (Let (Variable (Generated mon_300)) Pure (Variable (User z))
-               (Application (Variable (Generated mon_299))
-                (((Variable (Generated mon_300)) Pure)
-                 ((Variable (Generated mon_298)) Pure))
+           (((Let (Variable (Generated mon_397)) Pure (Variable (User h))
+              (Let (Variable (Generated mon_398)) Pure (Variable (User z))
+               (Application (Variable (Generated mon_397))
+                (((Variable (Generated mon_398)) Pure)
+                 ((Variable (Generated mon_396)) Pure))
                 Ctl)))
              Ctl)
-            ((Variable (Generated mon_298)) Pure)
-            ((Application (Variable (Generated opt_84))
+            ((Variable (Generated mon_396)) Pure)
+            ((Application (Variable (Generated opt_108))
               (((Variable (User z)) Pure)) Pure)
              Pure))
            Ctl))))))
      ((User foo)
       ((((Variable (User f)) Pure) ((Variable (User g)) Pure)
         ((Variable (User h)) Pure) ((Variable (User x)) Pure)
-        ((Variable (Generated mon_276)) Pure))
+        ((Variable (Generated mon_374)) Pure))
        Ctl
        (Match_ctl
         (subject
@@ -2941,302 +3825,302 @@ Then show with bind-inlining and other rewriting applied
           (subject
            (Match_ctl
             (subject
-             (Let (Variable (Generated mon_277)) Pure (Variable (User f))
+             (Let (Variable (Generated mon_375)) Pure (Variable (User f))
               (Match_ctl
                (subject
-                (Let (Variable (Generated mon_278)) Pure (Variable (User g))
-                 (Let (Variable (Generated mon_279)) Pure (Variable (User x))
-                  (Application (Variable (Generated mon_278))
-                   (((Variable (Generated mon_279)) Pure)
-                    ((Variable (Generated mon_276)) Pure))
+                (Let (Variable (Generated mon_376)) Pure (Variable (User g))
+                 (Let (Variable (Generated mon_377)) Pure (Variable (User x))
+                  (Application (Variable (Generated mon_376))
+                   (((Variable (Generated mon_377)) Pure)
+                    ((Variable (Generated mon_374)) Pure))
                    Ctl))))
                (pure_branch
-                ((Variable (Generated mon_280))
-                 (Let (Variable (Generated mon_281)) Pure
-                  (Variable (Generated mon_276))
-                  (Application (Variable (Generated mon_277))
-                   (((Variable (Generated mon_280)) Pure)
-                    ((Variable (Generated mon_281)) Pure))
+                ((Variable (Generated mon_378))
+                 (Let (Variable (Generated mon_379)) Pure
+                  (Variable (Generated mon_374))
+                  (Application (Variable (Generated mon_375))
+                   (((Variable (Generated mon_378)) Pure)
+                    ((Variable (Generated mon_379)) Pure))
                    Ctl))))
                (yield_branch
-                ((Generated opt_106) (Generated opt_107) (Generated opt_108)
-                 (Construct_yield (marker (Variable (Generated opt_106)))
-                  (op_clause (Variable (Generated opt_107)))
+                ((Generated opt_130) (Generated opt_131) (Generated opt_132)
+                 (Construct_yield (marker (Variable (Generated opt_130)))
+                  (op_clause (Variable (Generated opt_131)))
                   (resumption
                    (Lambda
-                    ((((Variable (Generated opt_109)) Pure)
-                      ((Variable (Generated opt_110)) Pure))
+                    ((((Variable (Generated opt_133)) Pure)
+                      ((Variable (Generated opt_134)) Pure))
                      Ctl
                      (Application (Variable (Language bind))
-                      (((Application (Variable (Generated opt_108))
-                         (((Variable (Generated opt_109)) Pure)
-                          ((Variable (Generated opt_110)) Pure))
+                      (((Application (Variable (Generated opt_132))
+                         (((Variable (Generated opt_133)) Pure)
+                          ((Variable (Generated opt_134)) Pure))
                          Ctl)
                         Ctl)
-                       ((Variable (Generated opt_110)) Pure)
-                       ((Application (Variable (Generated opt_105))
-                         (((Variable (Generated mon_277)) Pure)) Pure)
+                       ((Variable (Generated opt_134)) Pure)
+                       ((Application (Variable (Generated opt_129))
+                         (((Variable (Generated mon_375)) Pure)) Pure)
                         Pure))
                       Ctl))))))))))
             (pure_branch
-             ((Variable (Generated mon_282))
-              (Let (Variable (Generated mon_283)) Pure
-               (Variable (Generated mon_276))
-               (Let (Variable (Generated mon_284)) Pure (Literal (Int 0))
+             ((Variable (Generated mon_380))
+              (Let (Variable (Generated mon_381)) Pure
+               (Variable (Generated mon_374))
+               (Let (Variable (Generated mon_382)) Pure (Literal (Int 0))
                 (Construct_pure
-                 (Operator (Variable (Generated mon_282)) (Int Greater_than)
-                  (Variable (Generated mon_284))))))))
+                 (Operator (Variable (Generated mon_380)) (Int Greater_than)
+                  (Variable (Generated mon_382))))))))
             (yield_branch
-             ((Generated opt_111) (Generated opt_112) (Generated opt_113)
-              (Construct_yield (marker (Variable (Generated opt_111)))
-               (op_clause (Variable (Generated opt_112)))
+             ((Generated opt_135) (Generated opt_136) (Generated opt_137)
+              (Construct_yield (marker (Variable (Generated opt_135)))
+               (op_clause (Variable (Generated opt_136)))
                (resumption
                 (Lambda
-                 ((((Variable (Generated opt_114)) Pure)
-                   ((Variable (Generated opt_115)) Pure))
+                 ((((Variable (Generated opt_138)) Pure)
+                   ((Variable (Generated opt_139)) Pure))
                   Ctl
                   (Application (Variable (Language bind))
-                   (((Application (Variable (Generated opt_113))
-                      (((Variable (Generated opt_114)) Pure)
-                       ((Variable (Generated opt_115)) Pure))
+                   (((Application (Variable (Generated opt_137))
+                      (((Variable (Generated opt_138)) Pure)
+                       ((Variable (Generated opt_139)) Pure))
                       Ctl)
                      Ctl)
-                    ((Variable (Generated opt_115)) Pure)
-                    ((Application (Variable (Generated opt_104)) () Pure) Pure))
+                    ((Variable (Generated opt_139)) Pure)
+                    ((Application (Variable (Generated opt_128)) () Pure) Pure))
                    Ctl)))))))))
           (pure_branch
-           ((Variable (Generated mon_285))
-            (Let (Variable (Generated mon_286)) Pure
-             (Variable (Generated mon_276))
-             (If_then_else (Variable (Generated mon_285))
+           ((Variable (Generated mon_383))
+            (Let (Variable (Generated mon_384)) Pure
+             (Variable (Generated mon_374))
+             (If_then_else (Variable (Generated mon_383))
               (Match_ctl
                (subject
-                (Let (Variable (Generated mon_287)) Pure (Variable (User h))
-                 (Let (Variable (Generated mon_288)) Pure (Literal (Int 0))
-                  (Application (Variable (Generated mon_287))
-                   (((Variable (Generated mon_288)) Pure)
-                    ((Variable (Generated mon_286)) Pure))
+                (Let (Variable (Generated mon_385)) Pure (Variable (User h))
+                 (Let (Variable (Generated mon_386)) Pure (Literal (Int 0))
+                  (Application (Variable (Generated mon_385))
+                   (((Variable (Generated mon_386)) Pure)
+                    ((Variable (Generated mon_384)) Pure))
                    Ctl))))
                (pure_branch
-                ((Variable (Generated mon_289))
-                 (Let (Variable (Generated mon_290)) Pure
-                  (Variable (Generated mon_286))
-                  (Let (Variable (Generated mon_291)) Pure (Literal (Int 1))
-                   (Application (Variable (Generated mon_289))
-                    (((Variable (Generated mon_291)) Pure)
-                     ((Variable (Generated mon_290)) Pure))
+                ((Variable (Generated mon_387))
+                 (Let (Variable (Generated mon_388)) Pure
+                  (Variable (Generated mon_384))
+                  (Let (Variable (Generated mon_389)) Pure (Literal (Int 1))
+                   (Application (Variable (Generated mon_387))
+                    (((Variable (Generated mon_389)) Pure)
+                     ((Variable (Generated mon_388)) Pure))
                     Ctl)))))
                (yield_branch
-                ((Generated opt_92) (Generated opt_93) (Generated opt_94)
-                 (Construct_yield (marker (Variable (Generated opt_92)))
-                  (op_clause (Variable (Generated opt_93)))
+                ((Generated opt_116) (Generated opt_117) (Generated opt_118)
+                 (Construct_yield (marker (Variable (Generated opt_116)))
+                  (op_clause (Variable (Generated opt_117)))
                   (resumption
                    (Lambda
-                    ((((Variable (Generated opt_95)) Pure)
-                      ((Variable (Generated opt_96)) Pure))
+                    ((((Variable (Generated opt_119)) Pure)
+                      ((Variable (Generated opt_120)) Pure))
                      Ctl
                      (Application (Variable (Language bind))
-                      (((Application (Variable (Generated opt_94))
-                         (((Variable (Generated opt_95)) Pure)
-                          ((Variable (Generated opt_96)) Pure))
+                      (((Application (Variable (Generated opt_118))
+                         (((Variable (Generated opt_119)) Pure)
+                          ((Variable (Generated opt_120)) Pure))
                          Ctl)
                         Ctl)
-                       ((Variable (Generated opt_96)) Pure)
-                       ((Application (Variable (Generated opt_91)) () Pure)
+                       ((Variable (Generated opt_120)) Pure)
+                       ((Application (Variable (Generated opt_115)) () Pure)
                         Pure))
                       Ctl))))))))
               (Match_ctl
                (subject
-                (Let (Variable (Generated mon_292)) Pure (Variable (User h))
-                 (Let (Variable (Generated mon_293)) Pure (Literal (Int 1))
-                  (Application (Variable (Generated mon_292))
-                   (((Variable (Generated mon_293)) Pure)
-                    ((Variable (Generated mon_286)) Pure))
+                (Let (Variable (Generated mon_390)) Pure (Variable (User h))
+                 (Let (Variable (Generated mon_391)) Pure (Literal (Int 1))
+                  (Application (Variable (Generated mon_390))
+                   (((Variable (Generated mon_391)) Pure)
+                    ((Variable (Generated mon_384)) Pure))
                    Ctl))))
                (pure_branch
-                ((Variable (Generated mon_294))
-                 (Let (Variable (Generated mon_295)) Pure
-                  (Variable (Generated mon_286))
-                  (Let (Variable (Generated mon_296)) Pure (Literal (Int 0))
-                   (Application (Variable (Generated mon_294))
-                    (((Variable (Generated mon_296)) Pure)
-                     ((Variable (Generated mon_295)) Pure))
+                ((Variable (Generated mon_392))
+                 (Let (Variable (Generated mon_393)) Pure
+                  (Variable (Generated mon_384))
+                  (Let (Variable (Generated mon_394)) Pure (Literal (Int 0))
+                   (Application (Variable (Generated mon_392))
+                    (((Variable (Generated mon_394)) Pure)
+                     ((Variable (Generated mon_393)) Pure))
                     Ctl)))))
                (yield_branch
-                ((Generated opt_98) (Generated opt_99) (Generated opt_100)
-                 (Construct_yield (marker (Variable (Generated opt_98)))
-                  (op_clause (Variable (Generated opt_99)))
+                ((Generated opt_122) (Generated opt_123) (Generated opt_124)
+                 (Construct_yield (marker (Variable (Generated opt_122)))
+                  (op_clause (Variable (Generated opt_123)))
                   (resumption
                    (Lambda
-                    ((((Variable (Generated opt_101)) Pure)
-                      ((Variable (Generated opt_102)) Pure))
+                    ((((Variable (Generated opt_125)) Pure)
+                      ((Variable (Generated opt_126)) Pure))
                      Ctl
                      (Application (Variable (Language bind))
-                      (((Application (Variable (Generated opt_100))
-                         (((Variable (Generated opt_101)) Pure)
-                          ((Variable (Generated opt_102)) Pure))
+                      (((Application (Variable (Generated opt_124))
+                         (((Variable (Generated opt_125)) Pure)
+                          ((Variable (Generated opt_126)) Pure))
                          Ctl)
                         Ctl)
-                       ((Variable (Generated opt_102)) Pure)
-                       ((Application (Variable (Generated opt_97)) () Pure)
+                       ((Variable (Generated opt_126)) Pure)
+                       ((Application (Variable (Generated opt_121)) () Pure)
                         Pure))
                       Ctl))))))))))))
           (yield_branch
-           ((Generated opt_116) (Generated opt_117) (Generated opt_118)
-            (Construct_yield (marker (Variable (Generated opt_116)))
-             (op_clause (Variable (Generated opt_117)))
+           ((Generated opt_140) (Generated opt_141) (Generated opt_142)
+            (Construct_yield (marker (Variable (Generated opt_140)))
+             (op_clause (Variable (Generated opt_141)))
              (resumption
               (Lambda
-               ((((Variable (Generated opt_119)) Pure)
-                 ((Variable (Generated opt_120)) Pure))
+               ((((Variable (Generated opt_143)) Pure)
+                 ((Variable (Generated opt_144)) Pure))
                 Ctl
                 (Application (Variable (Language bind))
-                 (((Application (Variable (Generated opt_118))
-                    (((Variable (Generated opt_119)) Pure)
-                     ((Variable (Generated opt_120)) Pure))
+                 (((Application (Variable (Generated opt_142))
+                    (((Variable (Generated opt_143)) Pure)
+                     ((Variable (Generated opt_144)) Pure))
                     Ctl)
                    Ctl)
-                  ((Variable (Generated opt_120)) Pure)
-                  ((Application (Variable (Generated opt_103))
+                  ((Variable (Generated opt_144)) Pure)
+                  ((Application (Variable (Generated opt_127))
                     (((Variable (User h)) Pure)) Pure)
                    Pure))
                  Ctl)))))))))
         (pure_branch
-         ((Variable (Generated mon_297))
-          (Let (Variable (Generated mon_298)) Pure
-           (Variable (Generated mon_276))
-           (Let (Variable (User z)) Pure (Variable (Generated mon_297))
+         ((Variable (Generated mon_395))
+          (Let (Variable (Generated mon_396)) Pure
+           (Variable (Generated mon_374))
+           (Let (Variable (User z)) Pure (Variable (Generated mon_395))
             (Match_ctl
              (subject
-              (Let (Variable (Generated mon_299)) Pure (Variable (User h))
-               (Let (Variable (Generated mon_300)) Pure (Variable (User z))
-                (Application (Variable (Generated mon_299))
-                 (((Variable (Generated mon_300)) Pure)
-                  ((Variable (Generated mon_298)) Pure))
+              (Let (Variable (Generated mon_397)) Pure (Variable (User h))
+               (Let (Variable (Generated mon_398)) Pure (Variable (User z))
+                (Application (Variable (Generated mon_397))
+                 (((Variable (Generated mon_398)) Pure)
+                  ((Variable (Generated mon_396)) Pure))
                  Ctl))))
              (pure_branch
-              ((Variable (Generated mon_301))
-               (Let (Variable (Generated mon_302)) Pure
-                (Variable (Generated mon_298))
-                (Let (Variable (Generated mon_303)) Pure (Variable (User z))
-                 (Application (Variable (Generated mon_301))
-                  (((Variable (Generated mon_303)) Pure)
-                   ((Variable (Generated mon_302)) Pure))
+              ((Variable (Generated mon_399))
+               (Let (Variable (Generated mon_400)) Pure
+                (Variable (Generated mon_396))
+                (Let (Variable (Generated mon_401)) Pure (Variable (User z))
+                 (Application (Variable (Generated mon_399))
+                  (((Variable (Generated mon_401)) Pure)
+                   ((Variable (Generated mon_400)) Pure))
                   Ctl)))))
              (yield_branch
-              ((Generated opt_85) (Generated opt_86) (Generated opt_87)
-               (Construct_yield (marker (Variable (Generated opt_85)))
-                (op_clause (Variable (Generated opt_86)))
+              ((Generated opt_109) (Generated opt_110) (Generated opt_111)
+               (Construct_yield (marker (Variable (Generated opt_109)))
+                (op_clause (Variable (Generated opt_110)))
                 (resumption
                  (Lambda
-                  ((((Variable (Generated opt_88)) Pure)
-                    ((Variable (Generated opt_89)) Pure))
+                  ((((Variable (Generated opt_112)) Pure)
+                    ((Variable (Generated opt_113)) Pure))
                    Ctl
                    (Application (Variable (Language bind))
-                    (((Application (Variable (Generated opt_87))
-                       (((Variable (Generated opt_88)) Pure)
-                        ((Variable (Generated opt_89)) Pure))
+                    (((Application (Variable (Generated opt_111))
+                       (((Variable (Generated opt_112)) Pure)
+                        ((Variable (Generated opt_113)) Pure))
                        Ctl)
                       Ctl)
-                     ((Variable (Generated opt_89)) Pure)
-                     ((Application (Variable (Generated opt_84))
+                     ((Variable (Generated opt_113)) Pure)
+                     ((Application (Variable (Generated opt_108))
                        (((Variable (User z)) Pure)) Pure)
                       Pure))
                     Ctl))))))))))))
         (yield_branch
-         ((Generated opt_121) (Generated opt_122) (Generated opt_123)
-          (Construct_yield (marker (Variable (Generated opt_121)))
-           (op_clause (Variable (Generated opt_122)))
+         ((Generated opt_145) (Generated opt_146) (Generated opt_147)
+          (Construct_yield (marker (Variable (Generated opt_145)))
+           (op_clause (Variable (Generated opt_146)))
            (resumption
             (Lambda
-             ((((Variable (Generated opt_124)) Pure)
-               ((Variable (Generated opt_125)) Pure))
+             ((((Variable (Generated opt_148)) Pure)
+               ((Variable (Generated opt_149)) Pure))
               Ctl
               (Application (Variable (Language bind))
-               (((Application (Variable (Generated opt_123))
-                  (((Variable (Generated opt_124)) Pure)
-                   ((Variable (Generated opt_125)) Pure))
+               (((Application (Variable (Generated opt_147))
+                  (((Variable (Generated opt_148)) Pure)
+                   ((Variable (Generated opt_149)) Pure))
                   Ctl)
                  Ctl)
-                ((Variable (Generated opt_125)) Pure)
-                ((Application (Variable (Generated opt_90))
+                ((Variable (Generated opt_149)) Pure)
+                ((Application (Variable (Generated opt_114))
                   (((Variable (User h)) Pure)) Pure)
                  Pure))
                Ctl))))))))))
      ((User main)
-      ((((Variable (Generated mon_304)) Pure)) Ctl
-       (Let (Variable (Generated mon_306)) Pure
+      ((((Variable (Generated mon_402)) Pure)) Ctl
+       (Let (Variable (Generated mon_404)) Pure
         (Application (Variable (Language perform))
          (((Effect_label console) Pure)
           ((Lambda
-            ((((Variable (Generated mon_305)) Pure)) Pure
+            ((((Variable (Generated mon_403)) Pure)) Pure
              (Select_operation console (User println-int)
-              (Variable (Generated mon_305)))))
+              (Variable (Generated mon_403)))))
            Pure))
          Pure)
-        (Let (Variable (Generated mon_323)) Pure
-         (Let (Variable (Generated mon_307)) Pure (Variable (User foo))
-          (Let (Variable (Generated mon_311)) Pure
+        (Let (Variable (Generated mon_421)) Pure
+         (Let (Variable (Generated mon_405)) Pure (Variable (User foo))
+          (Let (Variable (Generated mon_409)) Pure
            (Lambda
-            ((((Variable (User y)) Pure) ((Variable (Generated mon_308)) Pure))
+            ((((Variable (User y)) Pure) ((Variable (Generated mon_406)) Pure))
              Ctl
-             (Let (Variable (Generated mon_309)) Pure (Variable (User y))
-              (Let (Variable (Generated mon_310)) Pure (Variable (User y))
+             (Let (Variable (Generated mon_407)) Pure (Variable (User y))
+              (Let (Variable (Generated mon_408)) Pure (Variable (User y))
                (Construct_pure
-                (Operator (Variable (Generated mon_309)) (Int Times)
-                 (Variable (Generated mon_310))))))))
-           (Let (Variable (Generated mon_315)) Pure
+                (Operator (Variable (Generated mon_407)) (Int Times)
+                 (Variable (Generated mon_408))))))))
+           (Let (Variable (Generated mon_413)) Pure
             (Lambda
              ((((Variable (User x)) Pure)
-               ((Variable (Generated mon_312)) Pure))
+               ((Variable (Generated mon_410)) Pure))
               Ctl
-              (Let (Variable (Generated mon_313)) Pure (Variable (User x))
-               (Let (Variable (Generated mon_314)) Pure (Variable (User x))
+              (Let (Variable (Generated mon_411)) Pure (Variable (User x))
+               (Let (Variable (Generated mon_412)) Pure (Variable (User x))
                 (Construct_pure
-                 (Operator (Variable (Generated mon_313)) (Int Plus)
-                  (Variable (Generated mon_314))))))))
-            (Let (Variable (Generated mon_320)) Pure
+                 (Operator (Variable (Generated mon_411)) (Int Plus)
+                  (Variable (Generated mon_412))))))))
+            (Let (Variable (Generated mon_418)) Pure
              (Lambda
               ((((Variable (User m)) Pure)
-                ((Variable (Generated mon_316)) Pure))
+                ((Variable (Generated mon_414)) Pure))
                Ctl
                (Construct_pure
                 (Lambda
                  ((((Variable (User n)) Pure)
-                   ((Variable (Generated mon_317)) Pure))
+                   ((Variable (Generated mon_415)) Pure))
                   Ctl
-                  (Let (Variable (Generated mon_318)) Pure (Variable (User m))
-                   (Let (Variable (Generated mon_319)) Pure (Variable (User n))
+                  (Let (Variable (Generated mon_416)) Pure (Variable (User m))
+                   (Let (Variable (Generated mon_417)) Pure (Variable (User n))
                     (Construct_pure
-                     (Operator (Variable (Generated mon_318)) (Int Minus)
-                      (Variable (Generated mon_319)))))))))))
-             (Let (Variable (Generated mon_321)) Pure (Literal (Int 3))
+                     (Operator (Variable (Generated mon_416)) (Int Minus)
+                      (Variable (Generated mon_417)))))))))))
+             (Let (Variable (Generated mon_419)) Pure (Literal (Int 3))
               (Match_ctl_pure
                (subject
-                (Application (Variable (Generated mon_307))
-                 (((Variable (Generated mon_311)) Pure)
-                  ((Variable (Generated mon_315)) Pure)
-                  ((Variable (Generated mon_320)) Pure)
-                  ((Variable (Generated mon_321)) Pure)
-                  ((Variable (Generated mon_304)) Pure))
+                (Application (Variable (Generated mon_405))
+                 (((Variable (Generated mon_409)) Pure)
+                  ((Variable (Generated mon_413)) Pure)
+                  ((Variable (Generated mon_418)) Pure)
+                  ((Variable (Generated mon_419)) Pure)
+                  ((Variable (Generated mon_402)) Pure))
                  Ctl))
                (pure_branch
-                ((Variable (Generated mon_322)) (Variable (Generated mon_322))))))))))
-         (Application (Variable (Generated mon_306))
-          (((Variable (Generated mon_323)) Pure)
-           ((Variable (Generated mon_304)) Pure))
+                ((Variable (Generated mon_420)) (Variable (Generated mon_420))))))))))
+         (Application (Variable (Generated mon_404))
+          (((Variable (Generated mon_421)) Pure)
+           ((Variable (Generated mon_402)) Pure))
           Ctl)))))
-     ((Generated opt_126)
+     ((Generated opt_150)
       (() Pure
        (Lambda
-        ((((Variable (Generated mon_333)) Pure)
-          ((Variable (Generated mon_334)) Pure))
+        ((((Variable (Generated mon_431)) Pure)
+          ((Variable (Generated mon_432)) Pure))
          Ctl (Construct_pure (Tuple_construction ()))))))
      ((Language main)
-      ((((Variable (Generated mon_324)) Pure)) Ctl
+      ((((Variable (Generated mon_422)) Pure)) Ctl
        (Match_ctl
         (subject
-         (Let (Variable (Generated mon_331)) Pure
+         (Let (Variable (Generated mon_429)) Pure
           (Application (Variable (Language handler))
            (((Effect_label console) Pure)
             ((Construct_handler (handled_effect console)
@@ -3245,65 +4129,65 @@ Then show with bind-inlining and other rewriting applied
                  (Construct_op_tail
                   (Lambda
                    ((((Variable (Language x)) Pure)
-                     ((Variable (Generated mon_325)) Pure))
+                     ((Variable (Generated mon_423)) Pure))
                     Ctl
-                    (Let (Variable (Generated mon_326)) Pure
+                    (Let (Variable (Generated mon_424)) Pure
                      (Variable (Language x))
                      (Construct_pure
                       (Impure_built_in
-                       (Impure_print_int (value (Variable (Generated mon_326)))
+                       (Impure_print_int (value (Variable (Generated mon_424)))
                         (newline false)))))))))
                 ((User println)
                  (Construct_op_tail
                   (Lambda
-                   (((Wildcard Pure) ((Variable (Generated mon_327)) Pure)) Ctl
+                   (((Wildcard Pure) ((Variable (Generated mon_425)) Pure)) Ctl
                     (Construct_pure (Impure_built_in Impure_println))))))
                 ((User println-int)
                  (Construct_op_tail
                   (Lambda
                    ((((Variable (Language x)) Pure)
-                     ((Variable (Generated mon_328)) Pure))
+                     ((Variable (Generated mon_426)) Pure))
                     Ctl
-                    (Let (Variable (Generated mon_329)) Pure
+                    (Let (Variable (Generated mon_427)) Pure
                      (Variable (Language x))
                      (Construct_pure
                       (Impure_built_in
-                       (Impure_print_int (value (Variable (Generated mon_329)))
+                       (Impure_print_int (value (Variable (Generated mon_427)))
                         (newline true)))))))))
                 ((User read-int)
                  (Construct_op_tail
                   (Lambda
-                   (((Wildcard Pure) ((Variable (Generated mon_330)) Pure)) Ctl
+                   (((Wildcard Pure) ((Variable (Generated mon_428)) Pure)) Ctl
                     (Construct_pure (Impure_built_in Impure_read_int)))))))))
              Pure))
            Pure)
-          (Let (Variable (Generated mon_332)) Pure (Variable (User main))
-           (Application (Variable (Generated mon_331))
-            (((Variable (Generated mon_332)) Pure)
-             ((Variable (Generated mon_324)) Pure))
+          (Let (Variable (Generated mon_430)) Pure (Variable (User main))
+           (Application (Variable (Generated mon_429))
+            (((Variable (Generated mon_430)) Pure)
+             ((Variable (Generated mon_422)) Pure))
             Ctl))))
         (pure_branch
-         ((Variable (Generated mon_333))
-          (Let (Variable (Generated mon_334)) Pure
-           (Variable (Generated mon_324))
+         ((Variable (Generated mon_431))
+          (Let (Variable (Generated mon_432)) Pure
+           (Variable (Generated mon_422))
            (Construct_pure (Tuple_construction ())))))
         (yield_branch
-         ((Generated opt_127) (Generated opt_128) (Generated opt_129)
-          (Construct_yield (marker (Variable (Generated opt_127)))
-           (op_clause (Variable (Generated opt_128)))
+         ((Generated opt_151) (Generated opt_152) (Generated opt_153)
+          (Construct_yield (marker (Variable (Generated opt_151)))
+           (op_clause (Variable (Generated opt_152)))
            (resumption
             (Lambda
-             ((((Variable (Generated opt_130)) Pure)
-               ((Variable (Generated opt_131)) Pure))
+             ((((Variable (Generated opt_154)) Pure)
+               ((Variable (Generated opt_155)) Pure))
               Ctl
               (Application (Variable (Language bind))
-               (((Application (Variable (Generated opt_129))
-                  (((Variable (Generated opt_130)) Pure)
-                   ((Variable (Generated opt_131)) Pure))
+               (((Application (Variable (Generated opt_153))
+                  (((Variable (Generated opt_154)) Pure)
+                   ((Variable (Generated opt_155)) Pure))
                   Ctl)
                  Ctl)
-                ((Variable (Generated opt_131)) Pure)
-                ((Application (Variable (Generated opt_126)) () Pure) Pure))
+                ((Variable (Generated opt_155)) Pure)
+                ((Application (Variable (Generated opt_150)) () Pure) Pure))
                Ctl))))))))))))
    (entry_expr
     (Application (Variable (Language main)) ((Nil_evidence_vector Pure)) Ctl)))
