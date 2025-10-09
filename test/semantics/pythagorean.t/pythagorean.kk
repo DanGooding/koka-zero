@@ -2,43 +2,16 @@
 // request an integer in [1,n)
 effect control choose-up-to(n : int) : int;
 
-fun choose-const(n, action) {
-  with handler {
-    control choose-up-to(_) {
-      resume(n);
+fun all-solutions(action) {
+  with control choose-up-to(m) {
+    range(1, m).flat-map fn(i) {
+      resume(i)
     };
   };
-  action();
-}
-
-fun choose-user(action) {
-  with handler {
-    control choose-up-to(m) {
-      println-int(m);
-      resume(read-int(()));
-    };
-  };
-  action();
-}
-
-fun for(start, stop, action) {
-  if start >= stop
-  then ()
-  else {
-    action(start);
-    for(start + 1, stop, action)
-  };
-}
-
-fun choose-any(action) {
-  with handler {
-    control choose-up-to(m) {
-      for(1, m) fn(i) {
-        resume(i);
-      };
-    };
-  };
-  action();
+  match action() {
+    None -> [];
+    Some(result) -> [result];
+  }
 }
 
 fun is-triple(a, b, c) {
@@ -50,13 +23,17 @@ fun find-triple(n) {
   val b = choose-up-to(c);
   val a = choose-up-to(b);
   if is-triple(a, b, c)
-  then { print-int(a); print-int(b); println-int(c); }
-  else ();
+  then Some((a, b, c))
+  else None
+}
+
+fun print-triple((a, b, c)) {
+  print-int(a); print-int(b); println-int(c);
 }
 
 fun main() {
   val limit = read-int(());
-  with choose-any();
-  find-triple(limit);
+  val triples = all-solutions fn() find-triple(limit);
+  triples.for-each(print-triple);
 }
 
